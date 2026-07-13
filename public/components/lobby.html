@@ -1,0 +1,26 @@
+<div id="lobby-screen" class="overlay-screen hidden">
+    <div class="lobby-box">
+      <h1>CONNECT CONTROLLER</h1>
+      <p>Scan the QR code or enter the code on your phone to connect Player 2 (Bowler).</p>
+      
+      <!-- Timing race fix: only shown once room is loaded -->
+      <div id="qr-loading-spinner" class="qr-spinner">Loading QR Code...</div>
+      <div id="qr-image-wrapper" class="qr-code-container" style="display: none;">
+        <img id="qr-image" src="" alt="Scan QR to connect phone controller">
+      </div>
+
+      <div class="room-code-wrapper">
+        <div class="room-code-label">Room Code</div>
+        <div id="room-code-text" class="room-code-val">----</div>
+      </div>
+
+      <div class="connection-status" style="margin-bottom: 20px;">
+        <span class="status-dot"></span>
+        <span id="status-label">Connecting to server...</span>
+      </div>
+
+      <button id="lobby-back-btn" class="menu-btn" style="max-width: 200px; padding: 10px;">
+        CANCEL
+      </button>
+    </div>
+  </div>

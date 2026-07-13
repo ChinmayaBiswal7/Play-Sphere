@@ -1,0 +1,94 @@
+<!-- Bowling Console HUD -->
+  <div id="bowling-console-hud" class="bowling-console-hud hidden">
+    <!-- Aim Landing Preview at top of HUD -->
+    <div class="bowling-aim-preview" id="bowling-aim-preview">
+      Landing: GOOD LENGTH, ON STUMPS
+    </div>
+
+    <div class="bowling-hud-row">
+      <!-- Left: Delivery Wheel -->
+      <div class="bowling-hud-column">
+        <div class="bowling-hud-title" id="bowling-wheel-title">DELIVERY</div>
+        <div class="delivery-wheel" id="bowling-delivery-wheel">
+          <!-- 4 sectors -->
+          <div class="wheel-sector top active" data-index="0" data-name="Straight">
+            <span class="sector-label">STANDARD</span>
+          </div>
+          <div class="wheel-sector left" data-index="1" data-name="Out-swing">
+            <span class="sector-label">OUT-SWING</span>
+          </div>
+          <div class="wheel-sector right" data-index="2" data-name="In-swing">
+            <span class="sector-label">IN-SWING</span>
+          </div>
+          <div class="wheel-sector bottom" data-index="3" data-name="Slower">
+            <span class="sector-label">SLOWER</span>
+          </div>
+          <!-- Center stick indicator -->
+          <div class="wheel-center-stick">
+            <span class="wheel-stick-icon">L</span>
+          </div>
+        </div>
+        <div class="delivery-variation-toggle" id="variation-toggle-btn">
+          VARIATION <span class="variation-key-badge">TAB</span>
+        </div>
+      </div>
+
+      <!-- Middle: Vertical Release Meter -->
+      <div class="bowling-hud-column vertical-meter-column" id="bowling-vertical-meter-col" style="display: none;">
+        <div class="bowling-hud-title">RELEASE</div>
+        <div class="vertical-meter-wrapper">
+          <div class="vertical-meter-zone red-top"></div>
+          <div class="vertical-meter-zone green-sweet"></div>
+          <div class="vertical-meter-zone yellow-mid"></div>
+          <div class="vertical-meter-zone red-bottom"></div>
+          <!-- Sweep indicator line -->
+          <div id="bowling-meter-indicator" class="vertical-meter-indicator" style="bottom: 0%;"></div>
+        </div>
+        <div id="bowling-meter-feedback" class="vertical-meter-feedback"></div>
+      </div>
+
+      <!-- Right: Length/Timing Column -->
+      <div class="bowling-hud-column" id="bowling-list-column">
+        <!-- Length List -->
+        <div class="length-list-container" id="bowling-length-list-container">
+          <div class="bowling-hud-title">LENGTH</div>
+          <div class="length-list" id="bowling-length-list">
+            <div class="length-item" id="length-yorker" data-preset="1">
+              <span class="btn-badge btn-x">X</span>
+              <span class="item-name">Yorker</span>
+            </div>
+            <div class="length-item" id="length-full" data-preset="2">
+              <span class="btn-badge btn-y">Y</span>
+              <span class="item-name">Full</span>
+            </div>
+            <div class="length-item active" id="length-good" data-preset="3">
+              <span class="btn-badge btn-a">A</span>
+              <span class="item-name">Good</span>
+            </div>
+            <div class="length-item" id="length-short" data-preset="4">
+              <span class="btn-badge btn-b">B</span>
+              <span class="item-name">Short</span>
+            </div>
+          </div>
+        </div>
+        <!-- Timing List -->
+        <div class="timing-list-container hidden" id="bowling-timing-list-container">
+          <div class="bowling-hud-title">TIMING</div>
+          <div class="timing-list" id="bowling-timing-list">
+            <div class="timing-item" id="timing-faster">
+              <span class="btn-badge btn-y">Y</span>
+              <span class="item-name">Faster</span>
+            </div>
+            <div class="timing-item active" id="timing-normal">
+              <span class="btn-badge btn-a">A</span>
+              <span class="item-name">Normal</span>
+            </div>
+            <div class="timing-item" id="timing-slower">
+              <span class="btn-badge btn-b">B</span>
+              <span class="item-name">Slower</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>

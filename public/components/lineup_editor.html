@@ -1,0 +1,104 @@
+<!-- Lineup Editor Overlay -->
+<div id="lineup-editor-overlay" class="fc-menu-screen hidden">
+  <div class="lineup-container-main">
+    <!-- Top Header -->
+    <div class="lineup-header">
+      <div class="lineup-title">LINEUP MANAGER</div>
+      <div class="lineup-subtitle" id="lineup-active-edit-team-name">INDIA VS AUSTRALIA</div>
+    </div>
+
+    <!-- Main Content Panel -->
+    <div class="lineup-grid-panels">
+      <!-- Left Column: Home Team XI -->
+      <div class="lineup-team-column" id="lineup-home-panel">
+        <div class="lineup-team-title" id="lineup-home-team-title">INDIA XI</div>
+        <div class="lineup-list" id="lineup-home-list">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <!-- Center Column: Player Skill Card -->
+      <div class="lineup-card-column">
+        <div class="lineup-player-card" id="lineup-player-details-card">
+          <div class="card-header">
+            <div class="card-player-role" id="card-role">BATSMAN</div>
+            <div class="card-player-name" id="card-name">ABHISHEK SHARMA</div>
+            <div class="card-player-style" id="card-style">LHB | SLO | OVR 82</div>
+          </div>
+          <div class="card-stats-grid">
+            <div class="stat-bar-row">
+              <span class="stat-label">Batting Technique</span>
+              <div class="bar-bg"><div class="bar-fill" id="bar-bat-tech" style="width: 80%"></div></div>
+              <span class="stat-value" id="val-bat-tech">80</span>
+            </div>
+            <div class="stat-bar-row">
+              <span class="stat-label">Front Foot</span>
+              <div class="bar-bg"><div class="bar-fill" id="bar-front-foot" style="width: 85%"></div></div>
+              <span class="stat-value" id="val-front-foot">85</span>
+            </div>
+            <div class="stat-bar-row">
+              <span class="stat-label">Back Foot</span>
+              <div class="bar-bg"><div class="bar-fill" id="bar-back-foot" style="width: 81%"></div></div>
+              <span class="stat-value" id="val-back-foot">81</span>
+            </div>
+            <div class="stat-bar-row">
+              <span class="stat-label">Unorthodox</span>
+              <div class="bar-bg"><div class="bar-fill" id="bar-unorthodox" style="width: 55%"></div></div>
+              <span class="stat-value" id="val-unorthodox">55</span>
+            </div>
+            <div class="stat-bar-row">
+              <span class="stat-label">Bowling Delivery</span>
+              <div class="bar-bg"><div class="bar-fill" id="bar-bowl-del" style="width: 56%"></div></div>
+              <span class="stat-value" id="val-bowl-del">56</span>
+            </div>
+            <div class="stat-bar-row">
+              <span class="stat-label">Bowling Control</span>
+              <div class="bar-bg"><div class="bar-fill" id="bar-bowl-ctrl" style="width: 61%"></div></div>
+              <span class="stat-value" id="val-bowl-ctrl">61</span>
+            </div>
+            <div class="stat-bar-row">
+              <span class="stat-label">Fielding</span>
+              <div class="bar-bg"><div class="bar-fill" id="bar-fielding" style="width: 81%"></div></div>
+              <span class="stat-value" id="val-fielding">81</span>
+            </div>
+            <div class="stat-bar-row">
+              <span class="stat-label">Physical</span>
+              <div class="bar-bg"><div class="bar-fill" id="bar-physical" style="width: 85%"></div></div>
+              <span class="stat-value" id="val-physical">85</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Away Team XI -->
+      <div class="lineup-team-column" id="lineup-away-panel">
+        <div class="lineup-team-title" id="lineup-away-team-title">ENGLAND XI</div>
+        <div class="lineup-list" id="lineup-away-list">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer Controls -->
+    <div class="lineup-footer-hints">
+      <div class="lineup-hint-item"><kbd class="key-hint">[Enter]</kbd> <span class="btn-bubble confirm-btn">✕</span> Select/Swap</div>
+      <div class="lineup-hint-item"><kbd class="key-hint">[C]</kbd> <span class="btn-bubble option-btn">⬜</span> Set Captain</div>
+      <div class="lineup-hint-item"><kbd class="key-hint">[Esc]</kbd> <span class="btn-bubble cancel-btn">○</span> Back</div>
+    </div>
+  </div>
+
+  <!-- Bench Selector Modal -->
+  <div id="lineup-bench-modal" class="settings-modal hidden">
+    <div class="settings-modal-content lineup-bench-content">
+      <div class="modal-header" id="bench-modal-title">SELECT BENCH PLAYER</div>
+      <div class="bench-list-container">
+        <div class="bench-grid" id="bench-players-list">
+          <!-- Populated dynamically with bench players -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="lineup-bench-close-btn" class="fc-action-btn danger">CANCEL</button>
+      </div>
+    </div>
+  </div>
+</div>

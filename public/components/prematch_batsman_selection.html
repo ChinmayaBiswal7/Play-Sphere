@@ -1,0 +1,182 @@
+<div id="prematch-batsman-selection-screen" class="overlay-screen hidden">
+  <div class="prematch-batsman-box">
+    <div class="prematch-batsman-header">
+      <div class="prematch-batsman-title">SELECT OPENING LINEUP</div>
+      <div class="prematch-batsman-subtitle">Choose your striker and non-striker to open the innings</div>
+    </div>
+    
+    <div class="prematch-selections-container">
+      <!-- Single Horizontal Selected Display Bar -->
+      <div class="selected-openers-bar">
+        <div class="opener-info">
+          <span class="opener-label">STRIKER (No. 1):</span>
+          <span id="selected-striker-display" class="opener-value">SELECT STRIKER</span>
+        </div>
+        <div class="opener-separator"></div>
+        <div class="opener-info">
+          <span class="opener-label">NON-STRIKER (No. 2):</span>
+          <span id="selected-nonstriker-display" class="opener-value">SELECT NON-STRIKER</span>
+        </div>
+      </div>
+
+      <!-- Single Column List of All 11 Players -->
+      <div class="squad-selection-container">
+        <div class="column-header-title" style="margin-bottom: 12px; text-align: left;">SQUAD SELECTION</div>
+        <div class="prematch-player-grid" id="prematch-players-grid">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+    </div>
+    
+    <button id="prematch-confirm-btn" class="menu-btn primary" style="width: 250px; margin: 0 auto; display: block;">CONFIRM & PLAY</button>
+  </div>
+</div>
+
+<style>
+  .prematch-batsman-box {
+    background: rgba(15, 23, 42, 0.92);
+    backdrop-filter: blur(20px);
+    border: 2px solid rgba(59, 130, 246, 0.35);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.75), 0 0 30px rgba(59, 130, 246, 0.15);
+    border-radius: 20px;
+    padding: 30px;
+    width: 90%;
+    max-width: 600px; /* Reduced width since we are using single column layout */
+    box-sizing: border-box;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    font-family: 'Segoe UI', Roboto, sans-serif;
+  }
+  .prematch-batsman-title {
+    font-size: 1.8rem;
+    font-weight: 900;
+    letter-spacing: 2px;
+    background: linear-gradient(135deg, #60a5fa 0%, #2563eb 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 6px;
+    text-shadow: 0 2px 10px rgba(37, 99, 235, 0.3);
+  }
+  .prematch-batsman-subtitle {
+    font-size: 0.9rem;
+    color: #94a3b8;
+    font-weight: 500;
+  }
+  .prematch-selections-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 100%;
+  }
+  .selected-openers-bar {
+    background: rgba(30, 41, 59, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .opener-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .opener-label {
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: #94a3b8;
+  }
+  .opener-value {
+    color: #60a5fa;
+    font-weight: 800;
+    text-shadow: 0 0 10px rgba(96, 165, 250, 0.3);
+    text-transform: uppercase;
+    font-size: 1rem;
+    min-height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .opener-separator {
+    width: 1px;
+    height: 36px;
+    background: rgba(255, 255, 255, 0.12);
+  }
+  .squad-selection-container {
+    background: rgba(30, 41, 59, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 20px;
+    box-sizing: border-box;
+    width: 100%;
+  }
+  .column-header-title {
+    font-size: 0.85rem;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    color: #94a3b8;
+    text-transform: uppercase;
+  }
+  .prematch-player-grid {
+    display: grid;
+    grid-template-columns: 1fr; /* Single column list to avoid '2 panels' layout */
+    gap: 8px;
+    max-height: 250px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 6px;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+  }
+  .prematch-player-grid::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
+  .prematch-player-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #e2e8f0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .prematch-player-row:hover:not(.disabled):not(.active) {
+    background: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.3);
+    color: #fff;
+  }
+  .prematch-player-row.active {
+    background: rgba(59, 130, 246, 0.25);
+    border-color: rgba(59, 130, 246, 0.6);
+    color: #fff;
+  }
+  .prematch-player-row.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .player-role-badge {
+    font-size: 0.7rem;
+    font-weight: 800;
+    background: rgba(255, 255, 255, 0.1);
+    color: #94a3b8;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+  }
+  .prematch-player-row.active .player-role-badge {
+    background: rgba(96, 165, 250, 0.3);
+    color: #fff;
+  }
+</style>

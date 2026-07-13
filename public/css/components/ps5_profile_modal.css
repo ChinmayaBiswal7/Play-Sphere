@@ -1,0 +1,769 @@
+/* ═══════════════════════════════════════════════════════
+   PROFILE MODAL — Component Specific Styles
+   ═══════════════════════════════════════════════════════ */
+
+/* Overlay backdrop */
+.ps5-profile-modal {
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.85);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  z-index: 150;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+.ps5-profile-modal.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Card shell */
+.ps5-profile-card {
+  position: relative;
+  width: 840px;
+  height: 500px;
+  background: rgba(7, 13, 30, 0.98);
+  border: 1px solid rgba(59, 130, 246, 0.28);
+  border-radius: 20px;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.8), 0 0 60px rgba(59,130,246,0.1);
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+}
+
+/* Close button */
+.ps5-profile-close {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  font-size: 1.5rem;
+  color: rgba(255,255,255,0.4);
+  cursor: pointer;
+  z-index: 20;
+  line-height: 1;
+  transition: color 0.2s;
+}
+.ps5-profile-close:hover { color: #fff; }
+
+/* ── LEFT PANEL ──────────────────────────────────────── */
+.prf-left {
+  width: 220px;
+  min-width: 220px;
+  flex-shrink: 0;
+  background: linear-gradient(175deg, rgba(59,130,246,0.08) 0%, rgba(8,14,32,1) 70%);
+  border-right: 1px solid rgba(59,130,246,0.12);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 28px 20px 20px;
+  box-sizing: border-box;
+  overflow: hidden;
+  text-align: center;
+}
+
+/* Avatar circle */
+.prf-avatar {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+  border: 3px solid #3b82f6;
+  box-shadow: 0 0 0 5px rgba(59,130,246,0.15), 0 0 24px rgba(59,130,246,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: #fff;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.prf-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+.ps5-profile-big-avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+/* Username */
+.prf-username {
+  margin: 14px 0 6px;
+  font-size: 1.05rem;
+  font-weight: 800;
+  text-align: center;
+  background: linear-gradient(135deg, #fff 40%, #93c5fd);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  max-width: 180px;
+  word-break: break-word;
+  line-height: 1.25;
+}
+
+/* Level badge */
+.prf-level {
+  display: inline-block;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  padding: 3px 12px;
+  border-radius: 20px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 10px rgba(217,119,6,0.35);
+}
+
+/* XP bar */
+.prf-xp-wrap {
+  width: 100%;
+  margin-bottom: 0;
+}
+.prf-xp-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.65rem;
+  color: rgba(255,255,255,0.4);
+  margin-bottom: 5px;
+}
+.prf-xp-track {
+  width: 100%;
+  height: 5px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.prf-xp-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #2563eb, #60a5fa);
+  width: 0%;
+  border-radius: 3px;
+  transition: width 0.5s ease;
+  box-shadow: 0 0 6px #3b82f6;
+}
+
+/* Spacer pushes coins + buttons to bottom */
+.prf-spacer { flex: 1; }
+
+/* Coin pill */
+.prf-coins {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(245,158,11,0.12);
+  border: 1px solid rgba(245,158,11,0.28);
+  color: #f59e0b;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 20px;
+  white-space: nowrap;
+  margin-bottom: 10px;
+}
+
+/* Buttons */
+.prf-btn {
+  width: 100%;
+  padding: 9px 0;
+  border-radius: 9px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: all 0.25s;
+  text-align: center;
+  white-space: nowrap;
+  margin-bottom: 7px;
+  border: none;
+}
+.prf-btn:last-child { margin-bottom: 0; }
+.prf-btn-primary {
+  background: #2563eb;
+  color: #fff;
+}
+.prf-btn-primary:hover {
+  background: #3b82f6;
+  box-shadow: 0 0 14px rgba(59,130,246,0.5);
+}
+.prf-btn-danger {
+  background: rgba(239,68,68,0.1);
+  color: rgba(252,165,165,0.9);
+  border: 1px solid rgba(239,68,68,0.22) !important;
+}
+.prf-btn-danger:hover {
+  background: rgba(239,68,68,0.22);
+  color: #fca5a5;
+}
+
+/* ── RIGHT PANEL ─────────────────────────────────────── */
+.prf-right {
+  flex: 1;
+  min-width: 0;
+  padding: 28px 28px 20px 28px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(59,130,246,0.25) transparent;
+}
+.prf-right::-webkit-scrollbar { width: 4px; }
+.prf-right::-webkit-scrollbar-track { background: transparent; }
+.prf-right::-webkit-scrollbar-thumb {
+  background: rgba(59,130,246,0.25);
+  border-radius: 2px;
+}
+
+/* Section heading */
+.prf-section-title {
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(96,165,250,0.75);
+  border-bottom: 1px solid rgba(59,130,246,0.12);
+  padding-bottom: 7px;
+  margin: 0 0 12px 0;
+  text-align: left;
+}
+
+/* Stats 2×2 grid */
+.prf-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-bottom: 22px;
+}
+.prf-stat {
+  background: rgba(59,130,246,0.06);
+  border: 1px solid rgba(59,130,246,0.15);
+  border-radius: 10px;
+  padding: 14px 12px;
+  text-align: center;
+  transition: border-color 0.2s, transform 0.15s;
+}
+.prf-stat:hover {
+  border-color: rgba(59,130,246,0.35);
+  transform: translateY(-1px);
+}
+.prf-stat-val {
+  font-size: 1.75rem;
+  font-weight: 900;
+  color: #60a5fa;
+  line-height: 1;
+}
+.prf-stat-lbl {
+  font-size: 0.56rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(255,255,255,0.32);
+  margin-top: 5px;
+}
+
+/* Achievements list */
+.prf-ach-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.prf-ach {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 10px 13px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 9px;
+  transition: background 0.15s, border-color 0.15s;
+  text-align: left;
+}
+.prf-ach:hover {
+  background: rgba(255,255,255,0.045);
+  border-color: rgba(255,255,255,0.1);
+}
+.prf-ach.unlocked {
+  background: linear-gradient(90deg, rgba(245,158,11,0.08), transparent);
+  border-color: rgba(245,158,11,0.25);
+}
+.prf-ach-icon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  filter: grayscale(1) brightness(0.4);
+  width: 24px;
+  text-align: center;
+  padding-top: 1px;
+}
+.prf-ach.unlocked .prf-ach-icon {
+  filter: none;
+  text-shadow: 0 0 8px rgba(245,158,11,0.5);
+}
+.prf-ach-body { min-width: 0; }
+.prf-ach-name {
+  font-size: 0.79rem;
+  font-weight: 700;
+  color: rgba(255,255,255,0.45);
+  line-height: 1.3;
+}
+.prf-ach.unlocked .prf-ach-name { color: #e2e8f0; }
+.prf-ach-desc {
+  font-size: 0.65rem;
+  color: rgba(255,255,255,0.3);
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+/* ── PlaySphere Friends PvP Grid View ── */
+.profile-friends-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.profile-friend-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 12px;
+  cursor: pointer;
+  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s, box-shadow 0.2s;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.profile-friend-card:hover, .profile-friend-card:focus, .profile-friend-card.selected {
+  transform: translateY(-4px);
+  border-color: rgba(59, 130, 246, 0.55);
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.2);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* ── PlaySphere Game Library Grid View ── */
+.profile-games-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.profile-game-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s, box-shadow 0.2s;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.profile-game-card:hover, .profile-game-card:focus, .profile-game-card.selected {
+  transform: translateY(-4px);
+  border-color: rgba(59, 130, 246, 0.55);
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.2);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.profile-game-thumbnail-wrap {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  position: relative;
+  overflow: hidden;
+  background: #000;
+}
+
+.profile-game-thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.profile-game-card:hover .profile-game-thumbnail {
+  transform: scale(1.08);
+}
+
+.profile-game-card-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.45);
+  backdrop-filter: blur(2px);
+  opacity: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.25s ease;
+}
+
+.profile-game-card:hover .profile-game-card-overlay {
+  opacity: 1;
+}
+
+.profile-game-play-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+  transform: scale(0.85);
+  transition: transform 0.2s;
+}
+
+.profile-game-card:hover .profile-game-play-btn {
+  transform: scale(1);
+}
+
+.profile-game-card-body {
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.profile-game-card-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #f8fafc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-game-card-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+  font-size: 0.58rem;
+  font-weight: 600;
+}
+
+.profile-game-card-hours {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.profile-game-card-ach-pct {
+  color: #60a5fa;
+}
+
+.profile-friend-card-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+}
+
+.profile-friend-avatar-wrap {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: #fff;
+  font-size: 1.1rem;
+  border: 2px solid rgba(59, 130, 246, 0.4);
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.2);
+  flex-shrink: 0;
+}
+
+.profile-friend-presence-dot {
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid #070d1e;
+  background: #6b7280;
+}
+
+.profile-friend-presence-dot.online {
+  background: #10b981;
+  box-shadow: 0 0 6px #10b981;
+}
+
+.profile-friend-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.profile-friend-card-name {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #f8fafc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-friend-h2h {
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: #60a5fa;
+}
+
+
+/* ── PlaySphere Steam-Style H2H Rivals Banner ── */
+.profile-vs-banner {
+  width: 100%;
+  height: 140px;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid rgba(59, 130, 246, 0.15);
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, #090e24 0%, #0f172a 100%);
+}
+
+.vs-banner-bg-overlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(59, 130, 246, 0.18) 0%, transparent 70%);
+}
+
+.vs-banner-content {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 16px 30px;
+  box-sizing: border-box;
+}
+
+.vs-player-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 120px;
+}
+
+.vs-avatar {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  border: 3px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 0 15px rgba(59,130,246,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.5rem;
+  font-weight: 900;
+  overflow: hidden;
+}
+
+.vs-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.vs-name {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 110px;
+}
+
+.vs-badge {
+  font-size: 0.54rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 10px;
+  letter-spacing: 0.05em;
+}
+
+.vs-badge.me {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.4);
+}
+
+.vs-badge.rival {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+/* Center VS divider */
+.vs-center-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  max-width: 220px;
+}
+
+.vs-glow-circle {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6, #ef4444);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 0.82rem;
+  color: #fff;
+  border: 2.5px solid #090e24;
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.6);
+  font-style: italic;
+}
+
+.vs-h2h-progress-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+}
+
+.vs-progress-fill.me {
+  background: #3b82f6;
+  box-shadow: 0 0 6px #3b82f6;
+}
+
+.vs-progress-fill.them {
+  background: #ef4444;
+  box-shadow: 0 0 6px #ef4444;
+}
+
+.vs-record-score {
+  font-size: 0.95rem;
+  font-weight: 900;
+  color: #f8fafc;
+  letter-spacing: 0.05em;
+}
+
+
+/* ── PlaySphere Steam-Style Details View (Common) ── */
+.profile-details-header {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 10px;
+}
+
+.profile-back-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  transition: background 0.2s, color 0.2s, transform 0.1s;
+  outline: none;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-family: inherit;
+}
+
+.profile-back-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.profile-back-btn:active {
+  transform: scale(0.97);
+}
+
+.profile-details-content-grid {
+  display: grid;
+  grid-template-columns: 1fr 180px;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.profile-details-achievements-pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.profile-details-metadata-pane {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.metadata-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: left;
+}
+
+.metadata-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.metadata-row .metadata-label {
+  font-size: 0.52rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.35);
+  letter-spacing: 0.06em;
+}
+
+.metadata-row .metadata-value {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #e2e8f0;
+}
+
+/* Outcome styling for PvP list matches */
+.pvp-outcome-badge {
+  font-size: 0.58rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-left: auto;
+}
+
+.pvp-outcome-badge.won {
+  background: rgba(16, 185, 129, 0.18);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.pvp-outcome-badge.lost {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+

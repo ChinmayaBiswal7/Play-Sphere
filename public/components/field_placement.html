@@ -1,0 +1,32 @@
+<!-- Field Placement Modal Overlay -->
+<div id="field-placement-modal" class="field-placement-modal">
+  <div class="field-placement-content">
+    <div class="field-placement-title">FIELD PLACEMENT</div>
+    <div class="field-placement-hint">
+      Click a fielder (yellow dot) to select them,<br>
+      then click anywhere on the field to place them.
+    </div>
+
+    <!-- Large circular field map -->
+    <div id="field-map-circle" class="field-map-circle">
+      <div class="map-pitch"></div>
+      <div class="map-inner-circle"></div>
+      <!-- Bowler end crease -->
+      <div class="map-crease" style="left: calc(50% - 12px); top: calc(50% - 34.5px);"></div>
+      <!-- Batting end crease -->
+      <div class="map-crease" style="left: calc(50% - 12px); top: calc(50% + 34.5px);"></div>
+
+      <!-- Static dots for pitch participants -->
+      <div id="map-batsman" class="map-dot batsman" style="left: 50%; top: calc(50% + 34.5px);"></div>
+      <div id="map-bowler" class="map-dot bowler" style="left: 50%; top: calc(50% - 34.5px);"></div>
+
+      <!-- Dynamic fielder dots will be injected here on open -->
+      <div id="map-fielders-container"></div>
+    </div>
+
+    <div class="field-placement-btn-row">
+      <button id="field-placement-apply-btn" class="field-placement-btn apply">APPLY</button>
+      <button id="field-placement-cancel-btn" class="field-placement-btn cancel">CANCEL</button>
+    </div>
+  </div>
+</div>

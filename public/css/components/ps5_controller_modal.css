@@ -1,0 +1,110 @@
+/* ── PlaySphere Controller Link Modal Styles ── */
+
+#ps5-controller-modal .controller-card {
+  max-width: 460px;
+  min-height: 480px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  box-sizing: border-box;
+  text-align: center;
+  gap: 20px;
+}
+
+#ps5-controller-modal h2 {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: 0.05em;
+  margin: 0;
+  font-family: inherit;
+}
+
+#ps5-controller-modal .controller-instructions {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  margin: 0 0 10px 0;
+  max-width: 320px;
+  font-family: inherit;
+}
+
+/* QR Container */
+.controller-qr-container {
+  width: 170px;
+  height: 170px;
+  background: #ffffff;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  box-shadow: 0 0 30px rgba(96,165,250,0.25);
+  position: relative;
+  box-sizing: border-box;
+}
+
+#ps5-controller-qr-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: none;
+}
+
+#ps5-controller-qr-spinner {
+  font-size: 0.8rem;
+  color: #020617;
+  font-weight: bold;
+  font-family: inherit;
+}
+
+/* Code Display Box */
+.controller-code-box {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 10px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.controller-code-label {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+#ps5-controller-room-val {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #60a5fa;
+  letter-spacing: 0.1em;
+  font-family: monospace;
+}
+
+/* Status Indicator */
+.controller-status-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+#ps5-controller-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 10px #ef4444;
+  display: inline-block;
+}
+
+#ps5-controller-status-text {
+  font-weight: 600;
+}

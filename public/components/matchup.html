@@ -1,0 +1,111 @@
+<!-- Captains Faceoff Matchup Screen -->
+<div id="matchup-screen" class="fc-menu-screen hidden">
+  <!-- Top Bar -->
+  <div class="fc-top-bar">
+    <div class="fc-logo">MATCH PREVIEW</div>
+    <div class="match-mode-title" id="faceoff-match-mode-title">T20 INTERNATIONAL</div>
+  </div>
+
+  <!-- Captains Faceoff Layout -->
+  <div class="faceoff-container">
+    <!-- Left Captain Panel (Home Team) -->
+    <div class="faceoff-captain-panel left-panel" id="faceoff-panel-home" style="cursor: pointer;">
+      <div class="faceoff-team-info">
+        <div class="faceoff-flag" id="faceoff-user-flag">🇮🇳</div>
+        <div class="faceoff-team-name" id="faceoff-user-team-name">INDIA</div>
+        <div class="faceoff-rating-badge" id="faceoff-user-rating">OVR 85</div>
+      </div>
+      <div class="faceoff-captain-name" id="faceoff-user-captain-name">ROHIT SHARMA</div>
+      <div class="faceoff-edit-hint">CLICK TO CHANGE TEAM</div>
+    </div>
+
+    <!-- Center Panel with Match Info & Conditions -->
+    <div class="faceoff-center-panel">
+      <div class="faceoff-tournament-logo">🏆</div>
+      <div class="faceoff-stadium" id="faceoff-stadium-name">HPCA STADIUM</div>
+      <div class="faceoff-datetime">01.01.2025 | 7:30 PM</div>
+      <div class="faceoff-match-type">SERIES (2 CLUBS) - MATCH 1</div>
+
+      <!-- Weather/Pitch Details Grid -->
+      <div class="faceoff-conditions-bar">
+        <div class="condition-badge" title="Pitch Type">
+          <span class="badge-icon">🏏</span>
+          <span class="badge-label" id="faceoff-cond-pitch">Hard</span>
+        </div>
+        <div class="condition-badge" title="Outfield Type">
+          <span class="badge-icon">🌱</span>
+          <span class="badge-label" id="faceoff-cond-outfield">Grassy</span>
+        </div>
+        <div class="condition-badge" title="Wickets/Grass">
+          <span class="badge-icon">🪵</span>
+          <span class="badge-label" id="faceoff-cond-wickets">None</span>
+        </div>
+        <div class="condition-badge" title="Temperature">
+          <span class="badge-icon">🌡️</span>
+          <span class="badge-label" id="faceoff-cond-temp">15°C</span>
+        </div>
+        <div class="condition-badge" title="Wind Speed">
+          <span class="badge-icon">💨</span>
+          <span class="badge-label" id="faceoff-cond-wind">1 km/h</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Captain Panel (Away Team) -->
+    <div class="faceoff-captain-panel right-panel" id="faceoff-panel-away" style="cursor: pointer;">
+      <div class="faceoff-team-info">
+        <div class="faceoff-flag" id="faceoff-opp-flag">🇦🇺</div>
+        <div class="faceoff-team-name" id="faceoff-opp-team-name">AUSTRALIA</div>
+        <div class="faceoff-rating-badge" id="faceoff-opp-rating">OVR 88</div>
+      </div>
+      <div class="faceoff-captain-name" id="faceoff-opp-captain-name">MITCHELL MARSH</div>
+      <div class="faceoff-edit-hint">CLICK TO CHANGE TEAM</div>
+    </div>
+  </div>
+
+  <!-- Bottom Buttons -->
+  <div class="faceoff-footer-actions">
+    <button id="matchup-btn-start" class="fc-action-btn primary">START MATCH</button>
+    <button id="matchup-btn-settings" class="fc-action-btn">MATCH SETTINGS</button>
+    <button id="matchup-btn-lineup" class="fc-action-btn">EDIT LINEUP AND KIT</button>
+    <button id="matchup-btn-back" class="fc-action-btn danger">BACK</button>
+  </div>
+
+  <!-- Inline Match Settings Panel Modal (hidden by default) -->
+  <div id="match-settings-modal" class="settings-modal hidden">
+    <div class="settings-modal-content">
+      <div class="modal-header">MATCH SETTINGS</div>
+      <div class="modal-body">
+        <div class="setting-row">
+          <label for="matchup-stadium">STADIUM</label>
+          <select id="matchup-stadium" class="matchup-select">
+            <option value="default">Melbourne Cricket Ground</option>
+            <option value="ekana">Ekana Stadium (Lucknow)</option>
+            <option value="stadium_usdz">USDZ Stadium</option>
+            <option value="qaddafi">Qaddafi Stadium (Lahore)</option>
+            <option value="classic">Classic Cricket Stadium</option>
+            <option value="grand">Grand Cricket Stadium</option>
+            <option value="cricket_ground">Cricket Ground Arena</option>
+          </select>
+        </div>
+        <div class="setting-row">
+          <label for="matchup-overs">MATCH LENGTH</label>
+          <select id="matchup-overs" class="matchup-select">
+            <option value="1">1 Over</option>
+            <option value="2" selected>2 Overs</option>
+            <option value="5">5 Overs</option>
+            <option value="10">10 Overs</option>
+            <option value="20">20 Overs</option>
+          </select>
+        </div>
+        <div class="setting-row" style="display: none;">
+          <label for="matchup-target">TARGET RUNS (CHASE)</label>
+          <input type="number" id="matchup-target" min="1" max="999" value="24" class="matchup-select" style="text-align: center;" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="settings-modal-close-btn" class="fc-action-btn primary">APPLY & CLOSE</button>
+      </div>
+    </div>
+  </div>
+</div>

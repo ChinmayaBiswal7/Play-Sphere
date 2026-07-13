@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script>
+    // Universal error interceptor to log client crashes directly to Node backend console
+    window.onerror = (msg, src, line, col, err) => {
+      fetch('/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ type: 'error', msg, src, line, col, stack: err?.stack })
+      }).catch(() => {});
+      return false; // let browser still print to devtools console
+    };
+    window.onunhandledrejection = (event) => {
+      fetch('/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ 
+          type: 'unhandled_rejection', 
+          msg: event.reason?.message || String(event.reason), 
+          stack: event.reason?.stack 
+        })
+      }).catch(() => {});
+    };
+
+    window.addEventListener('unhandledrejection', (e) => {
+      fetch('/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({
+          type: 'unhandledrejection',
+          msg: e.reason ? String(e.reason.message || e.reason) : 'Unknown promise rejection',
+          stack: e.reason ? String(e.reason.stack || '') : ''
+        })
+      });
+    });
+
+    const originalLog = console.log;
+    console.log = function(...args) {
+      originalLog.apply(console, args);
+      const msg = args.map(a => {
+        try {
+          if (a instanceof Error) return a.stack;
+          if (typeof a === 'object' && a !== null) {
+            if (a.isAnimationMixer || a.isObject3D) return `[ThreeJS Object: ${a.type || 'Object'}]`;
+            return JSON.stringify(a);
+          }
+          return String(a);
+        } catch (e) {
+          return '[Unserializable Object]';
+        }
+      }).join(' ');
+      
+      if (msg.includes('[Audit]') || msg.includes('mismatch') || msg.includes('[Diagnostic]')) {
+        fetch('/log', {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({ type: 'log', msg })
+        }).catch(() => {});
+      }
+    };
+  </script>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PlaySphere Console</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='32' stroke='%233b82f6' stroke-width='6' fill='none'/><ellipse cx='50' cy='50' rx='42' ry='15' stroke='%233b82f6' stroke-width='4' fill='none' transform='rotate(-30 50 50)'/><ellipse cx='50' cy='50' rx='42' ry='15' stroke='%2360a5fa' stroke-width='3.5' fill='none' transform='rotate(30 50 50)'/><circle cx='50' cy='50' r='14' fill='%23ffffff'/></svg>">
+  
+  <link rel="stylesheet" href="css/base.css?v=60">
+  <link rel="stylesheet" href="css/menus.css?v=60">
+  <link rel="stylesheet" href="css/hud.css?v=60">
+  <link rel="stylesheet" href="css/sidebars.css?v=60">
+  <link rel="stylesheet" href="css/overlays.css?v=60">
+  <link rel="stylesheet" href="css/ps5_dashboard.css?v=60">
+  <link rel="stylesheet" href="css/components/ps5_boot.css?v=60">
+  <link rel="stylesheet" href="css/components/ps5_dashboard_home.css?v=60">
+  <link rel="stylesheet" href="css/components/ps5_store.css?v=60">
+  <link rel="stylesheet" href="css/components/ps5_music_player.css?v=60">
+  <link rel="stylesheet" href="css/components/ps5_friends_modal.css?v=60">
+  <link rel="stylesheet" href="css/components/ps5_profile_modal.css?v=60">
+  <link rel="stylesheet" href="css/components/ps5_controller_modal.css?v=60">
+  <link rel="stylesheet" href="css/components/ps5_achievement_system.css?v=60">
+  <link rel="stylesheet" href="css/team_selection.css?v=60">
+  <link rel="stylesheet" href="css/faceoff_lineup.css?v=60">
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.147.0/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/libs/fflate.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/FBXLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/utils/SkeletonUtils.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+  <div id="canvas-container"></div>
+
+  <script>
+    [
+      'splash_menu', 'matchup', 'toss', 'match_intro', 'innings_break',
+      'controls_settings', 'match_loading', 'lobby', 'sidebars', 'bowling_hud',
+      'hud', 'game_over', 'pause_settings', 'profile', 'crease_tracker',
+      'shot_rating', 'broadcast_overlay', 'field_placement', 'prematch_batsman_selection',
+      'team_selection', 'lineup_editor',
+      'ps5_boot', 'ps5_dashboard_home', 'ps5_store', 'ps5_music_player',
+      'ps5_friends_modal', 'ps5_profile_modal', 'ps5_controller_modal'
+    ].forEach(name => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('GET', 'components/' + name + '.html?v=61', false);
+      xhr.send(null);
+      if (xhr.status === 200) {
+        document.write(xhr.responseText);
+      } else {
+        console.error('Failed to load component: ' + name);
+      }
+    });
+  </script>
+
+  <script src="js/gamepad_emulator.js?v=60"></script>
+  <script src="js/socket_controller.js?v=60"></script>
+  <script src="js/input_controller.js?v=60"></script>
+  <script src="js/game_state_manager.js?v=60"></script>
+  <script src="js/batting_controller.js?v=60"></script>
+  <script src="js/toss_cutscene.js?v=60"></script>
+  <script src="js/wicket_cutscene.js?v=60"></script>
+  <script src="js/entrance_cutscene.js?v=60"></script>
+  <script src="js/animation_system.js?v=60"></script>
+
+  <script src="js/socket_manager.js?v=60"></script>
+  <script src="js/ui_menus.js?v=60"></script>
+  <script src="js/bowling_hud.js?v=60"></script>
+  <script type="module" src="js/profile.js?v=60"></script>
+  <script src="js/components/ps5_sound_manager.js?v=60"></script>
+  <script src="js/components/ps5_achievement_system.js?v=60"></script>
+  <script src="js/components/ps5_music_player.js?v=60"></script>
+  <script src="js/components/ps5_store.js?v=60"></script>
+  <script src="js/components/ps5_friends_modal.js?v=60"></script>
+  <script src="js/components/ps5_profile_modal.js?v=60"></script>
+  <script src="js/components/ps5_controller_modal.js?v=60"></script>
+  <script src="js/components/ps5_dashboard_home.js?v=61"></script>
+  <script src="js/components/ps5_boot.js?v=61"></script>
+  <script src="js/ps5_dashboard.js?v=61"></script>
+  <script src="js/bowling_flow.js?v=60"></script>
+  <script src="js/field_placement.js?v=60"></script>
+  <script src="js/replay_system.js?v=60"></script>
+  <script src="js/drs_system.js?v=60"></script>
+  <script src="js/runout_system.js?v=60"></script>
+  <script src="js/qte_system.js?v=60"></script>
+  <script src="js/prematch_batsman_selection.js?v=60"></script>
+  <script src="js/intro_animation.js?v=60"></script>
+  <script src="js/team_selection.js?v=60"></script>
+  <script src="js/lineup_editor.js?v=60"></script>
+  <script type="module" src="game.js?v=60"></script>
+</body>
+</html>

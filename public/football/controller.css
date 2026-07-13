@@ -1,0 +1,403 @@
+/* PlaySphere Virtual Football Controller Style */
+
+:root {
+  --bg-color: #030712;
+  --glow-blue: #3b82f6;
+  --glow-cyan: #22d3ee;
+  --glow-red: #ef4444;
+  --glow-green: #10b981;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+body, html {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg-color);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #fff;
+}
+
+/* ── Landscape orientation warnings ── */
+.landscape-warning {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #030712;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 30px;
+  text-align: center;
+}
+
+.landscape-warning h2 {
+  font-size: 1.5rem;
+  color: #60a5fa;
+  margin-bottom: 12px;
+}
+
+.landscape-warning p {
+  color: #94a3b8;
+  font-size: 0.9rem;
+  max-width: 320px;
+}
+
+/* Show controller ONLY in landscape */
+@media (orientation: landscape) {
+  .landscape-warning {
+    display: none;
+  }
+}
+
+/* ── Pairing Screen ── */
+.pairing-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #090d16;
+  z-index: 500;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.pairing-box {
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  border-radius: 16px;
+  padding: 24px;
+  width: 90%;
+  max-width: 420px;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.pairing-box h3 {
+  font-size: 1.2rem;
+  color: #60a5fa;
+  margin-bottom: 8px;
+  letter-spacing: 0.05em;
+}
+
+.pairing-box p {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  margin-bottom: 16px;
+}
+
+.pairing-box input {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1.5px solid rgba(59, 130, 246, 0.3);
+  border-radius: 8px;
+  color: #fff;
+  padding: 12px;
+  font-size: 1.4rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-align: center;
+  margin-bottom: 16px;
+  text-transform: uppercase;
+}
+
+.pairing-box input:focus {
+  border-color: #60a5fa;
+  outline: none;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+}
+
+.pairing-box button {
+  width: 100%;
+  background: #3b82f6;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pairing-box button:hover {
+  background: #2563eb;
+}
+
+.error-msg {
+  color: #ef4444;
+  font-size: 0.8rem;
+  margin-top: 10px;
+  font-weight: 600;
+}
+
+/* ── MAIN CONTROLLER CONTAINER ── */
+.controller-container {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1.2fr;
+  grid-template-rows: 44px 1fr;
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
+  padding: 12px 24px 20px 24px;
+  gap: 10px;
+}
+
+/* Shoulder / utility bars */
+.shoulder-bar-left, .shoulder-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+.shoulder-bar-right {
+  justify-content: flex-end;
+}
+
+.btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.trigger-btn {
+  height: 36px;
+  padding: 0 18px;
+  font-weight: 800;
+  font-size: 0.85rem;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.active-sprint {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.4);
+  color: #93c5fd;
+}
+.active-sprint.pressed {
+  background: #3b82f6;
+  color: #fff;
+  box-shadow: 0 0 12px #3b82f6;
+}
+
+.utility-btn {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #94a3b8;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 4px;
+}
+
+/* ── GRIPS ── */
+.left-grip, .right-grip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Left Joystick stick */
+.joystick-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.stick-boundary {
+  width: 120px;
+  height: 120px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 3px solid rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+  position: relative;
+  box-shadow: inset 0 0 12px rgba(0,0,0,0.8);
+}
+
+.stick-knob {
+  width: 52px;
+  height: 52px;
+  background: radial-gradient(circle at 30% 30%, #4b5563 0%, #1f2937 100%);
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-radius: 50%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.6);
+}
+
+.stick-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #4b5563;
+}
+
+/* ── Center bridge display ── */
+.center-bridge {
+  grid-column: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.touchpad-area {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  width: 150px;
+  height: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,0.5);
+  border-top: 2px solid rgba(59, 130, 246, 0.3);
+}
+
+.game-logo {
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  color: #60a5fa;
+  margin-bottom: 4px;
+}
+
+.room-indicator {
+  font-size: 0.95rem;
+  font-weight: 900;
+  font-family: monospace;
+  color: #fff;
+  letter-spacing: 0.1em;
+}
+
+/* Lights bar glow */
+.lightbar-glow {
+  width: 110px;
+  height: 4px;
+  background-color: var(--glow-red);
+  border-radius: 2px;
+  box-shadow: 0 0 10px var(--glow-red);
+  transition: all 0.3s ease;
+}
+
+.connection-status {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: #64748b;
+}
+
+/* ── Action buttons layout ── */
+.action-buttons-group {
+  position: relative;
+  width: 140px;
+  height: 140px;
+}
+
+.action-btn {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 0.9rem;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+}
+
+.action-btn span {
+  font-size: 0.9rem;
+}
+
+.action-btn small {
+  font-size: 0.45rem;
+  font-weight: 800;
+  color: #94a3b8;
+  margin-top: -2px;
+}
+
+/* Cross pass (bottom) */
+.act-cross {
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  border-color: rgba(96, 165, 250, 0.4);
+  background: rgba(96, 165, 250, 0.08);
+  color: #60a5fa;
+}
+.act-cross.pressed {
+  background: #3b82f6;
+  color: #fff;
+  box-shadow: 0 0 10px var(--glow-blue);
+}
+
+/* Circle shoot (right) */
+.act-circle {
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  border-color: rgba(248, 113, 113, 0.4);
+  background: rgba(248, 113, 113, 0.08);
+  color: #f87171;
+}
+.act-circle.pressed {
+  background: #ef4444;
+  color: #fff;
+  box-shadow: 0 0 10px var(--glow-red);
+}
+
+/* Square tackle (left) */
+.act-square {
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  border-color: rgba(232, 121, 249, 0.4);
+  background: rgba(232, 121, 249, 0.08);
+  color: #e879f9;
+}
+.act-square.pressed {
+  background: #d946ef;
+  color: #fff;
+  box-shadow: 0 0 10px #d946ef;
+}
+
+/* Triangle lob (top) */
+.act-triangle {
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  border-color: rgba(52, 211, 153, 0.4);
+  background: rgba(52, 211, 153, 0.08);
+  color: #34d399;
+}
+.act-triangle.pressed {
+  background: #10b981;
+  color: #fff;
+  box-shadow: 0 0 10px var(--glow-green);
+}

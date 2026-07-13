@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chibi Tennis Duel - PlaySphere Console</title>
+  <link rel="stylesheet" href="tennis.css">
+  
+  <!-- Socket.io dependency -->
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+  <!-- 2D Canvas Container -->
+  <div id="canvas-container">
+    <canvas id="tennis-canvas"></canvas>
+  </div>
+
+  <!-- Game UI HUD Overlays -->
+  <div id="hud-overlay" class="hud-overlay hidden">
+    <!-- Split line down the middle of the screen -->
+    <div class="split-screen-divider"></div>
+
+    <!-- Pro Tennis Scoreboard -->
+    <div class="tennis-pro-scoreboard">
+      <div class="score-row header-row">
+        <span class="lbl-col">MATCH</span>
+        <span class="set-col">S1</span>
+        <span class="set-col">S2</span>
+        <span class="set-col">S3</span>
+        <span class="game-col">G</span>
+        <span class="point-col">PTS</span>
+      </div>
+      <div class="score-row p1-row">
+        <span class="lbl-col p1-text" id="p1-name-hud"><span class="serve-ball-ind" id="p1-serve-ind">●</span> PLAYER 1</span>
+        <span class="set-col" id="p1-s1">-</span>
+        <span class="set-col" id="p1-s2">-</span>
+        <span class="set-col" id="p1-s3">-</span>
+        <span class="game-col" id="p1-games-hud">0</span>
+        <span class="point-col highlight-pts" id="p1-points-hud">LOVE</span>
+      </div>
+      <div class="score-row p2-row">
+        <span class="lbl-col p2-text" id="p2-name-hud"><span class="serve-ball-ind" id="p2-serve-ind"></span> PLAYER 2</span>
+        <span class="set-col" id="p2-s1">-</span>
+        <span class="set-col" id="p2-s2">-</span>
+        <span class="set-col" id="p2-s3">-</span>
+        <span class="game-col" id="p2-games-hud">0</span>
+        <span class="point-col highlight-pts" id="p2-points-hud">LOVE</span>
+      </div>
+    </div>
+
+    <!-- Gameplay match status notifications (e.g. OUT, FAULT, POINT P1) -->
+    <div id="match-notification" class="match-notification hidden">POINT PLAYER 1</div>
+  </div>
+
+  <!-- 1. Connection Lobby Screen -->
+  <div id="lobby-screen" class="lobby-screen">
+    <div class="lobby-divider"></div>
+    <div class="lobby-title-bar">
+      <h1>CHIBI TENNIS DUEL</h1>
+      <p class="lobby-subtitle">LOCAL 2-PLAYER PHONE CONTROLLER SHOWDOWN</p>
+    </div>
+
+    <div class="lobby-split-container">
+      <!-- Player 1 Connection -->
+      <div class="player-lobby-panel" id="lobby-p1">
+        <div class="panel-inner">
+          <div class="player-header p1-text">PLAYER 1 (LEFT COURT)</div>
+          <div class="connection-status-label" id="p1-connect-status">WAITING FOR CONTROLLER...</div>
+          
+          <div class="qr-container" id="p1-qr-container">
+            <div class="qr-spinner" id="p1-qr-spinner">GENERATING QR...</div>
+            <img class="qr-code-img" id="p1-qr-image" src="" alt="P1 QR Code">
+          </div>
+          <div class="scan-instructions">Scan QR to connect Phone 1</div>
+        </div>
+      </div>
+
+      <!-- Player 2 Connection -->
+      <div class="player-lobby-panel" id="lobby-p2">
+        <div class="panel-inner">
+          <div class="player-header p2-text">PLAYER 2 (RIGHT COURT)</div>
+          <div class="connection-status-label" id="p2-connect-status">WAITING FOR CONTROLLER...</div>
+          
+          <div class="qr-container" id="p2-qr-container">
+            <div class="qr-spinner" id="p2-qr-spinner">GENERATING QR...</div>
+            <img class="qr-code-img" id="p2-qr-image" src="" alt="P2 QR Code">
+          </div>
+          <div class="scan-instructions">Scan QR to connect Phone 2</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="console-room-footer">
+      <span>ROOM CODE: </span>
+      <span class="room-code-badge" id="lobby-room-code">----</span>
+    </div>
+  </div>
+
+  <!-- 2. Match Setup Screen -->
+  <div id="setup-screen" class="setup-screen hidden">
+    <div class="setup-box">
+      <h2>MATCH SETUP</h2>
+      <p class="setup-guide">Player 1 selects format and rules. Both players press <strong>HIT</strong> to Ready.</p>
+
+      <div class="setup-label">MATCH FORMAT</div>
+      <div class="format-options">
+        <div class="option-card" data-format="QUICK">QUICK TENNIS</div>
+        <div class="option-card active" data-format="1SET">ONE SET</div>
+        <div class="option-card" data-format="3SET">BEST OF 3 SETS</div>
+      </div>
+
+      <div id="quick-target-section" class="hidden" style="margin-top: 15px;">
+        <div class="setup-label">TARGET POINTS</div>
+        <div class="target-options">
+          <div class="option-card" data-points="5">5 POINTS</div>
+          <div class="option-card active" data-points="10">10 POINTS</div>
+          <div class="option-card" data-points="15">15 POINTS</div>
+          <div class="option-card" data-points="21">21 POINTS</div>
+        </div>
+      </div>
+
+      <div class="player-ready-bar" style="margin-top: 25px;">
+        <div class="ready-indicator p1-ready-indicator" id="p1-ready-badge">PLAYER 1: WAITING</div>
+        <div class="ready-indicator p2-ready-indicator" id="p2-ready-badge">PLAYER 2: WAITING</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Countdown Overlay -->
+  <div id="countdown-overlay" class="countdown-overlay hidden">
+    <div id="countdown-number" class="countdown-number">3</div>
+  </div>
+
+  <!-- 4. Pause / Disconnect Overlay -->
+  <div id="pause-overlay" class="pause-overlay hidden">
+    <div class="pause-box">
+      <h2 id="pause-title">CONTROLLER DISCONNECTED</h2>
+      <p id="pause-desc">The match is paused. Waiting for the player to reconnect...</p>
+      <div class="reconnect-timer" id="reconnect-timer-val">30s</div>
+    </div>
+  </div>
+
+  <!-- 5. Game Over / Match End Screen -->
+  <div id="game-over-screen" class="game-over-screen hidden">
+    <div class="winner-panel">
+      <h1 class="winner-announcement" id="winner-announcement-text">PLAYER 1 WINS!</h1>
+      <p class="final-score-text" id="final-score-text">Final Score: 10 - 7</p>
+
+      <div class="game-over-choices">
+        <button class="choice-btn highlight-btn" id="btn-rematch">REMATCH (0/2 READY)</button>
+        <button class="choice-btn secondary-btn" id="btn-exit">EXIT TO DASHBOARD</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. Pause / Rules Modal Overlay -->
+  <div id="rules-overlay" class="pause-overlay hidden">
+    <div class="rules-modal-box">
+      <h2>GAME PAUSED - RULES & REGULATIONS</h2>
+      <p class="rules-guide">Press <strong>ESC</strong> on keyboard or click button to resume the match.</p>
+
+      <div class="rules-grid">
+        <div class="rules-category">
+          <h3>🎾 MATCH FLOW</h3>
+          <ul>
+            <li><strong>Match Formats:</strong> Select from Quick Tennis, One Set, or Best of 3 Sets on the match setup screen.</li>
+            <li><strong>Game Scoring:</strong> Points score as LOVE → 15 → 30 → 40 → GAME. Tie-breaks are played at 6-6 games.</li>
+            <li><strong>Change of Ends:</strong> Players switch court halves after the first game and every odd-numbered game in a set.</li>
+          </ul>
+        </div>
+        <div class="rules-category">
+          <h3>⚡ SERVING LAWS</h3>
+          <ul>
+            <li><strong>Serve Side:</strong> Serves alternate court sides every point. Start on the Right (Deuce) side, then Left (Advantage).</li>
+            <li><strong>Diagonal Target:</strong> Ball must land in the diagonally opposite service box. The target box is highlighted in your viewport.</li>
+            <li><strong>Faults & Lets:</strong> First serve out is a Fault. Second out is a Double Fault. Net touch that lands in is a Let (replay serve).</li>
+          </ul>
+        </div>
+        <div class="rules-category">
+          <h3>🥎 BALL IN PLAY</h3>
+          <ul>
+            <li><strong>Volleys:</strong> Volleys are legal during rallies, but prohibited on the immediate serve return (ball must bounce once first).</li>
+            <li><strong>Net Collisions:</strong> Net touches during rallies are in play if the ball crosses. Fails to cross awards point to opponent.</li>
+            <li><strong>Double Bounce:</strong> Hitting the ball after a second floor bounce awards the point to your opponent.</li>
+          </ul>
+        </div>
+        <div class="rules-category">
+          <h3>🎮 CONTROLLER BUTTONS</h3>
+          <ul>
+            <li><strong>Joystick:</strong> Move your chibi player. Direction controls auto-adjust when baseline ends swap.</li>
+            <li><strong>HIT:</strong> Low trajectory flat drive. Serve toss & hit are both triggered by this button.</li>
+            <li><strong>LOB / POWER:</strong> High lob shots vs high speed smash drives.</li>
+            <li><strong>DIVE:</strong> Push joystick in direction and press DIVE to execute a diving save.</li>
+          </ul>
+        </div>
+      </div>
+
+      <button class="choice-btn highlight-btn" style="margin-top: 20px; width: auto; padding: 12px 50px;" id="btn-resume-rules">RESUME MATCH</button>
+    </div>
+  </div>
+
+  <!-- Main Game Loop and Logic -->
+  <script src="tennis.js"></script>
+</body>
+</html>

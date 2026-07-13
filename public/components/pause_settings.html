@@ -1,0 +1,63 @@
+<!-- 7. Pause & Settings Screen Overlay -->
+  <div id="pause-settings-screen" class="overlay-screen hidden">
+    <div class="pause-box">
+      <h2>MATCH PAUSED</h2>
+      
+      <!-- Camera Angle Settings -->
+      <div class="pause-section">
+        <h3>CAMERA ANGLE</h3>
+        <div class="camera-options">
+          <button class="camera-btn active" data-camera="broadcast">BROADCAST</button>
+          <button class="camera-btn" data-camera="bowler">BOWLER END VIEW</button>
+          <button class="camera-btn" data-camera="tactical">TACTICAL HIGH</button>
+          <button class="camera-btn" data-camera="wicketkeeper">KEEPER VIEW</button>
+        </div>
+      </div>
+
+      <!-- Quick Audio & Video Settings in Pause -->
+      <div class="pause-section">
+        <h3>MATCH PREFERENCES</h3>
+        <div class="menu-settings-container mini">
+          <div class="setting-row">
+            <label>Graphics Quality</label>
+            <select id="pause-setting-graphics" class="settings-select">
+              <option value="low">LOW</option>
+              <option value="medium" selected>MEDIUM</option>
+              <option value="high">HIGH</option>
+            </select>
+          </div>
+          <div class="setting-row">
+            <label>Master Vol</label>
+            <input type="range" id="pause-setting-vol-master" min="0" max="1" step="0.05" value="0.8" class="settings-slider">
+          </div>
+          <div class="setting-row">
+            <label>SFX Vol</label>
+            <input type="range" id="pause-setting-vol-sfx" min="0" max="1" step="0.05" value="0.75" class="settings-slider">
+          </div>
+          <div class="setting-row">
+            <label>Crowd Vol</label>
+            <input type="range" id="pause-setting-vol-crowd" min="0" max="1" step="0.05" value="0.6" class="settings-slider">
+          </div>
+        </div>
+      </div>
+
+      <!-- Key controls reference -->
+      <div class="pause-section">
+        <h3>KEY CONTROLS REFERENCE</h3>
+        <div class="controls-grid mini">
+          <div class="control-row"><span>Move Crease</span><strong>A / D <span class="light">or</span> ◀ / ▶</strong></div>
+          <div class="control-row"><span>Grounded Swing</span><strong>Space Bar</strong></div>
+          <div class="control-row"><span>Power Shot (Loft)</span><strong>Left Ctrl</strong></div>
+          <div class="control-row"><span>Defensive Block</span><strong>Left Shift</strong></div>
+          <div class="control-row"><span>Pause Menu</span><strong>ESC Key</strong></div>
+        </div>
+      </div>
+
+      <!-- Pause actions -->
+      <div class="pause-actions">
+        <button id="pause-resume-btn" class="menu-btn primary">RESUME PLAY</button>
+        <button id="pause-restart-btn" class="menu-btn">RESTART MATCH</button>
+        <button id="pause-menu-btn" class="menu-btn danger">EXIT TO MAIN MENU</button>
+      </div>
+    </div>
+  </div>

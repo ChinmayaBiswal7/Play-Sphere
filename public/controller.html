@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script>
+    window.onerror = (msg, src, line, col, err) => {
+      fetch('/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({
+          type: 'phone_error',
+          msg,
+          src,
+          line,
+          col,
+          stack: err?.stack
+        })
+      }).catch(() => {});
+    };
+    window.addEventListener('unhandledrejection', (e) => {
+      fetch('/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({
+          type: 'phone_unhandledrejection',
+          msg: e.reason ? String(e.reason.message || e.reason) : 'Unknown promise rejection',
+          stack: e.reason ? String(e.reason.stack || '') : ''
+        })
+      }).catch(() => {});
+    });
+  </script>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>PlaySphere DualSense Controller</title>
+  <link rel="stylesheet" href="controller.css?v=56">
+  <!-- Socket.io-client -->
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+  <!-- 1. Rotate Screen Warning -->
+  <div class="landscape-warning">
+    <h2>Rotate Your Device</h2>
+    <p>Please rotate your phone to Landscape mode to use the PlaySphere controller.</p>
+  </div>
+
+  <!-- 2. Room Code Entry Overlay -->
+  <div id="loader-screen" class="loader-screen">
+    <div class="room-input-box">
+      <h3>JOIN GAME ROOM</h3>
+      <p>Enter the 4-character code displayed on the PC screen.</p>
+      
+      <input type="text" id="room-input" placeholder="CODE" maxlength="4" autocomplete="off" spellcheck="false">
+      <button id="join-btn">CONNECT CONTROLLER</button>
+      
+      <div id="room-error" class="room-error-msg"></div>
+    </div>
+  </div>
+
+  <!-- 3. Virtual PlaySphere Controller Layout -->
+  <div class="gamepad-container">
+    <!-- Left Top Controls -->
+    <div class="top-bar-left">
+      <div class="btn trigger" id="btn-l2">L2</div>
+      <div class="btn trigger" id="btn-l1">L1</div>
+      <div class="btn utility-btn" id="btn-create">Create</div>
+    </div>
+
+    <!-- Right Top Controls -->
+    <div class="top-bar-right">
+      <div class="btn trigger" id="btn-r2">R2</div>
+      <div class="btn trigger" id="btn-r1">R1</div>
+      <div class="btn utility-btn" id="btn-options">Options</div>
+    </div>
+
+    <!-- Left Side Controls (D-Pad & L3 Stick Zone) -->
+    <div class="left-grip">
+      <div class="dpad">
+        <div class="btn dpad-btn dpad-up" id="btn-dpad-up">▲</div>
+        <div class="btn dpad-btn dpad-left" id="btn-dpad-left">◀</div>
+        <div class="btn dpad-btn dpad-right" id="btn-dpad-right">▶</div>
+        <div class="btn dpad-btn dpad-down" id="btn-dpad-down">▼</div>
+      </div>
+      
+      <div class="joystick-zone-left">
+        <div class="thumbstick-base" id="left-stick-boundary">
+          <div class="thumbstick-knob" id="left-stick"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Center Bridge (Touchpad & PS Button) -->
+    <div class="center-ps-zone">
+      <div class="btn touchpad-stub" id="btn-touchpad">
+        <div style="font-size: 8px; color: #a0aec0; letter-spacing: 0.12em; font-weight: 700; margin-bottom: 2px;">TOUCHPAD</div>
+        <div style="font-size: 11px; font-weight: 800; color: #60a5fa;" id="room-display-code">ROOM: ----</div>
+      </div>
+      <div class="btn ps-btn" id="btn-ps">PS</div>
+      <div style="display: flex; align-items: center; gap: 6px; font-size: 9px; font-weight: 800; color: #a0aec0; margin-top: 4px;">
+        <span id="status-ind" style="width: 7px; height: 7px; border-radius: 50%; background-color: #ef4444; box-shadow: 0 0 6px #ef4444; display: inline-block; transition: all 0.3s ease;"></span>
+        <span id="status-text" style="letter-spacing: 0.05em;">DISCONNECTED</span>
+      </div>
+      <div style="font-size: 8px; font-weight: 700; color: #4a5568; letter-spacing: 0.05em; margin-top: 4px;" id="role-text">DASHBOARD CONTROLLER</div>
+    </div>
+
+    <!-- Right Side Controls (Action Gems & R3 Stick Zone) -->
+    <div class="right-grip">
+      <div class="action-group">
+        <div class="btn action-btn act-triangle" id="btn-triangle">▲</div>
+        <div class="btn action-btn act-square" id="btn-square">■</div>
+        <div class="btn action-btn act-circle" id="btn-circle">●</div>
+        <div class="btn action-btn act-cross" id="btn-cross">✖</div>
+      </div>
+
+      <div class="joystick-zone-right">
+        <div class="thumbstick-base" id="right-stick-boundary">
+          <div class="thumbstick-knob" id="right-stick"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Gamepad Client Script -->
+  <script src="controller.js?v=56"></script>
+</body>
+</html>

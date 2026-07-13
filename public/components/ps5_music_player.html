@@ -1,0 +1,41 @@
+<!-- Floating Music Player Widget (Bottom Right) -->
+<div id="ps5-music-player" style="display: none;">
+  <!-- Hidden YouTube iframe -->
+  <div id="ps5-yt-container" style="display:none; width:1px; height:1px; overflow:hidden; position:absolute; top:0; left:0;">
+    <div id="ps5-yt-player"></div>
+  </div>
+
+  <!-- Vinyl Disc -->
+  <div id="ps5-vinyl">
+    <div class="ps5-vinyl-center"></div>
+  </div>
+
+  <!-- Track Info -->
+  <div class="ps5-track-info">
+    <div class="ps5-track-label">NOW PLAYING</div>
+    <div id="ps5-music-title">Loading...</div>
+  </div>
+
+  <!-- Controls -->
+  <div class="ps5-music-controls">
+    <!-- Prev -->
+    <button onclick="ps5MusicPrev()" class="ps5-music-ctrl-btn" title="Previous">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+    </button>
+
+    <!-- Play/Pause -->
+    <button id="ps5-music-playbtn" onclick="ps5MusicToggle()" title="Play/Pause">
+      <svg id="ps5-music-play-icon" viewBox="0 0 24 24" width="13" height="13" fill="white"><path d="M8 5v14l11-7z"/></svg>
+    </button>
+
+    <!-- Next -->
+    <button onclick="ps5MusicNext()" class="ps5-music-ctrl-btn" title="Next">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+    </button>
+
+    <!-- Shuffle toggle -->
+    <button id="ps5-music-shufflebtn" onclick="ps5MusicShuffle()" class="ps5-music-shuffle-btn" title="Shuffle">
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M10.59 9.17 5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
+    </button>
+  </div>
+</div>

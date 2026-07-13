@@ -1,0 +1,259 @@
+<!-- PlaySphere User Profile Hub Modal -->
+<div class="ps5-profile-modal" id="ps5-profile-modal">
+  <div class="ps5-profile-card">
+    <span class="ps5-profile-close" id="ps5-profile-close-btn">&times;</span>
+
+    <!-- MAIN PROFILE VIEW -->
+    <div id="ps5-profile-main-view" style="display:contents;">
+      <!-- LEFT PANEL -->
+      <div class="prf-left">
+        <div class="prf-avatar" id="ps5-profile-avatar-container">👤</div>
+        <h2 class="prf-username" id="ps5-profile-username-val">Gamer</h2>
+        <span class="prf-level" id="ps5-profile-lvl-val">LEVEL 1</span>
+
+        <div class="prf-xp-wrap">
+          <div class="prf-xp-labels">
+            <span>Progress</span>
+            <span id="ps5-profile-xp-val">0 / 500 XP</span>
+          </div>
+          <div class="prf-xp-track">
+            <div class="prf-xp-fill" id="ps5-profile-xp-fill"></div>
+          </div>
+        </div>
+
+        <div class="prf-spacer"></div>
+
+        <div class="prf-coins">
+          <span>🪙</span>
+          <span id="ps5-profile-coins-val">0 Coins</span>
+        </div>
+        <button class="prf-btn prf-btn-primary" id="ps5-profile-auth-btn">Google Sign-In</button>
+      </div>
+
+      <!-- RIGHT PANEL -->
+      <div class="prf-right">
+        <!-- 1. FRIENDS LIST & GAMES LIBRARY HUB VIEW -->
+        <div id="ps5-profile-friends-view" style="display: block; width: 100%; height: 100%;">
+          <h3 class="prf-section-title">Friends PvP Statistics</h3>
+          <div class="profile-friends-grid" id="profile-friends-grid">
+            <!-- Dynamically rendered based on friends array + mock fallbacks -->
+          </div>
+
+          <h3 class="prf-section-title" style="margin-top: 18px;">PlaySphere Game Library</h3>
+          <div class="profile-games-grid" id="profile-games-grid">
+            <!-- Game Card 1: Cricket -->
+            <div class="profile-game-card" data-game-key="cricket" tabindex="0">
+              <div class="profile-game-thumbnail-wrap">
+                <img class="profile-game-thumbnail" src="https://images.unsplash.com/photo-1531415074968-036ba1b575da?q=80&w=260&auto=format&fit=crop" alt="Cricket Pro">
+                <div class="profile-game-card-overlay">
+                  <div class="profile-game-play-btn">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="white"><path d="M8 5v14l11-7z"/></svg>
+                  </div>
+                </div>
+              </div>
+              <div class="profile-game-card-body">
+                <div class="profile-game-card-title">Cricket Pro 2026</div>
+                <div class="profile-game-card-meta">
+                  <span class="profile-game-card-hours">42.8 hrs</span>
+                  <span class="profile-game-card-ach-pct" id="profile-ach-pct-cricket">0% Achievements</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Game Card 2: F1 Racer -->
+            <div class="profile-game-card" data-game-key="f1" tabindex="0">
+              <div class="profile-game-thumbnail-wrap">
+                <img class="profile-game-thumbnail" src="https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?q=80&w=260&auto=format&fit=crop" alt="Formula 1 Racer">
+                <div class="profile-game-card-overlay">
+                  <div class="profile-game-play-btn">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="white"><path d="M8 5v14l11-7z"/></svg>
+                  </div>
+                </div>
+              </div>
+              <div class="profile-game-card-body">
+                <div class="profile-game-card-title">Formula 1 Racer</div>
+                <div class="profile-game-card-meta">
+                  <span class="profile-game-card-hours">18.3 hrs</span>
+                  <span class="profile-game-card-ach-pct" id="profile-ach-pct-f1">0% Achievements</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Game Card 3: Mortal Combat -->
+            <div class="profile-game-card" data-game-key="mortal" tabindex="0">
+              <div class="profile-game-thumbnail-wrap">
+                <img class="profile-game-thumbnail" src="https://images.unsplash.com/photo-1552820728-8b83bb6b773f?q=80&w=260&auto=format&fit=crop" alt="Mortal Combat">
+                <div class="profile-game-card-overlay">
+                  <div class="profile-game-play-btn">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="white"><path d="M8 5v14l11-7z"/></svg>
+                  </div>
+                </div>
+              </div>
+              <div class="profile-game-card-body">
+                <div class="profile-game-card-title">Mortal Combat</div>
+                <div class="profile-game-card-meta">
+                  <span class="profile-game-card-hours">5.4 hrs</span>
+                  <span class="profile-game-card-ach-pct" id="profile-ach-pct-mortal">0% Achievements</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. PVP MATCHES DETAIL VIEW (HIDDEN BY DEFAULT) -->
+        <div id="ps5-profile-pvp-details-view" style="display: none; width: 100%; height: 100%;">
+          <div class="profile-details-header">
+            <button id="profile-pvp-back-btn" class="profile-back-btn">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="margin-right: 4px; vertical-align: middle; display: inline-block;"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+              Back to Rivals
+            </button>
+          </div>
+
+          <!-- Rivals VS Head-to-Head Banner -->
+          <div class="profile-vs-banner">
+            <div class="vs-banner-bg-overlay"></div>
+            
+            <div class="vs-banner-content">
+              <!-- Me -->
+              <div class="vs-player-card me">
+                <div class="vs-avatar" id="vs-me-avatar">👤</div>
+                <div class="vs-name" id="vs-me-name">You</div>
+                <div class="vs-badge me">YOU</div>
+              </div>
+
+              <!-- VS Divider & H2H record -->
+              <div class="vs-center-wrap">
+                <div class="vs-glow-circle">VS</div>
+                <div class="vs-h2h-progress-bar">
+                  <div class="vs-progress-fill me" id="vs-fill-me" style="width: 50%;"></div>
+                  <div class="vs-progress-fill them" id="vs-fill-them" style="width: 50%;"></div>
+                </div>
+                <div class="vs-record-score" id="vs-record-text">0 - 0</div>
+              </div>
+
+              <!-- Rival -->
+              <div class="vs-player-card them">
+                <div class="vs-avatar" id="vs-them-avatar">👤</div>
+                <div class="vs-name" id="vs-them-name">Rival</div>
+                <div class="vs-badge rival">RIVAL</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- History content grid -->
+          <div class="profile-details-content-grid">
+            <!-- Left Side: Match history cards dates wise -->
+            <div class="profile-details-achievements-pane">
+              <h3 class="prf-section-title">Match History</h3>
+              <div class="prf-ach-list" id="ps5-pvp-matches-list">
+                <!-- Rendered dynamically -->
+              </div>
+            </div>
+
+            <!-- Right Side: Stats breakdown -->
+            <div class="profile-details-metadata-pane">
+              <h3 class="prf-section-title">Rivalry Stats</h3>
+              <div class="metadata-card">
+                <div class="metadata-row">
+                  <span class="metadata-label">TOTAL PVP PLAYED</span>
+                  <span class="metadata-value" id="vs-meta-total">0</span>
+                </div>
+                <div class="metadata-row">
+                  <span class="metadata-label">YOUR WIN RATIO</span>
+                  <span class="metadata-value" id="vs-meta-winratio">0%</span>
+                </div>
+                <div class="metadata-row">
+                  <span class="metadata-label">FAVORITE GAME</span>
+                  <span class="metadata-value" id="vs-meta-favgame">Cricket Pro</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. STEAM GAME DETAILS VIEW (HIDDEN BY DEFAULT) -->
+        <div id="ps5-profile-details-view" style="display: none; width: 100%; height: 100%;">
+          <div class="profile-details-header">
+            <button id="profile-details-back-btn" class="profile-back-btn">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="margin-right: 4px; vertical-align: middle; display: inline-block;"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+              Back to Library
+            </button>
+          </div>
+
+          <div class="profile-hero-banner">
+            <img id="profile-hero-img" src="" alt="banner">
+            <div class="profile-hero-overlay">
+              <div class="profile-hero-text">
+                <h1 id="profile-hero-title">Game Title</h1>
+                <div class="profile-hero-meta-row">
+                  <div class="profile-hero-meta-item">
+                    <span class="meta-label">PLAY TIME</span>
+                    <span class="meta-value" id="profile-hero-playtime">0 hrs</span>
+                  </div>
+                  <div class="profile-hero-meta-item">
+                    <span class="meta-label">LAST PLAYED</span>
+                    <span class="meta-value" id="profile-hero-lastplayed">Yesterday</span>
+                  </div>
+                  <div class="profile-hero-meta-item">
+                    <span class="meta-label">ACHIEVEMENTS</span>
+                    <span class="meta-value" id="profile-hero-ach-count">0 / 6</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="profile-details-content-grid">
+            <div class="profile-details-achievements-pane">
+              <h3 class="prf-section-title">Achievements</h3>
+              <div class="prf-ach-list" id="ps5-ach-list-details">
+                <!-- Rendered dynamically -->
+              </div>
+            </div>
+
+            <div class="profile-details-metadata-pane">
+              <h3 class="prf-section-title">Game Info</h3>
+              <div class="metadata-card">
+                <div class="metadata-row">
+                  <span class="metadata-label">DEVELOPER</span>
+                  <span class="metadata-value" id="profile-meta-developer">PlaySphere Studios</span>
+                </div>
+                <div class="metadata-row">
+                  <span class="metadata-label">PUBLISHER</span>
+                  <span class="metadata-value" id="profile-meta-publisher">PlaySphere Publishing</span>
+                </div>
+                <div class="metadata-row">
+                  <span class="metadata-label">GENRE</span>
+                  <span class="metadata-value" id="profile-meta-genre">Sports</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /main-view -->
+
+    <!-- LOGIN / GUEST VIEW -->
+    <div id="ps5-profile-login-view" style="display:flex; flex-direction:column; align-items:center; justify-content:center; width:100%; height:100%; padding:30px 20px; box-sizing:border-box; text-align:center; gap:16px;">
+      <!-- Branding Header Logo (Always visible!) -->
+      <svg id="ps5-profile-login-logo" class="ps5-boot-logo" style="width:70px; height:70px; filter: drop-shadow(0 0 15px rgba(59,130,246,0.6)); flex-shrink:0; margin-bottom: 2px;" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="50" cy="50" r="32" stroke="#ffffff" stroke-width="4" stroke-linecap="round"/>
+        <ellipse cx="50" cy="50" rx="42" ry="15" stroke="#3b82f6" stroke-width="3" transform="rotate(-30 50 50)" stroke-dasharray="120 40"/>
+        <ellipse cx="50" cy="50" rx="42" ry="15" stroke="#60a5fa" stroke-width="2.5" transform="rotate(30 50 50)" stroke-dasharray="100 60"/>
+        <circle cx="50" cy="50" r="14" fill="#ffffff" opacity="0.8"/>
+      </svg>
+
+      <!-- Branding Text -->
+      <div id="ps5-profile-login-branding-text" style="display:flex; flex-direction:column; align-items:center; gap:12px; margin-bottom:4px;">
+        <h2 style="font-size:1.85rem; font-weight:800; margin:0; background: linear-gradient(135deg, #ffffff 0%, #94a3b8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-family:inherit;">PlaySphere™ Network</h2>
+        <p style="color:rgba(248, 250, 252, 0.6); max-width:320px; font-size:0.9rem; line-height:1.65; margin:0; font-family:inherit;">
+          Connect your account to sync your statistics, track achievements, and spend coins in the PlaySphere Store.
+        </p>
+      </div>
+
+      <!-- Dynamic Options & Inputs Container -->
+      <div id="ps5-profile-login-right" style="width:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; box-sizing:border-box;">
+      </div>
+    </div>
+  </div>
+</div>

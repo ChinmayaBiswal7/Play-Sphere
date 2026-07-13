@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>WWE Controller</title>
+  <!-- Outfit Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Outfit:wght@500;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="controller.css">
+  <!-- Socket.io -->
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+
+  <!-- 1. Connection Join Screen -->
+  <div id="loader-screen" class="screen">
+    <div class="loader-box">
+      <div class="loader-title">WWE RUMBLE</div>
+      <div class="loader-subtitle">CONTROLLER PAIRING</div>
+
+      <div class="input-group">
+        <input type="text" id="room-input" placeholder="ENTER 4-LETTER CODE" maxlength="4">
+        <button id="join-btn">CONNECT CONTROLLER</button>
+      </div>
+      <div id="room-error" class="error-msg"></div>
+    </div>
+  </div>
+
+  <!-- 2. Active Controller Screen -->
+  <div id="controller-screen" class="controller-container">
+    <!-- Top Status Bar -->
+    <div class="status-bar">
+      <span class="status-indicator" id="status-ind"></span>
+      <span class="status-text" id="status-text">CONNECTING...</span>
+      <span class="player-indicator" id="player-indicator">PLAYER 1</span>
+      <span class="room-code-display" id="room-display-code">ROOM: ----</span>
+    </div>
+
+    <!-- Joystick and Button Controls Layout -->
+    <div class="controls-layout">
+      <!-- Left side: Thumbstick Joystick -->
+      <div class="joystick-column">
+        <div class="thumbstick-container">
+          <div class="thumbstick-base" id="left-stick-boundary">
+            <div class="thumbstick-knob" id="left-stick"></div>
+          </div>
+          <div class="stick-label">MOVE / RUN</div>
+        </div>
+      </div>
+
+      <!-- Right side: Combat Buttons Grid -->
+      <div class="buttons-column">
+        <div class="buttons-grid">
+          <!-- Strike/Punch Button -->
+          <div class="control-btn-wrapper">
+            <button class="combat-btn btn-strike" id="btn-strike">STRIKE</button>
+          </div>
+          <!-- Grapple/Throw/Pin Button -->
+          <div class="control-btn-wrapper">
+            <button class="combat-btn btn-grapple" id="btn-grapple">GRAPPLE</button>
+          </div>
+          <!-- Block Button -->
+          <div class="control-btn-wrapper">
+            <button class="combat-btn btn-block" id="btn-block">BLOCK</button>
+          </div>
+          <!-- Finisher Button (active when meter is full) -->
+          <div class="control-btn-wrapper">
+            <button class="combat-btn btn-finisher disabled" id="btn-finisher">FINISHER</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. PINFALL KICK-OUT MINI-GAME OVERLAY -->
+    <!-- Appears on screen when your wrestler is being pinned! -->
+    <div id="pin-overlay" class="pin-overlay hidden">
+      <div class="pin-box">
+        <div class="pin-alert-title">TAP TO KICK OUT!</div>
+        <div class="pin-alert-sub">Stop the indicator inside the green target zone!</div>
+        
+        <!-- Struggle gauge -->
+        <div class="struggle-bar-container">
+          <div class="struggle-target-zone" id="kickout-target-zone"></div>
+          <div class="struggle-needle" id="kickout-needle"></div>
+        </div>
+        <button class="kickout-action-btn" id="btn-kickout">TAP!</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="controller.js"></script>
+</body>
+</html>

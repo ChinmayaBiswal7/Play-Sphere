@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Chibi Tennis Duel Controller</title>
+  <link rel="stylesheet" href="controller.css">
+  <!-- Socket.io-client -->
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+  <!-- 1. Rotate Screen Warning -->
+  <div class="landscape-warning">
+    <h2>Rotate Your Device</h2>
+    <p>Please rotate your phone to Landscape mode to play Chibi Tennis Duel.</p>
+  </div>
+
+  <!-- 2. Room Code Entry Overlay (fallback if parameters missing) -->
+  <div id="loader-screen" class="loader-screen">
+    <div class="room-input-box">
+      <h3>JOIN TENNIS ROOM</h3>
+      <p>Enter the 4-character code displayed on the PC screen.</p>
+      
+      <input type="text" id="room-input" placeholder="CODE" maxlength="4" autocomplete="off" spellcheck="false">
+      <div class="slot-selector">
+        <button class="slot-btn active" data-slot="PLAYER_1">PLAYER 1 (LEFT)</button>
+        <button class="slot-btn" data-slot="PLAYER_2">PLAYER 2 (RIGHT)</button>
+      </div>
+      <button id="join-btn">CONNECT CONTROLLER</button>
+      
+      <div id="room-error" class="room-error-msg"></div>
+    </div>
+  </div>
+
+  <!-- 3. Virtual Tennis Controller Layout -->
+  <div class="gamepad-container">
+    <div class="header-info">
+      <span class="player-indicator" id="player-indicator">CONNECTING...</span>
+      <span class="room-indicator" id="room-display-code">ROOM: ----</span>
+    </div>
+
+    <div class="controller-body">
+      <!-- Left Side: Joystick -->
+      <div class="left-grip">
+        <div class="joystick-zone">
+          <div class="thumbstick-base" id="left-stick-boundary">
+            <div class="thumbstick-knob" id="left-stick"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Side: Action Buttons -->
+      <div class="right-grip">
+        <div class="action-zone">
+          <!-- Main giant HIT button -->
+          <div class="btn main-hit-btn" id="btn-hit">
+            <span class="btn-label">HIT</span>
+          </div>
+          <!-- Secondary action buttons -->
+          <div class="sub-actions">
+            <div class="btn sub-btn lob-btn" id="btn-lob">
+              <span class="sub-btn-label">LOB</span>
+            </div>
+            <div class="btn sub-btn power-btn" id="btn-power">
+              <span class="sub-btn-label">POWER</span>
+            </div>
+            <div class="btn sub-btn dive-btn" id="btn-dive">
+              <span class="sub-btn-label">DIVE</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer-info">
+      <div class="connection-status">
+        <span id="status-ind"></span>
+        <span id="status-text">DISCONNECTED</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tennis Gamepad Script -->
+  <script src="controller.js"></script>
+</body>
+</html>

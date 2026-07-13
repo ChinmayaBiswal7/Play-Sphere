@@ -1,0 +1,38 @@
+<div id="toss-screen" class="overlay-screen hidden">
+    <div class="toss-box">
+      <div class="toss-header">
+        <div class="toss-title">COIN TOSS</div>
+        <div class="toss-captains" id="toss-captains-info">Rohit Sharma (IND) VS Mitchell Marsh (AUS)</div>
+      </div>
+      
+      <!-- CSS 3D Flipping Coin -->
+      <div class="coin-container">
+        <div id="toss-coin" class="toss-coin">
+          <div class="coin-side coin-heads">HEADS</div>
+          <div class="coin-side coin-tails">TAILS</div>
+        </div>
+      </div>
+      
+      <div class="toss-status-panel">
+        <div id="toss-status-text" class="toss-status-text">Click Flip to start the toss cutscene</div>
+        
+        <!-- Call Heads/Tails Buttons (While coin is in the air) -->
+        <div id="toss-call-container" class="toss-choices hidden">
+          <button id="toss-btn-heads" class="menu-btn">HEADS</button>
+          <button id="toss-btn-tails" class="menu-btn">TAILS</button>
+        </div>
+
+        <!-- Interactive Decision Buttons -->
+        <div id="toss-choices-container" class="toss-choices hidden">
+          <button id="toss-btn-bat" class="menu-btn primary">CHOOSE TO BAT</button>
+          <button id="toss-btn-bowl" class="menu-btn">CHOOSE TO BOWL</button>
+        </div>
+        
+        <div id="toss-proceed-container" class="toss-choices hidden">
+          <button id="toss-btn-proceed" class="menu-btn primary">PROCEED TO MATCH</button>
+        </div>
+      </div>
+      
+      <button id="toss-btn-flip" class="menu-btn flip-btn">FLIP COIN</button>
+    </div>
+  </div>

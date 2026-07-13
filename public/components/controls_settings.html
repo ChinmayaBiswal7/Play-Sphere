@@ -1,0 +1,162 @@
+<div id="controls-screen" class="overlay-screen hidden">
+    <div class="menu-box max-wide">
+      <h2>CONTROLS & GAMEPAD SETUP</h2>
+      <p style="margin-bottom: 24px; color: #94a3b8;">Use either device to play. Play solo using a keyboard/phone or connect one phone for a local multiplayer PvP duel!</p>
+
+      <div class="controls-grid">
+        <div class="controls-column">
+          <h3>BATTING CONTROLS</h3>
+          <div class="control-row"><span>Move Crease</span><strong>A / D <span class="light">or</span> ◀ / ▶ <span class="light">or</span> L-Stick</strong></div>
+          <div class="control-row"><span>Grounded Swing</span><strong>Space Bar <span class="light">or</span> ✕ Button</strong></div>
+          <div class="control-row"><span>Lofted Sixer</span><strong>Left Ctrl <span class="light">or</span> △ Button</strong></div>
+          <div class="control-row"><span>Defensive Block</span><strong>Left Shift <span class="light">or</span> ○ Button</strong></div>
+          <div class="control-row"><span>Shot Steering</span><strong>Aim Stance direction during swing</strong></div>
+        </div>
+
+        <div class="controls-column">
+          <h3>BOWLING CONTROLS (PVP)</h3>
+          <div class="control-row"><span>Aim Delivery</span><strong>Joystick / Left Stick (Phone Only)</strong></div>
+          <div class="control-row"><span>Fast Ball</span><strong>✕ Button (Phone Only)</strong></div>
+          <div class="control-row"><span>Spin Ball</span><strong>○ Button (Phone Only)</strong></div>
+          <div class="control-row"><span>Bouncer</span><strong>△ Button (Phone Only)</strong></div>
+          <div class="control-row"><span>Yorker</span><strong>□ Button (Phone Only)</strong></div>
+          <div class="control-row"><span>Wind-up & Bowl</span><strong>Pull R2 Trigger (Phone Only)</strong></div>
+        </div>
+      </div>
+
+      <button id="controls-back-btn" class="menu-btn" style="margin-top: 32px; max-width: 200px;">
+        BACK TO MENU
+      </button>
+    </div>
+  </div>
+
+  <!-- Dedicated Fullscreen Settings Screen Overlay -->
+  <div id="settings-screen" class="fc-menu-screen hidden">
+    <!-- Top Bar -->
+    <div class="fc-top-bar">
+      <div class="fc-logo">GAME SETTINGS</div>
+      <div class="match-mode-title">PREFERENCES & KEY BINDINGS</div>
+    </div>
+
+    <!-- Scrollable content panel -->
+    <div class="settings-container-scrollable">
+      <div class="settings-grid-layout">
+        <!-- Left Side: Video & Audio Customizers -->
+        <div class="settings-column-large">
+          <div class="settings-group-box">
+            <h3>VIDEO & PERFORMANCE</h3>
+            <div class="setting-row">
+              <label>Graphics Quality</label>
+              <select id="menu-setting-graphics" class="settings-select">
+                <option value="low">LOW (Fastest / No Shadows)</option>
+                <option value="medium" selected>MEDIUM (Standard Shadows)</option>
+                <option value="high">HIGH (High-Res Shadows & AA)</option>
+              </select>
+            </div>
+            <div class="setting-row">
+              <label>Resolution Scale</label>
+              <div class="slider-with-label">
+                <input type="range" id="menu-setting-res" min="0.5" max="1.5" step="0.1" value="1.0" class="settings-slider">
+                <span class="slider-val" id="menu-setting-res-val">100%</span>
+              </div>
+            </div>
+            <div class="setting-row">
+              <label>Screen Mode</label>
+              <button id="menu-setting-fullscreen" class="fc-action-btn mini-btn" style="margin-top: 0; width: 220px; font-size: 0.75rem; padding: 8px 12px; background: rgba(30, 41, 59, 0.6); border: 1px solid rgba(255, 255, 255, 0.15); color: #fff;">GO FULLSCREEN</button>
+            </div>
+          </div>
+
+          <div class="settings-group-box">
+            <h3>AUDIO ENGINE VOLUMES</h3>
+            <div class="setting-row">
+              <label>Master Volume</label>
+              <div class="slider-with-label">
+                <input type="range" id="menu-setting-vol-master" min="0" max="1" step="0.05" value="0.8" class="settings-slider">
+                <span class="slider-val" id="menu-setting-vol-master-val">80%</span>
+              </div>
+            </div>
+            <div class="setting-row">
+              <label>SFX (Hits / Wickets)</label>
+              <div class="slider-with-label">
+                <input type="range" id="menu-setting-vol-sfx" min="0" max="1" step="0.05" value="0.75" class="settings-slider">
+                <span class="slider-val" id="menu-setting-vol-sfx-val">75%</span>
+              </div>
+            </div>
+            <div class="setting-row">
+              <label>Crowd & Ambience</label>
+              <div class="slider-with-label">
+                <input type="range" id="menu-setting-vol-crowd" min="0" max="1" step="0.05" value="0.6" class="settings-slider">
+                <span class="slider-val" id="menu-setting-vol-crowd-val">60%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Side: Key Bindings Reference -->
+        <div class="settings-column-small">
+          <div class="settings-group-box" style="height: 100%;">
+            <h3>KEY BINDINGS</h3>
+            <div class="controls-grid mini">
+              <div class="control-row"><span>Move Left</span><strong>A <span class="light">or</span> ◀</strong></div>
+              <div class="control-row"><span>Move Right</span><strong>D <span class="light">or</span> ▶</strong></div>
+              <div class="control-row"><span>Grounded Shot</span><strong>Space Bar</strong></div>
+              <div class="control-row"><span>Lofted Drive</span><strong>Left Ctrl</strong></div>
+              <div class="control-row"><span>Defensive Block</span><strong>Left Shift</strong></div>
+              <div class="control-row"><span>Pause Menu</span><strong>ESC Key</strong></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Controller / Gamepad Section -->
+      <div class="settings-controller-section">
+        <h3>🎮 Controller / Gamepad</h3>
+        <div class="gamepad-detected-row">
+          <div class="gamepad-dot" id="gamepad-dot"></div>
+          <span id="gamepad-detected-name">No gamepad detected — plug in a controller or use keyboard</span>
+        </div>
+        <div class="gamepad-bind-grid">
+          <div class="gamepad-bind-row">
+            <span>Hit Ball</span>
+            <span class="gamepad-btn-badge">✕ Cross</span>
+          </div>
+          <div class="gamepad-bind-row">
+            <span>Defend / Block</span>
+            <span class="gamepad-btn-badge">○ Circle</span>
+          </div>
+          <div class="gamepad-bind-row">
+            <span>Loft Shot</span>
+            <span class="gamepad-btn-badge">△ Triangle</span>
+          </div>
+          <div class="gamepad-bind-row">
+            <span>Power Shot</span>
+            <span class="gamepad-btn-badge">R2</span>
+          </div>
+          <div class="gamepad-bind-row">
+            <span>Call Run</span>
+            <span class="gamepad-btn-badge">R1</span>
+          </div>
+          <div class="gamepad-bind-row">
+            <span>Cancel Run</span>
+            <span class="gamepad-btn-badge">L1</span>
+          </div>
+          <div class="gamepad-bind-row">
+            <span>Aim Direction</span>
+            <span class="gamepad-btn-badge">L-Stick ←→</span>
+          </div>
+          <div class="gamepad-bind-row">
+            <span>Pause</span>
+            <span class="gamepad-btn-badge">Start / Options</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Action Footer -->
+    <div class="matchup-footer">
+      <button id="menu-btn-save-settings" class="fc-action-btn primary">APPLY SETTINGS</button>
+      <button id="settings-back-btn" class="fc-action-btn danger">BACK TO MENU</button>
+    </div>
+  </div>
+
+  </div>

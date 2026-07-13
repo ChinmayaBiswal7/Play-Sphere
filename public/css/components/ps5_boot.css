@@ -1,0 +1,79 @@
+/* ── BOOT SEQUENCE OVERLAY ── */
+.ps5-boot-screen {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  transition: opacity 1.2s ease-out;
+  overflow: hidden;
+}
+
+.ps5-boot-screen.fade-out {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Canvas fills the whole screen */
+#ps5-intro-canvas {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  display: block;
+}
+
+/* "Press any key" prompt — sits at bottom centre, JS controls opacity */
+.ps5-boot-prompt {
+  position: absolute;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.85rem;
+  letter-spacing: 0.22em;
+  color: rgba(248, 250, 252, 0.6);
+  text-transform: uppercase;
+  font-weight: 300;
+  opacity: 0;
+  cursor: pointer;
+  padding: 10px 26px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 30px;
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(6px);
+  transition: color 0.3s, border-color 0.3s, background 0.3s;
+  white-space: nowrap;
+  animation: promptPulse 2.2s 0.5s infinite alternate ease-in-out;
+  z-index: 2;
+}
+
+.ps5-boot-prompt:hover {
+  color: #ffffff;
+  border-color: rgba(59, 130, 246, 0.6);
+  background: rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.35);
+}
+
+.ps5-boot-lightbar {
+  position: absolute;
+  bottom: 0; left: 0;
+  width: 100%; height: 3px;
+  background: linear-gradient(90deg, transparent, #3b82f6, #60a5fa, #3b82f6, transparent);
+  background-size: 200% 100%;
+  animation: lightSweep 3.5s 1.5s infinite linear;
+  z-index: 2;
+}
+
+/* Boot Animations */
+@keyframes promptPulse {
+  0%   { opacity: 0.45; }
+  100% { opacity: 1.0;  }
+}
+
+@keyframes lightSweep {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}

@@ -1,0 +1,1217 @@
+/**
+ * Chibi Tennis Duel - 2D Neon Canvas Client
+ * local live 2-player controller split-screen arcade tennis.
+ */
+
+// ── GAME STATE MACHINE ──────────────────────────────────────────
+const STATES = {
+  CONTROLLER_LOBBY: 'CONTROLLER_LOBBY',
+  MATCH_SETUP: 'MATCH_SETUP',
+  COUNTDOWN: 'COUNTDOWN',
+  SERVE: 'SERVE',
+  RALLY: 'RALLY',
+  POINT_END: 'POINT_END',
+  MATCH_END: 'MATCH_END',
+  PAUSED_DISCONNECT: 'PAUSED_DISCONNECT'
+};
+let gameState = STATES.CONTROLLER_LOBBY;
+
+// ── CONNECTION SLOTS ───────────────────────────────────────────
+const controllerSlots = {
+  PLAYER_1: { connected: false, socketId: null, ready: false },
+  PLAYER_2: { connected: false, socketId: null, ready: false }
+};
+
+// ── INPUT STATES ───────────────────────────────────────────────
+const playerInputs = {
+  PLAYER_1: { moveX: 0, moveY: 0, hit: false, lob: false, power: false, dive: false },
+  PLAYER_2: { moveX: 0, moveY: 0, hit: false, lob: false, power: false, dive: false }
+};
+
+// ── MATCH SCORING ──────────────────────────────────────────────
+let targetScore = 10;
+let scores = { PLAYER_1: 0, PLAYER_2: 0 };
+let currentServer = 'PLAYER_1'; // PLAYER_1 or PLAYER_2
+let serveStage = 0; // 0 = ready, 1 = ball tossed
+let lastHitter = null; // 'PLAYER_1' or 'PLAYER_2'
+let ballBounces = 0;
+let ballLastBounceSide = null; // 'P1' or 'P2'
+let rallyActive = false;
+
+// ── GAME TIMERS & MULTIPLAYER RECONNECT ────────────────────────
+let socket = null;
+let roomCode = '----';
+let localIp = 'localhost';
+let port = 3000;
+
+let countdownVal = 3;
+let countdownInterval = null;
+let pauseTimeout = null;
+let pauseTimeRemaining = 30;
+
+let clock = {
+  lastTime: 0,
+  getDelta() {
+    const now = performance.now();
+    if (this.lastTime === 0) this.lastTime = now;
+    const delta = (now - this.lastTime) / 1000;
+    this.lastTime = now;
+    return delta;
+  },
+  getElapsedTime() {
+    return performance.now() / 1000;
+  }
+};
+
+// ── PARTICLE EFFECT SYSTEM ─────────────────────────────────────
+const particles = [];
+function spawnParticles(x, y, color, count = 10) {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 100 + Math.random() * 250;
+    particles.push({
+      x,
+      y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 0.4 + Math.random() * 0.3,
+      maxLife: 0.7,
+      color,
+      size: 3 + Math.random() * 4
+    });
+  }
+}
+
+function updateParticles(dt) {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.life -= dt;
+    if (p.life <= 0) {
+      particles.splice(i, 1);
+      continue;
+    }
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.vx *= 0.95;
+    p.vy *= 0.95;
+  }
+}
+
+// ── SOUND SYNTHESIS (WEB AUDIO API) ────────────────────────────
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playSynthSound(freq, type, duration, vol = 0.3) {
+  try {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    
+    gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+    
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    
+    osc.start();
+    osc.stop(audioCtx.currentTime + duration);
+  } catch (e) {}
+}
+
+const sounds = {
+  hit: () => playSynthSound(600, 'triangle', 0.15, 0.4),
+  lob: () => playSynthSound(450, 'sine', 0.25, 0.4),
+  power: () => playSynthSound(850, 'sawtooth', 0.3, 0.5),
+  bounce: () => playSynthSound(280, 'sine', 0.1, 0.3),
+  net: () => playSynthSound(120, 'square', 0.2, 0.4),
+  point: () => playSynthSound(523.25, 'triangle', 0.4, 0.3), // C5 note
+  win: () => {
+    playSynthSound(523.25, 'sine', 0.2, 0.3);
+    setTimeout(() => playSynthSound(659.25, 'sine', 0.2, 0.3), 150);
+    setTimeout(() => playSynthSound(783.99, 'sine', 0.4, 0.4), 300);
+  },
+  countdown: () => playSynthSound(440, 'sine', 0.08, 0.25),
+  countdownGo: () => playSynthSound(880, 'sine', 0.25, 0.3)
+};
+
+// ── 2D/3D NEON GEOMETRY DEPTH PERSPECTIVE ──────────────────────
+function depthScale(worldY, viewerSign) {
+  // viewerSign is +1 for P1 (bottom is y = +600), -1 for P2 (bottom is y = -600)
+  const dist = viewerSign > 0 ? (600 - worldY) : (600 + worldY); // 0 = near, 1200 = far
+  return lerp(1.15, 0.42, clamp(dist / 1200, 0, 1));
+}
+
+function lerp(start, end, amt) {
+  return (1 - amt) * start + amt * end;
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+// Project world coordinates onto 2D viewport
+function worldToScreen(worldX, worldY, worldH, viewerId, vw, vh) {
+  const viewerSign = viewerId === 'PLAYER_1' ? 1 : -1;
+  const dScale = depthScale(worldY, viewerSign);
+  
+  // Center of viewport
+  const cx = vw / 2;
+  const cy = vh / 2;
+  
+  // 180 degree rotation for Player 2 viewport
+  let relativeX = worldX * viewerSign;
+  let relativeY = worldY * viewerSign;
+  
+  // Screen placement coordinates scaled by depth multiplier
+  const screenX = cx + relativeX * 0.42 * dScale;
+  const screenY = cy + relativeY * 0.45 * dScale;
+  const screenH = worldH * 0.65 * dScale;
+  
+  return {
+    x: screenX,
+    y: screenY - screenH, // drawn coordinates
+    shadowY: screenY,     // flat ground shadow coordinates
+    scale: dScale
+  };
+}
+
+// ── WORLD BALL OBJECT CLASS ────────────────────────────────────
+class WorldBall {
+  constructor() {
+    this.x = 0;
+    this.y = 0;
+    this.h = 40; // height above ground
+    
+    this.vx = 0;
+    this.vy = 0;
+    this.vh = 0; // vertical height velocity
+    
+    this.radius = 10;
+    this.inPlay = false;
+  }
+
+  reset() {
+    this.x = 0;
+    this.y = 0;
+    this.h = 40;
+    this.vx = 0;
+    this.vy = 0;
+    this.vh = 0;
+    this.inPlay = false;
+    ballBounces = 0;
+    ballLastBounceSide = null;
+    lastHitter = null;
+  }
+
+  update(dt) {
+    if (!this.inPlay) return;
+
+    // Apply gravity
+    this.vh -= 320 * dt;
+
+    // Apply wind drag in world space
+    this.vx -= this.vx * 0.15 * dt;
+    this.vy -= this.vy * 0.15 * dt;
+
+    // Update positions
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    this.h += this.vh * dt;
+
+    // Floor collision
+    if (this.h <= 0) {
+      this.h = 0;
+      this.vh = Math.abs(this.vh) * 0.82; // Bounce restitution
+      
+      // Stop low bouncers
+      if (this.vh < 35) this.vh = 0;
+
+      sounds.bounce();
+      spawnParticles(this.x, this.y, '#39ff14', 5);
+
+      const side = this.y > 0 ? 'P1' : 'P2';
+
+      if (gameState === STATES.RALLY) {
+        if (ballLastBounceSide === side) {
+          triggerPointWin(side === 'P1' ? 'PLAYER_2' : 'PLAYER_1', 'Double Bounce!');
+        } else {
+          ballBounces++;
+          ballLastBounceSide = side;
+
+          // Out check
+          if (Math.abs(this.x) > 300 || Math.abs(this.y) > 500) {
+            const opponent = lastHitter === 'PLAYER_1' ? 'PLAYER_2' : 'PLAYER_1';
+            triggerPointWin(opponent, 'Out of Bounds!');
+          }
+        }
+      }
+    }
+
+    // Net collision check (Net is at y = 0, height = 75, width = [-320, 320])
+    const prevY = this.y - this.vy * dt;
+    if (Math.sign(prevY) !== Math.sign(this.y)) {
+      if (this.h <= 75 && Math.abs(this.x) <= 320) {
+        sounds.net();
+        this.y = prevY;
+        this.vy = -this.vy * 0.25;
+        this.vh = Math.max(20, this.vh * 0.5);
+        this.vx *= 0.5;
+
+        spawnParticles(this.x, 0, '#ffffff', 8);
+
+        if (gameState === STATES.RALLY && lastHitter) {
+          const opponent = lastHitter === 'PLAYER_1' ? 'PLAYER_2' : 'PLAYER_1';
+          setTimeout(() => {
+            triggerPointWin(opponent, 'Hit the Net!');
+          }, 500);
+        }
+      }
+    }
+
+    // Border recovery limits
+    if (Math.abs(this.y) > 750 || Math.abs(this.x) > 450) {
+      if (gameState === STATES.RALLY && lastHitter) {
+        const opponent = lastHitter === 'PLAYER_1' ? 'PLAYER_2' : 'PLAYER_1';
+        triggerPointWin(opponent, 'Out of Bounds!');
+      } else {
+        this.reset();
+      }
+    }
+  }
+}
+
+// ── WORLD PLAYER CLASS ─────────────────────────────────────────
+class WorldPlayer {
+  constructor(slot, color, startY) {
+    this.slot = slot;
+    this.color = color;
+    this.x = 0;
+    this.y = startY;
+    
+    this.speed = 420;
+    this.swingTimer = 0;
+    this.swingType = null;
+    this.diveTimer = 0;
+    this.diveX = 0;
+    this.diveY = 0;
+  }
+
+  swing(type) {
+    if (this.swingTimer > 0) return;
+    this.swingType = type;
+    this.swingTimer = 0.25;
+
+    if (type === 'HIT') sounds.hit();
+    else if (type === 'LOB') sounds.lob();
+    else if (type === 'POWER') sounds.power();
+  }
+
+  dive(dx, dy) {
+    if (this.diveTimer > 0) return;
+    this.diveTimer = 0.4;
+    const len = Math.hypot(dx, dy) || 1;
+    this.diveX = (dx / len) * this.speed * 1.5;
+    this.diveY = (dy / len) * this.speed * 1.5;
+    sounds.hit();
+  }
+
+  update(dt, input) {
+    let dx = 0;
+    let dy = 0;
+    let isMoving = false;
+
+    if (this.diveTimer > 0) {
+      this.diveTimer -= dt;
+      dx = this.diveX;
+      dy = this.diveY;
+      isMoving = true;
+    } else {
+      if (Math.abs(input.moveX) > 0.15 || Math.abs(input.moveY) > 0.15) {
+        if (this.slot === 'PLAYER_1') {
+          dx = input.moveX * this.speed;
+          dy = input.moveY * this.speed;
+        } else {
+          // Rotated 180° for P2 viewport controls
+          dx = -input.moveX * this.speed;
+          dy = -input.moveY * this.speed;
+        }
+        isMoving = true;
+      }
+    }
+
+    if (isMoving) {
+      this.x += dx * dt;
+      this.y += dy * dt;
+
+      // Clamp within boundaries
+      this.x = clamp(this.x, -280, 280);
+      if (this.slot === 'PLAYER_1') {
+        this.y = clamp(this.y, 40, 520);
+      } else {
+        this.y = clamp(this.y, -520, -40);
+      }
+    }
+
+    // Update swing interval
+    if (this.swingTimer > 0) {
+      this.swingTimer -= dt;
+      const progress = 1 - (this.swingTimer / 0.25);
+      
+      // Swing reach calculation (impact window midway)
+      if (progress >= 0.35 && progress <= 0.65) {
+        checkRacketImpact(this);
+      }
+    }
+  }
+}
+
+// ── RACKET STRIKE DETECTION ────────────────────────────────────
+function checkRacketImpact(player) {
+  if (!ball.inPlay && gameState !== STATES.SERVE) return;
+
+  const dx = ball.x - player.x;
+  const dy = ball.y - player.y;
+  const dist = Math.hypot(dx, dy);
+
+  const maxReach = 110;
+  const maxHitHeight = 180;
+
+  if (dist <= maxReach && ball.h <= maxHitHeight) {
+    const input = playerInputs[player.slot];
+    
+    // Horizontal aiming direction (X axis) based on controller input
+    let angleX = 0;
+    if (player.slot === 'PLAYER_1') {
+      angleX = input.moveX * 280;
+    } else {
+      angleX = -input.moveX * 280;
+    }
+
+    const dir = player.slot === 'PLAYER_1' ? -1 : 1;
+
+    if (gameState === STATES.SERVE && currentServer === player.slot && serveStage === 1) {
+      // Strike Serve!
+      ball.inPlay = true;
+      ball.vx = angleX;
+      ball.vy = 480 * dir;
+      ball.vh = 150; // Toss hitting height lift
+      
+      ballBounces = 0;
+      ballLastBounceSide = null;
+      lastHitter = player.slot;
+      rallyActive = true;
+      gameState = STATES.RALLY;
+
+      sounds.hit();
+      showNotification('GOOD SERVE!');
+      spawnParticles(ball.x, ball.y, player.color, 12);
+    } else if (gameState === STATES.RALLY) {
+      // Return during rally
+      let speedY = 560;
+      let speedH = 110;
+
+      if (player.swingType === 'LOB') {
+        speedY = 320;
+        speedH = 260; // High lob curve
+      } else if (player.swingType === 'POWER') {
+        speedY = 720; // Fast smash
+        speedH = 70;
+      }
+
+      // Lift low-lying balls slightly
+      if (ball.h < 25) {
+        speedH += 60;
+      }
+
+      ball.vx = angleX;
+      ball.vy = speedY * dir;
+      ball.vh = speedH;
+      
+      ballBounces = 0;
+      ballLastBounceSide = null;
+      lastHitter = player.slot;
+
+      sounds.hit();
+      spawnParticles(ball.x, ball.y, player.color, 15);
+      triggerControllerVibration(player.slot === 'PLAYER_1' ? 'PLAYER_2' : 'PLAYER_1', 80);
+    }
+
+    player.swingType = null;
+  }
+}
+
+function triggerControllerVibration(slot, duration) {
+  if (socket && socket.connected) {
+    socket.emit('trigger-vibration', { slot, pattern: duration });
+  }
+}
+
+// ── INITIALIZE GAME WORLD ──────────────────────────────────────
+const ball = new WorldBall();
+const players = {
+  PLAYER_1: new WorldPlayer('PLAYER_1', '#00d2ff', 420),
+  PLAYER_2: new WorldPlayer('PLAYER_2', '#ff007f', -420)
+};
+
+// ── 2D CANVAS DRAWING FUNCTIONS ────────────────────────────────
+function renderViewport(playerId, vx, vy, vw, vh) {
+  const canvas = document.getElementById('tennis-canvas');
+  const ctx = canvas.getContext('2d');
+  
+  // Set clip path to current viewport
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(vx, vy, vw, vh);
+  ctx.clip();
+
+  // Draw background gradient
+  const grad = ctx.createLinearGradient(vx, vy, vx, vy + vh);
+  grad.addColorStop(0, '#090d16');
+  grad.addColorStop(1, '#020408');
+  ctx.fillStyle = grad;
+  ctx.fillRect(vx, vy, vw, vh);
+
+  const viewerSign = playerId === 'PLAYER_1' ? 1 : -1;
+  const cx = vx + vw / 2;
+  const cy = vy + vh / 2;
+
+  // Draw Glowing Court boundaries
+  // Sidelines: x = -300 and 300, Baselines: y = -500 and 500
+  const corners = [
+    { x: -300, y: -500 },
+    { x: 300, y: -500 },
+    { x: 300, y: 500 },
+    { x: -300, y: 500 }
+  ];
+  
+  const screenCorners = corners.map(c => worldToScreen(c.x, c.y, 0, playerId, vw, vh));
+  
+  // Draw court base surface fill
+  ctx.beginPath();
+  ctx.moveTo(vx + screenCorners[0].x, vy + screenCorners[0].y);
+  ctx.lineTo(vx + screenCorners[1].x, vy + screenCorners[1].y);
+  ctx.lineTo(vx + screenCorners[2].x, vy + screenCorners[2].y);
+  ctx.lineTo(vx + screenCorners[3].x, vy + screenCorners[3].y);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.4)';
+  ctx.fill();
+  
+  // Glow lines styling
+  ctx.strokeStyle = '#1e3a8a';
+  ctx.lineWidth = 4;
+  ctx.shadowColor = '#1e40af';
+  ctx.shadowBlur = 10;
+  ctx.stroke();
+  ctx.shadowBlur = 0; // reset glow
+
+  // Draw court lines
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+  ctx.lineWidth = 2.5;
+
+  function drawWorldLine(x1, y1, x2, y2) {
+    const p1 = worldToScreen(x1, y1, 0, playerId, vw, vh);
+    const p2 = worldToScreen(x2, y2, 0, playerId, vw, vh);
+    ctx.beginPath();
+    ctx.moveTo(vx + p1.x, vy + p1.y);
+    ctx.lineTo(vx + p2.x, vy + p2.y);
+    ctx.stroke();
+  }
+
+  // Draw Outer borders
+  drawWorldLine(-300, -500, 300, -500); // base far
+  drawWorldLine(-300, 500, 300, 500);   // base near
+  drawWorldLine(-300, -500, -300, 500); // side left
+  drawWorldLine(300, -500, 300, 500);   // side right
+
+  // Draw Singles lines
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+  drawWorldLine(-240, -500, -240, 500);
+  drawWorldLine(240, -500, 240, 500);
+
+  // Service boxes
+  drawWorldLine(-240, -300, 240, -300); // Service line far
+  drawWorldLine(-240, 300, 240, 300);   // Service line near
+  drawWorldLine(0, -300, 0, 300);       // Center service line
+
+  // Draw player-specific indicators (glow boundaries)
+  ctx.save();
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = playerId === 'PLAYER_1' ? '#00d2ff' : '#ff007f';
+  ctx.shadowColor = playerId === 'PLAYER_1' ? '#00d2ff' : '#ff007f';
+  ctx.shadowBlur = 8;
+  // highlight viewer's baseline
+  if (playerId === 'PLAYER_1') {
+    drawWorldLine(-300, 500, 300, 500);
+  } else {
+    drawWorldLine(-300, -500, 300, -500);
+  }
+  ctx.restore();
+
+  // Draw Net (drawn as screen-space quad + mesh grid)
+  const netHeight = 75;
+  const pBottomLeft = worldToScreen(-320, 0, 0, playerId, vw, vh);
+  const pBottomRight = worldToScreen(320, 0, 0, playerId, vw, vh);
+  const pTopLeft = worldToScreen(-320, 0, netHeight, playerId, vw, vh);
+  const pTopRight = worldToScreen(320, 0, netHeight, playerId, vw, vh);
+
+  // Net mesh grid
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+  ctx.beginPath();
+  ctx.moveTo(vx + pBottomLeft.x, vy + pBottomLeft.y);
+  ctx.lineTo(vx + pBottomRight.x, vy + pBottomRight.y);
+  ctx.lineTo(vx + pTopRight.x, vy + pTopRight.y);
+  ctx.lineTo(vx + pTopLeft.x, vy + pTopLeft.y);
+  ctx.closePath();
+  ctx.fill();
+
+  // Net white band line
+  ctx.strokeStyle = '#f8fafc';
+  ctx.lineWidth = 3.5;
+  ctx.beginPath();
+  ctx.moveTo(vx + pTopLeft.x, vy + pTopLeft.y);
+  ctx.lineTo(vx + pTopRight.x, vy + pTopRight.y);
+  ctx.stroke();
+
+  // Net posts
+  ctx.strokeStyle = '#475569';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(vx + pBottomLeft.x, vy + pBottomLeft.y);
+  ctx.lineTo(vx + pTopLeft.x, vy + pTopLeft.y);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(vx + pBottomRight.x, vy + pBottomRight.y);
+  ctx.lineTo(vx + pTopRight.x, vy + pTopRight.y);
+  ctx.stroke();
+
+  // ── DRAW SHADOWS FIRST ──
+  // Player Shadows
+  Object.values(players).forEach(p => {
+    const proj = worldToScreen(p.x, p.y, 0, playerId, vw, vh);
+    const radius = 25 * proj.scale;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+    ctx.beginPath();
+    ctx.ellipse(vx + proj.x, vy + proj.shadowY, radius, radius * 0.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // Ball Shadow
+  if (gameState !== STATES.CONTROLLER_LOBBY) {
+    const ballProj = worldToScreen(ball.x, ball.y, 0, playerId, vw, vh);
+    const shadowFactor = 1.0 + ball.h * 0.005;
+    const shadowRadius = (ball.radius + 3) * ballProj.scale / shadowFactor;
+    
+    ctx.fillStyle = `rgba(0, 0, 0, ${clamp(0.5 / shadowFactor, 0.05, 0.5)})`;
+    ctx.beginPath();
+    ctx.arc(vx + ballProj.x, vy + ballProj.shadowY, shadowRadius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // ── DRAW PLAYERS ──
+  Object.values(players).forEach(p => {
+    const proj = worldToScreen(p.x, p.y, 0, playerId, vw, vh);
+    const dScale = proj.scale;
+
+    // Body dimensions
+    const headRadius = 18 * dScale;
+    const bodyWidth = 32 * dScale;
+    const bodyHeight = 50 * dScale;
+
+    // Draw Chibi Body Capsule
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    // draw capsule path
+    ctx.roundRect(vx + proj.x - bodyWidth/2, vy + proj.y - bodyHeight, bodyWidth, bodyHeight, 10 * dScale);
+    ctx.fill();
+    
+    // Glow player indicator outline
+    ctx.strokeStyle = p.color;
+    ctx.lineWidth = 2;
+    ctx.save();
+    ctx.shadowColor = p.color;
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.roundRect(vx + proj.x - bodyWidth/2, vy + proj.y - bodyHeight, bodyWidth, bodyHeight, 10 * dScale);
+    ctx.stroke();
+    ctx.restore();
+
+    // Draw Chibi Skin Head
+    ctx.fillStyle = '#ffdbac';
+    ctx.beginPath();
+    ctx.arc(vx + proj.x, vy + proj.y - bodyHeight - headRadius * 0.7, headRadius, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Hair cap
+    ctx.fillStyle = p.slot === 'PLAYER_1' ? '#1e3a8a' : '#881337';
+    ctx.beginPath();
+    ctx.arc(vx + proj.x, vy + proj.y - bodyHeight - headRadius * 0.7, headRadius * 1.02, Math.PI, 0);
+    ctx.fill();
+
+    // Arms & Rackets
+    const handX = proj.x + 22 * dScale;
+    const handY = proj.y - bodyHeight * 0.6;
+    
+    ctx.strokeStyle = '#ffdbac';
+    ctx.lineWidth = 4 * dScale;
+    ctx.beginPath();
+    ctx.moveTo(vx + proj.x + 14 * dScale, vy + proj.y - bodyHeight * 0.8);
+    ctx.lineTo(vx + handX, vy + handY);
+    ctx.stroke();
+
+    // Racket Shaft
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 3 * dScale;
+    const racketEndX = handX + 16 * dScale;
+    const racketEndY = handY - 14 * dScale;
+    ctx.beginPath();
+    ctx.moveTo(vx + handX, vy + handY);
+    ctx.lineTo(vx + racketEndX, vy + racketEndY);
+    ctx.stroke();
+
+    // Racket Rim
+    ctx.strokeStyle = p.color;
+    ctx.lineWidth = 4 * dScale;
+    ctx.beginPath();
+    ctx.arc(vx + racketEndX + 10 * dScale, vy + racketEndY - 10 * dScale, 12 * dScale, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Racket strings
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(vx + racketEndX + 10 * dScale, vy + racketEndY - 22 * dScale);
+    ctx.lineTo(vx + racketEndX + 10 * dScale, vy + racketEndY + 2 * dScale);
+    ctx.moveTo(vx + racketEndX - 2 * dScale, vy + racketEndY - 10 * dScale);
+    ctx.lineTo(vx + racketEndX + 22 * dScale, vy + racketEndY - 10 * dScale);
+    ctx.stroke();
+
+    // Draw Swing Arc Trail
+    if (p.swingTimer > 0) {
+      const progress = 1 - (p.swingTimer / 0.25);
+      ctx.strokeStyle = p.color;
+      ctx.lineWidth = 6 * dScale;
+      ctx.beginPath();
+      // Draw arc based on progress
+      ctx.arc(
+        vx + handX,
+        vy + handY,
+        42 * dScale,
+        -Math.PI / 4 + progress * Math.PI,
+        -Math.PI / 4 + (progress + 0.2) * Math.PI
+      );
+      ctx.stroke();
+    }
+  });
+
+  // ── DRAW BALL ──
+  if (gameState !== STATES.CONTROLLER_LOBBY) {
+    const ballProj = worldToScreen(ball.x, ball.y, ball.h, playerId, vw, vh);
+    const radius = ball.radius * ballProj.scale;
+
+    // Outer glow
+    ctx.save();
+    ctx.shadowColor = '#ccff00';
+    ctx.shadowBlur = 12;
+    
+    ctx.fillStyle = '#ccff00';
+    ctx.beginPath();
+    ctx.arc(vx + ballProj.x, vy + ballProj.y, radius, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.restore();
+
+    // Inner details/shading
+    ctx.strokeStyle = '#85b300';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(vx + ballProj.x - radius * 0.2, vy + ballProj.y - radius * 0.2, radius * 0.8, 0, Math.PI * 0.5);
+    ctx.stroke();
+  }
+
+  // ── DRAW PARTICLES ──
+  particles.forEach(p => {
+    const pProj = worldToScreen(p.x, p.y, 0, playerId, vw, vh);
+    ctx.fillStyle = p.color;
+    ctx.globalAlpha = p.life / p.maxLife;
+    ctx.beginPath();
+    ctx.arc(vx + pProj.x + (p.x - ball.x) * 0.1, vy + pProj.y + (p.y - ball.y) * 0.1, p.size * pProj.scale, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1.0; // reset alpha
+
+  // ── DRAW SCOREBOARD OVERLAY GRAPHICS ──
+  if (gameState === STATES.CONTROLLER_LOBBY) {
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+    ctx.font = `bold ${32 * viewerSign > 0 ? 32 : 32}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(playerId === 'PLAYER_1' ? 'PLAYER 1 VIEW' : 'PLAYER 2 VIEW', cx, cy - 20);
+  }
+
+  ctx.restore(); // restore viewport clip boundary
+}
+
+// ── CONNECTION LOBBY & ROUTING ────────────────────────────────
+function initSocketConnection() {
+  socket = io();
+
+  socket.on('connect', () => {
+    console.log('Tennis PC Client connected to server.');
+    socket.emit('join-room-pc');
+  });
+
+  socket.on('room-created', ({ roomCode: code, localIp: ip, port: p }) => {
+    roomCode = code;
+    localIp = ip;
+    port = p;
+
+    document.getElementById('lobby-room-code').innerText = code;
+
+    let baseUrl;
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === '') {
+      baseUrl = `http://${localIp}:${port}/tennis/controller.html?room=${code}`;
+    } else {
+      baseUrl = `${window.location.origin}/tennis/controller.html?room=${code}`;
+    }
+
+    const p1Url = `${baseUrl}&slot=PLAYER_1`;
+    const p2Url = `${baseUrl}&slot=PLAYER_2`;
+
+    const p1QrImg = document.getElementById('p1-qr-image');
+    const p1Spinner = document.getElementById('p1-qr-spinner');
+    p1QrImg.src = `/qrcode?text=${encodeURIComponent(p1Url)}`;
+    p1QrImg.onload = () => {
+      p1Spinner.style.display = 'none';
+      p1QrImg.style.display = 'block';
+    };
+
+    const p2QrImg = document.getElementById('p2-qr-image');
+    const p2Spinner = document.getElementById('p2-qr-spinner');
+    p2QrImg.src = `/qrcode?text=${encodeURIComponent(p2Url)}`;
+    p2QrImg.onload = () => {
+      p2Spinner.style.display = 'none';
+      p2QrImg.style.display = 'block';
+    };
+
+    console.log(`Tennis session pairing initialized. Room: ${code}`);
+  });
+
+  socket.on('phone-connected', ({ phoneSlot }) => {
+    const slotKey = phoneSlot === 1 ? 'PLAYER_1' : 'PLAYER_2';
+    
+    if (controllerSlots[slotKey]) {
+      controllerSlots[slotKey].connected = true;
+      controllerSlots[slotKey].ready = false;
+
+      const panel = document.getElementById(phoneSlot === 1 ? 'lobby-p1' : 'lobby-p2');
+      const statusLabel = document.getElementById(phoneSlot === 1 ? 'p1-connect-status' : 'p2-connect-status');
+      
+      if (panel) panel.classList.add('connected');
+      if (statusLabel) {
+        statusLabel.innerText = 'PAIRED & READY';
+      }
+
+      triggerHapticFeedback(phoneSlot, [50, 30, 50]);
+
+      if (controllerSlots.PLAYER_1.connected && controllerSlots.PLAYER_2.connected) {
+        setTimeout(() => {
+          transitionToMatchSetup();
+        }, 1200);
+      }
+    }
+  });
+
+  socket.on('phone-disconnected', ({ phoneSlot }) => {
+    const slotKey = phoneSlot === 1 ? 'PLAYER_1' : 'PLAYER_2';
+    if (controllerSlots[slotKey]) {
+      controllerSlots[slotKey].connected = false;
+      controllerSlots[slotKey].ready = false;
+
+      const panel = document.getElementById(phoneSlot === 1 ? 'lobby-p1' : 'lobby-p2');
+      const statusLabel = document.getElementById(phoneSlot === 1 ? 'p1-connect-status' : 'p2-connect-status');
+      
+      if (panel) panel.classList.remove('connected');
+      if (statusLabel) {
+        statusLabel.innerText = 'WAITING FOR CONTROLLER...';
+      }
+
+      if (gameState !== STATES.CONTROLLER_LOBBY && gameState !== STATES.MATCH_END) {
+        triggerDisconnectPause(slotKey);
+      }
+    }
+  });
+
+  socket.on('controller-input', (data) => {
+    const slot = data.slot; // PLAYER_1 or PLAYER_2
+    if (!slot || !playerInputs[slot]) return;
+
+    if (data.type === 'joystick') {
+      playerInputs[slot].moveX = data.x;
+      playerInputs[slot].moveY = data.y;
+    } else if (data.type === 'btnDown') {
+      if (data.btn === 'HIT') {
+        playerInputs[slot].hit = true;
+        handleButtonPress(slot, 'HIT');
+      } else if (data.btn === 'LOB') {
+        playerInputs[slot].lob = true;
+        handleButtonPress(slot, 'LOB');
+      } else if (data.btn === 'POWER') {
+        playerInputs[slot].power = true;
+        handleButtonPress(slot, 'POWER');
+      } else if (data.btn === 'DIVE') {
+        playerInputs[slot].dive = true;
+        handleButtonPress(slot, 'DIVE');
+      }
+    } else if (data.type === 'btnUp') {
+      if (data.btn === 'HIT') playerInputs[slot].hit = false;
+      if (data.btn === 'LOB') playerInputs[slot].lob = false;
+      if (data.btn === 'POWER') playerInputs[slot].power = false;
+      if (data.btn === 'DIVE') playerInputs[slot].dive = false;
+    }
+  });
+}
+
+function triggerHapticFeedback(slotNum, pattern) {
+  if (socket && socket.connected) {
+    socket.emit('trigger-vibration', { slot: slotNum === 1 ? 'PLAYER_1' : 'PLAYER_2', pattern });
+  }
+}
+
+// ── CONTROL ACTIONS ────────────────────────────────────────────
+function handleButtonPress(slot, btn) {
+  if (gameState === STATES.MATCH_SETUP) {
+    if (btn === 'HIT') {
+      controllerSlots[slot].ready = !controllerSlots[slot].ready;
+      
+      const badge = document.getElementById(slot === 'PLAYER_1' ? 'p1-ready-badge' : 'p2-ready-badge');
+      if (badge) {
+        badge.innerText = `${slot === 'PLAYER_1' ? 'PLAYER 1' : 'PLAYER 2'}: ${controllerSlots[slot].ready ? 'READY!' : 'WAITING'}`;
+        badge.className = `ready-indicator ${slot === 'PLAYER_1' ? 'p1-ready-indicator' : 'p2-ready-indicator'} ${controllerSlots[slot].ready ? 'ready' : ''}`;
+      }
+
+      if (slot === 'PLAYER_1' && !controllerSlots.PLAYER_1.ready) {
+        const targets = [5, 10, 15, 21];
+        let nextIdx = (targets.indexOf(targetScore) + 1) % targets.length;
+        updateTargetPoints(targets[nextIdx]);
+      }
+
+      if (controllerSlots.PLAYER_1.ready && controllerSlots.PLAYER_2.ready) {
+        startCountdownSequence();
+      }
+    }
+  } else if (gameState === STATES.SERVE && currentServer === slot) {
+    if (btn === 'HIT') {
+      if (serveStage === 0) {
+        // Toss the ball!
+        ball.x = slot === 'PLAYER_1' ? players.PLAYER_1.x + 35 : players.PLAYER_2.x - 35;
+        ball.y = slot === 'PLAYER_1' ? players.PLAYER_1.y - 35 : players.PLAYER_2.y + 35;
+        ball.h = 60;
+        
+        ball.vx = 0;
+        ball.vy = 0;
+        ball.vh = 380; // toss velocity upwards
+        ball.inPlay = true;
+        serveStage = 1;
+        
+        sounds.bounce();
+      } else if (serveStage === 1) {
+        players[slot].swing('HIT');
+      }
+    }
+  } else if (gameState === STATES.RALLY) {
+    if (btn === 'HIT') {
+      players[slot].swing('HIT');
+    } else if (btn === 'LOB') {
+      players[slot].swing('LOB');
+    } else if (btn === 'POWER') {
+      players[slot].swing('POWER');
+    } else if (btn === 'DIVE') {
+      const input = playerInputs[slot];
+      if (Math.abs(input.moveX) > 0.1 || Math.abs(input.moveY) > 0.1) {
+        players[slot].dive(
+          slot === 'PLAYER_1' ? input.moveX : -input.moveX,
+          slot === 'PLAYER_1' ? input.moveY : -input.moveY
+        );
+      }
+    }
+  } else if (gameState === STATES.MATCH_END) {
+    if (btn === 'HIT') {
+      controllerSlots[slot].ready = !controllerSlots[slot].ready;
+      
+      const p1R = controllerSlots.PLAYER_1.ready ? 1 : 0;
+      const p2R = controllerSlots.PLAYER_2.ready ? 1 : 0;
+      document.getElementById('btn-rematch').innerText = `REMATCH (${p1R + p2R}/2 READY)`;
+
+      if (controllerSlots.PLAYER_1.ready && controllerSlots.PLAYER_2.ready) {
+        resetMatchToSetup();
+      }
+    }
+  }
+}
+
+function transitionToMatchSetup() {
+  gameState = STATES.MATCH_SETUP;
+  
+  document.getElementById('lobby-screen').classList.add('hidden');
+  document.getElementById('setup-screen').classList.remove('hidden');
+
+  triggerControllerVibration('PLAYER_1', 120);
+  triggerControllerVibration('PLAYER_2', 120);
+}
+
+function updateTargetPoints(pts) {
+  targetScore = pts;
+  document.querySelectorAll('.option-card').forEach(card => {
+    if (parseInt(card.getAttribute('data-points')) === pts) {
+      card.classList.add('active');
+    } else {
+      card.classList.remove('active');
+    }
+  });
+
+  document.getElementById('target-score-val').innerText = pts;
+}
+
+function startCountdownSequence() {
+  gameState = STATES.COUNTDOWN;
+  document.getElementById('setup-screen').classList.add('hidden');
+  document.getElementById('countdown-overlay').classList.remove('hidden');
+
+  countdownVal = 3;
+  document.getElementById('countdown-number').innerText = countdownVal;
+  sounds.countdown();
+
+  countdownInterval = setInterval(() => {
+    countdownVal--;
+    if (countdownVal > 0) {
+      document.getElementById('countdown-number').innerText = countdownVal;
+      sounds.countdown();
+    } else if (countdownVal === 0) {
+      document.getElementById('countdown-number').innerText = 'PLAY!';
+      sounds.countdownGo();
+    } else {
+      clearInterval(countdownInterval);
+      document.getElementById('countdown-overlay').classList.add('hidden');
+      document.getElementById('hud-overlay').classList.remove('hidden');
+      startNewPoint();
+    }
+  }, 1000);
+}
+
+function startNewPoint() {
+  gameState = STATES.SERVE;
+  serveStage = 0;
+  rallyActive = false;
+
+  ball.reset();
+  
+  players.PLAYER_1.x = 0;
+  players.PLAYER_1.y = 420;
+  players.PLAYER_1.diveTimer = 0;
+  players.PLAYER_1.swingTimer = 0;
+
+  players.PLAYER_2.x = 0;
+  players.PLAYER_2.y = -420;
+  players.PLAYER_2.diveTimer = 0;
+  players.PLAYER_2.swingTimer = 0;
+
+  // Ball follows server before toss
+  if (currentServer === 'PLAYER_1') {
+    ball.x = players.PLAYER_1.x + 35;
+    ball.y = players.PLAYER_1.y - 35;
+  } else {
+    ball.x = players.PLAYER_2.x - 35;
+    ball.y = players.PLAYER_2.y + 35;
+  }
+  ball.h = 60;
+
+  showNotification(`${currentServer === 'PLAYER_1' ? 'PLAYER 1' : 'PLAYER 2'} SERVES`);
+}
+
+function showNotification(txt) {
+  const notif = document.getElementById('match-notification');
+  notif.innerText = txt;
+  notif.classList.remove('hidden');
+  setTimeout(() => {
+    notif.classList.add('hidden');
+  }, 2200);
+}
+
+function triggerPointWin(winner, reason) {
+  gameState = STATES.POINT_END;
+  scores[winner]++;
+  
+  sounds.point();
+
+  document.getElementById('p1-score-val').innerText = scores.PLAYER_1;
+  document.getElementById('p2-score-val').innerText = scores.PLAYER_2;
+
+  showNotification(`${winner === 'PLAYER_1' ? 'PLAYER 1' : 'PLAYER 2'} SCORES! (${reason})`);
+
+  triggerControllerVibration(winner, 150);
+
+  if (scores[winner] >= targetScore) {
+    setTimeout(() => {
+      triggerMatchWin(winner);
+    }, 2500);
+  } else {
+    currentServer = winner === 'PLAYER_1' ? 'PLAYER_2' : 'PLAYER_1';
+    
+    setTimeout(() => {
+      startNewPoint();
+    }, 2500);
+  }
+}
+
+function triggerMatchWin(winner) {
+  gameState = STATES.MATCH_END;
+  sounds.win();
+
+  document.getElementById('hud-overlay').classList.add('hidden');
+  document.getElementById('game-over-screen').classList.remove('hidden');
+
+  document.getElementById('winner-announcement-text').innerText = `${winner === 'PLAYER_1' ? 'PLAYER 1' : 'PLAYER 2'} WINS!`;
+  document.getElementById('final-score-text').innerText = `Final Score: ${scores.PLAYER_1} - ${scores.PLAYER_2}`;
+
+  controllerSlots.PLAYER_1.ready = false;
+  controllerSlots.PLAYER_2.ready = false;
+  document.getElementById('btn-rematch').innerText = 'REMATCH (0/2 READY)';
+}
+
+function resetMatchToSetup() {
+  scores.PLAYER_1 = 0;
+  scores.PLAYER_2 = 0;
+  document.getElementById('p1-score-val').innerText = 0;
+  document.getElementById('p2-score-val').innerText = 0;
+
+  document.getElementById('game-over-screen').classList.add('hidden');
+  
+  controllerSlots.PLAYER_1.ready = false;
+  controllerSlots.PLAYER_2.ready = false;
+  const badge1 = document.getElementById('p1-ready-badge');
+  const badge2 = document.getElementById('p2-ready-badge');
+  if (badge1) {
+    badge1.innerText = 'PLAYER 1: WAITING';
+    badge1.className = 'ready-indicator p1-ready-indicator';
+  }
+  if (badge2) {
+    badge2.innerText = 'PLAYER 2: WAITING';
+    badge2.className = 'ready-indicator p2-ready-indicator';
+  }
+
+  transitionToMatchSetup();
+}
+
+function triggerDisconnectPause(disconnectedSlot) {
+  if (gameState === STATES.PAUSED_DISCONNECT) return;
+  
+  const prevState = gameState;
+  gameState = STATES.PAUSED_DISCONNECT;
+
+  document.getElementById('pause-overlay').classList.remove('hidden');
+  document.getElementById('pause-title').innerText = `${disconnectedSlot === 'PLAYER_1' ? 'PLAYER 1' : 'PLAYER 2'} DISCONNECTED`;
+
+  pauseTimeRemaining = 30;
+  document.getElementById('reconnect-timer-val').innerText = `${pauseTimeRemaining}s`;
+
+  if (pauseTimeout) clearInterval(pauseTimeout);
+
+  pauseTimeout = setInterval(() => {
+    pauseTimeRemaining--;
+    document.getElementById('reconnect-timer-val').innerText = `${pauseTimeRemaining}s`;
+
+    if (pauseTimeRemaining <= 0) {
+      clearInterval(pauseTimeout);
+      window.location.reload();
+    }
+  }, 1000);
+
+  const checkRecon = setInterval(() => {
+    if (controllerSlots[disconnectedSlot].connected) {
+      clearInterval(checkRecon);
+      clearInterval(pauseTimeout);
+      document.getElementById('pause-overlay').classList.add('hidden');
+      
+      gameState = prevState;
+      showNotification('RESUMED!');
+    }
+  }, 500);
+}
+
+document.getElementById('btn-exit').onclick = () => {
+  if (window.parent && typeof window.parent.closeGameIframe === 'function') {
+    window.parent.closeGameIframe();
+  } else {
+    window.location.reload();
+  }
+};
+
+// ── MAIN ANIMATION FRAME LOOP ──────────────────────────────────
+function animate() {
+  requestAnimationFrame(animate);
+
+  const dt = Math.min(0.033, clock.getDelta()); 
+
+  if (gameState !== STATES.CONTROLLER_LOBBY && gameState !== STATES.PAUSED_DISCONNECT) {
+    // Pin ball to server's hand before toss
+    if (gameState === STATES.SERVE && serveStage === 0) {
+      if (currentServer === 'PLAYER_1') {
+        ball.x = players.PLAYER_1.x + 35;
+        ball.y = players.PLAYER_1.y - 35;
+      } else {
+        ball.x = players.PLAYER_2.x - 35;
+        ball.y = players.PLAYER_2.y + 35;
+      }
+      ball.h = 60;
+      ball.vx = 0;
+      ball.vy = 0;
+      ball.vh = 0;
+    } else {
+      // Update ball physics
+      ball.update(dt);
+    }
+
+    // Update players
+    players.PLAYER_1.update(dt, playerInputs.PLAYER_1);
+    players.PLAYER_2.update(dt, playerInputs.PLAYER_2);
+    
+    // Update active particles
+    updateParticles(dt);
+  }
+
+  // ── Split screen 2D Render ──
+  const canvas = document.getElementById('tennis-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+
+  if (canvas.width !== w || canvas.height !== h) {
+    canvas.width = w;
+    canvas.height = h;
+  }
+
+  // Clear background
+  ctx.fillStyle = '#020617';
+  ctx.fillRect(0, 0, w, h);
+
+  // 1. Render Left side: Player 1 Viewport
+  renderViewport('PLAYER_1', 0, 0, w / 2, h);
+
+  // 2. Render Right side: Player 2 Viewport
+  renderViewport('PLAYER_2', w / 2, 0, w / 2, h);
+
+  // Draw Center divider line
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(w / 2, 0);
+  ctx.lineTo(w / 2, h);
+  ctx.stroke();
+}
+
+function start() {
+  initSocketConnection();
+  animate();
+}
+
+window.onload = start;

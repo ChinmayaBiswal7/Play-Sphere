@@ -1,0 +1,16 @@
+/* PlaySphere Console Dashboard Style System */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
+
+#ps5-console-root {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: #020617;
+  color: #f8fafc;
+  font-family: 'Outfit', sans-serif;
+  z-index: 99999;
+  overflow: hidden;
+  user-select: none;
+}

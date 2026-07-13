@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script>
+    // Universal error interceptor to log client crashes directly to Node backend console
+    window.onerror = (msg, src, line, col, err) => {
+      fetch('/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ type: 'error', msg, src, line, col, stack: err?.stack })
+      }).catch(() => {});
+      return false;
+    };
+    window.onunhandledrejection = (event) => {
+      fetch('/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ 
+          type: 'unhandled_rejection', 
+          msg: event.reason?.message || String(event.reason), 
+          stack: event.reason?.stack 
+        })
+      }).catch(() => {});
+    };
+  </script>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Football Legends 2026 — PlaySphere</title>
+  
+  <!-- Modern Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+  
+  <!-- CSS Stylesheet -->
+  <link rel="stylesheet" href="style.css?v=13">
+
+  <!-- Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.147.0/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <!-- Gamepad emulator -->
+  <script src="../js/gamepad_emulator.js?v=60"></script>
+</head>
+<body>
+  <!-- 3D Canvas container -->
+  <div id="canvas-container"></div>
+
+  <!-- Dynamic HUD Overlay -->
+  <div id="game-hud" style="display: none;">
+    <!-- Top Bar Scoreboard -->
+    <header class="hud-scoreboard">
+      <div class="team-panel team-home">
+        <span class="team-color" id="hud-home-color"></span>
+        <span class="team-name" id="hud-home-name">RED DEVILS</span>
+        <span class="team-score" id="score-home">0</span>
+      </div>
+      <div class="time-panel">
+        <span class="match-time" id="match-timer">00:00</span>
+        <span class="match-period">1ST HALF</span>
+      </div>
+      <div class="team-panel team-away">
+        <span class="team-score" id="score-away">0</span>
+        <span class="team-name" id="hud-away-name">SKY BLUES</span>
+        <span class="team-color" id="hud-away-color"></span>
+      </div>
+    </header>
+
+    <!-- Active Player / Controls Status -->
+    <div class="hud-player-stats">
+      <div class="active-player-tag">
+        <span class="tag-label">PLAYER IN CONTROL</span>
+        <span class="player-name" id="hud-active-player">NO. 10 (YOU)</span>
+        <div class="hud-stamina-container">
+          <div class="hud-stamina-fill" id="hud-stamina-fill" style="width: 100%;"></div>
+        </div>
+      </div>
+      <div class="controls-pill" id="remote-indicator">
+        <span class="status-dot"></span>
+        <span id="remote-label">KEYBOARD CONTROL</span>
+      </div>
+    </div>
+
+    <!-- Power Bar Overlay -->
+    <div class="power-bar-wrapper" id="power-wrapper" style="opacity: 0;">
+      <span class="power-label">KICK POWER</span>
+      <div class="power-bar-bg">
+        <div class="power-bar-fill" id="power-fill"></div>
+      </div>
+    </div>
+
+    <!-- Standalone Mobile Touch Controls -->
+    <div id="mobile-touch-controls" style="display: none;">
+      <div class="mobile-joystick-zone">
+        <div class="touch-joystick-base" id="mobile-js-base">
+          <div class="touch-joystick-knob" id="mobile-js-knob"></div>
+        </div>
+      </div>
+
+      <div class="mobile-buttons-zone">
+        <button class="mobile-btn btn-sprint" id="touch-btn-sprint">SPRINT</button>
+        <button class="mobile-btn btn-tackle" id="touch-btn-tackle">TACKLE</button>
+        <button class="mobile-btn btn-pass" id="touch-btn-pass">PASS</button>
+        <button class="mobile-btn btn-shoot" id="touch-btn-shoot">SHOOT</button>
+      </div>
+    </div>
+
+    <!-- Match Mini stats -->
+    <div class="radar-hud">
+      <div class="stats-row"><span>POSSESSION</span><b id="possession-split">50% / 50%</b></div>
+      <div class="stats-row"><span>SHOTS (ON GOAL)</span><b id="shots-split">0 / 0</b></div>
+    </div>
+
+    <!-- Football Mini Map Radar -->
+    <div class="radar-map-wrapper">
+      <canvas id="radar-canvas" width="220" height="130"></canvas>
+    </div>
+
+    <button class="pause-trigger-btn" id="hud-pause-btn">|| PAUSE</button>
+  </div>
+
+  <!-- Goal Scored Overlay Celebration -->
+  <div class="goal-celebration-overlay" id="goal-overlay">
+    <div class="goal-text-glow">GOAL!</div>
+    <div class="goal-sub-text" id="goal-scorer-sub">SPECTACULAR STRIKE!</div>
+  </div>
+
+  <!-- Slow Motion Replay TV overlay -->
+  <div class="replay-watermark" id="replay-overlay" style="display: none;">
+    <div class="replay-header">
+      <span class="rec-dot"></span>
+      <span>REPLAY — SLOW MOTION</span>
+    </div>
+    <div class="replay-logo">PLAYSPHERE TV</div>
+  </div>
+
+  <!-- Match Over Screen -->
+  <div class="menu-overlay" id="match-over-screen" style="display: none;">
+    <div class="menu-box">
+      <h1 class="menu-title text-glow">MATCH OVER</h1>
+      <h2 class="match-result-banner" id="match-result-title">RED DEVILS WIN!</h2>
+      
+      <div class="match-summary-stats">
+        <div class="stat-item">
+          <span id="end-home-name">RED DEVILS</span>
+          <strong id="final-home-score">0</strong>
+        </div>
+        <div class="stat-divider">VS</div>
+        <div class="stat-item">
+          <strong id="final-away-score">0</strong>
+          <span id="end-away-name">SKY BLUES</span>
+        </div>
+      </div>
+
+      <div class="stat-details-list">
+        <div class="detail-row"><span>Total Shots</span><span id="stat-shots">4 - 3</span></div>
+        <div class="detail-row"><span>Steals/Tackles</span><span id="stat-tackles">8 - 6</span></div>
+        <div class="detail-row"><span>XP Earned</span><span id="stat-xp">+150 XP</span></div>
+      </div>
+
+      <button class="menu-btn primary-btn" id="match-over-retry">REPLAY MATCH</button>
+      <button class="menu-btn secondary-btn" id="match-over-dash">BACK TO DASHBOARD</button>
+    </div>
+  </div>
+
+  <!-- Main Menu Overlay -->
+  <div class="menu-overlay" id="main-menu-screen">
+    
+    <!-- Live Moving Background Slideshow -->
+    <div class="slideshow-container">
+      <div class="slide" style="background-image: url('/football_menu_bg.png');"></div>
+      <div class="slide" style="background-image: url('/football_menu_bg2.png');"></div>
+      <div class="slide" style="background-image: url('/football_menu_bg3.png');"></div>
+    </div>
+
+    <!-- Next-Gen Widescreen Landing Dashboard -->
+    <div class="football-dashboard" id="menu-dashboard-view">
+      
+      <!-- Top Header Row -->
+      <header class="dash-header">
+        <div class="header-left">
+          <div class="dash-profile-card">
+            <div class="profile-avatar-wrapper">
+              <span class="profile-avatar-glow"></span>
+              <div class="profile-avatar-circle" id="menu-avatar">👤</div>
+            </div>
+            <div class="profile-meta">
+              <span class="profile-name" id="menu-username">PlayerOne</span>
+              <div class="profile-xp-row">
+                <span class="profile-level-badge" id="menu-userlevel-badge">LEVEL 1 MEMBER</span>
+                <div class="xp-progress-bar">
+                  <div class="xp-progress-fill" id="menu-xp-fill" style="width: 10%;"></div>
+                </div>
+                <span class="xp-ratio" id="menu-xp-ratio">0 / 500 XP</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="header-right">
+          <!-- Currency pills -->
+          <div class="currency-pill-group">
+            <div class="currency-pill gold-pill">
+              <span class="pill-icon">🪙</span>
+              <span id="menu-coin-count">12,450</span>
+              <button class="pill-add-btn">+</button>
+            </div>
+            <div class="currency-pill gem-pill">
+              <span class="pill-icon">💎</span>
+              <span id="menu-gem-count">860</span>
+              <button class="pill-add-btn">+</button>
+            </div>
+            <div class="currency-pill energy-pill">
+              <span class="pill-icon">⚡</span>
+              <span>100/100</span>
+              <button class="pill-add-btn">+</button>
+            </div>
+          </div>
+
+          <!-- Quick Action Buttons -->
+          <div class="quick-icons-group">
+            <button class="action-icon-btn">✉️</button>
+            <button class="action-icon-btn">🎁</button>
+            <button class="action-icon-btn" id="menu-fs-btn" title="Toggle Fullscreen">🖥️</button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Content Layout -->
+      <div class="dash-content-grid">
+        
+        <!-- Left Side Options -->
+        <aside class="dash-sidebar-left">
+          <button class="sidebar-tab-btn" id="btn-tab-career">
+            <span class="tab-icon">⚽</span>
+            <div class="tab-text">
+              <strong>CAREER MODE</strong>
+              <small>Build your legacy</small>
+            </div>
+          </button>
+          <button class="sidebar-tab-btn" id="btn-tab-tournament">
+            <span class="tab-icon">🏆</span>
+            <div class="tab-text">
+              <strong>TOURNAMENT</strong>
+              <small>Compete & win</small>
+            </div>
+          </button>
+          <button class="sidebar-tab-btn" id="btn-tab-multiplayer">
+            <span class="tab-icon">👥</span>
+            <div class="tab-text">
+              <strong>MULTIPLAYER</strong>
+              <small>Play with real players</small>
+            </div>
+          </button>
+          <button class="sidebar-tab-btn" id="btn-tab-practice">
+            <span class="tab-icon">🎯</span>
+            <div class="tab-text">
+              <strong>PRACTICE</strong>
+              <small>Hone your skills</small>
+            </div>
+          </button>
+        </aside>
+
+        <!-- Center Widescreen Banner -->
+        <main class="dash-center-main">
+          <div class="main-title-area">
+            <h1 class="legends-title">FOOTBALL <span class="accent-lime">LEGENDS</span></h1>
+            <p class="legends-tagline">LIVE THE GAME. BE THE LEGEND.</p>
+          </div>
+
+          <!-- Quick Match Trigger Card -->
+          <div class="kickoff-hero-card" id="btn-quick-kickoff">
+            <div class="kickoff-bg-overlay"></div>
+            <div class="kickoff-info">
+              <small class="lime-text">QUICK MATCH</small>
+              <h2>KICK OFF</h2>
+              <p>Jump into the action and play now!</p>
+            </div>
+            <div class="kickoff-action-arrow">
+              <span>❯</span>
+            </div>
+          </div>
+        </main>
+
+        <!-- Right Side Widgets -->
+        <aside class="dash-sidebar-right">
+          <!-- Daily Reward Card -->
+          <div class="widget-card reward-widget">
+            <div class="widget-header">
+              <span class="widget-title">DAILY REWARD</span>
+              <span class="timer-countdown">18h 32m</span>
+            </div>
+            <div class="widget-body">
+              <p>Come back tomorrow for more rewards!</p>
+              <div class="reward-box-visual">🎁</div>
+            </div>
+          </div>
+
+          <!-- Upcoming Event Card -->
+          <div class="widget-card event-widget">
+            <div class="widget-header">
+              <span class="widget-title">UPCOMING EVENT</span>
+              <span class="timer-countdown">2d 06h</span>
+            </div>
+            <div class="widget-body">
+              <strong>CHAMPIONS CUP</strong>
+              <div class="event-ball-visual">🏆</div>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <!-- Bottom Nav Bar -->
+      <footer class="dash-footer">
+        <nav class="footer-nav">
+          <button class="nav-item active" id="btn-nav-home">
+            <span class="nav-dot"></span>
+            <span>HOME</span>
+          </button>
+          <button class="nav-item" id="btn-nav-team">
+            <span>TEAM</span>
+          </button>
+          <button class="nav-item" id="btn-nav-customize" onclick="alert('Customize Arena unlocking in Season 2!')">
+            <span>CUSTOMIZE</span>
+          </button>
+          <button class="nav-item" id="btn-nav-store">
+            <span>STORE</span>
+          </button>
+          <button class="nav-item" id="btn-nav-leaderboard">
+            <span>LEADERBOARD</span>
+          </button>
+        </nav>
+
+        <div class="footer-right-team">
+          <div class="my-team-badge">
+            <div class="team-shield">🛡️</div>
+            <div class="team-ovr-meta">
+              <small>MY TEAM</small>
+              <strong>OVR 87</strong>
+            </div>
+          </div>
+          <button class="arrow-nav-btn" id="dash-settings-btn" title="Open Settings">⚙️</button>
+        </div>
+      </footer>
+    </div>
+
+    <!-- Dynamic Sub-Screen View Panel -->
+    <div class="football-dashboard subscreen-view-panel" id="subscreen-view" style="display: none;">
+      <!-- Subscreen Header -->
+      <header class="dash-header">
+        <div class="header-left" style="gap: 20px;">
+          <button class="back-arrow-btn" id="btn-subscreen-back" title="Back to Home">➔</button>
+          <h1 class="subscreen-title text-glow" id="subscreen-title-text" style="font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 2.2rem; color: #fff;">CAREER MODE</h1>
+        </div>
+
+        <div class="header-right">
+          <!-- Currency pills -->
+          <div class="currency-pill-group">
+            <div class="currency-pill gold-pill">
+              <span class="pill-icon">🪙</span>
+              <span class="sub-coin-count">12,450</span>
+            </div>
+            <div class="currency-pill gem-pill">
+              <span class="pill-icon">💎</span>
+              <span class="sub-gem-count">860</span>
+            </div>
+            <div class="currency-pill energy-pill">
+              <span class="pill-icon">⚡</span>
+              <span>100/100</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Subscreen Dynamic Content wrapper -->
+      <div class="subscreen-content-wrapper" id="subscreen-dynamic-content">
+        <!-- Components injected here -->
+      </div>
+    </div>
+
+    <!-- ══ STAGE 1: PREMIUM TEAM SELECTION VIEW ══ -->
+    <div id="menu-matchup-view" style="display: none;">
+      <div class="matchup-inner">
+      <!-- Header -->
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 16px; margin-bottom: 20px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <span style="background: #a3e635; color: #000; padding: 4px 8px; font-size: 0.75rem; font-weight: 800; border-radius: 4px; font-family: 'Orbitron', sans-serif;">KICK OFF</span>
+          <h2 style="margin: 0; font-family: 'Orbitron', sans-serif; font-size: 1.4rem; color: #fff; letter-spacing: 1px;">SELECT TEAMS</h2>
+        </div>
+        <div style="font-family: 'Orbitron', sans-serif; font-size: 0.85rem; color: rgba(255,255,255,0.6);">CLASSIC MATCH</div>
+      </div>
+
+      <div style="display: flex; gap: 28px; flex-wrap: wrap; width: 100%; justify-content: center; margin-top: 10px;">
+        <!-- Left Column: Home Selector -->
+        <div class="team-selection-col premium-selection-card home" style="flex: 1; min-width: 340px; max-width: 480px; text-align: center;">
+          <div style="font-size: 0.95rem; font-weight: 900; color: #a3e635; margin-bottom: 14px; font-family: 'Orbitron', sans-serif; letter-spacing: 2px;">HOME SQUAD</div>
+          
+          <!-- Gender toggle -->
+          <div style="display: flex; justify-content: center; gap: 8px; margin-bottom: 18px; font-size: 0.75rem;">
+            <button class="settings-pill active" style="padding: 8px 16px; border-radius: 20px; border: 1px solid #a3e635; background: rgba(163,230,53,0.12); color: #fff; cursor: pointer; font-weight: bold; font-family: 'Orbitron', sans-serif;">✔ Men's Teams</button>
+            <button class="settings-pill" style="padding: 8px 16px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.15); background: transparent; color: rgba(255,255,255,0.5); cursor: pointer; font-family: 'Orbitron', sans-serif;">Women's Teams</button>
+          </div>
+
+          <!-- Country Dropdown -->
+          <div style="margin-bottom: 18px; text-align: left;">
+            <label style="font-size: 0.72rem; color: rgba(255,255,255,0.45); display: block; margin-bottom: 6px; font-family: 'Orbitron', sans-serif; font-weight: bold; letter-spacing: 1px;">SELECT NATION</label>
+            <select id="user-country-select" class="country-select-dropdown"></select>
+          </div>
+
+          <!-- Club Card Selector -->
+          <div class="club-card-selector team-display-inner" style="position: relative;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+              <button class="arrow-btn" id="user-team-prev">◀</button>
+              <div id="user-team-crest">🔵🔴</div>
+              <button class="arrow-btn" id="user-team-next">▶</button>
+            </div>
+            <h3 id="user-team-name" style="margin: 8px 0 4px; font-family: 'Orbitron', sans-serif; font-size: 1.4rem; color: #fff; font-weight: 900; letter-spacing: 0.5px;">FC Barcelona</h3>
+            <div style="color: #fbbf24; font-size: 1rem; margin-bottom: 14px; letter-spacing: 2px; text-shadow: 0 0 12px rgba(251,191,36,0.5);">★★★★★</div>
+            
+            <!-- Overall Stats -->
+            <div class="stat-badge-group">
+              <div class="stat-badge att"><span>ATT</span><strong id="user-team-att">87</strong></div>
+              <div class="stat-badge mid"><span>MID</span><strong id="user-team-mid">85</strong></div>
+              <div class="stat-badge def"><span>DEF</span><strong id="user-team-def">83</strong></div>
+            </div>
+            
+            <div id="user-team-league" style="font-size: 0.65rem; color: rgba(255,255,255,0.4); margin-top: 14px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: bold; font-family: 'Orbitron', sans-serif;">LALIGA EA SPORTS</div>
+          </div>
+        </div>
+
+        <!-- Center Column: Advantage Settings -->
+        <div style="width: 220px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 20px; text-align: center; font-family: 'Orbitron', sans-serif;">
+          <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 16px; border-radius: 12px; width: 100%; box-shadow: 0 4px 15px rgba(0,0,0,0.25); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);">
+            <div style="font-size: 0.68rem; color: rgba(255,255,255,0.45); font-weight: bold; margin-bottom: 6px; letter-spacing: 1.5px;">ADVANTAGE SETTINGS</div>
+            <strong style="font-size: 0.95rem; color: #fff; font-weight: 900; text-shadow: 0 0 10px rgba(255,255,255,0.15);">OFF</strong>
+          </div>
+          <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 16px; border-radius: 12px; width: 100%; box-shadow: 0 4px 15px rgba(0,0,0,0.25); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);">
+            <div style="font-size: 0.68rem; color: rgba(255,255,255,0.45); font-weight: bold; margin-bottom: 6px; letter-spacing: 1.5px;">LIVE FORM</div>
+            <strong style="font-size: 0.95rem; color: #a3e635; font-weight: 900; text-shadow: 0 0 10px rgba(163,230,53,0.3);">ON ✔</strong>
+          </div>
+          <div style="font-size: 2.2rem; font-weight: 900; color: rgba(255,255,255,0.2); letter-spacing: 2px; text-shadow: 0 0 30px rgba(255,255,255,0.05); margin-top: 10px;">VS</div>
+        </div>
+
+        <!-- Right Column: Away Selector -->
+        <div class="team-selection-col premium-selection-card away" style="flex: 1; min-width: 340px; max-width: 480px; text-align: center;">
+          <div style="font-size: 0.95rem; font-weight: 900; color: #38bdf8; margin-bottom: 14px; font-family: 'Orbitron', sans-serif; letter-spacing: 2px;">AWAY SQUAD</div>
+          
+          <!-- Gender toggle -->
+          <div style="display: flex; justify-content: center; gap: 8px; margin-bottom: 18px; font-size: 0.75rem;">
+            <button class="settings-pill active" style="padding: 8px 16px; border-radius: 20px; border: 1px solid #38bdf8; background: rgba(56,189,248,0.12); color: #fff; cursor: pointer; font-weight: bold; font-family: 'Orbitron', sans-serif;">✔ Men's Teams</button>
+            <button class="settings-pill" style="padding: 8px 16px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.15); background: transparent; color: rgba(255,255,255,0.5); cursor: pointer; font-family: 'Orbitron', sans-serif;">Women's Teams</button>
+          </div>
+
+          <!-- Country Dropdown -->
+          <div style="margin-bottom: 18px; text-align: left;">
+            <label style="font-size: 0.72rem; color: rgba(255,255,255,0.45); display: block; margin-bottom: 6px; font-family: 'Orbitron', sans-serif; font-weight: bold; letter-spacing: 1px;">SELECT NATION</label>
+            <select id="opp-country-select" class="country-select-dropdown"></select>
+          </div>
+
+          <!-- Club Card Selector -->
+          <div class="club-card-selector team-display-inner" style="position: relative;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+              <button class="arrow-btn" id="opp-team-prev">◀</button>
+              <div id="opp-team-crest">⚪👑</div>
+              <button class="arrow-btn" id="opp-team-next">▶</button>
+            </div>
+            <h3 id="opp-team-name" style="margin: 8px 0 4px; font-family: 'Orbitron', sans-serif; font-size: 1.4rem; color: #fff; font-weight: 900; letter-spacing: 0.5px;">Real Madrid</h3>
+            <div style="color: #fbbf24; font-size: 1rem; margin-bottom: 14px; letter-spacing: 2px; text-shadow: 0 0 12px rgba(251,191,36,0.5);">★★★★★</div>
+            
+            <!-- Overall Stats -->
+            <div class="stat-badge-group">
+              <div class="stat-badge att"><span>ATT</span><strong id="opp-team-att">90</strong></div>
+              <div class="stat-badge mid"><span>MID</span><strong id="opp-team-mid">84</strong></div>
+              <div class="stat-badge def"><span>DEF</span><strong id="opp-team-def">82</strong></div>
+            </div>
+            
+            <div id="opp-team-league" style="font-size: 0.65rem; color: rgba(255,255,255,0.4); margin-top: 14px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: bold; font-family: 'Orbitron', sans-serif;">LALIGA EA SPORTS</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action buttons -->
+      <div style="display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 16px; margin-top: 20px;">
+        <button class="menu-btn secondary-btn" id="btn-back-to-dash" style="padding: 10px 20px; border-radius: 6px; font-family: 'Orbitron', sans-serif; cursor: pointer; border: 1px solid rgba(255,255,255,0.2); background: transparent; color: #fff;">BACK TO HOME</button>
+        <button class="menu-btn primary-btn" id="btn-confirm-teams" style="padding: 10px 24px; border-radius: 6px; font-family: 'Orbitron', sans-serif; cursor: pointer; border: none; background: #a3e635; color: #000; font-weight: bold; box-shadow: 0 4px 15px rgba(163,230,53,0.3);">CONFIRM TEAMS ▶</button>
+      </div>
+      </div>
+    </div>
+
+
+    <!-- ══ STAGE 2: KICK OFF MATCH PREVIEW / FACE-OFF SCREEN ══ -->
+    <!-- ══ STAGE 2: KICK OFF MATCH PREVIEW / FACE-OFF SCREEN ══ -->
+    <div id="match-preview-screen" style="display: none;">
+      <div class="preview-inner">
+
+      <!-- Top Header Nav Tabs (FC 26 style) -->
+      <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; border-bottom: 1.5px solid rgba(255,255,255,0.08); padding-bottom: 16px; margin-bottom: 24px; font-family: 'Orbitron', sans-serif;">
+        <div style="display: flex; align-items: center; gap: 32px;">
+          <span style="font-size: 1.4rem; font-weight: 900; color: #fff; letter-spacing: 2px; text-shadow: 0 0 10px rgba(255,255,255,0.2);">KO</span>
+          <div style="display: flex; gap: 24px; font-size: 0.85rem; font-weight: 700; text-transform: uppercase;">
+            <span style="color: #a3e635; border-bottom: 3.5px solid #a3e635; padding-bottom: 16px; margin-bottom: -17px; cursor: pointer; letter-spacing: 1.5px;">MATCH PREVIEW</span>
+            <span style="color: rgba(255,255,255,0.45); cursor: pointer; transition: color 0.2s; letter-spacing: 1.5px;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.45)'" onclick="document.getElementById('btn-goto-management').click()">TEAM MANAGEMENT</span>
+            <span style="color: rgba(255,255,255,0.45); cursor: pointer; transition: color 0.2s; letter-spacing: 1.5px;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.45)'" onclick="document.getElementById('dash-settings-btn').click();">GAME SETTINGS</span>
+          </div>
+        </div>
+        <div style="font-size: 0.8rem; font-weight: 700; color: rgba(255,255,255,0.5); letter-spacing: 1px;">KICK OFF MATCH DAY</div>
+      </div>
+
+      <!-- 3-Column Body -->
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 24px; width: 100%; flex: 1; margin-bottom: 20px;">
+
+        <!-- Left: Home Captain -->
+        <div style="flex: 1; min-width: 0; text-align: center; display: flex; flex-direction: column; align-items: center;">
+          <div style="color: #a3e635; font-size: 0.75rem; font-weight: 800; letter-spacing: 2px; margin-bottom: 8px; font-family: 'Orbitron', sans-serif;">HOME CONTROLLER</div>
+          <div id="preview-home-crest" style="font-size: 4.5rem; margin-bottom: 8px; filter: drop-shadow(0 0 12px rgba(255,255,255,0.1));">🔵🔴</div>
+          <h2 id="preview-home-name" style="margin: 0 0 16px; font-family: 'Orbitron', sans-serif; font-size: 1.3rem; font-weight: 900; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; letter-spacing: 1px;">FC Barcelona</h2>
+
+          <!-- Captain Card -->
+          <div class="preview-captain-card home-card">
+            <div class="card-header-overlay">
+              <div class="card-rating-val" id="preview-home-rating">93</div>
+              <div class="card-pos-val" id="preview-home-pos">ST</div>
+              <div class="card-flag-badge" id="preview-home-flag">🇵🇱</div>
+            </div>
+            <div class="card-player-avatar-zone" id="preview-home-avatar"><span>👑</span></div>
+            <div class="card-player-name-glow" id="preview-home-cap">Lewandowski</div>
+            <div class="card-stats-grid">
+              <div class="card-stat-item"><span>PAC</span><span class="card-stat-val" id="preview-home-pac">88</span></div>
+              <div class="card-stat-item"><span>DRI</span><span class="card-stat-val" id="preview-home-dri">92</span></div>
+              <div class="card-stat-item"><span>SHO</span><span class="card-stat-val" id="preview-home-sho">93</span></div>
+              <div class="card-stat-item"><span>DEF</span><span class="card-stat-val" id="preview-home-def">44</span></div>
+              <div class="card-stat-item"><span>PAS</span><span class="card-stat-val" id="preview-home-pas">85</span></div>
+              <div class="card-stat-item"><span>PHY</span><span class="card-stat-val" id="preview-home-phy">83</span></div>
+            </div>
+            <div class="card-role-tag-bottom">CAPTAIN</div>
+          </div>
+        </div>
+
+        <!-- Center: Actions -->
+        <div style="flex: 0 0 auto; width: 300px; display: flex; flex-direction: column; gap: 14px; align-items: center; justify-content: center; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 20px; padding: 24px 16px; backdrop-filter: blur(10px); box-shadow: inset 0 0 20px rgba(255,255,255,0.02);">
+          
+          <button class="menu-btn primary-btn" id="menu-start-btn" style="width: 100%; padding: 14px 24px; font-size: 1rem; border-radius: 30px; font-weight: 900; font-family: 'Orbitron', sans-serif; background: #a3e635; color: #000; border: none; cursor: pointer; box-shadow: var(--glow-lime); transition: all 0.25s ease; letter-spacing: 1.5px; text-transform: uppercase;">⚡ START MATCH</button>
+
+          <button class="menu-btn secondary-btn" id="btn-goto-management" style="width: 100%; padding: 12px 24px; border-radius: 30px; font-family: 'Orbitron', sans-serif; font-size: 0.85rem; font-weight: 700; border: 1.5px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.05); color: #fff; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: all 0.25s ease; letter-spacing: 1px;">
+            <span>📋 TEAM MANAGEMENT</span><span style="color: #a3e635;">❯</span>
+          </button>
+
+          <button class="menu-btn secondary-btn" id="btn-back-to-teams" style="width: 100%; padding: 12px 24px; border-radius: 30px; font-family: 'Orbitron', sans-serif; font-size: 0.85rem; font-weight: 700; border: 1.5px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.05); color: #fff; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: all 0.25s ease; letter-spacing: 1px;">
+            <span>🔄 SELECT TEAMS</span><span>❮</span>
+          </button>
+
+          <!-- Overall H2H Stats (FC 26 style) -->
+          <div style="margin-top: 16px; text-align: center; width: 100%;">
+            <div style="font-size: 0.72rem; color: #a3e635; font-family: 'Orbitron', sans-serif; margin-bottom: 12px; font-weight: 800; letter-spacing: 1.5px; text-shadow: var(--glow-lime);">OVERALL H2H</div>
+            <div style="display: flex; justify-content: center; gap: 14px; align-items: center;">
+              <div>
+                <div style="width: 44px; height: 44px; border-radius: 50%; border: 3px solid #a3e635; display: flex; justify-content: center; align-items: center; font-weight: 900; color: #fff; font-size: 1.1rem; font-family: 'Orbitron', sans-serif; box-shadow: 0 0 12px rgba(163,230,53,0.35);">3</div>
+                <div style="font-size: 0.55rem; color: rgba(255,255,255,0.45); font-weight: 800; margin-top: 6px; letter-spacing: 1px;">WINS</div>
+              </div>
+              <div style="width: 12px; height: 1px; background: rgba(255,255,255,0.15);"></div>
+              <div>
+                <div style="width: 44px; height: 44px; border-radius: 50%; border: 3px solid rgba(255,255,255,0.35); display: flex; justify-content: center; align-items: center; font-weight: 900; color: #fff; font-size: 1.1rem; font-family: 'Orbitron', sans-serif;">2</div>
+                <div style="font-size: 0.55rem; color: rgba(255,255,255,0.45); font-weight: 800; margin-top: 6px; letter-spacing: 1px;">DRAWS</div>
+              </div>
+              <div style="width: 12px; height: 1px; background: rgba(255,255,255,0.15);"></div>
+              <div>
+                <div style="width: 44px; height: 44px; border-radius: 50%; border: 3px solid #38bdf8; display: flex; justify-content: center; align-items: center; font-weight: 900; color: #fff; font-size: 1.1rem; font-family: 'Orbitron', sans-serif; box-shadow: 0 0 12px rgba(56,189,248,0.35);">4</div>
+                <div style="font-size: 0.55rem; color: rgba(255,255,255,0.45); font-weight: 800; margin-top: 6px; letter-spacing: 1px;">WINS</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Away Captain -->
+        <div style="flex: 1; min-width: 0; text-align: center; display: flex; flex-direction: column; align-items: center;">
+          <div style="color: #38bdf8; font-size: 0.75rem; font-weight: 800; letter-spacing: 2px; margin-bottom: 8px; font-family: 'Orbitron', sans-serif;">AWAY CONTROLLER</div>
+          <div id="preview-away-crest" style="font-size: 4.5rem; margin-bottom: 8px; filter: drop-shadow(0 0 12px rgba(255,255,255,0.1));">⚪👑</div>
+          <h2 id="preview-away-name" style="margin: 0 0 16px; font-family: 'Orbitron', sans-serif; font-size: 1.3rem; font-weight: 900; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; letter-spacing: 1px;">Real Madrid</h2>
+
+          <!-- Captain Card -->
+          <div class="preview-captain-card away-card">
+            <div class="card-header-overlay">
+              <div class="card-rating-val" id="preview-away-rating">91</div>
+              <div class="card-pos-val" id="preview-away-pos">ST</div>
+              <div class="card-flag-badge" id="preview-away-flag">🇫🇷</div>
+            </div>
+            <div class="card-player-avatar-zone" id="preview-away-avatar"><span>⚡</span></div>
+            <div class="card-player-name-glow" id="preview-away-cap">Mbappe</div>
+            <div class="card-stats-grid">
+              <div class="card-stat-item"><span>PAC</span><span class="card-stat-val" id="preview-away-pac">97</span></div>
+              <div class="card-stat-item"><span>DRI</span><span class="card-stat-val" id="preview-away-dri">92</span></div>
+              <div class="card-stat-item"><span>SHO</span><span class="card-stat-val" id="preview-away-sho">89</span></div>
+              <div class="card-stat-item"><span>DEF</span><span class="card-stat-val" id="preview-away-def">36</span></div>
+              <div class="card-stat-item"><span>PAS</span><span class="card-stat-val" id="preview-away-pas">80</span></div>
+              <div class="card-stat-item"><span>PHY</span><span class="card-stat-val" id="preview-away-phy">78</span></div>
+            </div>
+            <div class="card-role-tag-bottom">CAPTAIN</div>
+          </div>
+        </div>
+
+      </div><!-- end 3-col body -->
+
+      <!-- Full-Width Settings Footer Bar -->
+      <div style="width: 100vw; margin-left: -60px; margin-right: -60px; margin-top: auto; background: rgba(0, 0, 0, 0.7); border-top: 1.5px solid rgba(255, 255, 255, 0.08); padding: 18px 60px; display: flex; justify-content: center; gap: 32px; font-size: 0.72rem; color: rgba(255,255,255,0.65); font-family: 'Orbitron', sans-serif; box-shadow: 0 -8px 32px rgba(0,0,0,0.4); box-sizing: border-box;">
+        <div>STADIUM: <strong style="color: #fff; letter-spacing: 0.5px;">MONUMENTAL</strong></div>
+        <div style="color: rgba(255,255,255,0.25);">|</div>
+        <div>MATCH LENGTH: <strong style="color: #fff; letter-spacing: 0.5px;">6 MIN</strong></div>
+        <div style="color: rgba(255,255,255,0.25);">|</div>
+        <div>DIFFICULTY: <strong style="color: #fff; letter-spacing: 0.5px;">PROFESSIONAL</strong></div>
+        <div style="color: rgba(255,255,255,0.25);">|</div>
+        <div>WEATHER: <strong style="color: #fff; letter-spacing: 0.5px;">SUNNY, 10:00 PM</strong></div>
+      </div>
+
+      </div><!-- end inner card -->
+    </div><!-- end match-preview-screen -->
+
+
+
+    <!-- ══ STAGE 3: TEAM MANAGEMENT & TACTICS OVERLAY ══ -->
+    <div id="team-management-screen" style="display: none;">
+      <div class="management-inner">
+      
+      <!-- Top Header Nav Tabs -->
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid rgba(255,255,255,0.08); padding-bottom: 16px; margin-bottom: 24px; font-family: 'Orbitron', sans-serif;">
+        <div style="display: flex; gap: 24px; font-size: 1rem; font-weight: 800;">
+          <span id="mgt-tab-squad" style="color: #a3e635; border-bottom: 3px solid #a3e635; padding-bottom: 16px; margin-bottom: -18px; cursor: pointer; letter-spacing: 1px;">SQUAD</span>
+          <span id="mgt-tab-tactics" style="color: rgba(255,255,255,0.4); cursor: pointer; letter-spacing: 1px;">TACTICS</span>
+          <span id="mgt-tab-roles" style="color: rgba(255,255,255,0.4); cursor: pointer; letter-spacing: 1px;">ROLES</span>
+        </div>
+        <h2 id="mgt-team-title" style="margin: 0; font-size: 1.2rem; font-weight: 900; color: #fff; letter-spacing: 1px;">FC BARCELONA DEFAULT</h2>
+      </div>
+
+      <!-- Main Layout Body (SQUAD VIEW) -->
+      <div id="mgt-view-squad" style="display: flex; flex: 1; gap: 24px; overflow: hidden; height: 100%;">
+        
+        <!-- Left Sidebar: Formations & Save/Discard Actions -->
+        <div style="width: 280px; display: flex; flex-direction: column; gap: 16px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 20px; box-sizing: border-box; height: 100%;">
+          <h4 style="margin: 0; font-family: 'Orbitron', sans-serif; color: #a3e635; font-size: 0.8rem; letter-spacing: 1px; font-weight: 800;">TACTICAL PRESET</h4>
+          
+          <!-- Formation Selector Dropdown -->
+          <div>
+            <label style="font-size: 0.72rem; color: rgba(255,255,255,0.4); display: block; margin-bottom: 6px; font-weight: bold; font-family: 'Orbitron', sans-serif;">FORMATION</label>
+            <select id="mgt-formation-select" style="width: 100%; padding: 12px; background: #111827; border: 1.5px solid rgba(163,230,53,0.3); border-radius: 8px; color: #fff; font-family: 'Orbitron', sans-serif; font-size: 0.85rem; font-weight: 800; cursor: pointer; transition: border-color 0.2s;" onfocus="this.style.borderColor='#a3e635'" onblur="this.style.borderColor='rgba(163,230,53,0.3)'"></select>
+          </div>
+
+          <div style="font-size: 0.72rem; color: rgba(255,255,255,0.45); line-height: 1.5; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 14px; font-family: 'Inter', sans-serif;">
+            Select a basic system for your team's tactical board. You can swap player positions by clicking them directly on the pitch layout or by using the panel.
+          </div>
+
+          <!-- Save / Discard Actions (Moved from bottom to left sidebar!) -->
+          <div style="margin-top: auto; display: flex; flex-direction: column; gap: 10px; border-top: 1.5px solid rgba(255,255,255,0.08); padding-top: 18px; width: 100%; font-family: 'Orbitron', sans-serif;">
+            <button class="menu-btn primary-btn" id="btn-save-management" style="width: 100%; padding: 13px 20px; border-radius: 30px; font-weight: 900; background: #a3e635; color: #000; border: none; cursor: pointer; box-shadow: var(--glow-lime); transition: all 0.25s ease; letter-spacing: 0.5px; text-transform: uppercase;">Save Changes</button>
+            <button class="menu-btn secondary-btn" id="btn-discard-management" style="width: 100%; padding: 11px 20px; border-radius: 30px; font-weight: 700; border: 1.5px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.05); color: #fff; cursor: pointer; transition: all 0.25s ease; letter-spacing: 0.5px; text-transform: uppercase;">Discard</button>
+          </div>
+        </div>
+
+        <!-- Center Area: Interactive 2D Football Pitch (Clean and spacious) -->
+        <div style="flex: 1; display: flex; flex-direction: column; background: radial-gradient(circle at center, rgba(16, 46, 26, 0.92) 0%, rgba(6, 20, 12, 0.98) 100%); border: 1.5px solid rgba(255,255,255,0.06); border-radius: 16px; overflow: hidden; position: relative; padding: 20px; box-shadow: inset 0 0 30px rgba(0,0,0,0.6); box-sizing: border-box; height: 100%;">
+          
+          <!-- Tactical Pitch Markings (Low opacity, clean lines) -->
+          <div style="position: absolute; inset: 20px; border: 1.5px solid rgba(255,255,255,0.06); border-radius: 10px; pointer-events: none;">
+            <!-- Center Circle -->
+            <div style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 140px; height: 140px; border: 1.5px solid rgba(255,255,255,0.06); border-radius: 50%;"></div>
+            <!-- Center Line -->
+            <div style="position: absolute; left: 50%; top: 0; bottom: 0; border-left: 1.5px solid rgba(255,255,255,0.06);"></div>
+            <!-- Goal Area Left -->
+            <div style="position: absolute; left: 0; top: 30%; bottom: 30%; width: 10%; border: 1.5px solid rgba(255,255,255,0.06); border-left: none;"></div>
+            <!-- Penalty Box Left -->
+            <div style="position: absolute; left: 0; top: 15%; bottom: 15%; width: 26%; border: 1.5px solid rgba(255,255,255,0.06); border-left: none;"></div>
+            <!-- Goal Area Right -->
+            <div style="position: absolute; right: 0; top: 30%; bottom: 30%; width: 10%; border: 1.5px solid rgba(255,255,255,0.06); border-right: none;"></div>
+            <!-- Penalty Box Right -->
+            <div style="position: absolute; right: 0; top: 15%; bottom: 15%; width: 26%; border: 1.5px solid rgba(255,255,255,0.06); border-right: none;"></div>
+          </div>
+
+          <!-- Starting XI Interactive Cards Grid -->
+          <div id="mgt-starting-grid" style="position: relative; flex: 1; pointer-events: auto; width: 100%;"></div>
+
+          <!-- Reserves Row -->
+          <div style="height: 110px; border-top: 1.5px solid rgba(255,255,255,0.08); margin-top: 12px; padding-top: 12px; pointer-events: auto; display: flex; flex-direction: column;">
+            <div style="font-size: 0.72rem; color: #a3e635; font-weight: 800; font-family: 'Orbitron', sans-serif; margin-bottom: 6px; letter-spacing: 1px;">RESERVES / BENCH</div>
+            <div id="mgt-reserves-row" style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; flex: 1;"></div>
+          </div>
+        </div>
+
+        <!-- Right Side: Selected Player Profile & Attributes Card -->
+        <div style="width: 320px; display: flex; flex-direction: column; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 20px; font-family: 'Orbitron', sans-serif; box-sizing: border-box; height: 100%;">
+          <h4 style="margin: 0 0 12px; color: #a3e635; font-size: 0.8rem; letter-spacing: 1px; border-bottom: 1.5px solid rgba(255,255,255,0.06); padding-bottom: 10px; font-weight: 800;">PLAYER DETAILS</h4>
+          
+          <div id="mgt-player-detail-card" style="text-align: center; flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%;">
+            <span style="font-size: 4rem; filter: drop-shadow(0 6px 14px rgba(0,0,0,0.5));">🏃‍♂️</span>
+            <h3 id="mgt-pname" style="margin: 12px 0 2px; color: #fff; font-size: 1.3rem; font-weight: 900; letter-spacing: 0.5px;">Select a Player</h3>
+            <div id="mgt-prole" style="font-size: 0.75rem; color: #a3e635; font-weight: 800; margin-bottom: 20px; letter-spacing: 0.5px;">SQUAD POSITION</div>
+            
+            <!-- Stats attributes list (EA FC style bars) -->
+            <div style="width: 100%; display: flex; flex-direction: column; gap: 9px; text-align: left; font-size: 0.72rem; font-family: 'Orbitron', sans-serif;">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span>PACE</span>
+                <span id="mgt-stat-pac" style="font-weight:bold; color:#fff;">--</span>
+              </div>
+              <div style="width: 100%; height: 5px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow:hidden;">
+                <div id="mgt-bar-pac" style="width: 0%; height:100%; background: #a3e635; border-radius: 2px;"></div>
+              </div>
+
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span>SHOOTING</span>
+                <span id="mgt-stat-sho" style="font-weight:bold; color:#fff;">--</span>
+              </div>
+              <div style="width: 100%; height: 5px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow:hidden;">
+                <div id="mgt-bar-sho" style="width: 0%; height:100%; background: #a3e635; border-radius: 2px;"></div>
+              </div>
+
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span>PASSING</span>
+                <span id="mgt-stat-pas" style="font-weight:bold; color:#fff;">--</span>
+              </div>
+              <div style="width: 100%; height: 5px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow:hidden;">
+                <div id="mgt-bar-pas" style="width: 0%; height:100%; background: #a3e635; border-radius: 2px;"></div>
+              </div>
+
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span>DRIBBLING</span>
+                <span id="mgt-stat-dri" style="font-weight:bold; color:#fff;">--</span>
+              </div>
+              <div style="width: 100%; height: 5px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow:hidden;">
+                <div id="mgt-bar-dri" style="width: 0%; height:100%; background: #a3e635; border-radius: 2px;"></div>
+              </div>
+
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span>DEFENDING</span>
+                <span id="mgt-stat-def" style="font-weight:bold; color:#fff;">--</span>
+              </div>
+              <div style="width: 100%; height: 5px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow:hidden;">
+                <div id="mgt-bar-def" style="width: 0%; height:100%; background: #a3e635; border-radius: 2px;"></div>
+              </div>
+            </div>
+
+            <!-- Swap Dropdown Container -->
+            <div id="mgt-swap-container" style="display: none; margin-top: 24px; width: 100%; border-top: 1.5px solid rgba(255,255,255,0.06); padding-top: 16px;">
+              <label style="font-size: 0.72rem; color: #a3e635; display: block; margin-bottom: 8px; font-weight: 800; letter-spacing: 1px;">🔄 SWAP PLAYER</label>
+              <div style="display: flex; gap: 8px; width: 100%;">
+                <select id="mgt-swap-select" style="flex: 1; padding: 10px; background: #111827; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #fff; font-family: 'Orbitron', sans-serif; font-size: 0.75rem; cursor: pointer;"></select>
+                <button id="mgt-swap-btn" style="padding: 10px 14px; background: #38bdf8; border: none; border-radius: 6px; color: #000; font-family: 'Orbitron', sans-serif; font-size: 0.75rem; font-weight: 900; cursor: pointer; transition: all 0.2s; box-shadow: 0 0 10px rgba(56,189,248,0.25);">SWAP</button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- TACTICS SUB-VIEW -->
+      <div id="mgt-view-tactics" style="display: none; flex: 1; gap: 24px; overflow: hidden; height: 100%; box-sizing: border-box;">
+        <!-- Left Column: Settings list -->
+        <div style="width: 320px; display: flex; flex-direction: column; gap: 20px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 20px; box-sizing: border-box; font-family: 'Orbitron', sans-serif; height: 100%;">
+          <h4 style="margin: 0; color: #a3e635; font-size: 0.85rem; letter-spacing: 1px; font-weight: 800; border-bottom: 1.5px solid rgba(255,255,255,0.06); padding-bottom: 10px;">TEAM INSTRUCTIONS</h4>
+          
+          <div>
+            <label style="font-size: 0.72rem; color: rgba(255,255,255,0.4); display: block; margin-bottom: 6px; font-weight: bold;">TACTICAL APPROACH</label>
+            <select id="tactic-style-select" style="width: 100%; padding: 10px; background: #111827; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #fff; font-family: 'Orbitron', sans-serif; font-size: 0.78rem; cursor: pointer;">
+              <option value="balanced">Balanced</option>
+              <option value="tikitaka">Tiki-Taka</option>
+              <option value="gegenpress">Gegenpressing</option>
+              <option value="counter">Counter-Attack</option>
+              <option value="wingplay">Wing Play</option>
+            </select>
+          </div>
+
+          <div>
+            <label style="font-size: 0.72rem; color: rgba(255,255,255,0.4); display: block; margin-bottom: 6px; font-weight: bold;">BUILD UP PLAY</label>
+            <select id="tactic-buildup-select" style="width: 100%; padding: 10px; background: #111827; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #fff; font-family: 'Orbitron', sans-serif; font-size: 0.78rem; cursor: pointer;">
+              <option value="short">Short Passing</option>
+              <option value="balanced">Balanced</option>
+              <option value="long">Long Ball</option>
+            </select>
+          </div>
+
+          <div>
+            <label style="font-size: 0.72rem; color: rgba(255,255,255,0.4); display: block; margin-bottom: 6px; font-weight: bold;">DEFENSIVE LINE</label>
+            <select id="tactic-defense-select" style="width: 100%; padding: 10px; background: #111827; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #fff; font-family: 'Orbitron', sans-serif; font-size: 0.78rem; cursor: pointer;">
+              <option value="high">High Press</option>
+              <option value="balanced">Balanced</option>
+              <option value="drop">Drop Back</option>
+            </select>
+          </div>
+
+          <div>
+            <label style="font-size: 0.72rem; color: rgba(255,255,255,0.4); display: block; margin-bottom: 6px; font-weight: bold;">TEAM MENTALITY</label>
+            <select id="tactic-mentality-select" style="width: 100%; padding: 10px; background: #111827; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #fff; font-family: 'Orbitron', sans-serif; font-size: 0.78rem; cursor: pointer;">
+              <option value="ultra-def">Ultra Defensive</option>
+              <option value="def">Defensive</option>
+              <option value="balanced" selected>Balanced</option>
+              <option value="att">Attacking</option>
+              <option value="ultra-att">Ultra Attacking</option>
+            </select>
+          </div>
+
+          <!-- Shared Save / Discard Actions -->
+          <div style="margin-top: auto; display: flex; flex-direction: column; gap: 10px; border-top: 1.5px solid rgba(255,255,255,0.08); padding-top: 18px; width: 100%;">
+            <button class="menu-btn primary-btn btn-save-mgt-shared" style="width: 100%; padding: 13px 20px; border-radius: 30px; font-weight: 900; background: #a3e635; color: #000; border: none; cursor: pointer; box-shadow: var(--glow-lime); transition: all 0.25s ease; letter-spacing: 0.5px; text-transform: uppercase;">Save Changes</button>
+            <button class="menu-btn secondary-btn btn-discard-mgt-shared" style="width: 100%; padding: 11px 20px; border-radius: 30px; font-weight: 700; border: 1.5px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.05); color: #fff; cursor: pointer; transition: all 0.25s ease; letter-spacing: 0.5px; text-transform: uppercase;">Discard</button>
+          </div>
+        </div>
+
+        <!-- Right Column: Interactive Tactics Radar & Descriptions -->
+        <div style="flex: 1; display: flex; flex-direction: column; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 24px; box-sizing: border-box; justify-content: center; align-items: center; text-align: center; font-family: 'Orbitron', sans-serif; height: 100%;">
+          <div id="tactic-description-icon" style="font-size: 5rem; margin-bottom: 20px; filter: drop-shadow(0 0 16px rgba(163,230,53,0.35));">🛡️</div>
+          <h3 id="tactic-description-title" style="font-size: 1.4rem; color: #fff; font-weight: 900; margin: 0 0 12px; letter-spacing: 1px;">BALANCED SETUP</h3>
+          <p id="tactic-description-text" style="font-family: 'Inter', sans-serif; font-size: 0.85rem; color: rgba(255,255,255,0.6); max-width: 460px; line-height: 1.6; margin-bottom: 24px;">Standard tactical setup with balanced attacking support and structured defensive positioning. Best suited for fluid match control.</p>
+          
+          <!-- Dynamic Checklist -->
+          <div style="display: flex; flex-direction: column; gap: 10px; text-align: left; background: rgba(0,0,0,0.25); border: 1.5px solid rgba(255,255,255,0.04); border-radius: 12px; padding: 18px 24px; min-width: 320px; font-size: 0.75rem;">
+            <div style="display: flex; align-items: center; gap: 8px; color: #a3e635;"><span style="font-size:1rem;">✓</span> <span id="tactic-check-1">Flexible Build-Up Option</span></div>
+            <div style="display: flex; align-items: center; gap: 8px; color: #a3e635;"><span style="font-size:1rem;">✓</span> <span id="tactic-check-2">Maintains Team Structure</span></div>
+            <div style="display: flex; align-items: center; gap: 8px; color: #a3e635;"><span style="font-size:1rem;">✓</span> <span id="tactic-check-3">Adaptive Pressing Level</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ROLES SUB-VIEW -->
+      <div id="mgt-view-roles" style="display: none; flex: 1; gap: 24px; overflow: hidden; height: 100%; box-sizing: border-box;">
+        <!-- Left Column: List of Roles and selectors -->
+        <div style="width: 340px; display: flex; flex-direction: column; gap: 20px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 20px; box-sizing: border-box; font-family: 'Orbitron', sans-serif; height: 100%;">
+          <h4 style="margin: 0; color: #a3e635; font-size: 0.85rem; letter-spacing: 1px; font-weight: 800; border-bottom: 1.5px solid rgba(255,255,255,0.06); padding-bottom: 10px;">MATCH ASSIGNMENTS</h4>
+          
+          <div>
+            <label style="font-size: 0.72rem; color: rgba(255,255,255,0.4); display: block; margin-bottom: 6px; font-weight: bold;">TEAM CAPTAIN</label>
+            <select id="role-captain-select" style="width: 100%; padding: 10px; background: #111827; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #fff; font-family: 'Orbitron', sans-serif; font-size: 0.78rem; cursor: pointer;"></select>
+          </div>
+
+          <div>
+            <label style="font-size: 0.72rem; color: rgba(255,255,255,0.4); display: block; margin-bottom: 6px; font-weight: bold;">PENALTY TAKER</label>
+            <select id="role-penalty-select" style="width: 100%; padding: 10px; background: #111827; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #fff; font-family: 'Orbitron', sans-serif; font-size: 0.78rem; cursor: pointer;"></select>
+          </div>
+
+          <div>
+            <label style="font-size: 0.72rem; color: rgba(255,255,255,0.4); display: block; margin-bottom: 6px; font-weight: bold;">FREE KICK TAKER</label>
+            <select id="role-fk-select" style="width: 100%; padding: 10px; background: #111827; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #fff; font-family: 'Orbitron', sans-serif; font-size: 0.78rem; cursor: pointer;"></select>
+          </div>
+
+          <div>
+            <label style="font-size: 0.72rem; color: rgba(255,255,255,0.4); display: block; margin-bottom: 6px; font-weight: bold;">CORNER KICK TAKER</label>
+            <select id="role-corner-select" style="width: 100%; padding: 10px; background: #111827; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #fff; font-family: 'Orbitron', sans-serif; font-size: 0.78rem; cursor: pointer;"></select>
+          </div>
+
+          <!-- Shared Save / Discard Actions -->
+          <div style="margin-top: auto; display: flex; flex-direction: column; gap: 10px; border-top: 1.5px solid rgba(255,255,255,0.08); padding-top: 18px; width: 100%;">
+            <button class="menu-btn primary-btn btn-save-mgt-shared" style="width: 100%; padding: 13px 20px; border-radius: 30px; font-weight: 900; background: #a3e635; color: #000; border: none; cursor: pointer; box-shadow: var(--glow-lime); transition: all 0.25s ease; letter-spacing: 0.5px; text-transform: uppercase;">Save Changes</button>
+            <button class="menu-btn secondary-btn btn-discard-mgt-shared" style="width: 100%; padding: 11px 20px; border-radius: 30px; font-weight: 700; border: 1.5px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.05); color: #fff; cursor: pointer; transition: all 0.25s ease; letter-spacing: 0.5px; text-transform: uppercase;">Discard</button>
+          </div>
+        </div>
+
+        <!-- Right Column: Interactive Role Descriptions -->
+        <div style="flex: 1; display: flex; flex-direction: column; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 24px; box-sizing: border-box; justify-content: center; align-items: center; text-align: center; font-family: 'Orbitron', sans-serif; height: 100%;">
+          <div id="role-description-icon" style="font-size: 5rem; margin-bottom: 20px; filter: drop-shadow(0 0 16px rgba(56,189,248,0.35));">👑</div>
+          <h3 id="role-description-title" style="font-size: 1.4rem; color: #fff; font-weight: 900; margin: 0 0 12px; letter-spacing: 1px;">ROLE ASSIGNMENT</h3>
+          <p id="role-description-text" style="font-family: 'Inter', sans-serif; font-size: 0.85rem; color: rgba(255,255,255,0.6); max-width: 460px; line-height: 1.6; margin-bottom: 24px;">Assign specific player roles for set-piece execution. Players assigned to their preferred roles receive stats boosts and play style bonuses.</p>
+          
+          <!-- Role stats cards -->
+          <div style="display: flex; gap: 16px; width: 100%; justify-content: center; max-width: 500px; box-sizing: border-box;">
+            <div style="flex: 1; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.05); border-radius: 10px; padding: 12px; font-size: 0.72rem;">
+              <div style="color: #a3e635; font-weight: bold; margin-bottom: 4px;">CAPTAIN BOOST</div>
+              <div style="color: rgba(255,255,255,0.6); font-family: 'Inter', sans-serif; font-size: 0.65rem; line-height: 1.4;">Increases team composure and reduces stam/fatigue scaling under pressure.</div>
+            </div>
+            <div style="flex: 1; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.05); border-radius: 10px; padding: 12px; font-size: 0.72rem;">
+              <div style="color: #38bdf8; font-weight: bold; margin-bottom: 4px;">SET PIECE BOOST</div>
+              <div style="color: rgba(255,255,255,0.6); font-family: 'Inter', sans-serif; font-size: 0.65rem; line-height: 1.4;">Provides +5 shot power and +8 curve to corner kicks and free kicks.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ TEAM HYPE SCREEN (pre-match reveal) ══ -->
+
+  <div id="team-hype-screen" style="display:none; position:fixed; inset:0; z-index:200; overflow:hidden; background:#020817;">
+    <div class="hype-scanlines"></div>
+    <div class="hype-vignette"></div>
+    <div class="hype-layout">
+      <div class="hype-side hype-home" id="hype-home-panel">
+        <div class="hype-captain-card">
+          <div class="card-glow"></div>
+          <div class="card-role" id="hype-home-cap-role">ST</div>
+          <div class="card-number" id="hype-home-cap-number">9</div>
+          <div class="card-avatar">🏃‍♂️</div>
+          <div class="card-name" id="hype-home-cap-name">LEWANDOWSKI</div>
+          <div class="card-tag">CAPTAIN</div>
+        </div>
+        <div class="hype-team-label" id="hype-home-label">HOME</div>
+        <div class="hype-team-stat" id="hype-home-att-bar">ATTACK ████████░░</div>
+        <div class="hype-team-stat" id="hype-home-def-bar">DEFENSE ███████░░░</div>
+      </div>
+      <div class="hype-vs-col">
+        <div class="hype-vs-glow"></div>
+        <div class="hype-vs-badge">VS</div>
+        <div class="hype-matchday-tag">MATCH DAY</div>
+        <div class="hype-stadium-tag" id="hype-stadium-tag">⚽ KICKOFF</div>
+      </div>
+      <div class="hype-side hype-away" id="hype-away-panel">
+        <div class="hype-captain-card">
+          <div class="card-glow"></div>
+          <div class="card-role" id="hype-away-cap-role">ST</div>
+          <div class="card-number" id="hype-away-cap-number">7</div>
+          <div class="card-avatar">🏃‍♂️</div>
+          <div class="card-name" id="hype-away-cap-name">RONALDO</div>
+          <div class="card-tag">CAPTAIN</div>
+        </div>
+        <div class="hype-team-label" id="hype-away-label">AWAY</div>
+        <div class="hype-team-stat" id="hype-away-att-bar">ATTACK ███████░░░</div>
+        <div class="hype-team-stat" id="hype-away-def-bar">DEFENSE ████████░░</div>
+      </div>
+    </div>
+    <div class="hype-bottom-bar">
+      <div class="hype-progress-line" id="hype-progress-line"></div>
+    </div>
+  </div>
+
+  <!-- ══ COIN TOSS CINEMATIC SCREEN ══ -->
+  <div id="toss-screen" style="display:none; position:fixed; inset:0; z-index:210; background:transparent; overflow:hidden;">
+    <!-- Translucent vignette overlay for atmospheric cinematic look -->
+    <div style="position:absolute; inset:0; background:radial-gradient(ellipse at center, transparent 30%, rgba(3,7,18,0.7) 100%); pointer-events:none;"></div>
+
+    <!-- Caption: Centre circle label -->
+    <div class="toss-header-tag">⬤ CENTRE CIRCLE — COIN TOSS</div>
+
+    <!-- Captain figures + coin -->
+    <div class="toss-stage">
+      <!-- Home Captain -->
+      <div class="toss-captain-wrap home" id="toss-cap-home">
+        <div class="cap-shadow"></div>
+        <div class="cap-body home-body">
+          <div class="cap-torso"></div>
+          <div class="cap-shorts"></div>
+          <div class="cap-legs">
+            <div class="cap-leg"></div><div class="cap-leg"></div>
+          </div>
+          <div class="cap-arms">
+            <div class="cap-arm left"></div><div class="cap-arm right"></div>
+          </div>
+          <div class="cap-head">
+            <div class="cap-face"></div>
+            <div class="cap-armband">C</div>
+          </div>
+        </div>
+        <div class="cap-name-tag" id="toss-home-name">RED CAPTAIN</div>
+      </div>
+
+      <!-- Coin in center -->
+      <div class="toss-coin-zone">
+        <div class="coin-pedestal-glow"></div>
+        <div class="coin-scene" id="toss-coin-scene">
+          <div class="toss-coin" id="toss-coin-mesh">
+            <div class="coin-face coin-heads">H</div>
+            <div class="coin-face coin-tails">T</div>
+          </div>
+        </div>
+        <div class="toss-result-text" id="toss-result-label">Flip to decide who starts!</div>
+
+        <!-- Choose prompt -->
+        <div id="toss-choose-prompt" class="toss-choose-prompt">
+          <div class="toss-choose-label">CALL IT —</div>
+          <div class="toss-choice-row">
+            <button class="toss-choice-btn heads-btn" id="btn-toss-heads">
+              <span class="btn-icon">🪙</span> HEADS
+            </button>
+            <button class="toss-choice-btn tails-btn" id="btn-toss-tails">
+              <span class="btn-icon">🪙</span> TAILS
+            </button>
+          </div>
+        </div>
+
+        <!-- Post-flip decision (user won) -->
+        <div id="toss-decision-buttons" class="toss-decision-area" style="display:none;">
+          <div class="toss-decision-label">YOU WON THE TOSS! CHOOSE:</div>
+          <div class="toss-choice-row">
+            <button class="toss-choice-btn kickoff-btn" id="btn-toss-kickoff">⚽ KICK OFF</button>
+            <button class="toss-choice-btn defend-btn" id="btn-toss-defend">🛡 DEFEND</button>
+          </div>
+        </div>
+
+        <!-- Post-flip (opponent won) -->
+        <div id="toss-opponent-decision" class="toss-decision-area" style="display:none;">
+          <button class="toss-choice-btn continue-btn" id="btn-toss-continue">▶ CONTINUE TO MATCH</button>
+        </div>
+      </div>
+
+      <!-- Away Captain -->
+      <div class="toss-captain-wrap away" id="toss-cap-away">
+        <div class="cap-shadow"></div>
+        <div class="cap-body away-body">
+          <div class="cap-torso"></div>
+          <div class="cap-shorts"></div>
+          <div class="cap-legs">
+            <div class="cap-leg"></div><div class="cap-leg"></div>
+          </div>
+          <div class="cap-arms">
+            <div class="cap-arm left"></div><div class="cap-arm right"></div>
+          </div>
+          <div class="cap-head">
+            <div class="cap-face"></div>
+            <div class="cap-armband away-band">C</div>
+          </div>
+        </div>
+        <div class="cap-name-tag" id="toss-away-name">BLUE CAPTAIN</div>
+      </div>
+    </div>
+
+    <!-- Referee figure at bottom -->
+    <div class="toss-referee">
+      <div class="ref-body"></div>
+      <div class="ref-head"></div>
+      <div class="ref-whistle">🏁</div>
+    </div>
+  </div>
+
+  <!-- ══ WALKOUT CUTSCENE ══ -->
+  <div id="walkout-screen" style="display:none; position:fixed; inset:0; z-index:220; background:transparent; overflow:hidden;">
+    <!-- Translucent vignette overlay for walkout -->
+    <div style="position:absolute; inset:0; background:radial-gradient(ellipse at center, transparent 40%, rgba(1,5,16,0.6) 100%); pointer-events:none;"></div>
+    <div class="walkout-crowd-noise"></div>
+    <div class="walkout-content">
+      <div class="walkout-title-line">
+        <span id="walkout-home-team" class="walkout-team-name home">RED DEVILS</span>
+        <span class="walkout-vs">⚽</span>
+        <span id="walkout-away-team" class="walkout-team-name away">SKY BLUES</span>
+      </div>
+      <div class="walkout-players-row" id="walkout-players-row">
+        <!-- Populated by JS -->
+      </div>
+      <div class="walkout-sub-text" id="walkout-sub">THE PLAYERS TAKE THE FIELD</div>
+    </div>
+    <button class="skip-cutscene-btn" id="btn-skip-walkout">SKIP</button>
+  </div>
+
+  <!-- ══ SET PIECE MENU OVERLAY ══ -->
+  <div id="setpiece-hud" style="display:none; position:fixed; bottom: 8%; left: 50%; transform: translateX(-50%); z-index:200; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px); border: 2px solid rgba(163, 230, 53, 0.4); border-radius: 12px; padding: 16px 28px; width: 340px; color: #fff; font-family: 'Orbitron', sans-serif; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6); text-align: center;">
+    <div id="setpiece-title" style="font-weight: 800; font-size: 1.1rem; color: #a3e635; margin-bottom: 8px; letter-spacing: 1px; text-transform: uppercase;">THROW-IN</div>
+    <div id="setpiece-prompt" style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.7); line-height: 1.4; margin-bottom: 12px;">Cycle teammates with C. Press Pass (E) to Throw.</div>
+    <div id="corner-choices" style="display: none; flex-direction: column; gap: 8px;">
+      <button id="btn-corner-pass" style="background: rgba(163, 230, 53, 0.2); border: 1px solid #a3e635; color: #fff; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-family: 'Orbitron', sans-serif; font-size: 0.85rem; font-weight: bold; transition: all 0.2s;" onmouseover="this.style.background='rgba(163, 230, 53, 0.4)'" onmouseout="this.style.background='rgba(163, 230, 53, 0.2)'">1. CROSS TO TEAMMATE</button>
+      <button id="btn-corner-direct" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); color: #fff; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-family: 'Orbitron', sans-serif; font-size: 0.85rem; transition: all 0.2s;" onmouseover="this.style.background='rgba(255, 255, 255, 0.2)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.1)'">2. DIRECT CROSS / AIM</button>
+    </div>
+  </div>
+
+  <!-- ══ REFEREE CARD POPUP OVERLAY ══ -->
+  <div id="card-popup" style="display:none; position:fixed; top: 12%; left: 50%; transform: translateX(-50%); z-index:230; pointer-events:none; font-family: 'Orbitron', sans-serif; text-align: center;">
+    <div id="card-color-box" style="width: 70px; height: 110px; border-radius: 8px; margin: 0 auto 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); border: 2px solid rgba(255,255,255,0.4);"></div>
+    <div id="card-text-label" style="font-weight: 800; font-size: 1.5rem; text-shadow: 0 2px 8px rgba(0,0,0,0.8); text-transform: uppercase; color: #fff;">YELLOW CARD</div>
+    <div id="card-player-label" style="font-size: 0.95rem; color: #a3e635; text-shadow: 0 2px 4px rgba(0,0,0,0.8); margin-top: 4px;">NO. 10 (RED DEVILS)</div>
+  </div>
+
+
+
+  <!-- Pause Menu Overlay -->
+  <div class="menu-overlay" id="pause-screen" style="display: none;">
+    <div class="menu-box">
+      <h1 class="menu-title text-glow">MATCH PAUSED</h1>
+      
+      <button class="menu-btn primary-btn" id="pause-resume">RESUME MATCH</button>
+      <button class="menu-btn secondary-btn" id="pause-restart">RESTART</button>
+      <button class="menu-btn danger-btn" id="pause-dash">QUIT TO DASHBOARD</button>
+    </div>
+  </div>
+
+  <!-- Sound Toggle -->
+  <button class="sound-toggle-btn" id="sound-btn">🔊 SOUND: ON</button>
+
+  <!-- 7-Stage Cinematic Boot Loader Overlay -->
+  <div id="game-loader">
+    
+    <!-- Stage 1: Splash Screen (Fully Live & Animated) -->
+    <div class="boot-stage active" id="boot-stage-splash">
+      <div class="slideshow-container">
+        <div class="slideshow-img active" style="background-image: url('/football_menu_bg.png');"></div>
+        <div class="slideshow-img" style="background-image: url('/football_menu_bg2.png');"></div>
+        <div class="slideshow-img" style="background-image: url('/football_menu_bg3.png');"></div>
+      </div>
+      <div class="boot-splash-overlay"></div>
+      <div class="splash-particles" id="splash-particles-container"></div>
+      
+      <div class="boot-splash-content">
+        <div class="splash-logo-crest-live">
+          <div class="crest-shield-glow"></div>
+          <div class="crest-ball-3d">⚽</div>
+        </div>
+        <h1 class="legends-title text-glow-lime">FOOTBALL <span class="accent-lime">LEGENDS</span></h1>
+        <p class="legends-tagline-live">LIVE THE GAME. BE THE LEGEND.</p>
+        
+        <button class="kickoff-enter-btn" id="btn-splash-enter">
+          <span class="btn-glow-bar"></span>
+          <span class="btn-text-content">PRESS TO KICKOFF</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Stages 2, 3, 4: Main Loading Screen -->
+    <div class="boot-stage" id="boot-stage-loading">
+      <div class="boot-splash-bg dimmed" style="background-image: url('/football_splash_bg.png');"></div>
+      <div class="boot-loading-content">
+        <h1 class="legends-title text-glow" style="font-size: 3rem;">FOOTBALL <span class="accent-lime">LEGENDS</span></h1>
+        <div class="loading-label-text">loading...</div>
+        
+        <div class="loading-percentage" id="boot-loading-pct">0%</div>
+        
+        <div class="loading-bar-container">
+          <div class="loading-bar-fill" id="boot-loading-fill"></div>
+        </div>
+        
+        <div class="loading-status-text" id="boot-loading-status">WARMING UP THE PITCH...</div>
+      </div>
+    </div>
+
+    <!-- Stage 5: Publisher Logo -->
+    <div class="boot-stage" id="boot-stage-publisher">
+      <div class="publisher-content">
+        <span class="pub-header">PUBLISHED BY</span>
+        <div class="cyberzone-logo-box">
+          <div class="cz-icon-glow"></div>
+          <div class="cz-letter">CZ</div>
+        </div>
+        <h2 class="publisher-name text-glow">CYBERZONE GAMES</h2>
+      </div>
+    </div>
+
+    <!-- Stage 6: Anti-Cheat Screen -->
+    <div class="boot-stage" id="boot-stage-anticheat">
+      <div class="anticheat-content">
+        <span class="ac-header">SECURING THE GAME</span>
+        <h2 class="anticheat-title">FAIR PLAY <span class="accent-gold">ANTI-CHEAT</span></h2>
+        
+        <div class="ac-shield-box">
+          <div class="ac-shield-glow"></div>
+          <div class="ac-shield-icon">✓</div>
+        </div>
+        
+        <div class="loading-bar-container" style="max-width: 280px; margin-top: 20px;">
+          <div class="loading-bar-fill" id="boot-anticheat-fill" style="width: 0%;"></div>
+        </div>
+        <div class="ac-status">SCANNING GAME FILES... <span id="boot-anticheat-pct">0%</span></div>
+      </div>
+    </div>
+
+    <!-- Stage 7: Gameplay Tunnel Walkout Cutscene -->
+    <div class="boot-stage" id="boot-stage-cutscene">
+      <div class="boot-cutscene-bg" style="background-image: url('/football_cutscene_bg.png');"></div>
+      <button class="skip-cutscene-btn" id="btn-skip-cutscene">SKIP</button>
+      
+      <div class="cutscene-banner-arch">
+        <div class="arch-logo">⚽ FOOTBALL <span class="accent-lime">LEGENDS</span></div>
+      </div>
+      
+      <div class="cutscene-subtitles" id="cutscene-sub-text">THE STADIUM IS READY! LET THE GAME BEGIN!</div>
+    </div>
+
+  </div>
+
+  <!-- Game logic script -->
+  <script type="module" src="game.js"></script>
+</body>
+</html>

@@ -1,0 +1,131 @@
+<!-- PlaySphere Console Dashboard -->
+<div class="ps5-dashboard" id="ps5-dash" style="display: none;">
+  <canvas id="ps5-bg-canvas"></canvas>
+
+  <!-- System Header Bar -->
+  <header class="ps5-header">
+    <div class="ps5-nav-menu">
+      <span class="ps5-nav-item active" id="nav-item-games">Games</span>
+      <span class="ps5-nav-item" id="nav-item-store">PlaySphere Store</span>
+    </div>
+
+    <div class="ps5-system-status">
+      <span id="ps5-time">00:00 PM</span>
+      
+      <!-- Friends List Toggle Button -->
+      <div class="ps5-avatar-btn-container" id="ps5-friends-trigger" style="margin-right: 12px; position: relative;">
+        <div class="ps5-avatar-btn-img" id="ps5-header-friends-icon" style="line-height: 24px; text-align: center; background: rgba(255,255,255,0.1); font-size:0.75rem;">👥</div>
+        <span style="font-weight:600;">Friends</span>
+        <span id="ps5-friends-badge" class="hidden" style="position: absolute; top: -2px; left: 16px; width: 8px; height: 8px; background: #ef4444; border-radius: 50%; box-shadow: 0 0 6px #ef4444;"></span>
+      </div>
+
+      <!-- Avatar Icon Button to trigger Profile Hub -->
+      <div class="ps5-avatar-btn-container" id="ps5-profile-trigger">
+        <div class="ps5-avatar-btn-img" id="ps5-header-avatar" style="line-height: 24px; text-align: center; background: rgba(255,255,255,0.1); font-size:0.75rem;">👤</div>
+        <span style="font-weight:600;" id="ps5-header-username">Gamer</span>
+      </div>
+
+      <!-- Controller trigger button for pairing -->
+      <button id="ps5-controller-trigger">
+        <svg viewBox="0 0 36 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:32px;height:22px;flex-shrink:0;">
+          <!-- Controller body -->
+          <rect x="2" y="6" width="32" height="14" rx="7" fill="url(#cg1)" stroke="rgba(165,180,252,0.6)" stroke-width="0.8"/>
+          <!-- Left grip -->
+          <path d="M9 20 Q5 20 3.5 16" stroke="rgba(165,180,252,0.5)" stroke-width="1.2" stroke-linecap="round" fill="none"/>
+          <!-- Right grip -->
+          <path d="M27 20 Q31 20 32.5 16" stroke="rgba(165,180,252,0.5)" stroke-width="1.2" stroke-linecap="round" fill="none"/>
+          <!-- L1 shoulder -->
+          <rect x="5" y="4" width="7" height="3.5" rx="1.5" fill="rgba(129,140,248,0.7)" stroke="rgba(165,180,252,0.4)" stroke-width="0.5"/>
+          <!-- R1 shoulder -->
+          <rect x="24" y="4" width="7" height="3.5" rx="1.5" fill="rgba(129,140,248,0.7)" stroke="rgba(165,180,252,0.4)" stroke-width="0.5"/>
+          <!-- D-pad vertical -->
+          <rect x="9.5" y="10" width="2.5" height="6" rx="1" fill="rgba(199,210,254,0.9)"/>
+          <!-- D-pad horizontal -->
+          <rect x="7.5" y="12" width="6.5" height="2.5" rx="1" fill="rgba(199,210,254,0.9)"/>
+          <!-- ✕ button (blue) -->
+          <circle cx="23" cy="14" r="2.2" fill="rgba(96,165,250,0.85)" stroke="rgba(147,197,253,0.6)" stroke-width="0.4"/>
+          <text x="23" y="14.8" text-anchor="middle" fill="white" font-size="2.8" font-family="sans-serif" font-weight="800">✕</text>
+          <!-- ○ button (red) -->
+          <circle cx="27.5" cy="11.5" r="2.2" fill="rgba(248,113,113,0.85)" stroke="rgba(252,165,165,0.5)" stroke-width="0.4"/>
+          <circle cx="27.5" cy="11.5" r="1.2" fill="none" stroke="white" stroke-width="0.7"/>
+          <!-- △ button (green) -->
+          <circle cx="27.5" cy="16.5" r="2.2" fill="rgba(52,211,153,0.85)" stroke="rgba(110,231,183,0.5)" stroke-width="0.4"/>
+          <polygon points="27.5,15.2 26.2,17.6 28.8,17.6" fill="white"/>
+          <!-- □ button (pink) -->
+          <circle cx="23" cy="11" r="2.2" fill="rgba(232,121,249,0.85)" stroke="rgba(240,171,252,0.5)" stroke-width="0.4"/>
+          <rect x="21.9" y="9.9" width="2.2" height="2.2" rx="0.3" fill="white"/>
+          <!-- Touchpad -->
+          <rect x="15.5" y="11" width="5" height="3.5" rx="1" fill="rgba(100,116,139,0.55)" stroke="rgba(148,163,184,0.3)" stroke-width="0.5"/>
+          <!-- Center PS button glow -->
+          <circle cx="18" cy="18.5" r="1.5" fill="rgba(129,140,248,0.9)" filter="url(#glow)"/>
+          <defs>
+            <linearGradient id="cg1" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="rgba(71,85,105,0.9)"/>
+              <stop offset="100%" stop-color="rgba(30,41,59,0.95)"/>
+            </linearGradient>
+            <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="1" result="blur"/>
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+        </svg>
+        <span style="white-space:nowrap;line-height:1;">LINK CONTROLLER</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Games List Shelf -->
+  <main class="ps5-main-content" id="ps5-dashboard-view">
+    <div class="ps5-game-shelf" id="ps5-shelf">
+      <!-- Game Card 1: Cricket Pro 2026 -->
+      <div class="ps5-game-card selected" data-game="cricket" id="game-cricket">
+        <img class="ps5-game-card-img" src="https://images.unsplash.com/photo-1531415074968-036ba1b575da?q=80&w=350&auto=format&fit=crop" alt="Cricket Pro 2026">
+      </div>
+      <!-- Game Card 2: Football Pro 2026 -->
+      <div class="ps5-game-card" data-game="football" id="game-football">
+        <img class="ps5-game-card-img" src="/football_card.png" alt="Football Pro 2026">
+      </div>
+      <!-- Game Card 3: Apex Stars F1 -->
+      <div class="ps5-game-card" data-game="f1" id="game-f1">
+        <img class="ps5-game-card-img" src="/f1_card.svg" alt="Apex Stars: Chibi F1">
+      </div>
+      <!-- Game Card 4: Chibi Tennis Duel -->
+      <div class="ps5-game-card" data-game="tennis" id="game-tennis">
+        <img class="ps5-game-card-img" src="/tennis_card.png" alt="Chibi Tennis Duel">
+      </div>
+      <!-- Game Card 5: WWE Chibi Rumble -->
+      <div class="ps5-game-card" data-game="wwe" id="game-wwe">
+        <img class="ps5-game-card-img" src="/wwe_card.svg" alt="WWE Chibi Rumble">
+      </div>
+    </div>
+
+    <!-- Dynamic Game Details Panel -->
+    <section class="ps5-game-details visible" id="ps5-details">
+      <h1 class="ps5-game-title" id="game-title">Cricket Pro 2026</h1>
+      <div class="ps5-game-meta">
+        <span class="ps5-rating-pill">ESRB: E</span>
+        <span>⭐ 4.9 Rating</span>
+        <span>DeepMind Sports</span>
+      </div>
+      <p class="ps5-game-desc" id="game-desc">
+        Experience next-generation 3D physics-driven cricket gameplay. Take control of professional matches with timing-based batting, circular catch dials, throw QTEs, and slow-motion 3rd umpire referrals.
+      </p>
+      <button class="ps5-play-btn" id="ps5-play-game">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+          <path d="M8 5v14l11-7z"/>
+        </svg>
+        Play Game
+      </button>
+    </section>
+  </main>
+
+  <footer class="ps5-footer">
+    <span>🎮 Navigate: Arrow keys | Select: Enter / Space</span>
+    <span>PlaySphere v2.59</span>
+  </footer>
+</div>
+
+<!-- Launch CRT Shut Down Transition -->
+<div class="ps5-launch-overlay" id="ps5-launch">
+  <div class="ps5-shutdown-sweep"></div>
+</div>

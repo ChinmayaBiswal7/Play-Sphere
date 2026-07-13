@@ -1,0 +1,102 @@
+/* ── PLAYSPHERE STORE PAGE ── */
+.ps5-store-view {
+  position: absolute;
+  top: 90px;
+  left: 0;
+  width: 100%;
+  height: calc(100% - 150px);
+  padding: 30px 60px;
+  box-sizing: border-box;
+  overflow-y: auto;
+  scrollbar-width: none;
+  z-index: 12;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.ps5-store-view::-webkit-scrollbar {
+  display: none;
+}
+.ps5-store-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.ps5-store-title {
+  font-size: 2rem;
+  font-weight: 800;
+  margin: 0;
+}
+.ps5-store-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 25px;
+}
+.ps5-store-card {
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 15px;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+.ps5-store-card:hover {
+  transform: translateY(-5px);
+  border-color: #3b82f6;
+  box-shadow: 0 10px 25px rgba(59, 130, 246, 0.15);
+}
+.ps5-store-card-img {
+  width: 100%;
+  height: 130px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+.ps5-store-card-name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
+}
+.ps5-store-card-desc {
+  font-size: 0.85rem;
+  color: rgba(248, 250, 252, 0.6);
+  margin: 0;
+}
+.ps5-store-buy-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+}
+.ps5-store-price {
+  font-weight: 700;
+  color: #f59e0b;
+}
+.ps5-store-btn {
+  background: #3b82f6;
+  color: #ffffff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.3s;
+}
+.ps5-store-btn:hover {
+  background: #2563eb;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);
+}
+.ps5-store-btn.purchased {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.6);
+}
+.ps5-store-btn.equipped {
+  background: #10b981;
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+}

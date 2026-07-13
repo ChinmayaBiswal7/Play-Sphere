@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 350 350" width="100%" height="100%">
+  <!-- Defs for Gradients & Glows -->
+  <defs>
+    <radialGradient id="bgGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#1e1010" />
+      <stop offset="100%" stop-color="#02040a" />
+    </radialGradient>
+    <linearGradient id="neonRed" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ff3e3e" />
+      <stop offset="100%" stop-color="#b91c1c" />
+    </linearGradient>
+    <linearGradient id="neonGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffd700" />
+      <stop offset="100%" stop-color="#ff8800" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="350" height="350" fill="url(#bgGrad)" />
+
+  <!-- Ring Apron Perspective -->
+  <polygon points="50,280 300,280 240,160 110,160" fill="#0f172a" opacity="0.9" />
+  
+  <!-- Ring Canvas Mat -->
+  <polygon points="65,270 285,270 230,170 120,170" fill="#1e1b29" stroke="#ff3e3e" stroke-width="2.5" filter="url(#glow)" />
+  
+  <!-- Ring Ropes (3 layers) -->
+  <!-- Top Rope -->
+  <polygon points="65,220 285,220 230,120 120,120" fill="none" stroke="#ef4444" stroke-width="2" opacity="0.85" />
+  <!-- Middle Rope -->
+  <polygon points="65,235 285,235 230,135 120,135" fill="none" stroke="#ef4444" stroke-width="1.8" opacity="0.75" />
+  <!-- Bottom Rope -->
+  <polygon points="65,250 285,250 230,150 120,150" fill="none" stroke="#ef4444" stroke-width="1.5" opacity="0.65" />
+
+  <!-- Ring Posts -->
+  <!-- Back Left -->
+  <line x1="120" y1="170" x2="120" y2="110" stroke="#ffb700" stroke-width="5" />
+  <circle cx="120" cy="110" r="3.5" fill="#ffb700" />
+  <!-- Back Right -->
+  <line x1="230" y1="170" x2="230" y2="110" stroke="#ffb700" stroke-width="5" />
+  <circle cx="230" cy="110" r="3.5" fill="#ffb700" />
+  <!-- Front Left Post -->
+  <line x1="65" y1="270" x2="65" y2="200" stroke="#ffd700" stroke-width="7" />
+  <circle cx="65" cy="200" r="4.5" fill="#ffd700" />
+  <!-- Front Right Post -->
+  <line x1="285" y1="270" x2="285" y2="200" stroke="#ffd700" stroke-width="7" />
+  <circle cx="285" cy="200" r="4.5" fill="#ffd700" />
+
+  <!-- Player 1 Chibi Boxer Silhouette (Blue) -->
+  <g transform="translate(110, 195) scale(0.6)">
+    <!-- Body -->
+    <rect x="-15" y="-30" width="30" height="42" rx="7" fill="#00d2ff" filter="url(#glow)" />
+    <!-- Head -->
+    <circle cx="0" cy="-42" r="13" fill="#ffdbac" />
+    <path d="M-13,-45 Q0,-55 13,-45 Z" fill="#1e3a8a" />
+    <!-- Fist -->
+    <circle cx="22" cy="-20" r="8" fill="#00d2ff" />
+  </g>
+
+  <!-- Player 2 Chibi Boxer Silhouette (Red/Yellow) -->
+  <g transform="translate(225, 195) scale(0.6) scale(-1, 1)">
+    <!-- Body -->
+    <rect x="-15" y="-30" width="30" height="42" rx="7" fill="#ff3e3e" filter="url(#glow)" />
+    <!-- Head -->
+    <circle cx="0" cy="-42" r="13" fill="#ffdbac" />
+    <path d="M-13,-45 Q0,-55 13,-45 Z" fill="#ffb700" />
+    <!-- Fist -->
+    <circle cx="22" cy="-20" r="8" fill="#ff3e3e" />
+  </g>
+
+  <!-- Starburst Impact sparks -->
+  <path d="M165,190 L170,180 L175,190 L185,192 L175,198 L178,208 L168,200 L158,206 L162,196 L154,192 Z" fill="#ffb700" filter="url(#glow)" />
+
+  <!-- Game Title neon display -->
+  <text x="175" y="65" font-family="'Orbitron', sans-serif" font-weight="900" font-size="30" fill="url(#neonRed)" text-anchor="middle" filter="url(#glow)" letter-spacing="1">WWE</text>
+  <text x="175" y="94" font-family="'Orbitron', sans-serif" font-weight="900" font-size="12" fill="url(#neonGold)" text-anchor="middle" letter-spacing="4">CHIBI RUMBLE</text>
+</svg>

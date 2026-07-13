@@ -1,0 +1,159 @@
+<!-- 1. Splash Screen Loading Overlay -->
+  <div id="splash-screen" class="overlay-screen">
+    <div class="splash-content">
+      <div id="splash-logo-1" class="splash-logo">PLAYSPHERE</div>
+      <div id="splash-logo-2" class="splash-logo hidden">CRICKET PRO</div>
+      
+      <div class="loader-bar-wrapper">
+        <div id="loader-bar" class="loader-bar"></div>
+      </div>
+      <div class="splash-tagline">Loading High-Fidelity Assets...</div>
+    </div>
+  </div>
+
+  <!-- 2. Console-Style Main Menu Overlay (FC 26 Style) -->
+  <div id="main-menu" class="fc-menu-screen hidden">
+    <!-- Top Bar -->
+    <div class="fc-top-bar">
+      <div class="fc-logo">PLAYSPHERE</div>
+      <div class="fc-profile" id="menu-profile-btn" style="cursor: pointer;">
+        <div id="menu-prof-avatar" class="profile-avatar-thumb">👤</div>
+        <span class="profile-name" id="menu-prof-name">Gamer</span>
+        <span class="profile-divider">|</span>
+        <span class="profile-level" id="menu-prof-level">LVL 1</span>
+        <span class="profile-xp-bar"><span class="xp-fill" id="menu-prof-xp-fill" style="width: 0%;"></span></span>
+        <span class="profile-xp" id="menu-prof-xp">0 / 500 XP</span>
+      </div>
+    </div>
+
+    <!-- Main Sidebar and Center Detail Layout -->
+    <div class="fc-main-container">
+      <!-- Left Sidebar Menu -->
+      <div class="fc-sidebar">
+        <ul class="fc-menu-list">
+          <li class="fc-menu-item active" data-target="solo" id="menu-opt-solo">KICK OFF</li>
+          <li class="fc-menu-item" data-target="pvp" id="menu-opt-pvp">MULTIPLAYER</li>
+          <li class="fc-menu-item" data-target="controls" id="menu-opt-help">CONTROLS</li>
+          <li class="fc-menu-item" data-target="settings" id="menu-opt-settings">SETTINGS</li>
+          <li class="fc-menu-item" data-target="quit">QUIT</li>
+        </ul>
+      </div>
+
+      <!-- Center Detail Panel (changes based on hovered menu item) -->
+      <div class="fc-detail-panel">
+        <div id="detail-solo" class="detail-content">
+          <div class="detail-subtitle">QUICK PLAY</div>
+          <div class="detail-title">PLAY QUICK MATCH</div>
+          <div class="detail-desc" style="margin-bottom: 24px;">Experience the high-intensity T20 International action. Customise teams, stadium, overs format, and play conditions inside the Match Preview screen.</div>
+
+          <button id="menu-btn-solo" class="fc-action-btn">
+            Enter Kick Off
+          </button>
+        </div>
+        
+        <div id="detail-pvp" class="detail-content hidden">
+          <div class="detail-subtitle">LOCAL DUEL</div>
+          <div class="detail-title">PVP MULTIPLAYER</div>
+          <div class="detail-desc">Connect your phone as a PlayStation 5 controller and bowl in real-time while a friend bats on the keyboard!</div>
+          <div class="stadium-select-container" style="margin-top: 8px;">
+            <label for="pvp-stadium-select" style="font-size: 0.8rem; font-weight: 700; color: #cbd5e1; margin-bottom: 6px; display: block;">SELECT STADIUM</label>
+            <select id="pvp-stadium-select" class="settings-select" style="width: 100%; max-width: 320px;">
+              <option value="default">Default Procedural Stadium</option>
+              <option value="ekana">Ekana Stadium (Lucknow)</option>
+              <option value="stadium_usdz">USDZ Stadium</option>
+              <option value="qaddafi">Qaddafi Stadium (Lahore)</option>
+              <option value="classic">Classic Cricket Stadium</option>
+              <option value="grand">Grand Cricket Stadium</option>
+              <option value="cricket_ground">Cricket Ground Arena</option>
+            </select>
+          </div>
+
+          <!-- PVP Team Selection -->
+          <div style="display: flex; gap: 12px; margin-top: 12px; max-width: 320px;">
+            <div style="flex: 1;">
+              <label for="pvp-user-team" style="font-size: 0.75rem; font-weight: 700; color: #cbd5e1; margin-bottom: 4px; display: block;">YOUR TEAM</label>
+              <select id="pvp-user-team" class="settings-select" style="width: 100%;">
+                <option value="IND">India</option>
+                <option value="AUS">Australia</option>
+                <option value="ENG">England</option>
+                <option value="PAK">Pakistan</option>
+                <option value="NZ">New Zealand</option>
+                <option value="SA">South Africa</option>
+                <option value="WI">West Indies</option>
+                <option value="SL">Sri Lanka</option>
+                <option value="BAN">Bangladesh</option>
+                <option value="AFG">Afghanistan</option>
+              </select>
+            </div>
+            <div style="flex: 1;">
+              <label for="pvp-opp-team" style="font-size: 0.75rem; font-weight: 700; color: #cbd5e1; margin-bottom: 4px; display: block;">OPPONENT TEAM</label>
+              <select id="pvp-opp-team" class="settings-select" style="width: 100%;">
+                <option value="AUS">Australia</option>
+                <option value="IND">India</option>
+                <option value="ENG">England</option>
+                <option value="PAK">Pakistan</option>
+                <option value="NZ">New Zealand</option>
+                <option value="SA">South Africa</option>
+                <option value="WI">West Indies</option>
+                <option value="SL">Sri Lanka</option>
+                <option value="BAN">Bangladesh</option>
+                <option value="AFG">Afghanistan</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- PVP Match Length & Target -->
+          <div style="display: flex; gap: 12px; margin-top: 12px; max-width: 320px;">
+            <div style="flex: 1;">
+              <label for="pvp-overs" style="font-size: 0.75rem; font-weight: 700; color: #cbd5e1; margin-bottom: 4px; display: block;">OVERS</label>
+              <select id="pvp-overs" class="settings-select" style="width: 100%;">
+                <option value="1">1 Over</option>
+                <option value="2" selected>2 Overs</option>
+                <option value="5">5 Overs</option>
+                <option value="10">10 Overs</option>
+                <option value="20">20 Overs</option>
+              </select>
+            </div>
+            <div style="flex: 1;">
+              <label for="pvp-target" style="font-size: 0.75rem; font-weight: 700; color: #cbd5e1; margin-bottom: 4px; display: block;">TARGET RUNS</label>
+              <input type="number" id="pvp-target" min="1" max="999" value="24" class="settings-select" style="width: 100%; border: 1px solid rgba(255,255,255,0.15); border-radius: 4px; padding: 6px; box-sizing: border-box; text-align: center; color: #fff; background: rgba(30, 41, 59, 0.45);" />
+            </div>
+          </div>
+
+          <button id="menu-btn-pvp" class="fc-action-btn">
+            Host PvP Room
+          </button>
+        </div>
+
+        <div id="detail-controls" class="detail-content hidden">
+          <div class="detail-subtitle">TRAINING</div>
+          <div class="detail-title">LEARN STANCES</div>
+          <div class="detail-desc">Review your crease movement, power lofted drives, and defensive stance configurations.</div>
+          <button id="menu-btn-help" class="fc-action-btn">
+            View Controls
+          </button>
+        </div>
+
+        <div id="detail-settings" class="detail-content hidden">
+          <div class="detail-subtitle">PREFERENCES</div>
+          <div class="detail-title">GAME SETTINGS</div>
+          <div class="detail-desc">Adjust graphics quality, resolution scale, audio volume channels, and view keyboard control bindings.</div>
+          <button id="menu-btn-settings" class="fc-action-btn">
+            Open Settings Dashboard
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer Bar -->
+    <div class="fc-footer-bar">
+      <div class="fc-footer-left">
+        <span>Enter Select</span>
+        <span>Esc Exit</span>
+        <span>Settings / Accessibility Settings</span>
+      </div>
+      <div class="fc-footer-right">
+        PLAYSPHERE HUB
+      </div>
+    </div>
+  </div>

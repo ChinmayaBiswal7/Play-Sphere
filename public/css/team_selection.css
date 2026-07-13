@@ -1,0 +1,204 @@
+/* Team Selection Grid Styles */
+#team-selection-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(10, 10, 12, 0.95);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1500;
+  font-family: 'Outfit', 'Inter', sans-serif;
+  color: #fff;
+}
+
+.team-sel-container {
+  width: 90%;
+  max-width: 1200px;
+  height: 85%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* Tabs Bar */
+.team-sel-tabs {
+  display: flex;
+  justify-content: center;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 10px;
+  gap: 15px;
+}
+
+.team-sel-tab {
+  padding: 10px 20px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  letter-spacing: 1px;
+}
+
+.team-sel-tab.active, .team-sel-tab:hover {
+  color: #f43f5e;
+  border-bottom: 3px solid #f43f5e;
+  background: rgba(244, 63, 94, 0.1);
+}
+
+.team-sel-grid-container {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 20px 10px;
+  margin: 15px 0;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.team-sel-grid-container::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+/* Team Grid Layout */
+.team-sel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 20px;
+  justify-items: center;
+}
+
+/* Team Card */
+.team-sel-card {
+  width: 170px;
+  height: 110px;
+  background: #1e1e24;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+  padding: 10px;
+}
+
+.team-sel-card .team-logo-circle {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.6rem;
+  margin-bottom: 8px;
+  transition: transform 0.2s ease;
+}
+
+.team-sel-card .team-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+.team-sel-card .team-rating {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Glow Focus state for keyboard/controller */
+.team-sel-card.focused, .team-sel-card:hover {
+  background: #272730;
+  border-color: #f43f5e;
+  box-shadow: 0 0 15px rgba(244, 63, 94, 0.4);
+  transform: translateY(-3px);
+}
+
+.team-sel-card.focused .team-logo-circle, .team-sel-card:hover .team-logo-circle {
+  transform: scale(1.1);
+}
+
+/* Footer Section */
+.team-sel-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 2px solid rgba(255, 255, 255, 0.1);
+  padding-top: 15px;
+}
+
+.team-sel-footer-info {
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.sel-highlight {
+  color: #3b82f6;
+  text-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+}
+
+.team-sel-hints {
+  display: flex;
+  gap: 20px;
+}
+
+.hint-item {
+  display: flex;
+  align-items: center;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.btn-bubble {
+  background: #3b82f6;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  margin-right: 8px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+}
+
+.btn-bubble.cancel-btn {
+  background: #dc2626;
+}
+
+.hint-item .key-hint {
+  background: #27272a;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: 'Outfit', monospace;
+  font-size: 0.8rem;
+  font-weight: 700;
+  margin-right: 6px;
+  box-shadow: 0 2px 0 rgba(0,0,0,0.5);
+  color: #e4e4e7;
+}
+
+.team-sel-hints {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}

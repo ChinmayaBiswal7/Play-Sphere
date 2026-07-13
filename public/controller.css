@@ -1,0 +1,371 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
+
+/* Base Reset & Lock to Landscape */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none; /* Prevents default zooming and scrolling */
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background-color: #080a0f;
+  color: #ffffff;
+  font-family: 'Outfit', sans-serif;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: 60px 1fr;
+  grid-template-columns: 1fr 1fr;
+}
+
+/* Landscape Force Warning */
+.landscape-warning {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: #0f172a;
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 20px;
+}
+
+@media (orientation: landscape) {
+  .landscape-warning {
+    display: none;
+  }
+}
+
+.landscape-warning h2 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #3b82f6;
+  margin-bottom: 8px;
+}
+
+/* Generic Button Styling */
+.btn {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 14px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition: all 0.1s ease;
+}
+
+.btn:active, .btn.active {
+  background: rgba(59, 130, 246, 0.3); /* Blue glow on press */
+  border-color: #3b82f6;
+  box-shadow: 0 0 14px rgba(59, 130, 246, 0.5);
+  transform: scale(0.94);
+}
+
+/* --- TOP BAR (Triggers & Menu Buttons) --- */
+.top-bar-left {
+  grid-row: 1;
+  grid-column: 1;
+  display: flex;
+  gap: 10px;
+  padding: 10px 20px;
+  align-items: center;
+}
+
+.top-bar-right {
+  grid-row: 1;
+  grid-column: 2;
+  display: flex;
+  flex-direction: row-reverse;
+  gap: 10px;
+  padding: 10px 20px;
+  align-items: center;
+}
+
+.trigger {
+  width: 70px;
+  height: 40px;
+  font-size: 12px;
+  font-weight: 800;
+  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+}
+
+.utility-btn {
+  width: 75px;
+  height: 30px;
+  font-size: 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  color: #94a3b8;
+  font-weight: 600;
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+/* --- LEFT GRIP (D-Pad & Left Stick) --- */
+.left-grip {
+  grid-row: 2;
+  grid-column: 1;
+  position: relative;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* Cross D-Pad Shape */
+.dpad {
+  position: absolute;
+  top: 10px;
+  left: 40px;
+  width: 120px;
+  height: 120px;
+}
+
+.dpad-btn {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 16px;
+}
+.dpad-up    { top: 0; left: 40px; border-radius: 8px 8px 0 0; }
+.dpad-down  { bottom: 0; left: 40px; border-radius: 0 0 8px 8px; }
+.dpad-left  { top: 40px; left: 0; border-radius: 8px 0 0 8px; }
+.dpad-right { top: 40px; right: 0; border-radius: 0 8px 8px 0; }
+
+.dpad-btn:active, .dpad-btn.active {
+  background: #3b82f6;
+  border-color: #60a5fa;
+  color: #ffffff;
+}
+
+/* --- RIGHT GRIP (Action Buttons & Right Stick) --- */
+.right-grip {
+  grid-row: 2;
+  grid-column: 2;
+  position: relative;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+/* Diamond Action Buttons Shape */
+.action-group {
+  position: absolute;
+  top: 10px;
+  right: 40px;
+  width: 120px;
+  height: 120px;
+}
+
+.action-btn {
+  position: absolute;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%; /* Classic round buttons */
+  font-size: 16px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+}
+.act-triangle { top: 0; left: 41px; color: #10b981; }
+.act-cross    { bottom: 0; left: 41px; color: #3b82f6; }
+.act-square   { top: 41px; left: 0; color: #d946ef; }
+.act-circle   { top: 41px; right: 0; color: #ef4444; }
+
+.act-triangle:active, .act-triangle.active { background: #10b981; color: #ffffff; border-color: #34d399; box-shadow: 0 0 14px rgba(16, 185, 129, 0.5); }
+.act-cross:active, .act-cross.active       { background: #3b82f6; color: #ffffff; border-color: #60a5fa; box-shadow: 0 0 14px rgba(59, 130, 246, 0.5); }
+.act-square:active, .act-square.active     { background: #d946ef; color: #ffffff; border-color: #f472b6; box-shadow: 0 0 14px rgba(217, 70, 239, 0.5); }
+.act-circle:active, .act-circle.active     { background: #ef4444; color: #ffffff; border-color: #fca5a5; box-shadow: 0 0 14px rgba(239, 68, 68, 0.5); }
+
+/* --- JOYSTICKS (Thumb Zones) --- */
+.joystick-zone-left {
+  position: absolute;
+  bottom: 20px;
+  left: 140px;
+}
+
+.joystick-zone-right {
+  position: absolute;
+  bottom: 20px;
+  right: 140px;
+}
+
+.thumbstick-base {
+  width: 100px;
+  height: 100px;
+  background: rgba(15, 23, 42, 0.45);
+  border: 3px solid #1e293b;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 4px 10px rgba(0, 0, 0, 0.6);
+  position: relative;
+}
+
+.thumbstick-knob {
+  width: 58px;
+  height: 58px;
+  background: radial-gradient(circle at 30% 30%, #475569 0%, #1e293b 80%, #0f172a 100%);
+  border: 2px solid #4b5563;
+  border-radius: 50%;
+  box-shadow: 0 6px 12px rgba(0,0,0,0.5), inset 0 2px 2px rgba(255, 255, 255, 0.15);
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: 800;
+  color: #64748b;
+  letter-spacing: 0.05em;
+  transition: transform 0.05s ease;
+}
+
+/* Center Subtle Logo Touch */
+.center-ps-zone {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 10;
+}
+
+.ps-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 800;
+  background: radial-gradient(circle, #334155 0%, #1e293b 100%);
+  border-color: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+.touchpad-stub {
+  width: 140px;
+  height: 52px;
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.6) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.4), 0 4px 6px rgba(0,0,0,0.2);
+}
+
+/* Loader Screen Overlay */
+.loader-screen {
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: #090b0f;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  transition: opacity 0.4s ease;
+}
+
+.loader-screen.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.room-input-box {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 20px;
+  padding: 30px;
+  max-width: 320px;
+  width: 85%;
+  text-align: center;
+  box-shadow: 0 15px 35px rgba(0,0,0,0.6);
+  backdrop-filter: blur(10px);
+}
+
+.room-input-box h3 {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #f8fafc;
+  margin-bottom: 8px;
+  letter-spacing: 0.05em;
+}
+
+.room-input-box p {
+  font-size: 0.8rem;
+  color: #64748b;
+  margin-bottom: 20px;
+}
+
+.room-input-box input {
+  width: 100%;
+  background: #080a0f;
+  border: 2px solid #1e293b;
+  border-radius: 12px;
+  padding: 12px;
+  font-size: 1.5rem;
+  font-weight: 900;
+  text-align: center;
+  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: 4px;
+  margin-bottom: 16px;
+  outline: none;
+}
+
+.room-input-box input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+}
+
+.room-input-box button {
+  width: 100%;
+  background: #3b82f6;
+  border: none;
+  border-radius: 12px;
+  padding: 12px;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
+}
+
+.room-input-box button:active {
+  transform: scale(0.97);
+}
+
+.room-error-msg {
+  color: #ef4444;
+  font-size: 0.8rem;
+  margin-top: 10px;
+  font-weight: 600;
+}
+
+.gamepad-container {
+  width: 100%;
+  height: 100%;
+  display: contents; /* Grid defined in body is used directly */
+}

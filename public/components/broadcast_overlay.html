@@ -1,0 +1,80 @@
+<!-- Fullscreen Broadcast Overlay for Boundaries/Wickets -->
+  <div id="broadcast-overlay" class="broadcast-celebration-screen hidden">
+    <div class="broadcast-overlay-content">
+      <div id="broadcast-title" class="broadcast-text-large">FOUR!</div>
+      <div id="broadcast-subtitle" class="broadcast-text-small">UP AND OVER THE OUTFIELD</div>
+    </div>
+  </div>
+
+  <!-- LBW Appeal Prompt Overlay -->
+  <div id="lbw-appeal-card" class="drs-prompt-card hidden" style="border-color: #3b82f6; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6), 0 0 25px rgba(59, 130, 246, 0.35);">
+    <div class="drs-prompt-header" style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);">LBW APPEAL</div>
+    <div class="drs-prompt-body">
+      <div class="drs-prompt-text" id="lbw-appeal-text">HOW'S THAT?! APPEAL FOR LBW?</div>
+      <div class="drs-timer-container">
+        <svg class="drs-timer-svg" viewBox="0 0 36 36">
+          <path class="drs-timer-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+          <path id="lbw-appeal-timer-progress" class="drs-timer-progress" stroke="#3b82f6" stroke-dasharray="100, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+        </svg>
+        <div id="lbw-appeal-timer-value" class="drs-timer-value">3</div>
+      </div>
+    </div>
+    <div class="drs-prompt-footer">
+      <button id="lbw-btn-appeal" class="drs-btn" style="background: #3b82f6; cursor: pointer;">APPEAL (SPACE)</button>
+      <button id="lbw-btn-decline" class="drs-btn drs-btn-decline" style="cursor: pointer;">DECLINE (X)</button>
+    </div>
+  </div>
+
+  <!-- DRS Review Prompt Overlay -->
+  <div id="drs-prompt-card" class="drs-prompt-card hidden">
+    <div class="drs-prompt-header">DECISION REVIEW SYSTEM</div>
+    <div class="drs-prompt-body">
+      <div class="drs-prompt-text">CHALLENGE UMPIRE'S DECISION?</div>
+      <div class="drs-timer-container">
+        <svg class="drs-timer-svg" viewBox="0 0 36 36">
+          <path class="drs-timer-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+          <path id="drs-timer-progress" class="drs-timer-progress" stroke-dasharray="100, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+        </svg>
+        <div id="drs-timer-value" class="drs-timer-value">10</div>
+      </div>
+    </div>
+    <div class="drs-prompt-footer">
+      <button id="drs-btn-approve" class="drs-btn drs-btn-approve">DRS REVIEW (SPACE)</button>
+      <button id="drs-btn-decline" class="drs-btn drs-btn-decline">DECLINE (X)</button>
+    </div>
+  </div>
+
+  <!-- DRS Review Graphic Overlays (TV Broadcast Style) -->
+  <div id="drs-review-container" class="drs-review-container hidden">
+    <!-- Top Original Decision Card -->
+    <div class="drs-decision-card top-card">
+      <div class="drs-decision-label">ORIGINAL DECISION</div>
+      <div id="drs-original-decision-value" class="drs-decision-value out">OUT</div>
+    </div>
+
+    <!-- Left Tracking Panel -->
+    <div class="drs-tracking-panel">
+      <!-- Pitching -->
+      <div id="drs-panel-pitching" class="drs-tracking-item pending">
+        <div class="drs-item-title">PITCHING</div>
+        <div class="drs-item-value">-</div>
+      </div>
+      <!-- Impact -->
+      <div id="drs-panel-impact" class="drs-tracking-item pending">
+        <div class="drs-item-title">IMPACT</div>
+        <div class="drs-item-value">-</div>
+      </div>
+      <!-- Wickets -->
+      <div id="drs-panel-wickets" class="drs-tracking-item pending">
+        <div class="drs-item-title">WICKETS</div>
+        <div class="drs-item-value">-</div>
+      </div>
+    </div>
+
+    <!-- Bottom Right Final Decision / Review Status Card -->
+    <div class="drs-decision-card bottom-right-card hidden" id="drs-final-card">
+      <div class="drs-decision-label">DRS DECISION</div>
+      <div id="drs-final-decision-value" class="drs-decision-value notout">NOT OUT</div>
+      <div id="drs-review-status-value" class="drs-review-status">REVIEW RETAINED</div>
+    </div>
+  </div>

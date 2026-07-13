@@ -1,0 +1,30 @@
+<!-- PlaySphere Controller Link Modal -->
+<div class="ps5-profile-modal" id="ps5-controller-modal">
+  <div class="ps5-profile-card controller-card">
+    <span class="ps5-profile-close" id="ps5-controller-close-btn">&times;</span>
+    
+    <h2>LINK CONTROLLER</h2>
+    
+    <p class="controller-instructions">
+      Scan the QR code or enter the code on your phone browser (connected to the same Wi-Fi) to use it as a wireless gamepad.
+    </p>
+
+    <!-- QR Code Display -->
+    <div class="controller-qr-container">
+      <img id="ps5-controller-qr-img" />
+      <div id="ps5-controller-qr-spinner">GENERATING...</div>
+    </div>
+
+    <!-- Room Code Display -->
+    <div class="controller-code-box">
+      <span class="controller-code-label">Console Room Code</span>
+      <span id="ps5-controller-room-val">----</span>
+    </div>
+
+    <!-- Connection Status Indicator -->
+    <div class="controller-status-box">
+      <span id="ps5-controller-status-dot"></span>
+      <span id="ps5-controller-status-text">No phone controller linked</span>
+    </div>
+  </div>
+</div>

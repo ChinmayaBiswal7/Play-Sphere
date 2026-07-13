@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>PlaySphere Football Controller</title>
+  <link rel="stylesheet" href="controller.css?v=2">
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+  <!-- Rotate device warning -->
+  <div class="landscape-warning">
+    <h2>Rotate Device</h2>
+    <p>Please rotate your phone to Landscape mode to use the PlaySphere Football remote controller.</p>
+  </div>
+
+  <!-- Lobby Pairing screen (if no room query is set) -->
+  <div id="lobby-pairing" class="pairing-overlay">
+    <div class="pairing-box">
+      <h3>LINK FOOTBALL CONTROLLER</h3>
+      <p>Enter the 4-letter room code displayed on the PC screen.</p>
+      <input type="text" id="room-code-input" placeholder="CODE" maxlength="4" autocomplete="off" spellcheck="false">
+      <button id="connect-btn">LINK CONTROLLER</button>
+      <div id="pairing-error" class="error-msg"></div>
+    </div>
+  </div>
+
+  <!-- Main Gamepad Virtual Controller -->
+  <div class="controller-container">
+    <!-- Top shoulder triggers -->
+    <div class="shoulder-bar-left">
+      <div class="btn trigger-btn" id="btn-l1">L1</div>
+      <div class="btn utility-btn" id="btn-create">Create</div>
+    </div>
+
+    <div class="shoulder-bar-right">
+      <div class="btn trigger-btn active-sprint" id="btn-r1">R1 (SPRINT)</div>
+      <div class="btn utility-btn" id="btn-options">Options</div>
+    </div>
+
+    <!-- Grip controls -->
+    <div class="left-grip">
+      <!-- Joystick zone -->
+      <div class="joystick-wrapper">
+        <div class="stick-boundary" id="joystick-boundary">
+          <div class="stick-knob" id="joystick-knob"></div>
+        </div>
+        <span class="stick-label">MOVE / DRIBBLE</span>
+      </div>
+    </div>
+
+    <!-- Center Hub Info -->
+    <div class="center-bridge">
+      <div class="touchpad-area">
+        <span class="game-logo">FOOTBALL PRO</span>
+        <span class="room-indicator" id="room-code-text">ROOM: ----</span>
+      </div>
+      
+      <!-- Connection lightbar -->
+      <div class="lightbar-glow" id="status-light"></div>
+      
+      <div class="connection-status">
+        <span id="status-label">DISCONNECTED</span>
+      </div>
+    </div>
+
+    <!-- Right Grip Action Buttons -->
+    <div class="right-grip">
+      <div class="action-buttons-group">
+        <!-- Triangle (▲) -->
+        <div class="btn action-btn act-triangle" id="btn-triangle">
+          <span>▲</span>
+          <small>LOB</small>
+        </div>
+        <!-- Square (■) -->
+        <div class="btn action-btn act-square" id="btn-square">
+          <span>■</span>
+          <small>TACKLE</small>
+        </div>
+        <!-- Circle (●) -->
+        <div class="btn action-btn act-circle" id="btn-circle">
+          <span>●</span>
+          <small>SHOOT</small>
+        </div>
+        <!-- Cross (✖) -->
+        <div class="btn action-btn act-cross" id="btn-cross">
+          <span>✖</span>
+          <small>PASS</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main controller script -->
+  <script src="controller.js?v=2"></script>
+</body>
+</html>
