@@ -443,51 +443,237 @@ body, html {
 /* ══════════════════════════════════════════
    SCREEN 3 — PLAY MODE SELECT
 ══════════════════════════════════════════ */
+/* ══════════════════════════════════════════
+   SCREEN 3 — MAP SELECT (PREMIUM REDESIGN)
+══════════════════════════════════════════ */
 .play-mode-screen {
-  background: radial-gradient(circle at center, #0b152d 0%, #03060f 100%);
+  background: #030610;
   display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  padding: 60px;
   z-index: 10;
+  overflow: hidden;
 }
-.play-mode-bg {
+
+/* Full-bleed selected map art fills background */
+.map-select-fullbg {
+  position: absolute; inset: 0; z-index: 0;
+  background-image: url('../maps/map_rajdhani.png');
+  background-size: cover; background-position: center;
+  filter: brightness(0.35) saturate(0.7);
+  transition: background-image 0.5s ease;
+}
+.map-select-vignette {
+  position: absolute; inset: 0; z-index: 1;
+  background:
+    linear-gradient(to bottom, rgba(3,6,16,0.5) 0%, transparent 30%, transparent 60%, rgba(3,6,16,0.97) 100%),
+    linear-gradient(to right, rgba(3,6,16,0.7) 0%, transparent 20%, transparent 80%, rgba(3,6,16,0.7) 100%);
+}
+
+/* Header */
+.ms-header {
+  position: relative; z-index: 10;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 40px 16px;
+  background: rgba(3,6,16,0.5); backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
+}
+.ms-header-left { display: flex; align-items: center; gap: 14px; }
+.ms-esc-btn {
+  font-family: var(--font-logo); font-size: 11px; letter-spacing: 2px;
+  padding: 6px 14px; border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.06); color: var(--text-primary);
+  border-radius: 3px; cursor: pointer; transition: all 0.2s;
+}
+.ms-esc-btn:hover { border-color: var(--neon-cyan); color: var(--neon-cyan); }
+.ms-sep { color: rgba(255,255,255,0.2); font-size: 18px; }
+.ms-title {
+  font-family: var(--font-logo); font-size: 18px; font-weight: 900;
+  letter-spacing: 3px; color: var(--text-primary);
+}
+.ms-subtitle { font-size: 12px; color: var(--text-muted); letter-spacing: 1px; }
+.ms-header-right { display: flex; align-items: center; }
+.ms-mode-pills { display: flex; gap: 6px; }
+.ms-mode-pill {
+  padding: 8px 18px; font-family: var(--font-logo); font-size: 11px; letter-spacing: 2px;
+  background: transparent; border: 1px solid rgba(255,255,255,0.12);
+  color: var(--text-muted); border-radius: 3px; cursor: pointer; transition: all 0.2s;
+}
+.ms-mode-pill.active {
+  background: rgba(255,51,102,0.15); border-color: var(--neon-red);
+  color: var(--neon-red);
+}
+.ms-mode-pill.disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* Map Cards Row */
+.ms-cards-row {
+  position: relative; z-index: 10;
+  display: flex; gap: 14px; align-items: center; justify-content: center;
+  padding: 24px 40px 20px;
+  flex: 1; overflow: hidden;
+}
+
+.ms-card {
+  position: relative; border-radius: 8px; overflow: hidden;
+  cursor: pointer; transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  flex: 1; max-width: 220px; height: 300px;
+  border: 1px solid rgba(255,255,255,0.08);
+  display: flex; flex-direction: column;
+}
+.ms-card:hover { transform: translateY(-4px) scale(1.02); border-color: rgba(255,255,255,0.2); }
+.ms-card.selected {
+  flex: 2; max-width: 360px;
+  border: 2px solid var(--neon-red);
+  box-shadow: 0 0 40px rgba(255,51,102,0.35), 0 20px 60px rgba(0,0,0,0.6);
+  transform: none;
+}
+.ms-card.locked { opacity: 0.65; cursor: not-allowed; }
+.ms-card.locked:hover { transform: none; }
+
+.ms-card-img {
   position: absolute; inset: 0;
-  background: linear-gradient(rgba(4,8,17,0.6), rgba(4,8,17,0.9)),
-              url('../fps_bg.png') center/cover;
-  z-index: 0;
+  background-size: cover; background-position: center;
+  transition: transform 0.4s ease;
 }
-.play-mode-screen > * { position: relative; z-index: 1; }
-.mode-heading {
-  font-family: var(--font-logo); font-size: 20px; letter-spacing: 4px; margin-bottom: 40px;
+.ms-card:hover .ms-card-img { transform: scale(1.04); }
+.ms-card-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(to bottom, transparent 30%, rgba(3,6,16,0.9) 100%);
 }
-.maps-container { display: flex; gap: 20px; margin-bottom: 50px; }
-.map-card {
-  width: 320px; height: 200px;
-  background: var(--bg-card); border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 10px; overflow: hidden; cursor: pointer;
-  position: relative; transition: all 0.3s;
-  display: flex; align-items: flex-end;
+.ms-card-info {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  padding: 16px 18px; z-index: 2;
 }
-.map-card.active { border-color: var(--neon-red); box-shadow: 0 0 30px rgba(255,51,102,0.3); }
-.map-card-glow { position: absolute; inset: 0; background: linear-gradient(to bottom, transparent 30%, rgba(4,8,17,0.85) 100%); }
-.map-card-info { position: relative; z-index: 2; padding: 18px; }
-.map-card-info h3 { font-family: var(--font-logo); font-size: 22px; color: #fff; margin-bottom: 6px; }
-.map-card-info p { font-size: 12px; color: rgba(255,255,255,0.6); margin-bottom: 10px; line-height: 1.4; }
-.map-stats-badge {
-  font-family: var(--font-logo); font-size: 10px; letter-spacing: 1px;
-  color: var(--neon-cyan); background: rgba(0,210,255,0.1);
-  padding: 4px 10px; border-radius: 3px; display: inline-block;
+.ms-card-tag {
+  font-family: var(--font-logo); font-size: 9px; letter-spacing: 2px;
+  color: var(--neon-amber); margin-bottom: 6px;
 }
-.play-mode-choices { display: flex; flex-direction: column; align-items: center; gap: 20px; }
-.mode-options-row { display: flex; gap: 16px; }
-.mode-btn {
-  padding: 14px 30px; font-family: var(--font-logo); font-size: 13px; letter-spacing: 2px;
-  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12);
-  color: var(--text-primary); border-radius: 4px; cursor: pointer; transition: all 0.2s;
+.ms-card-map-icon { font-size: 22px; margin-bottom: 6px; }
+.ms-card h3 {
+  font-family: var(--font-logo); font-size: 16px; font-weight: 900;
+  line-height: 1.2; color: #fff; margin-bottom: 4px;
 }
-.mode-btn.active { background: rgba(255,51,102,0.15); border-color: var(--neon-red); color: var(--neon-red); }
-.mode-btn.disabled { opacity: 0.4; cursor: not-allowed; }
-.lobby-action-row { display: flex; gap: 16px; }
+.ms-card.selected h3 { font-size: 20px; }
+.ms-card p { font-size: 10px; letter-spacing: 2px; color: rgba(255,255,255,0.5); margin-bottom: 6px; }
+.ms-card-size {
+  font-family: var(--font-logo); font-size: 9px; letter-spacing: 1px;
+  color: var(--neon-cyan); margin-bottom: 6px;
+}
+.ms-card-desc { font-size: 11px; color: rgba(255,255,255,0.55); line-height: 1.4; margin-bottom: 0; }
+.ms-card-locked-icon {
+  position: absolute; top: 14px; right: 14px;
+  font-size: 18px; z-index: 3; opacity: 0.7;
+}
+.ms-selected-badge {
+  position: absolute; bottom: 14px; right: 14px; z-index: 3;
+  font-family: var(--font-logo); font-size: 11px; letter-spacing: 2px;
+  color: var(--neon-red);
+  background: rgba(255,51,102,0.15); border: 1px solid var(--neon-red);
+  padding: 4px 12px; border-radius: 3px;
+}
+
+/* Bottom Panel */
+.ms-bottom-panel {
+  position: relative; z-index: 10;
+  display: flex; gap: 30px;
+  padding: 18px 40px;
+  background: rgba(3,6,16,0.75); backdrop-filter: blur(16px);
+  border-top: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
+}
+
+.ms-overview-block { min-width: 240px; }
+.ms-overview-label {
+  font-family: var(--font-logo); font-size: 10px; letter-spacing: 3px;
+  color: var(--neon-red); margin-bottom: 14px;
+}
+.ms-overview-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ms-stat-item {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 6px; padding: 10px 8px;
+}
+.ms-stat-icon { font-size: 18px; }
+.ms-stat-num {
+  font-family: var(--font-logo); font-size: 13px; font-weight: 900;
+  color: var(--neon-cyan); letter-spacing: 1px;
+}
+.ms-stat-name { font-size: 9px; letter-spacing: 1px; color: var(--text-muted); text-align: center; }
+
+.ms-minimap-block {
+  display: flex; align-items: center; justify-content: center;
+  width: 200px; flex-shrink: 0;
+}
+.ms-minimap-canvas {
+  border: 1px solid rgba(0,210,255,0.2);
+  border-radius: 6px; overflow: hidden;
+  box-shadow: 0 0 20px rgba(0,210,255,0.1);
+  width: 200px; height: 180px;
+}
+.ms-minimap-canvas svg { width: 100%; height: 100%; display: block; }
+
+.ms-tactics-block { display: flex; gap: 40px; flex: 1; }
+.ms-tactics-col { flex: 1; }
+.ms-bestfor-col { width: 200px; }
+.ms-tac-header {
+  font-family: var(--font-logo); font-size: 10px; letter-spacing: 3px;
+  color: var(--neon-red); margin-bottom: 12px;
+}
+.ms-tac-item {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 12px; color: rgba(255,255,255,0.65);
+  padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+  line-height: 1.3;
+}
+.ms-tac-check { color: var(--neon-cyan); font-size: 12px; flex-shrink: 0; }
+.ms-bestfor-row { display: flex; gap: 8px; }
+.ms-bestfor-item {
+  flex: 1; padding: 10px 6px; text-align: center;
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 6px; font-size: 9px; letter-spacing: 1px; color: var(--text-muted);
+  display: flex; flex-direction: column; gap: 5px; align-items: center;
+}
+.ms-bestfor-item.active { border-color: var(--neon-cyan); color: var(--neon-cyan); background: rgba(0,210,255,0.07); }
+.ms-bestfor-item span:first-child { font-size: 18px; }
+
+/* Confirm Bar */
+.ms-confirm-bar {
+  position: relative; z-index: 10;
+  display: flex; align-items: center; justify-content: center; gap: 40px;
+  padding: 16px 40px;
+  background: rgba(3,6,16,0.9);
+  border-top: 1px solid rgba(255,51,102,0.25);
+  flex-shrink: 0;
+}
+.ms-confirm-btn {
+  padding: 18px 80px;
+  font-family: var(--font-logo); font-size: 16px; font-weight: 900;
+  letter-spacing: 4px; color: #fff;
+  background: linear-gradient(135deg, var(--neon-red), #c0392b);
+  border: none; border-radius: 4px; cursor: pointer;
+  box-shadow: 0 0 30px rgba(255,51,102,0.45);
+  transition: all 0.2s; position: relative; overflow: hidden;
+}
+.ms-confirm-btn::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+  transform: translateX(-100%); transition: transform 0.5s;
+}
+.ms-confirm-btn:hover::before { transform: translateX(100%); }
+.ms-confirm-btn:hover { box-shadow: 0 0 50px rgba(255,51,102,0.7); transform: translateY(-2px); }
+.ms-server-info { display: flex; align-items: center; gap: 10px; }
+.ms-server-region { font-size: 12px; color: var(--text-muted); }
+.ms-ping-bar { display: flex; gap: 3px; align-items: flex-end; }
+.ping-dot {
+  width: 5px; border-radius: 1px;
+}
+.ping-dot.g { background: #22c55e; }
+.ping-dot.g:nth-child(1) { height: 8px; }
+.ping-dot.g:nth-child(2) { height: 12px; }
+.ping-dot.g:nth-child(3) { height: 16px; }
+.ping-dot.d { height: 20px; background: rgba(255,255,255,0.15); }
+.ms-ping-val { font-family: var(--font-logo); font-size: 11px; color: #22c55e; }
+
+
 
 /* ══════════════════════════════════════════
    SCREEN 4 — AGENT SELECT
