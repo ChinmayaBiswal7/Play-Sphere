@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Delhi Defiance - 3D Tactical FPS</title>
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;900&family=Outfit:wght@400;500;700;900&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="fps.css">
+  <!-- Socket.io -->
+  <script src="/socket.io/socket.io.js"></script>
+  <!-- Three.js (r128 for stable 3D primitives) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+  <!-- 1. Studio Splash Loader -->
+  <div id="splash-screen" class="screen splash-screen">
+    <div class="splash-glow"></div>
+    <div class="splash-content">
+      <div class="studio-name">PLAYSPHERE STUDIOS</div>
+      <div class="game-logo-box">
+        <h1 class="logo-title">DELHI</h1>
+        <h2 class="logo-subtitle">DEFIANCE</h2>
+      </div>
+      <div class="splash-progress-container">
+        <div class="splash-progress-track">
+          <div id="splash-progress-bar" class="splash-progress-bar"></div>
+        </div>
+        <div id="splash-status-lbl" class="splash-status">INITIALIZING 3D ENGINE...</div>
+      </div>
+      <div id="splash-tip" class="splash-tip">Tip: Headshots deal 3x damage. Always crosshair-place at head level.</div>
+    </div>
+  </div>
+
+  <!-- 2. Profile Login Screen -->
+  <div id="login-screen" class="screen login-screen hidden">
+    <div class="login-box">
+      <h2>IDENTIFY AGENT</h2>
+      <p class="login-sub">Enter callsign to connect to Sentinel Network</p>
+      
+      <div class="input-field">
+        <input type="text" id="login-username-input" placeholder="AGENT_NAME" maxlength="15">
+      </div>
+      
+      <div class="avatar-select-box">
+        <label>SELECT PLAYER CARD AVATAR</label>
+        <div class="avatar-row">
+          <div class="avatar-option active" data-avatar="1">👤</div>
+          <div class="avatar-option" data-avatar="2">🔥</div>
+          <div class="avatar-option" data-avatar="3">🌀</div>
+          <div class="avatar-option" data-avatar="4">💀</div>
+        </div>
+      </div>
+
+      <div class="login-btn-row">
+        <button id="btn-login-guest" class="fps-btn">GUEST ACCESS</button>
+        <button id="btn-login-google" class="fps-btn secondary-fps-btn">GOOGLE SIGN-IN</button>
+      </div>
+      <div id="login-error-msg" class="login-error"></div>
+    </div>
+  </div>
+
+  <!-- 3. Lobby Home Dashboard -->
+  <div id="lobby-screen" class="screen lobby-screen hidden">
+    <!-- 3D background container for active Agent hologram -->
+    <div id="lobby-hologram-container"></div>
+    <div class="lobby-grid-overlay"></div>
+
+    <!-- Header bar -->
+    <header class="lobby-header">
+      <div class="lobby-logo">DD</div>
+      <nav class="lobby-nav">
+        <span class="nav-tab active" data-tab="lobby">LOBBY</span>
+        <span class="nav-tab" data-tab="career">CAREER</span>
+        <span class="nav-tab" data-tab="agents">AGENTS</span>
+        <span class="nav-tab" data-tab="loadout">LOADOUT</span>
+        <span class="nav-tab" data-tab="store">STORE</span>
+      </nav>
+      <div class="lobby-currencies">
+        <span class="currency"><i class="c-coin">🪙</i> <span id="lobby-coins-val">500</span></span>
+        <span class="currency"><i class="c-premium">💎</i> <span id="lobby-premium-val">100</span></span>
+      </div>
+    </header>
+
+    <!-- Content Sections -->
+    <div class="lobby-content-container">
+      
+      <!-- SUBSECTION A: Lobby Dashboard Home View -->
+      <div id="sub-view-lobby" class="sub-view">
+        <div class="lobby-left-panel">
+          <div class="party-status">
+            <h3>PARTY STATUS</h3>
+            <div class="party-member p1-member">
+              <span class="member-avatar" id="lobby-p1-avatar-icon">👤</span>
+              <span class="member-name" id="lobby-p1-username">PLAYER 1</span>
+              <span class="member-tag">HOST</span>
+            </div>
+            <div class="party-member empty-member" id="lobby-p2-slot">
+              <span class="member-avatar">👥</span>
+              <span class="member-name">WAITING FOR PARTY...</span>
+            </div>
+          </div>
+          <button class="fps-btn play-match-btn" id="btn-lobby-play">START MATCH</button>
+        </div>
+
+        <div class="lobby-right-panel">
+          <div class="player-profile-card">
+            <div class="card-bg-glow"></div>
+            <div class="card-banner" id="lobby-card-banner">👤</div>
+            <div class="card-details">
+              <h2 id="lobby-card-username">Gamer</h2>
+              <p class="player-rank">RANK: SENTINEL I</p>
+              <div class="level-bar-box">
+                <span class="lbl-level">LEVEL 1</span>
+                <div class="track-level"><div class="fill-level" style="width: 25%;"></div></div>
+                <span class="lbl-xp">250 / 1000 XP</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="missions-panel">
+            <h3>DAILY CONTRACTS</h3>
+            <div class="mission-item">
+              <span class="m-desc">Win 1 Match vs AI</span>
+              <span class="m-reward">+100 Coins</span>
+            </div>
+            <div class="mission-item">
+              <span class="m-desc">Land 3 Headshots in Rajdhani</span>
+              <span class="m-reward">+50 Coins</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUBSECTION B: Career Logs View -->
+      <div id="sub-view-career" class="sub-view hidden">
+        <div class="career-stats-row">
+          <div class="stat-card"><h3>WIN RATE</h3><span id="career-winrate">0%</span></div>
+          <div class="stat-card"><h3>K/D RATIO</h3><span id="career-kd">0.00</span></div>
+          <div class="stat-card"><h3>HEADSHOT %</h3><span id="career-hs">0.0%</span></div>
+        </div>
+        <div class="match-history-box">
+          <h3>MATCH HISTORY</h3>
+          <div class="history-list" id="career-match-list">
+            <div class="history-empty">No matches played this season.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUBSECTION C: Agents Catalog View -->
+      <div id="sub-view-agents" class="sub-view hidden">
+        <div class="agents-roster-split">
+          <div class="agent-preview-info">
+            <h1 id="agents-info-name">AGNI</h1>
+            <h3 class="role-lbl" id="agents-info-role">DUELIST</h3>
+            <p id="agents-info-bio">Indian fire specialist. Commands thermal walls and charges aggressively into battle.</p>
+            <div class="abilities-list">
+              <div class="ability-card">
+                <strong>[Q] Molten Wall</strong>
+                <span>Raise a wall of fire that blocks sight and damages players passing through.</span>
+              </div>
+              <div class="ability-card">
+                <strong>[E] Fire Dash</strong>
+                <span>Instantly dash forward, gaining increased movement speed.</span>
+              </div>
+              <div class="ability-card">
+                <strong>[X] Inferno Storm</strong>
+                <span>Equip fiery projectiles that deal massive blast damage on impact.</span>
+              </div>
+            </div>
+          </div>
+          <div class="agent-roster-selector">
+            <button class="agent-select-btn active" data-agent="agni">AGNI</button>
+            <button class="agent-select-btn" data-agent="vayu">VAYU</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUBSECTION D: Loadout Skins View -->
+      <div id="sub-view-loadout" class="sub-view hidden">
+        <div class="loadout-grid">
+          <div class="loadout-weapon-card">
+            <h3>PRIMARY WEAPON</h3>
+            <div class="weapon-skin-preview">VANDAL RIFLE</div>
+            <select id="loadout-primary-skin" class="skin-select">
+              <option value="default">Default Sandstone</option>
+              <option value="neon">Cyber Neon Blue</option>
+              <option value="crimson">Crimson Fire</option>
+            </select>
+          </div>
+          <div class="loadout-weapon-card">
+            <h3>SECONDARY WEAPON</h3>
+            <div class="weapon-skin-preview">SHERIFF PISTOL</div>
+            <select id="loadout-secondary-skin" class="skin-select">
+              <option value="default">Default Sandstone</option>
+              <option value="chrome">Polished Silver Chrome</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUBSECTION E: Store shop View -->
+      <div id="sub-view-store" class="sub-view hidden">
+        <div class="store-banners-row">
+          <div class="store-item-card">
+            <div class="store-badge">CRIMSON FIRE VANDAL</div>
+            <div class="store-item-cost">300 Coins</div>
+            <button class="fps-btn buy-skin-btn" data-skin="crimson" data-price="300">BUY SKIN</button>
+          </div>
+          <div class="store-item-card">
+            <div class="store-badge">CYBER NEON VANDAL</div>
+            <div class="store-item-cost">250 Coins</div>
+            <button class="fps-btn buy-skin-btn" data-skin="neon" data-price="250">BUY SKIN</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 4. Play Menu Mode Card Selection Screen -->
+  <div id="play-mode-screen" class="screen play-mode-screen hidden">
+    <h2>CHOOSE MISSION ENVIRONMENT</h2>
+    <div class="maps-container">
+      <div class="map-card active" data-map="rajdhani">
+        <div class="map-card-glow"></div>
+        <div class="map-card-info">
+          <h3>RAJDHANI</h3>
+          <p>Plants / Defuse. Futuristic Indian heritage city with tight lane turnings, sandstone arches, temples, and server vaults.</p>
+          <div class="map-stats-badge">SIZE: 120m x 120m | BOMB SITES: 2</div>
+        </div>
+      </div>
+    </div>
+    <div class="play-mode-choices">
+      <div class="mode-options-row">
+        <button class="mode-btn active" id="btn-mode-ai">VS COMPUTER BOTS</button>
+        <button class="mode-btn" id="btn-mode-pvp" style="opacity: 0.6; cursor: not-allowed;" title="Phone matchmaking coming soon">MULTIPLAYER DUAL</button>
+      </div>
+      <div class="lobby-action-row">
+        <button class="fps-btn secondary-fps-btn" id="btn-play-back">BACK</button>
+        <button class="fps-btn" id="btn-play-continue">CONTINUE</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Fullscreen Agent Selection Screen -->
+  <div id="agent-select-screen" class="screen agent-select-screen hidden">
+    <div class="agent-select-title">CHOOSE YEL OUTLAWS</div>
+    
+    <div class="select-timer-box">
+      <div class="select-timer-circle">
+        <span id="agent-select-timer">30</span>
+      </div>
+    </div>
+
+    <div class="agent-select-layout">
+      <!-- Left side: grid selector -->
+      <div class="agent-grid-panel">
+        <div class="agent-grid-item active" data-agent="agni">
+          <div class="agent-thumb">🔥</div>
+          <div class="agent-grid-name">AGNI</div>
+        </div>
+        <div class="agent-grid-item" data-agent="vayu">
+          <div class="agent-thumb">🌀</div>
+          <div class="agent-grid-name">VAYU</div>
+        </div>
+      </div>
+
+      <!-- Right side: details preview -->
+      <div class="agent-details-panel">
+        <h1 id="select-agent-name">AGNI</h1>
+        <h3 class="role-badge" id="select-agent-role">DUELIST</h3>
+        <p class="agent-bio-desc" id="select-agent-bio">Fire manipulator. Controls combat pacing with molten walls and dash maneuvers.</p>
+        
+        <div class="details-abilities-column">
+          <div class="detail-ability">
+            <span class="ab-key">[Q]</span> <strong>MOLTEN WALL</strong>
+          </div>
+          <div class="detail-ability">
+            <span class="ab-key">[E]</span> <strong>FIRE DASH</strong>
+          </div>
+          <div class="detail-ability">
+            <span class="ab-key">[X]</span> <strong>INFERNO STORM</strong>
+          </div>
+        </div>
+
+        <button class="fps-btn lock-in-btn" id="btn-agent-lockin">LOCK IN</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. Match Setup Loading Screen -->
+  <div id="match-loading-screen" class="screen match-loading-screen hidden">
+    <div class="match-loading-bg"></div>
+    <div class="match-loading-layout">
+      <div class="loading-team-box team-attackers">
+        <h2 class="att-heading">ATTACKERS</h2>
+        <div class="loading-player-slot">
+          <div class="l-player-card" id="match-load-p1-card">👤</div>
+          <div class="l-player-name" id="match-load-p1-name">PLAYER 1</div>
+          <div class="l-player-agent" id="match-load-p1-agent">AGNI</div>
+        </div>
+      </div>
+      
+      <div class="versus-divider">VS</div>
+
+      <div class="loading-team-box team-defenders">
+        <h2 class="def-heading">DEFENDERS</h2>
+        <div class="loading-player-slot">
+          <div class="l-player-card">💀</div>
+          <div class="l-player-name">BOT ARCHON</div>
+          <div class="l-player-agent">VAYU</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="match-loading-bar-box">
+      <div class="match-loading-track">
+        <div class="match-loading-fill" id="match-load-progress"></div>
+      </div>
+      <div class="match-loading-txt">LOADING MAP RAJDHANI...</div>
+    </div>
+  </div>
+
+  <!-- 7. First-Person 3D Viewport Arena Container -->
+  <div id="arena-container" class="arena-container hidden">
+    <!-- WebGL Render Canvas -->
+    <canvas id="fps-canvas"></canvas>
+
+    <!-- Pointer lock instructions overlay -->
+    <div id="pointerlock-overlay" class="pointerlock-overlay">
+      <div class="lock-instructions-box">
+        <h2>CLICK SCREEN TO ENGAGE MOUSE LOOK</h2>
+        <p>Use WASD to Move, Shift to Walk, Space to Jump, Mouse Click to Fire!</p>
+      </div>
+    </div>
+
+    <!-- Gameplay HUD Overlay -->
+    <div class="hud-overlay">
+      
+      <!-- Top Section (Round status) -->
+      <div class="hud-top-bar">
+        <div class="team-block att-block">
+          <span class="block-label">ATTACKERS</span>
+          <span class="block-score" id="hud-att-score">0</span>
+        </div>
+        <div class="timer-block">
+          <div class="timer-label">ROUND 1</div>
+          <div class="timer-val" id="hud-timer-val">1:45</div>
+        </div>
+        <div class="team-block def-block">
+          <span class="block-score" id="hud-def-score">0</span>
+          <span class="block-label">DEFENDERS</span>
+        </div>
+      </div>
+
+      <!-- High Priority Notifications (e.g. SPIKE PLANTED, BOMB DEFUSED) -->
+      <div id="hud-match-alert" class="hud-match-alert hidden">SPIKE PLANTED</div>
+
+      <!-- Top Right Kill Feed -->
+      <div class="hud-kill-feed" id="hud-kill-feed"></div>
+
+      <!-- Bottom Left (Health & Armor & Abilities) -->
+      <div class="hud-bottom-left">
+        <div class="stats-indicators">
+          <div class="hp-indicator-box">
+            <span class="stat-icon">❤️</span>
+            <span class="stat-number" id="hud-hp-val">100</span>
+          </div>
+          <div class="armor-indicator-box">
+            <span class="stat-icon">🛡️</span>
+            <span class="stat-number" id="hud-armor-val">50</span>
+          </div>
+        </div>
+        <!-- Ability widgets -->
+        <div class="hud-abilities-row">
+          <div class="ability-widget" id="hud-ab-q" title="Molten Wall">
+            <span class="ab-key-tag">Q</span>
+            <span class="ab-icon">🔥</span>
+          </div>
+          <div class="ability-widget" id="hud-ab-e" title="Fire Dash">
+            <span class="ab-key-tag">E</span>
+            <span class="ab-icon">⚡</span>
+          </div>
+          <div class="ability-widget" id="hud-ab-x" title="Inferno Ultimate">
+            <span class="ab-key-tag">X</span>
+            <span class="ab-icon">👑</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Center crosshair & prompts -->
+      <div class="hud-bottom-center">
+        <!-- SVG crosshair -->
+        <div class="fps-crosshair">
+          <svg viewBox="0 0 100 100" width="30" height="30">
+            <line x1="50" y1="35" x2="50" y2="45" stroke="#00d2ff" stroke-width="2" />
+            <line x1="50" y1="55" x2="50" y2="65" stroke="#00d2ff" stroke-width="2" />
+            <line x1="35" y1="50" x2="45" y2="50" stroke="#00d2ff" stroke-width="2" />
+            <line x1="55" y1="50" x2="65" y2="50" stroke="#00d2ff" stroke-width="2" />
+            <circle cx="50" cy="50" r="1.5" fill="#00d2ff" />
+          </svg>
+        </div>
+        <!-- Interact alerts -->
+        <div id="hud-interact-prompt" class="hud-interact-prompt hidden">HOLD [E] TO PLANT SPIKE</div>
+      </div>
+
+      <!-- Bottom Right (Weapon, Ammo, Credits) -->
+      <div class="hud-bottom-right">
+        <div class="weapon-info-box">
+          <div class="weapon-name-lbl" id="hud-weapon-name">VANDAL RIFLE</div>
+          <div class="ammo-indicators">
+            <span class="ammo-current" id="hud-ammo-val">25</span>
+            <span class="ammo-divider">/</span>
+            <span class="ammo-max">75</span>
+          </div>
+        </div>
+        <div class="credits-box">
+          <span class="c-label">CREDITS:</span>
+          <span class="c-val" id="hud-credits-val">3,900</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 8. Pause/Escape settings modal Overlay -->
+  <div id="pause-overlay" class="pause-overlay hidden">
+    <div class="pause-box">
+      <h2>TACTICAL PAUSE</h2>
+      <button class="fps-btn" id="btn-pause-resume">RESUME MATCH</button>
+      <button class="fps-btn secondary-fps-btn" id="btn-pause-exit">EXIT TO LOBBY</button>
+    </div>
+  </div>
+
+  <!-- 9. Game Over Screen -->
+  <div id="game-over-screen" class="game-over-screen hidden">
+    <div class="victory-box">
+      <h1 id="game-over-result-title">VICTORY</h1>
+      <p class="final-score" id="game-over-result-score">13 - 8</p>
+      <p class="game-over-desc">You successfully defused the Sentinel network threats.</p>
+      <div class="game-over-buttons">
+        <button class="fps-btn" id="btn-gameover-rematch">PLAY AGAIN</button>
+        <button class="fps-btn secondary-fps-btn" id="btn-gameover-exit">LOBBY MENU</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Game Scripts -->
+  <script src="js/state.js"></script>
+  <script src="js/audio/synthAudio.js"></script>
+  <script src="js/ui/splash.js"></script>
+  <script src="js/ui/login.js"></script>
+  <script src="js/ui/lobby.js"></script>
+  <script src="js/ui/agentSelect.js"></script>
+  <script src="js/agents/agentConfig.js"></script>
+  <script src="js/maps/rajdhani.js"></script>
+  <script src="js/weapons/weaponSystem.js"></script>
+  <script src="js/controllers/playerController.js"></script>
+  <script src="js/entities/botSystem.js"></script>
+  <script src="js/engine/spikeSystem.js"></script>
+  <script src="js/engine/gameLoop.js"></script>
+</body>
+</html>

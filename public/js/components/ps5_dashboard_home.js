@@ -51,6 +51,15 @@
       pill: 'ESRB: T',
       dev: 'DeepMind Wrestling',
       unlocked: true
+    },
+    {
+      id: 'fps',
+      title: 'Delhi Defiance',
+      desc: '5v5 tactical first-person shooter! Choose Agni or Vayu, deploy unique abilities, eliminate enemy bots, and hold your line in the futuristic sandstone ruins of Rajdhani!',
+      rating: '⭐ 4.9 Rating',
+      pill: 'ESRB: T',
+      dev: 'DeepMind Tactical',
+      unlocked: true
     }
   ];
 
@@ -210,12 +219,13 @@
         if (typeof window.launchCricketGame === 'function') {
           window.launchCricketGame();
         }
-      } else if (meta.id === 'football' || meta.id === 'f1' || meta.id === 'tennis' || meta.id === 'wwe') {
+      } else if (meta.id === 'football' || meta.id === 'f1' || meta.id === 'tennis' || meta.id === 'wwe' || meta.id === 'fps') {
         const code = window.roomCode || '';
         let url = `/f1/index.html?room=${code}`;
         if (meta.id === 'football') url = `/football/index.html?room=${code}`;
         else if (meta.id === 'tennis') url = `/tennis/index.html?room=${code}`;
         else if (meta.id === 'wwe') url = `/wwe/index.html?room=${code}`;
+        else if (meta.id === 'fps') url = `/fps/index.html?room=${code}`;
         
         let iframe = document.getElementById('game-session-iframe');
         if (!iframe) {

@@ -1,0 +1,163 @@
+/* ==========================================================================
+   DELHI DEFIANCE - AGENT SELECTION TIMER & LOCKED CONFIRMATIONS
+   ========================================================================= */
+
+class AgentSelectUIManager {
+  constructor() {
+    this.timerInterval = null;
+    this.secondsLeft = 30;
+    this.locked = false;
+  }
+
+  init() {
+    this.setupListeners();
+  }
+
+  setupListeners() {
+    const gridItems = document.querySelectorAll('.agent-grid-item');
+    gridItems.forEach(item => {
+      item.addEventListener('click', () => {
+        if (this.locked) return;
+        window.SynthAudio.playClick();
+        gridItems.forEach(i => i.classList.remove('active'));
+        item.add = item.classList.add('active');
+
+        const agentId = item.getAttribute('data-agent');
+        this.updateSelectedDetails(agentId);
+      });
+    });
+
+    // Lock In Button Click
+    document.getElementById('btn-agent-lockin').addEventListener('click', () => {
+      if (this.locked) return;
+      
+      this.locked = true;
+      window.FPSState.lockedAgentId = window.FPSState.selectedAgentId;
+      window.SynthAudio.playSplashChime(); // epic locked sound!
+      
+      const lockBtn = document.getElementById('btn-agent-lockin');
+      lockBtn.innerText = "LOCKED IN";
+      lockBtn.style.opacity = "0.6";
+      lockBtn.style.pointerEvents = "none";
+
+      // Stop timer and auto transition
+      clearInterval(this.timerInterval);
+      setTimeout(() => {
+        this.transitionToMatchLoading();
+      }, 1000);
+    });
+  }
+
+  updateSelectedDetails(agentId) {
+    window.FPSState.selectedAgentId = agentId;
+    
+    const nameLabel = document.getElementById('select-agent-name');
+    const roleLabel = document.getElementById('select-agent-role');
+    const bioLabel = document.getElementById('select-agent-bio');
+    const abilitiesBox = document.querySelector('.details-abilities-column');
+
+    if (agentId === 'agni') {
+      nameLabel.innerText = "AGNI";
+      roleLabel.innerText = "DUELIST";
+      roleLabel.style.color = "var(--neon-red)";
+      bioLabel.innerText = "Fire manipulator. Controls combat pacing with molten walls and dash maneuvers.";
+      abilitiesBox.innerHTML = `
+        <div class="detail-ability"><span class="ab-key">[Q]</span> <strong>MOLTEN WALL</strong></div>
+        <div class="detail-ability"><span class="ab-key">[E]</span> <strong>FIRE DASH</strong></div>
+        <div class="detail-ability"><span class="ab-key">[X]</span> <strong>INFERNO STORM</strong></div>
+      `;
+    } else {
+      nameLabel.innerText = "VAYU";
+      roleLabel.innerText = "INITIATOR";
+      roleLabel.style.color = "var(--neon-cyan)";
+      bioLabel.innerText = "Wind specialist. Highlights targets through obstacles and disorients defenders.";
+      abilitiesBox.innerHTML = `
+        <div class="detail-ability"><span class="ab-key">[Q]</span> <strong>AIR PULSE</strong></div>
+        <div class="detail-ability"><span class="ab-key">[E]</span> <strong>WIND BURST</strong></div>
+        <div class="detail-ability"><span class="ab-key">[X]</span> <strong>CYCLONE FIELD</strong></div>
+      `;
+    }
+  }
+
+  startCountdown() {
+    this.secondsLeft = 30;
+    this.locked = false;
+    
+    const timerLabel = document.getElementById('agent-select-timer');
+    timerLabel.innerText = this.secondsLeft;
+    
+    const lockBtn = document.getElementById('btn-agent-lockin');
+    lockBtn.innerText = "LOCK IN";
+    lockBtn.style.opacity = "1.0";
+    lockBtn.style.pointerEvents = "auto";
+
+    clearInterval(this.timerInterval);
+    this.timerInterval = setInterval(() => {
+      this.secondsLeft--;
+      timerLabel.innerText = this.secondsLeft;
+
+      if (this.secondsLeft <= 5) {
+        // play tick beep
+        window.SynthAudio.playSpikeTick(1.0);
+        document.querySelector('.select-timer-circle').style.borderColor = "var(--neon-red)";
+      }
+
+      if (this.secondsLeft <= 0) {
+        clearInterval(this.timerInterval);
+        if (!this.locked) {
+          // Auto lock current selection
+          this.locked = true;
+          window.FPSState.lockedAgentId = window.FPSState.selectedAgentId;
+          this.transitionToMatchLoading();
+        }
+      }
+    }, 1000);
+  }
+
+  transitionToMatchLoading() {
+    document.getElementById('agent-select-screen').classList.add('hidden');
+    
+    // Set up loading details
+    const user = window.FPSState.currentUser;
+    document.getElementById('match-load-p1-name').innerText = user.username;
+    document.getElementById('match-load-p1-agent').innerText = window.FPSState.lockedAgentId.toUpperCase();
+    
+    const avatars = { '1': '👤', '2': '🔥', '3': '🌀', '4': '💀' };
+    document.getElementById('match-load-p1-card').innerText = avatars[user.avatar] || '👤';
+
+    const matchLoadingScreen = document.getElementById('match-loading-screen');
+    matchLoadingScreen.classList.remove('hidden');
+    window.FPSState.gameState = window.STATES.MATCH_LOADING;
+
+    // Simulate match loading progress bar
+    let loadProgress = 0;
+    const progressFill = document.getElementById('match-load-progress');
+    
+    const interval = setInterval(() => {
+      loadProgress += Math.floor(Math.random() * 12) + 4;
+      if (loadProgress > 100) loadProgress = 100;
+      
+      progressFill.style.width = `${loadProgress}%`;
+
+      if (loadProgress >= 100) {
+        clearInterval(interval);
+        setTimeout(() => {
+          // Launch the 3D first-person game!
+          matchLoadingScreen.classList.add('hidden');
+          document.getElementById('arena-container').classList.remove('hidden');
+          window.FPSState.gameState = window.STATES.GAMEPLAY;
+
+          // Initialize the actual WebGL FPS camera, map, and game loop
+          if (window.FPSGameLoop) {
+            window.FPSGameLoop.startMatch();
+          }
+        }, 600);
+      }
+    }, 150);
+  }
+}
+
+window.agentSelectUI = new AgentSelectUIManager();
+document.addEventListener('DOMContentLoaded', () => {
+  window.agentSelectUI.init();
+});
