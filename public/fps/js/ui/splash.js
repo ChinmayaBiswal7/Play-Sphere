@@ -1,67 +1,58 @@
 /* ==========================================================================
-   DELHI DEFIANCE - SPLASH SCREEN & PROGRESSIVE LOADER
+   DELHI DEFIANCE — SPLASH LOADER
+   Handles loading animation then transitions directly to Lobby.
    ========================================================================== */
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Splash Screen Nodes
-  const splashScreen = document.getElementById('splash-screen');
-  const progressBar = document.getElementById('splash-progress-bar');
-  const statusLabel = document.getElementById('splash-status-lbl');
-  const tipLabel = document.getElementById('splash-tip');
+  const splashScreen   = document.getElementById('splash-screen');
+  const progressBar    = document.getElementById('splash-progress-bar');
+  const statusLabel    = document.getElementById('splash-status-lbl');
+  const lobbyScreen    = document.getElementById('lobby-screen');
 
-  // Loading Tips Catalog
-  const tips = [
-    "Tip: Headshots deal 3x damage. Always crosshair-place at head level.",
-    "Tip: Walking (Hold Shift) makes your movement completely silent.",
-    "Tip: The Vandal has high recoil. Pull down on your mouse while firing to control it.",
-    "Tip: Planting the Spike rewards your entire team with extra credits next round.",
-    "Tip: Defenders can defuse the Spike in 7 seconds. Defuse half-ticks are saved!"
-  ];
+  if (!splashScreen || !progressBar || !lobbyScreen) return;
 
-  // Pick random tip
-  tipLabel.innerText = tips[Math.floor(Math.random() * tips.length)];
-
-  // Loading state simulation
   let progress = 0;
-  
-  // Play startup sound on first click to unlock AudioContext
-  document.body.addEventListener('click', playStartupChimeOnFirstClick, { once: true });
-
-  function playStartupChimeOnFirstClick() {
-    window.SynthAudio.playSplashChime();
-  }
-
   const statusTexts = [
-    { threshold: 15, text: "INITIALIZING 3D ENGINE..." },
-    { threshold: 45, text: "COMPILING WEBGL SHADERS..." },
-    { threshold: 70, text: "BUILDING RAJDHANI ARENA GEOMETRY..." },
-    { threshold: 90, text: "SPAWNING COMBAT BOTS..." },
-    { threshold: 100, text: "ESTABLISHING SENTINEL LINK..." }
+    { threshold: 15,  text: 'INITIALIZING 3D ENGINE...' },
+    { threshold: 40,  text: 'COMPILING WEBGL SHADERS...' },
+    { threshold: 65,  text: 'BUILDING RAJDHANI ARENA...' },
+    { threshold: 85,  text: 'SPAWNING COMBAT BOTS...' },
+    { threshold: 100, text: 'ESTABLISHING SENTINEL LINK...' }
   ];
 
   const interval = setInterval(() => {
-    progress += Math.floor(Math.random() * 8) + 2;
+    progress += Math.floor(Math.random() * 8) + 3;
     if (progress > 100) progress = 100;
 
-    // Update bar width
     progressBar.style.width = `${progress}%`;
 
-    // Update status text
-    const matchedText = statusTexts.find(s => progress <= s.threshold);
-    if (matchedText) {
-      statusLabel.innerText = matchedText.text;
-    }
+    const matched = statusTexts.find(s => progress <= s.threshold);
+    if (matched && statusLabel) statusLabel.innerText = matched.text;
 
     if (progress >= 100) {
       clearInterval(interval);
       setTimeout(() => {
-        // Transition to login screen
-        splashScreen.classList.add('hidden');
-        document.getElementById('login-screen').classList.remove('hidden');
-        
-        // Update global state
-        window.FPSState.gameState = window.STATES.LOGIN;
-      }, 500);
+        // Hide splash
+        splashScreen.style.display = 'none';
+
+        // Try reading username from parent page (PlaySphere dashboard)
+        try {
+          if (window.parent && window.parent.firebaseUser) {
+            window.FPSState.currentUser.username =
+              window.parent.firebaseUser.displayName || 'Sentinel';
+          }
+        } catch (e) { /* cross-origin iframe guard */ }
+
+        // Show lobby
+        lobbyScreen.style.display = 'flex';
+        window.FPSState.gameState = window.STATES ? window.STATES.LOBBY : 'LOBBY';
+
+        // Sync profile and start 3D hologram
+        if (window.lobbyUI) {
+          window.lobbyUI.syncLobbyProfile();
+          window.lobbyUI.initHologramScene();
+        }
+      }, 400);
     }
-  }, 120);
+  }, 100);
 });

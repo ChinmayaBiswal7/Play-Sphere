@@ -33,7 +33,7 @@ class AgentSelectUIManager {
       
       this.locked = true;
       window.FPSState.lockedAgentId = window.FPSState.selectedAgentId;
-      window.SynthAudio.playSplashChime(); // epic locked sound!
+      if (window.SynthAudio) window.SynthAudio.playSplashChime();
       
       const lockBtn = document.getElementById('btn-agent-lockin');
       lockBtn.innerText = "LOCKED IN";
@@ -97,9 +97,9 @@ class AgentSelectUIManager {
       timerLabel.innerText = this.secondsLeft;
 
       if (this.secondsLeft <= 5) {
-        // play tick beep
-        window.SynthAudio.playSpikeTick(1.0);
-        document.querySelector('.select-timer-circle').style.borderColor = "var(--neon-red)";
+        if (window.SynthAudio) window.SynthAudio.playSpikeTick(1.0);
+        const tc = document.querySelector('.select-timer-circle');
+        if (tc) tc.style.borderColor = 'var(--neon-red)';
       }
 
       if (this.secondsLeft <= 0) {
@@ -115,19 +115,19 @@ class AgentSelectUIManager {
   }
 
   transitionToMatchLoading() {
-    document.getElementById('agent-select-screen').classList.add('hidden');
+    document.getElementById('agent-select-screen').style.display = 'none';
     
     // Set up loading details
     const user = window.FPSState.currentUser;
-    document.getElementById('match-load-p1-name').innerText = user.username;
-    document.getElementById('match-load-p1-agent').innerText = window.FPSState.lockedAgentId.toUpperCase();
-    
+    const setEl = (id, v) => { const e = document.getElementById(id); if (e) e.innerText = v; };
+    setEl('match-load-p1-name',  user.username);
+    setEl('match-load-p1-agent', (window.FPSState.lockedAgentId || 'agni').toUpperCase());
     const avatars = { '1': '👤', '2': '🔥', '3': '🌀', '4': '💀' };
-    document.getElementById('match-load-p1-card').innerText = avatars[user.avatar] || '👤';
+    setEl('match-load-p1-card', avatars[user.avatar] || '👤');
 
     const matchLoadingScreen = document.getElementById('match-loading-screen');
-    matchLoadingScreen.classList.remove('hidden');
-    window.FPSState.gameState = window.STATES.MATCH_LOADING;
+    matchLoadingScreen.style.display = 'flex';
+    window.FPSState.gameState = 'MATCH_LOADING';
 
     // Simulate match loading progress bar
     let loadProgress = 0;
@@ -136,21 +136,16 @@ class AgentSelectUIManager {
     const interval = setInterval(() => {
       loadProgress += Math.floor(Math.random() * 12) + 4;
       if (loadProgress > 100) loadProgress = 100;
-      
-      progressFill.style.width = `${loadProgress}%`;
+      if (progressFill) progressFill.style.width = `${loadProgress}%`;
 
       if (loadProgress >= 100) {
         clearInterval(interval);
         setTimeout(() => {
-          // Launch the 3D first-person game!
-          matchLoadingScreen.classList.add('hidden');
-          document.getElementById('arena-container').classList.remove('hidden');
-          window.FPSState.gameState = window.STATES.GAMEPLAY;
-
-          // Initialize the actual WebGL FPS camera, map, and game loop
-          if (window.FPSGameLoop) {
-            window.FPSGameLoop.startMatch();
-          }
+          matchLoadingScreen.style.display = 'none';
+          const arena = document.getElementById('arena-container');
+          if (arena) arena.style.display = 'block';
+          window.FPSState.gameState = 'GAMEPLAY';
+          if (window.FPSGameLoop) window.FPSGameLoop.startMatch();
         }, 600);
       }
     }, 150);

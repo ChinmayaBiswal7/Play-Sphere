@@ -45,14 +45,14 @@ class PlayerFPSController {
 
     document.addEventListener('pointerlockchange', () => {
       if (document.pointerLockElement === this.domElement) {
-        overlay.classList.add('hidden');
+        overlay.style.display = 'none';
         this.isLocked = true;
       } else {
-        overlay.classList.remove('hidden');
+        overlay.style.display = 'flex';
         this.isLocked = false;
         // Pause match if gameplay is active
-        if (window.FPSState.gameState === window.STATES.GAMEPLAY) {
-          document.getElementById('pause-overlay').classList.remove('hidden');
+        if (window.FPSState.gameState === 'GAMEPLAY' || window.FPSState.gameState === (window.STATES && window.STATES.GAMEPLAY)) {
+          document.getElementById('pause-overlay').style.display = 'flex';
           window.FPSState.isPauseActive = true;
         }
       }

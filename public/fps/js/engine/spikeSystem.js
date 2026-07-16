@@ -37,8 +37,8 @@ class SpikeSystem {
     
     window.FPSState.matchData.isSpikePlanted = false;
     window.FPSState.matchData.spikeState = 'idle';
-    document.getElementById('hud-match-alert').classList.add('hidden');
-    document.getElementById('hud-interact-prompt').classList.add('hidden');
+    document.getElementById('hud-match-alert').style.display = 'none';
+    document.getElementById('hud-interact-prompt').style.display = 'none';
   }
 
   update(dt, playerController) {
@@ -48,7 +48,7 @@ class SpikeSystem {
 
     // 1. Handling Plant Logic
     if (currentZone && !this.isPlanted && window.FPSState.matchData.spikeState !== 'exploded') {
-      hudPrompt.classList.remove('hidden');
+      hudPrompt.style.display = 'block';
       hudPrompt.innerText = `HOLD [E] TO PLANT SPIKE AT SITE ${currentZone}`;
 
       if (playerController.keys.e) {
@@ -74,7 +74,7 @@ class SpikeSystem {
       // 2. Handling Defuse Logic (If player approaches planted spike and holds E)
       const distToSpike = playerPos.distanceTo(this.spikeMesh.position);
       if (distToSpike < 3.5) {
-        hudPrompt.classList.remove('hidden');
+        hudPrompt.style.display = 'block';
         hudPrompt.innerText = "HOLD [E] TO DEFUSE SPIKE";
 
         if (playerController.keys.e) {
@@ -95,7 +95,7 @@ class SpikeSystem {
           this.defuseProgress = 0;
         }
       } else {
-        hudPrompt.classList.add('hidden');
+        hudPrompt.style.display = 'none';
         this.defuseProgress = 0;
       }
 
@@ -121,7 +121,7 @@ class SpikeSystem {
         
         // Flash alert HUD
         const alertBox = document.getElementById('hud-match-alert');
-        alertBox.classList.toggle('hidden');
+        alertBox.style.display = (alertBox.style.display === 'none') ? 'block' : 'none';
       }
 
       // Detonate!
@@ -129,7 +129,7 @@ class SpikeSystem {
         this.detonateSpike();
       }
     } else {
-      hudPrompt.classList.add('hidden');
+      hudPrompt.style.display = 'none';
       this.plantProgress = 0;
       this.defuseProgress = 0;
     }
@@ -180,7 +180,7 @@ class SpikeSystem {
     // Display Alert
     const alertBox = document.getElementById('hud-match-alert');
     alertBox.innerText = `SPIKE PLANTED AT SITE ${zoneName}`;
-    alertBox.classList.remove('hidden');
+    alertBox.style.display = 'block';
 
     window.SynthAudio.playSplashChime(); // epic trigger sound!
   }
@@ -194,7 +194,7 @@ class SpikeSystem {
     
     const alertBox = document.getElementById('hud-match-alert');
     alertBox.innerText = "SPIKE DEFUSED!";
-    alertBox.classList.remove('hidden');
+    alertBox.style.display = 'block';
 
     if (window.FPSGameLoop) {
       window.FPSGameLoop.triggerMatchEnd(true); // Victory
@@ -206,7 +206,7 @@ class SpikeSystem {
     this.isPlanted = false;
 
     // Hide alerts
-    document.getElementById('hud-match-alert').classList.add('hidden');
+    document.getElementById('hud-match-alert').style.display = 'none';
 
     // Play explosion gunshot blast
     window.SynthAudio.playShoot('sniper');

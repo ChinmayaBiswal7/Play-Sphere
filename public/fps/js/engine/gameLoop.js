@@ -53,8 +53,8 @@ class GameLoopManager {
 
     // Pause listeners
     document.getElementById('btn-pause-resume').addEventListener('click', () => {
-      window.SynthAudio.playClick();
-      document.getElementById('pause-overlay').classList.add('hidden');
+      if (window.SynthAudio) window.SynthAudio.playClick();
+      document.getElementById('pause-overlay').style.display = 'none';
       canvas.requestPointerLock();
       window.FPSState.isPauseActive = false;
     });
@@ -66,14 +66,14 @@ class GameLoopManager {
 
     // Game Over listeners
     document.getElementById('btn-gameover-rematch').addEventListener('click', () => {
-      window.SynthAudio.playClick();
-      document.getElementById('game-over-screen').classList.add('hidden');
+      if (window.SynthAudio) window.SynthAudio.playClick();
+      document.getElementById('game-over-screen').style.display = 'none';
       this.startMatch();
     });
 
     document.getElementById('btn-gameover-exit').addEventListener('click', () => {
-      window.SynthAudio.playClick();
-      document.getElementById('game-over-screen').classList.add('hidden');
+      if (window.SynthAudio) window.SynthAudio.playClick();
+      document.getElementById('game-over-screen').style.display = 'none';
       this.exitMatchToLobby();
     });
   }
@@ -111,8 +111,9 @@ class GameLoopManager {
     this.player.yaw = 0;
     this.player.pitch = 0;
 
-    // Trigger click lock pointer lock
-    document.getElementById('pointerlock-overlay').classList.remove('hidden');
+    // Show pointer lock overlay
+    const overlay = document.getElementById('pointerlock-overlay');
+    if (overlay) overlay.style.display = 'flex';
 
     // Run tick loop
     cancelAnimationFrame(this.animationId);
@@ -165,7 +166,7 @@ class GameLoopManager {
     document.exitPointerLock();
 
     // Hide viewport UI
-    document.getElementById('arena-container').classList.add('hidden');
+    document.getElementById('arena-container').style.display = 'none';
     
     // Setup game over dashboard card stats
     const title = document.getElementById('game-over-result-title');
@@ -185,8 +186,8 @@ class GameLoopManager {
       window.FPSState.matchData.scores.defenders = 13;
     }
 
-    document.getElementById('game-over-screen').classList.remove('hidden');
-    window.FPSState.gameState = window.STATES.GAME_OVER;
+    document.getElementById('game-over-screen').style.display = 'flex';
+    window.FPSState.gameState = 'GAME_OVER';
   }
 
   exitMatchToLobby() {
@@ -194,13 +195,13 @@ class GameLoopManager {
     document.exitPointerLock();
 
     // Hide gameplay overlays
-    document.getElementById('arena-container').classList.add('hidden');
-    document.getElementById('pause-overlay').classList.add('hidden');
-    document.getElementById('game-over-screen').classList.add('hidden');
+    document.getElementById('arena-container').style.display  = 'none';
+    document.getElementById('pause-overlay').style.display    = 'none';
+    document.getElementById('game-over-screen').style.display = 'none';
 
     // Show lobby screen
-    document.getElementById('lobby-screen').classList.remove('hidden');
-    window.FPSState.gameState = window.STATES.LOBBY;
+    document.getElementById('lobby-screen').style.display = 'flex';
+    window.FPSState.gameState = 'LOBBY';
 
     // Refresh lobby currencies and career logs
     if (window.lobbyUI) {
