@@ -221,6 +221,202 @@ class SynthAudioEngine {
     osc.start(time);
     osc.stop(time + 0.6);
   }
+
+  playError() {
+    this.init();
+    if (!this.ctx) return;
+    const time = this.ctx.currentTime;
+    const osc1 = this.ctx.createOscillator();
+    const osc2 = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc1.type = 'sawtooth';
+    osc1.frequency.setValueAtTime(130, time);
+    osc2.type = 'square';
+    osc2.frequency.setValueAtTime(135, time);
+
+    gain.gain.setValueAtTime(0.2, time);
+    gain.gain.exponentialRampToValueAtTime(0.01, time + 0.25);
+
+    osc1.connect(gain);
+    osc2.connect(gain);
+    gain.connect(this.masterGain);
+
+    osc1.start(time);
+    osc2.start(time);
+    osc1.stop(time + 0.25);
+    osc2.stop(time + 0.25);
+  }
+
+  playAbilityFlame() {
+    this.init();
+    if (!this.ctx) return;
+    const time = this.ctx.currentTime;
+    
+    const bufferSize = this.ctx.sampleRate * 0.8;
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = buffer;
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(300, time);
+    filter.frequency.exponentialRampToValueAtTime(1000, time + 0.2);
+    filter.frequency.exponentialRampToValueAtTime(100, time + 0.8);
+
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0.3, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.8);
+
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.masterGain);
+
+    noise.start(time);
+    noise.stop(time + 0.8);
+  }
+
+  playAbilityDash() {
+    this.init();
+    if (!this.ctx) return;
+    const time = this.ctx.currentTime;
+
+    const bufferSize = this.ctx.sampleRate * 0.25;
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = buffer;
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'highpass';
+    filter.frequency.setValueAtTime(1000, time);
+    filter.frequency.exponentialRampToValueAtTime(8000, time + 0.25);
+
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0.2, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.25);
+
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.masterGain);
+
+    noise.start(time);
+    noise.stop(time + 0.25);
+  }
+
+  playAbilityPulse() {
+    this.init();
+    if (!this.ctx) return;
+    const time = this.ctx.currentTime;
+
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(600, time);
+    osc.frequency.exponentialRampToValueAtTime(1200, time + 0.15);
+    osc.frequency.exponentialRampToValueAtTime(300, time + 0.5);
+
+    gain.gain.setValueAtTime(0.25, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.5);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+
+    osc.start(time);
+    osc.stop(time + 0.5);
+  }
+
+  playAbilityWind() {
+    this.init();
+    if (!this.ctx) return;
+    const time = this.ctx.currentTime;
+
+    const bufferSize = this.ctx.sampleRate * 0.4;
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = buffer;
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(200, time);
+    filter.frequency.exponentialRampToValueAtTime(1500, time + 0.15);
+    filter.frequency.exponentialRampToValueAtTime(100, time + 0.4);
+
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0.4, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.4);
+
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.masterGain);
+
+    noise.start(time);
+    noise.stop(time + 0.4);
+  }
+
+  playAbilityCyclone() {
+    this.init();
+    if (!this.ctx) return;
+    const time = this.ctx.currentTime;
+
+    // Lingering low-frequency rumble & whoosh
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(80, time);
+    osc.frequency.linearRampToValueAtTime(150, time + 1.5);
+
+    gain.gain.setValueAtTime(0.2, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 2.0);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(time);
+    osc.stop(time + 2.0);
+
+    // Swirling wind sound via modulated bandpass filter
+    const bufferSize = this.ctx.sampleRate * 2.0;
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const bData = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      bData[i] = Math.random() * 2 - 1;
+    }
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = buffer;
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(300, time);
+    
+    // sweep back and forth
+    filter.frequency.linearRampToValueAtTime(1200, time + 0.5);
+    filter.frequency.linearRampToValueAtTime(400, time + 1.0);
+    filter.frequency.linearRampToValueAtTime(1000, time + 1.5);
+    filter.frequency.linearRampToValueAtTime(100, time + 2.0);
+
+    const nGain = this.ctx.createGain();
+    nGain.gain.setValueAtTime(0.15, time);
+    nGain.gain.exponentialRampToValueAtTime(0.001, time + 2.0);
+
+    noise.connect(filter);
+    filter.connect(nGain);
+    nGain.connect(this.masterGain);
+
+    noise.start(time);
+    noise.stop(time + 2.0);
+  }
 }
 
 window.SynthAudio = new SynthAudioEngine();

@@ -68,8 +68,8 @@ class FPSWeaponSystem {
 
   setupMouseEvents() {
     window.addEventListener('mousedown', (e) => {
-      if (window.FPSState.gameState !== window.STATES.GAMEPLAY) return;
-      if (document.pointerLockElement !== document.body) return;
+      if (window.FPSState.gameState !== 'GAMEPLAY') return;
+      if (!document.pointerLockElement) return;
       if (e.button === 0) { // Left click
         this.triggerShoot();
       }

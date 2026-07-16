@@ -838,6 +838,12 @@ body, html {
   display: flex; align-items: center; gap: 6px;
   background: rgba(4,8,17,0.7); padding: 8px 12px; border-radius: 4px;
 }
+.energy-indicator-box {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(4,8,17,0.7); padding: 8px 12px; border-radius: 4px;
+  border: 1px solid rgba(255, 170, 0, 0.3);
+}
+.energy-indicator-box .stat-number { color: var(--neon-amber); }
 .stat-icon { font-size: 14px; }
 .stat-number { font-family: var(--font-logo); font-size: 18px; font-weight: 900; }
 .hud-abilities-row { display: flex; gap: 8px; }
@@ -845,9 +851,18 @@ body, html {
   width: 52px; height: 52px; background: rgba(4,8,17,0.75);
   border: 1px solid rgba(255,255,255,0.1); border-radius: 6px;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  position: relative; overflow: hidden;
 }
 .ab-key-tag { font-family: var(--font-logo); font-size: 9px; color: var(--neon-cyan); }
 .ab-icon { font-size: 18px; }
+.ab-cd-overlay {
+  position: absolute; inset: 0;
+  background: rgba(4, 8, 17, 0.85);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-logo); font-size: 14px; font-weight: bold;
+  color: var(--neon-red); text-shadow: 0 0 5px rgba(255,51,102,0.5);
+  z-index: 5;
+}
 
 .hud-bottom-center {
   position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);

@@ -13,6 +13,7 @@ class GameLoopManager {
     this.weapons = null;
     this.bots = null;
     this.spike = null;
+    this.abilities = null;
     
     this.clock = new THREE.Clock();
     this.animationId = null;
@@ -47,6 +48,7 @@ class GameLoopManager {
     this.weapons = new window.FPSWeaponSystem(this.scene, this.camera, window.RajdhaniMap.colliders);
     this.bots = new window.BotSystem(this.scene, window.RajdhaniMap.colliders, this.camera.position);
     this.spike = new window.SpikeSystem(this.scene, window.RajdhaniMap);
+    this.abilities = new window.AbilityManager(this.scene, this.camera, window.RajdhaniMap.colliders, this.player);
 
     // Resize listener
     window.addEventListener('resize', () => this.resizeViewport());
@@ -106,8 +108,13 @@ class GameLoopManager {
     // Spawn bots
     this.bots.spawnBots();
 
+    // Reset abilities
+    if (this.abilities) {
+      this.abilities.reset();
+    }
+
     // Position player at south spawn point
-    this.player.position.set(0, 1.3, 60);
+    this.player.position.set(0, 1.3, 52);
     this.player.yaw = 0;
     this.player.pitch = 0;
 
@@ -138,6 +145,11 @@ class GameLoopManager {
 
       // Update Spike plant zones
       this.spike.update(dt, this.player);
+
+      // Update active abilities and VFX
+      if (this.abilities) {
+        this.abilities.update(dt);
+      }
 
       // Update round Timer HUD
       this.updateRoundTimerHUD();

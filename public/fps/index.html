@@ -428,11 +428,13 @@
       <div class="stats-indicators">
         <div class="hp-indicator-box"><span class="stat-icon">❤️</span><span class="stat-number" id="hud-hp-val">100</span></div>
         <div class="armor-indicator-box"><span class="stat-icon">🛡️</span><span class="stat-number" id="hud-armor-val">50</span></div>
+        <div class="energy-indicator-box" title="Ability Energy"><span class="stat-icon">⚡</span><span class="stat-number" id="hud-energy-val">100</span></div>
       </div>
       <div class="hud-abilities-row">
-        <div class="ability-widget" id="hud-ab-q"><span class="ab-key-tag">Q</span><span class="ab-icon">🔥</span></div>
-        <div class="ability-widget" id="hud-ab-e"><span class="ab-key-tag">E</span><span class="ab-icon">⚡</span></div>
-        <div class="ability-widget" id="hud-ab-x"><span class="ab-key-tag">X</span><span class="ab-icon">👑</span></div>
+        <div class="ability-widget" id="hud-ab-q"><span class="ab-key-tag">Q</span><span class="ab-icon" id="hud-ab-q-icon">🔥</span><span class="ab-cd-overlay" id="hud-ab-q-cd" style="display:none;"></span></div>
+        <div class="ability-widget" id="hud-ab-e"><span class="ab-key-tag">E</span><span class="ab-icon" id="hud-ab-e-icon">⚡</span><span class="ab-cd-overlay" id="hud-ab-e-cd" style="display:none;"></span></div>
+        <div class="ability-widget" id="hud-ab-c"><span class="ab-key-tag">C</span><span class="ab-icon" id="hud-ab-c-icon">☄️</span><span class="ab-cd-overlay" id="hud-ab-c-cd" style="display:none;"></span></div>
+        <div class="ability-widget" id="hud-ab-x"><span class="ab-key-tag">X</span><span class="ab-icon" id="hud-ab-x-icon">👑</span><span class="ab-cd-overlay" id="hud-ab-x-cd" style="display:none;"></span></div>
       </div>
     </div>
     <div class="hud-bottom-center">
@@ -498,6 +500,7 @@
 <script src="js/controllers/playerController.js"></script>
 <script src="js/entities/botSystem.js"></script>
 <script src="js/engine/spikeSystem.js"></script>
+<script src="js/engine/abilitySystem.js"></script>
 <script src="js/engine/gameLoop.js"></script>
 </body>
 </html>

@@ -78,13 +78,21 @@ class PlayerFPSController {
     window.addEventListener('keydown', (e) => {
       if (!this.isLocked) return;
 
+      // Prevent browser scrolling while playing
+      if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+        e.preventDefault();
+      }
+
       switch(e.code) {
         case 'KeyW': this.keys.w = true; break;
         case 'KeyS': this.keys.s = true; break;
         case 'KeyA': this.keys.a = true; break;
         case 'KeyD': this.keys.d = true; break;
-        case 'ShiftLeft': this.keys.Shift = true; break;
-        case 'ControlLeft': this.keys.ctrl = true; break;
+        case 'ShiftLeft':
+        case 'ShiftRight': this.keys.Shift = true; break;
+        case 'ControlLeft':
+        case 'ControlRight':
+        case 'KeyC': this.keys.ctrl = true; break;
         case 'Space': this.keys.Space = true; break;
         case 'KeyE': this.keys.e = true; break;
       }
@@ -96,8 +104,11 @@ class PlayerFPSController {
         case 'KeyS': this.keys.s = false; break;
         case 'KeyA': this.keys.a = false; break;
         case 'KeyD': this.keys.d = false; break;
-        case 'ShiftLeft': this.keys.Shift = false; break;
-        case 'ControlLeft': this.keys.ctrl = false; break;
+        case 'ShiftLeft':
+        case 'ShiftRight': this.keys.Shift = false; break;
+        case 'ControlLeft':
+        case 'ControlRight':
+        case 'KeyC': this.keys.ctrl = false; break;
         case 'Space': this.keys.Space = false; break;
         case 'KeyE': this.keys.e = false; break;
       }
