@@ -226,3 +226,6 @@ window.registerBotHit = function(botGroup, dmg) {
     window.FPSGameLoop.bots.registerHit(botGroup, dmg);
   }
 };
+
+window.BotSystem = BotSystem;
+
