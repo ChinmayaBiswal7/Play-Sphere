@@ -50,6 +50,10 @@ class GameLoopManager {
     this.spike = new window.SpikeSystem(this.scene, window.RajdhaniMap);
     this.abilities = new window.AbilityManager(this.scene, this.camera, window.RajdhaniMap.colliders, this.player);
 
+    if (window.MiniMapRenderer) {
+      window.MiniMapRenderer.init();
+    }
+
     // Resize listener
     window.addEventListener('resize', () => this.resizeViewport());
 
@@ -149,6 +153,11 @@ class GameLoopManager {
       // Update active abilities and VFX
       if (this.abilities) {
         this.abilities.update(dt);
+      }
+
+      // Update Minimap Renderer
+      if (window.MiniMapRenderer && this.player) {
+        window.MiniMapRenderer.update(this.player.position.x, this.player.position.z, this.player.yaw);
       }
 
       // Update round Timer HUD

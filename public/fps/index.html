@@ -403,7 +403,7 @@
   <div id="pointerlock-overlay" class="pointerlock-overlay">
     <div class="lock-instructions-box">
       <h2>CLICK SCREEN TO LOCK MOUSE</h2>
-      <p>WASD — Move &nbsp;|&nbsp; Shift — Walk Silent &nbsp;|&nbsp; Space — Jump &nbsp;|&nbsp; LMB — Shoot &nbsp;|&nbsp; E — Plant/Defuse &nbsp;|&nbsp; Esc — Pause</p>
+      <p>WASD — Move &nbsp;|&nbsp; Shift — Walk Silent &nbsp;|&nbsp; Space — Jump &nbsp;|&nbsp; C / Ctrl — Crouch &nbsp;|&nbsp; LMB — Shoot &nbsp;|&nbsp; E — Plant/Defuse &nbsp;|&nbsp; Esc — Pause</p>
     </div>
   </div>
 
@@ -437,16 +437,21 @@
         <div class="ability-widget" id="hud-ab-x"><span class="ab-key-tag">X</span><span class="ab-icon" id="hud-ab-x-icon">👑</span><span class="ab-cd-overlay" id="hud-ab-x-cd" style="display:none;"></span></div>
       </div>
     </div>
+    <div class="hud-minimap-container">
+      <canvas id="hud-minimap-canvas" width="120" height="120"></canvas>
+    </div>
+    
+    <div class="fps-crosshair-container">
+      <svg viewBox="0 0 100 100" width="30" height="30">
+        <line x1="50" y1="35" x2="50" y2="45" stroke="#00d2ff" stroke-width="2"/>
+        <line x1="50" y1="55" x2="50" y2="65" stroke="#00d2ff" stroke-width="2"/>
+        <line x1="35" y1="50" x2="45" y2="50" stroke="#00d2ff" stroke-width="2"/>
+        <line x1="55" y1="50" x2="65" y2="50" stroke="#00d2ff" stroke-width="2"/>
+        <circle cx="50" cy="50" r="1.5" fill="#00d2ff"/>
+      </svg>
+    </div>
+
     <div class="hud-bottom-center">
-      <div class="fps-crosshair">
-        <svg viewBox="0 0 100 100" width="30" height="30">
-          <line x1="50" y1="35" x2="50" y2="45" stroke="#00d2ff" stroke-width="2"/>
-          <line x1="50" y1="55" x2="50" y2="65" stroke="#00d2ff" stroke-width="2"/>
-          <line x1="35" y1="50" x2="45" y2="50" stroke="#00d2ff" stroke-width="2"/>
-          <line x1="55" y1="50" x2="65" y2="50" stroke="#00d2ff" stroke-width="2"/>
-          <circle cx="50" cy="50" r="1.5" fill="#00d2ff"/>
-        </svg>
-      </div>
       <div id="hud-interact-prompt" class="hud-interact-prompt" style="display:none;">HOLD [E] TO PLANT SPIKE</div>
     </div>
     <div class="hud-bottom-right">
@@ -501,6 +506,7 @@
 <script src="js/entities/botSystem.js"></script>
 <script src="js/engine/spikeSystem.js"></script>
 <script src="js/engine/abilitySystem.js"></script>
+<script src="js/engine/minimap.js"></script>
 <script src="js/engine/gameLoop.js"></script>
 </body>
 </html>

@@ -786,7 +786,7 @@ body, html {
 /* ══════════════════════════════════════════
    SCREEN 6 — ARENA / HUD
 ══════════════════════════════════════════ */
-.arena-container { position: fixed; inset: 0; z-index: 10; }
+.arena-container { position: fixed; inset: 0; z-index: 10; cursor: none; }
 #fps-canvas { width: 100%; height: 100%; display: block; }
 
 .pointerlock-overlay {
@@ -864,11 +864,39 @@ body, html {
   z-index: 5;
 }
 
+/* Crosshair — fixed dead-center of viewport (not bottom-center) */
+.fps-crosshair-container {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 100;
+  pointer-events: none;
+}
+
+/* Minimap — top-right corner */
+.hud-minimap-container {
+  position: absolute;
+  top: 54px;
+  right: 14px;
+  width: 128px;
+  height: 128px;
+  border: 1px solid rgba(0, 210, 255, 0.45);
+  border-radius: 4px;
+  background: rgba(4, 8, 17, 0.88);
+  overflow: hidden;
+  box-shadow: 0 0 12px rgba(0, 210, 255, 0.15);
+}
+#hud-minimap-canvas {
+  width: 128px;
+  height: 128px;
+  display: block;
+}
+
 .hud-bottom-center {
   position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
   display: flex; flex-direction: column; align-items: center; gap: 8px;
 }
-.fps-crosshair { opacity: 0.9; }
 .hud-interact-prompt {
   font-family: var(--font-logo); font-size: 13px; letter-spacing: 2px;
   color: var(--neon-cyan); background: rgba(4,8,17,0.7);
@@ -877,8 +905,9 @@ body, html {
 }
 
 .hud-bottom-right {
-  position: absolute; bottom: 20px; right: 20px;
+  position: absolute; bottom: 20px; right: 14px;
   text-align: right; display: flex; flex-direction: column; gap: 8px;
+  max-width: 160px;
 }
 .weapon-name-lbl { font-family: var(--font-logo); font-size: 12px; letter-spacing: 2px; color: var(--text-muted); }
 .ammo-indicators { display: flex; gap: 4px; justify-content: flex-end; align-items: baseline; }
@@ -887,6 +916,10 @@ body, html {
 .ammo-max { font-family: var(--font-logo); font-size: 16px; color: var(--text-muted); }
 .credits-box { font-size: 13px; color: var(--text-muted); }
 .c-val { font-family: var(--font-logo); font-size: 16px; font-weight: 700; color: var(--neon-amber); }
+/* Crouch indicator flash when C/Ctrl is held */
+@keyframes crouchPulse {
+  0%,100%{opacity:1;} 50%{opacity:0.3;}
+}
 
 /* ══════════════════════════════════════════
    OVERLAYS — Pause + Game Over

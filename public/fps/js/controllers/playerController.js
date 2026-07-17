@@ -118,7 +118,11 @@ class PlayerFPSController {
   update(dt) {
     if (!this.isLocked) return;
 
-    // 1. Vertical physics (gravity and jumps)
+    // 1. Smooth Crouch Eye Height transition
+    const targetEyeHeight = this.keys.ctrl ? 0.95 : 1.65;
+    this.eyeHeight += (targetEyeHeight - this.eyeHeight) * 15 * dt;
+
+    // 2. Vertical physics (gravity and jumps)
     if (!this.isGrounded) {
       this.velocity.y += this.gravity * dt;
     }
@@ -131,15 +135,20 @@ class PlayerFPSController {
     // Apply vertical travel
     this.position.y += this.velocity.y * dt;
 
-    // Check ground level bounds
+    // Check ground level bounds based on current eyeHeight
     const groundLevel = -0.5 + this.eyeHeight;
-    if (this.position.y <= groundLevel) {
+    if (this.isGrounded) {
       this.position.y = groundLevel;
       this.velocity.y = 0;
-      this.isGrounded = true;
+    } else {
+      if (this.position.y <= groundLevel) {
+        this.position.y = groundLevel;
+        this.velocity.y = 0;
+        this.isGrounded = true;
+      }
     }
 
-    // 2. Horizontal physics (WASD moves)
+    // 3. Horizontal physics (WASD moves)
     let moveSpeed = this.speed;
     if (this.keys.Shift) moveSpeed = this.walkSpeed;
     if (this.keys.ctrl) moveSpeed = this.crouchSpeed;
@@ -156,7 +165,7 @@ class PlayerFPSController {
 
     moveDirection.normalize().multiplyScalar(moveSpeed);
 
-    // 3. Simple wall slide collision checks
+    // 4. Simple wall slide collision checks
     const targetPos = this.position.clone().add(moveDirection.clone().multiplyScalar(dt));
     const finalPos = this.checkCollisions(this.position, targetPos);
     
@@ -165,11 +174,6 @@ class PlayerFPSController {
 
     // Apply coordinates to camera node
     this.camera.position.copy(this.position);
-    
-    // Adjust height on crouches
-    if (this.keys.ctrl) {
-      this.camera.position.y -= 0.6;
-    }
   }
 
   checkCollisions(current, target) {
