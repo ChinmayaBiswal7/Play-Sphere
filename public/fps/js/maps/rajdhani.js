@@ -25,16 +25,24 @@ class RajdhaniMapBuilder {
     this.plantZones = [];
 
     /* ─── MATERIAL PALETTE ─────────────────────────────────── */
-    const sandMat    = new THREE.MeshStandardMaterial({ color: 0xc4a97e, roughness: 0.9 });
-    const darkSand   = new THREE.MeshStandardMaterial({ color: 0x8a6d4a, roughness: 0.9 });
-    const templeMat  = new THREE.MeshStandardMaterial({ color: 0x6b3a1e, roughness: 0.9 });
-    const techMat    = new THREE.MeshStandardMaterial({ color: 0x1a2436, roughness: 0.3, metalness: 0.8 });
-    const concMat    = new THREE.MeshStandardMaterial({ color: 0x787878, roughness: 0.85 });
-    const woodMat    = new THREE.MeshStandardMaterial({ color: 0xb8651a, roughness: 0.8 });
-    const metalMat   = new THREE.MeshStandardMaterial({ color: 0x3d4e63, roughness: 0.4, metalness: 0.7 });
-    const greenMetal = new THREE.MeshStandardMaterial({ color: 0x2d5219, roughness: 0.55, metalness: 0.6 });
-    const marbleMat  = new THREE.MeshStandardMaterial({ color: 0xd4b896, roughness: 0.35, metalness: 0.1 });
-    const brickMat   = new THREE.MeshStandardMaterial({ color: 0x7a3b1e, roughness: 0.9 });
+    const sandMat    = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.85 }); // Saffron Gold base
+    const darkSand   = new THREE.MeshStandardMaterial({ color: 0x4f46e5, roughness: 0.8 });  // Indigo accent lanes
+    const templeMat  = new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.85 }); // Ancient Crimson wood
+    const techMat    = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3, metalness: 0.85 }); // Dark navy tech carbon
+    const concMat    = new THREE.MeshStandardMaterial({ color: 0xa21caf, roughness: 0.65 }); // Bright magenta cover
+    const woodMat    = new THREE.MeshStandardMaterial({ color: 0xea580c, roughness: 0.75 }); // Safety Orange wood
+    const metalMat   = new THREE.MeshStandardMaterial({ color: 0x06b6d4, roughness: 0.35, metalness: 0.8 }); // Neon Cyan metal
+    const greenMetal = new THREE.MeshStandardMaterial({ color: 0x16a34a, roughness: 0.55, metalness: 0.75 }); // Emerald Green metal
+    const marbleMat  = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.25, metalness: 0.1 });  // White Polished Marble
+    const brickMat   = new THREE.MeshStandardMaterial({ color: 0xec4899, roughness: 0.8 });  // Cyber Pink brick
+
+    // --- Vibrant AAA Esports Plaster Palette ---
+    const colorAtk   = new THREE.MeshStandardMaterial({ color: 0x0d9488, roughness: 0.75 }); // Attacker Cyan/Teal
+    const colorDef   = new THREE.MeshStandardMaterial({ color: 0x312e81, roughness: 0.75 }); // Defender Royal Navy
+    const colorMid   = new THREE.MeshStandardMaterial({ color: 0xeab308, roughness: 0.8 });  // Mid Saffron/Gold
+    const colorSiteA = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.8 });  // A Site Ruby Red
+    const colorSiteB = new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.8 });  // B Site Cobalt Blue
+    const colorMain  = new THREE.MeshStandardMaterial({ color: 0x84cc16, roughness: 0.8 });  // Lanes Lime Green
 
     /* ─── GROUND FLOORS (zoned by area) ──────────────────────── */
     // Main ground canvas
@@ -43,11 +51,11 @@ class RajdhaniMapBuilder {
     scene.add(gMain);
 
     // Zone-specific floor tints
-    this.floorTile( 45, -17, 28, 24, new THREE.MeshStandardMaterial({ color: 0x9b6040, roughness: 0.65 }), scene); // A Site
-    this.floorTile(-45, -17, 28, 24, new THREE.MeshStandardMaterial({ color: 0x4a6055, roughness: 0.65 }), scene); // B Site
-    this.floorTile(  0,  -3, 34, 28, new THREE.MeshStandardMaterial({ color: 0xbba070, roughness: 0.45 }), scene); // Mid Plaza
-    this.floorTile(  0,  67, 28, 16, techMat.clone(), scene); // ATK Spawn
-    this.floorTile(  0, -67, 28, 14, techMat.clone(), scene); // DEF Spawn
+    this.floorTile( 45, -17, 28, 24, new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.65 }), scene); // A Site Red
+    this.floorTile(-45, -17, 28, 24, new THREE.MeshStandardMaterial({ color: 0x1d4ed8, roughness: 0.65 }), scene); // B Site Blue
+    this.floorTile(  0,  -3, 34, 28, new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.45 }), scene); // Mid Gold
+    this.floorTile(  0,  67, 28, 16, colorAtk.clone(), scene); // ATK Spawn Teal
+    this.floorTile(  0, -67, 28, 14, colorDef.clone(), scene); // DEF Spawn Navy
 
     /* ─── 1. OUTER BOUNDARY WALLS ─────────────────────────────── */
     this.W(    0, -75, 160, 8, 1, sandMat, scene);  // North
@@ -57,12 +65,12 @@ class RajdhaniMapBuilder {
 
     /* ─── 2. ATTACKER SPAWN ROOM ──────────────────────────────── */
     // Center (0, 67), 26x14, Z:60-74, X:-13 to 13
-    this.W(   0, 74, 28, this.WH, 1, techMat, scene); // S wall
-    this.W( -14, 67,  1, this.WH,14, techMat, scene); // W wall
-    this.W(  14, 67,  1, this.WH,14, techMat, scene); // E wall
+    this.W(   0, 74, 28, this.WH, 1, colorAtk, scene); // S wall
+    this.W( -14, 67,  1, this.WH,14, colorAtk, scene); // W wall
+    this.W(  14, 67,  1, this.WH,14, colorAtk, scene); // E wall
     // N wall with three exit gaps (left ~x=-9, mid ~x=0, right ~x=9)
-    this.W(-11, 60,  4, this.WH, 1, techMat, scene); // W segment
-    this.W( 11, 60,  4, this.WH, 1, techMat, scene); // E segment
+    this.W(-11, 60,  4, this.WH, 1, colorAtk, scene); // W segment
+    this.W( 11, 60,  4, this.WH, 1, colorAtk, scene); // E segment
     // (middle ~8m gap for mid tunnel, so no center segment)
 
     // ATK Spawn props
@@ -73,19 +81,19 @@ class RajdhaniMapBuilder {
 
     /* ─── 3. ATK → B MAIN (left branch connection) ──────────── */
     // Hallway going west from ATK spawn left side: X: -14 to -30, Z: 57-63
-    this.W(-22, 57, 16, this.WH, 1, darkSand, scene); // top
-    this.W(-22, 63, 16, this.WH, 1, darkSand, scene); // bottom
-    this.W(-30, 60,  1, this.WH, 6, darkSand, scene); // end cap (connects to B Main right wall)
+    this.W(-22, 57, 16, this.WH, 1, colorMain, scene); // top
+    this.W(-22, 63, 16, this.WH, 1, colorMain, scene); // bottom
+    this.W(-30, 60,  1, this.WH, 6, colorMain, scene); // end cap (connects to B Main right wall)
 
     /* ─── 4. B MAIN CORRIDOR ─────────────────────────────────── */
     // NS corridor, center X=-35, width 8m, Z: -2 to 57
     // Left outer wall
-    this.W(-39, 27.5, 1, this.WH, 59, brickMat, scene);
+    this.W(-39, 27.5, 1, this.WH, 59, colorSiteB, scene);
     // Right wall (inner, has gap where B Link connects at Z: -7 to -17)
     // Top segment (Z:-2 to -5): right inner wall north of B Link
-    this.W(-31, -3.5, 1, this.WH, 5, sandMat, scene);
+    this.W(-31, -3.5, 1, this.WH, 5, colorMain, scene);
     // Bottom segment (Z:5 to 57): right inner wall south of B Link
-    this.W(-31, 31, 1, this.WH, 52, sandMat, scene);
+    this.W(-31, 31, 1, this.WH, 52, colorMain, scene);
 
     // B Main props / cover
     this.addCover(-35, 48, this.CH, woodMat,  scene);
@@ -99,15 +107,15 @@ class RajdhaniMapBuilder {
     scene.add(this.makeColliderAt(-33, 1.2, 28, 2.4, 2.2, 7, scene));
 
     /* ─── 5. ATK → A MAIN (right branch connection) ─────────── */
-    this.W( 22, 57, 16, this.WH, 1, darkSand, scene);
-    this.W( 22, 63, 16, this.WH, 1, darkSand, scene);
-    this.W( 30, 60,  1, this.WH, 6, darkSand, scene);
+    this.W( 22, 57, 16, this.WH, 1, colorMain, scene);
+    this.W( 22, 63, 16, this.WH, 1, colorMain, scene);
+    this.W( 30, 60,  1, this.WH, 6, colorMain, scene);
 
     /* ─── 6. A MAIN CORRIDOR ─────────────────────────────────── */
     // NS corridor, center X=35, width 8m, Z: -2 to 57
-    this.W( 39, 27.5, 1, this.WH, 59, brickMat, scene); // Right outer
-    this.W( 31, -3.5, 1, this.WH,  5, sandMat, scene);  // Left inner north of A Link
-    this.W( 31, 31,   1, this.WH, 52, sandMat, scene);  // Left inner south
+    this.W( 39, 27.5, 1, this.WH, 59, colorSiteA, scene); // Right outer
+    this.W( 31, -3.5, 1, this.WH,  5, colorMain, scene);  // Left inner north of A Link
+    this.W( 31, 31,   1, this.WH, 52, colorMain, scene);  // Left inner south
 
     // A Main props
     this.addCover(35, 48, this.CH, woodMat, scene);
@@ -122,10 +130,10 @@ class RajdhaniMapBuilder {
 
     /* ─── 7. MID TUNNEL (underground) ───────────────────────── */
     // NS corridor, X: -4 to 4, Z: 14 to 57 (mouth to mid)
-    this.W(-4.5, 35.5, 1, 3.5, 43, techMat, scene); // Left wall
-    this.W( 4.5, 35.5, 1, 3.5, 43, techMat, scene); // Right wall
+    this.W(-4.5, 35.5, 1, 3.5, 43, colorDef, scene); // Left wall
+    this.W( 4.5, 35.5, 1, 3.5, 43, colorDef, scene); // Right wall
     // Tunnel ceiling
-    const tunCeil = new THREE.Mesh(new THREE.BoxGeometry(10, 0.3, 43), techMat);
+    const tunCeil = new THREE.Mesh(new THREE.BoxGeometry(10, 0.3, 43), colorDef);
     tunCeil.position.set(0, 2.85, 35.5); scene.add(tunCeil);
     // Neon guide strip
     this.neonLine(0, 2.7, 35.5,  9.5, 0.06, 43, new THREE.MeshBasicMaterial({ color: 0x00d2ff }), scene);
@@ -136,17 +144,17 @@ class RajdhaniMapBuilder {
     /* ─── 8. MID PLAZA ──────────────────────────────────────── */
     // Center (0,-3), roughly 34x28m. X:-17 to 17, Z:-17 to 11
     // West wall (has B Link gap at Z: -7 to -17)
-    this.W(-17,  4, 1, this.WH, 14, sandMat, scene);  // SW segment (Z:4 to 11 approx, south of B Link)
-    this.W(-17,-12, 1, this.WH,  6, sandMat, scene);  // NW segment (Z:-12 to -17 approx)
+    this.W(-17,  4, 1, this.WH, 14, colorMid, scene);  // SW segment (Z:4 to 11 approx, south of B Link)
+    this.W(-17,-12, 1, this.WH,  6, colorMid, scene);  // NW segment (Z:-12 to -17 approx)
     // East wall (has A Link gap)
-    this.W( 17,  4, 1, this.WH, 14, sandMat, scene);  // SE segment
-    this.W( 17,-12, 1, this.WH,  6, sandMat, scene);  // NE segment
+    this.W( 17,  4, 1, this.WH, 14, colorMid, scene);  // SE segment
+    this.W( 17,-12, 1, this.WH,  6, colorMid, scene);  // NE segment
     // South wall (has mid-tunnel gap width ~9m at center)
-    this.W(-10, 11, 14, this.WH, 1, sandMat, scene);  // SW
-    this.W( 10, 11, 14, this.WH, 1, sandMat, scene);  // SE
+    this.W(-10, 11, 14, this.WH, 1, colorMid, scene);  // SW
+    this.W( 10, 11, 14, this.WH, 1, colorMid, scene);  // SE
     // North wall (has connector gap to Mid Tower)
-    this.W(-7, -17, 10, this.WH, 1, sandMat, scene);  // NW
-    this.W( 7, -17, 10, this.WH, 1, sandMat, scene);  // NE
+    this.W(-7, -17, 10, this.WH, 1, colorMid, scene);  // NW
+    this.W( 7, -17, 10, this.WH, 1, colorMid, scene);  // NE
 
     // Mid Plaza — Central Fountain / Statue
     this.colliders.push(this.createPillar(0, 0, -3, 3.8, 1.2, marbleMat, scene));
@@ -163,19 +171,19 @@ class RajdhaniMapBuilder {
 
     /* ─── 9. MID → MID TOWER CONNECTOR ─────────────────────── */
     // Narrow passage north of Mid: X:-5 to 5, Z:-17 to -27
-    this.W(-5, -22, 1, this.WH, 10, sandMat, scene);
-    this.W( 5, -22, 1, this.WH, 10, sandMat, scene);
+    this.W(-5, -22, 1, this.WH, 10, colorMid, scene);
+    this.W( 5, -22, 1, this.WH, 10, colorMid, scene);
 
     /* ─── 10. MID TOWER ─────────────────────────────────────── */
     // Building at (0,-33), 16x14m, 3-floor height=10m
-    this.W( -8, -33, 1, 10, 14, techMat, scene); // W wall
-    this.W(  8, -33, 1, 10, 14, techMat, scene); // E wall
-    this.W(  0, -40, 16, 10,  1, techMat, scene); // N wall
+    this.W( -8, -33, 1, 10, 14, colorDef, scene); // W wall
+    this.W(  8, -33, 1, 10, 14, colorDef, scene); // E wall
+    this.W(  0, -40, 16, 10,  1, colorDef, scene); // N wall
     // S wall with center 4m door gap
-    this.W( -6, -27, 4, 10,  1, techMat, scene);
-    this.W(  6, -27, 4, 10,  1, techMat, scene);
+    this.W( -6, -27, 4, 10,  1, colorDef, scene);
+    this.W(  6, -27, 4, 10,  1, colorDef, scene);
     // Floor 2 balcony slab at y=4m
-    const towerBal = new THREE.Mesh(new THREE.BoxGeometry(16, 0.3, 14), techMat);
+    const towerBal = new THREE.Mesh(new THREE.BoxGeometry(16, 0.3, 14), colorDef);
     towerBal.position.set(0, 4.5, -33); scene.add(towerBal);
     this.colliders.push(towerBal);
     // Sniper window on south face (slit opening — visually only)
@@ -185,14 +193,14 @@ class RajdhaniMapBuilder {
 
     /* ─── 11. B LINK ─────────────────────────────────────────── */
     // EW corridor, Z center =-12, width 8m, X:-17 to -33
-    this.W(-25,  -7, 16, this.WH, 1, sandMat, scene); // North wall
-    this.W(-25, -17, 16, this.WH, 1, sandMat, scene); // South wall
+    this.W(-25,  -7, 16, this.WH, 1, colorMain, scene); // North wall
+    this.W(-25, -17, 16, this.WH, 1, colorMain, scene); // South wall
     this.addCover(-20, -12, this.CH, woodMat, scene);
     this.addCover(-30, -12, this.CH, concMat, scene);
 
     /* ─── 12. A LINK ─────────────────────────────────────────── */
-    this.W( 25,  -7, 16, this.WH, 1, sandMat, scene);
-    this.W( 25, -17, 16, this.WH, 1, sandMat, scene);
+    this.W( 25,  -7, 16, this.WH, 1, colorMain, scene);
+    this.W( 25, -17, 16, this.WH, 1, colorMain, scene);
     this.addCover(20, -12, this.CH, woodMat, scene);
     this.addCover(30, -12, this.CH, concMat, scene);
 
@@ -205,11 +213,11 @@ class RajdhaniMapBuilder {
     this.siteRing(45, -17, 0xff3366, scene);
 
     // Site A walls (entrance from A Link on west, open south-ish corridor)
-    this.W(32, -17, 1, this.WH, 22, sandMat, scene); // W wall (faces Mid, but gap for A Link entry)
-    this.W(58, -17, 1, this.WH, 22, sandMat, scene); // E wall (back site)
-    this.W(45, -28, 26, this.WH, 1, sandMat, scene); // N back wall
+    this.W(32, -17, 1, this.WH, 22, colorSiteA, scene); // W wall (faces Mid, but gap for A Link entry)
+    this.W(58, -17, 1, this.WH, 22, colorSiteA, scene); // E wall (back site)
+    this.W(45, -28, 26, this.WH, 1, colorSiteA, scene); // N back wall
     // S wall with entry gap (west-most 8m gap for link, rest is wall)
-    this.W(52, -6, 10, this.WH, 1, sandMat, scene); // eastern S segment
+    this.W(52, -6, 10, this.WH, 1, colorSiteA, scene); // eastern S segment
     // West gap (entry from A Link) is at X: 32-39, no wall here
 
     // A Site props
@@ -240,10 +248,10 @@ class RajdhaniMapBuilder {
     });
     this.siteRing(-45, -17, 0x00d2ff, scene);
 
-    this.W(-32, -17, 1, this.WH, 22, sandMat, scene);
-    this.W(-58, -17, 1, this.WH, 22, sandMat, scene);
-    this.W(-45, -28, 26, this.WH, 1, sandMat, scene);
-    this.W(-52,  -6, 10, this.WH, 1, sandMat, scene); // eastern S segment
+    this.W(-32, -17, 1, this.WH, 22, colorSiteB, scene);
+    this.W(-58, -17, 1, this.WH, 22, colorSiteB, scene);
+    this.W(-45, -28, 26, this.WH, 1, colorSiteB, scene);
+    this.W(-52,  -6, 10, this.WH, 1, colorSiteB, scene); // eastern S segment
 
     // B Site props
     this.block(-49, 1.1, -21, 2.4, 2.2, 8, techMat.clone(), scene); // Broken Bus
@@ -261,19 +269,19 @@ class RajdhaniMapBuilder {
 
     /* ─── 15. A HEAVEN (elevation: 5m) ──────────────────────── */
     // Platform at (45,-37), 20x12m
-    const aHeavenSlab = new THREE.Mesh(new THREE.BoxGeometry(20, 0.4, 12), darkSand);
+    const aHeavenSlab = new THREE.Mesh(new THREE.BoxGeometry(20, 0.4, 12), colorSiteA);
     aHeavenSlab.position.set(45, 4.7, -37); scene.add(aHeavenSlab);
     this.colliders.push(aHeavenSlab);
     // Railing on south (overlooking A Site)
     const aRailS = new THREE.Mesh(new THREE.BoxGeometry(20, 0.8, 0.25), metalMat);
     aRailS.position.set(45, 5.3, -31.5); scene.add(aRailS);
     // Back wall
-    const aHeavBackW = new THREE.Mesh(new THREE.BoxGeometry(20, 3, 1), sandMat);
+    const aHeavBackW = new THREE.Mesh(new THREE.BoxGeometry(20, 3, 1), colorSiteA);
     aHeavBackW.position.set(45, 6.0, -43); scene.add(aHeavBackW);
     this.colliders.push(aHeavBackW);
     // Stairs leading up from A Main top
     for (let i = 0; i < 5; i++) {
-      const step = new THREE.Mesh(new THREE.BoxGeometry(4, 0.5, 1), sandMat);
+      const step = new THREE.Mesh(new THREE.BoxGeometry(4, 0.5, 1), colorSiteA);
       step.position.set(58, i * 0.9, -32 - i); scene.add(step);
       this.colliders.push(step);
     }
@@ -282,16 +290,16 @@ class RajdhaniMapBuilder {
     this.block(50, 5.6, -42, 2, 1, 2, techMat.clone(), scene);
 
     /* ─── 16. B HEAVEN (elevation: 5m) ──────────────────────── */
-    const bHeavenSlab = new THREE.Mesh(new THREE.BoxGeometry(20, 0.4, 12), darkSand);
+    const bHeavenSlab = new THREE.Mesh(new THREE.BoxGeometry(20, 0.4, 12), colorSiteB);
     bHeavenSlab.position.set(-45, 4.7, -37); scene.add(bHeavenSlab);
     this.colliders.push(bHeavenSlab);
     const bRailS = new THREE.Mesh(new THREE.BoxGeometry(20, 0.8, 0.25), metalMat);
     bRailS.position.set(-45, 5.3, -31.5); scene.add(bRailS);
-    const bHeavBackW = new THREE.Mesh(new THREE.BoxGeometry(20, 3, 1), templeMat);
+    const bHeavBackW = new THREE.Mesh(new THREE.BoxGeometry(20, 3, 1), colorSiteB);
     bHeavBackW.position.set(-45, 6.0, -43); scene.add(bHeavBackW);
     this.colliders.push(bHeavBackW);
     for (let i = 0; i < 5; i++) {
-      const step = new THREE.Mesh(new THREE.BoxGeometry(4, 0.5, 1), sandMat);
+      const step = new THREE.Mesh(new THREE.BoxGeometry(4, 0.5, 1), colorSiteB);
       step.position.set(-58, i * 0.9, -32 - i); scene.add(step);
       this.colliders.push(step);
     }
@@ -300,12 +308,12 @@ class RajdhaniMapBuilder {
 
     /* ─── 17. DEFENDER SPAWN ─────────────────────────────────── */
     // Center (0,-67), 28x14m, Z:-74 to -60
-    this.W(   0, -74, 30, this.WH,  1, techMat, scene); // N wall
-    this.W( -15, -67,  1, this.WH, 14, techMat, scene); // W wall
-    this.W(  15, -67,  1, this.WH, 14, techMat, scene); // E wall
+    this.W(   0, -74, 30, this.WH,  1, colorDef, scene); // N wall
+    this.W( -15, -67,  1, this.WH, 14, colorDef, scene); // W wall
+    this.W(  15, -67,  1, this.WH, 14, colorDef, scene); // E wall
     // S wall with 3 exits at X:±23 and X:0
-    this.W(  -8, -60, 10, this.WH,  1, techMat, scene); // W segment (gap at 0)
-    this.W(   8, -60, 10, this.WH,  1, techMat, scene); // E segment
+    this.W(  -8, -60, 10, this.WH,  1, colorDef, scene); // W segment (gap at 0)
+    this.W(   8, -60, 10, this.WH,  1, colorDef, scene); // E segment
 
     // DEF spawn props
     this.addCover( 0, -70, 2.5, techMat, scene); // Server rack
@@ -315,22 +323,22 @@ class RajdhaniMapBuilder {
 
     /* ─── 18. DEF SIDE CONNECTORS → HEAVENS ─────────────────── */
     // Left corridor: X:-14 to -26, Z:-60 to -45
-    this.W(-14, -52, 1, this.WH, 15, techMat, scene);
-    this.W(-26, -52, 1, this.WH, 15, techMat, scene);
+    this.W(-14, -52, 1, this.WH, 15, colorDef, scene);
+    this.W(-26, -52, 1, this.WH, 15, colorDef, scene);
     // Right corridor
-    this.W( 14, -52, 1, this.WH, 15, techMat, scene);
-    this.W( 26, -52, 1, this.WH, 15, techMat, scene);
+    this.W( 14, -52, 1, this.WH, 15, colorDef, scene);
+    this.W( 26, -52, 1, this.WH, 15, colorDef, scene);
 
     /* ─── 19. MID TOWER SIDE WINGS → HEAVEN ACCESS ──────────── */
     // Left wing: X:-8 to -20, Z:-36 to -50
-    this.W(-14, -43, 1, this.WH, 14, sandMat, scene);
-    this.W( -8, -43, 1, this.WH, 14, sandMat, scene);
+    this.W(-14, -43, 1, this.WH, 14, colorDef, scene);
+    this.W( -8, -43, 1, this.WH, 14, colorDef, scene);
     // Right wing
-    this.W( 14, -43, 1, this.WH, 14, sandMat, scene);
-    this.W(  8, -43, 1, this.WH, 14, sandMat, scene);
+    this.W( 14, -43, 1, this.WH, 14, colorDef, scene);
+    this.W(  8, -43, 1, this.WH, 14, colorDef, scene);
     // Horizontal closers
-    this.W(-11, -50, 6, this.WH, 1, sandMat, scene);
-    this.W( 11, -50, 6, this.WH, 1, sandMat, scene);
+    this.W(-11, -50, 6, this.WH, 1, colorDef, scene);
+    this.W( 11, -50, 6, this.WH, 1, colorDef, scene);
 
     /* ─── 20. INTERIOR STREET LAMPS ─────────────────────────── */
     this.createStreetLamp(-35, 52, scene);
