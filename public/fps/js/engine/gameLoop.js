@@ -155,6 +155,11 @@ class GameLoopManager {
         this.abilities.update(dt);
       }
 
+      // Flickering fire torches oscillation
+      if (window.RajdhaniMap && window.RajdhaniMap.updateTorches) {
+        window.RajdhaniMap.updateTorches(dt);
+      }
+
       // Update Minimap Renderer
       if (window.MiniMapRenderer && this.player) {
         window.MiniMapRenderer.update(this.player.position.x, this.player.position.z, this.player.yaw);

@@ -24,8 +24,16 @@ class RajdhaniMapBuilder {
     this.interactiveObjects = [];
     this.plantZones = [];
 
-    /* ─── MATERIAL PALETTE ─────────────────────────────────── */
-    const sandMat    = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.85 }); // Saffron Gold base
+    // Generate Procedural Textures
+    const floorTexture = this.createSandStoneTexture();
+    const stuccoAtk = this.createPlasterBrickTexture('#0ea5e9', false);
+    const stuccoDef = this.createPlasterBrickTexture('#1e1b4b', true); // Navy blue tech brick
+    const stuccoMid = this.createPlasterBrickTexture('#f59e0b', false); // Saffron Gold plaster
+    const stuccoSiteA = this.createPlasterBrickTexture('#ef4444', true); // Ruby Red brick
+    const stuccoSiteB = this.createPlasterBrickTexture('#3b82f6', true); // Cobalt Blue brick
+    const stuccoMain = this.createPlasterBrickTexture('#84cc16', false); // Lime Green stucco
+
+    const sandMat    = new THREE.MeshStandardMaterial({ map: floorTexture, roughness: 0.85 }); // Paved sand/stone floor
     const darkSand   = new THREE.MeshStandardMaterial({ color: 0x4f46e5, roughness: 0.8 });  // Indigo accent lanes
     const templeMat  = new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.85 }); // Ancient Crimson wood
     const techMat    = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3, metalness: 0.85 }); // Dark navy tech carbon
@@ -37,12 +45,12 @@ class RajdhaniMapBuilder {
     const brickMat   = new THREE.MeshStandardMaterial({ color: 0xec4899, roughness: 0.8 });  // Cyber Pink brick
 
     // --- Vibrant AAA Esports Plaster Palette ---
-    const colorAtk   = new THREE.MeshStandardMaterial({ color: 0x0d9488, roughness: 0.75 }); // Attacker Cyan/Teal
-    const colorDef   = new THREE.MeshStandardMaterial({ color: 0x312e81, roughness: 0.75 }); // Defender Royal Navy
-    const colorMid   = new THREE.MeshStandardMaterial({ color: 0xeab308, roughness: 0.8 });  // Mid Saffron/Gold
-    const colorSiteA = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.8 });  // A Site Ruby Red
-    const colorSiteB = new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.8 });  // B Site Cobalt Blue
-    const colorMain  = new THREE.MeshStandardMaterial({ color: 0x84cc16, roughness: 0.8 });  // Lanes Lime Green
+    const colorAtk   = new THREE.MeshStandardMaterial({ map: stuccoAtk, roughness: 0.75 }); // Attacker Cyan/Teal
+    const colorDef   = new THREE.MeshStandardMaterial({ map: stuccoDef, roughness: 0.75 }); // Defender Royal Navy
+    const colorMid   = new THREE.MeshStandardMaterial({ map: stuccoMid, roughness: 0.8 });  // Mid Saffron/Gold
+    const colorSiteA = new THREE.MeshStandardMaterial({ map: stuccoSiteA, roughness: 0.8 });  // A Site Ruby Red
+    const colorSiteB = new THREE.MeshStandardMaterial({ map: stuccoSiteB, roughness: 0.8 });  // B Site Cobalt Blue
+    const colorMain  = new THREE.MeshStandardMaterial({ map: stuccoMain, roughness: 0.8 });  // Lanes Lime Green
 
     /* ─── GROUND FLOORS (zoned by area) ──────────────────────── */
     // Main ground canvas
@@ -389,6 +397,21 @@ class RajdhaniMapBuilder {
     this.addMarketStallsAndCables(scene, woodMat, techMat, metalMat);
     this.addResidentialDetails(scene, woodMat, techMat);
     this.addCornerScatterProps(scene, woodMat, concMat, metalMat, techMat);
+
+    // 24. Landmarks, Extra Cover & Fire Torches
+    this.createBanyanTree(0, 64, scene);
+    this.createBanyanTree(-12, -8, scene);
+    this.createBanyanTree(12, -8, scene);
+    this.createTempleBellLandmark(45, -23, scene, templeMat);
+    this.createElectricTransformer(-36, 12, scene, techMat);
+    this.createElectricTransformer(-45, -24, scene, techMat);
+    this.createBrokenCart(0, -8, scene, woodMat);
+    
+    // Fire Torches (Ruby Red themed warm flickering light)
+    this.createWallTorch(31.2, 2.2, 40, scene);
+    this.createWallTorch(31.2, 2.2, 20, scene);
+    this.createWallTorch(32.2, 2.2, -18, scene);
+    this.createWallTorch(57.8, 2.2, -18, scene);
 
     // Ambient audio
     this.initAmbianceAudio();
@@ -769,6 +792,76 @@ class RajdhaniMapBuilder {
     this.createLaundryLine(38.8, 3.8, 16, 31.2, 3.8, 16, scene);
   }
 
+  /* ══ LANDMARK & PROP HELPERS ══════════════════════════════ */
+  createBanyanTree(x, z, scene) {
+    const box = this.W(x, z, 3, 1.2, 3, new THREE.MeshStandardMaterial({ color: 0x52525b }), scene);
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.6, 3.8, 8), new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.9 }));
+    trunk.position.set(x, 1.8 - 0.5, z); scene.add(trunk);
+    this.colliders.push(trunk);
+    
+    const greenMat = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.95 });
+    for (let i = 0; i < 5; i++) {
+      const leaf = new THREE.Mesh(new THREE.SphereGeometry(1.8 + Math.random() * 0.4, 8, 8), greenMat);
+      leaf.position.set(x + (Math.random() - 0.5) * 1.5, 3.0 + Math.random() * 1.0, z + (Math.random() - 0.5) * 1.5);
+      scene.add(leaf);
+    }
+  }
+
+  createTempleBellLandmark(cx, cz, scene, templeMat) {
+    const p1 = this.createPillar(cx - 1.8, 3, cz, 0.5, 6, templeMat, scene);
+    const p2 = this.createPillar(cx + 1.8, 3, cz, 0.5, 6, templeMat, scene);
+    const beam = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.6, 0.8), templeMat);
+    beam.position.set(cx, 5.3, cz); scene.add(beam);
+    this.colliders.push(beam);
+    
+    const chain = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.8, 4), new THREE.MeshStandardMaterial({ color: 0x1f2937, metalness: 0.8 }));
+    chain.position.set(cx, 4.3, cz); scene.add(chain);
+    
+    const bell = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.6, 1.0, 10), new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.9, roughness: 0.2 }));
+    bell.position.set(cx, 3.1, cz); scene.add(bell);
+    this.colliders.push(bell);
+  }
+
+  createElectricTransformer(x, z, scene, techMat) {
+    const base = this.W(x, z, 2.5, 1.8, 2.5, techMat, scene);
+    const top = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.8, 6), new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.8 }));
+    top.position.set(x, 1.3, z); scene.add(top);
+    const warning = new THREE.Mesh(new THREE.BoxGeometry(2.52, 0.4, 0.4), new THREE.MeshBasicMaterial({ color: 0xeab308 }));
+    warning.position.set(x, 0.3, z); scene.add(warning);
+  }
+
+  createBrokenCart(x, z, scene, woodMat) {
+    const deck = this.block(x, 0.5, z, 1.8, 0.15, 3.2, woodMat, scene);
+    const wheel1 = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 0.15, 8), new THREE.MeshStandardMaterial({ color: 0x451a03 }));
+    wheel1.rotation.z = Math.PI / 2; wheel1.position.set(x - 0.95, 0.4, z - 0.6); scene.add(wheel1);
+    const wheel2 = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 0.15, 8), new THREE.MeshStandardMaterial({ color: 0x451a03 }));
+    wheel2.rotation.z = Math.PI / 2; wheel2.position.set(x + 0.95, 0.4, z + 0.6); scene.add(wheel2);
+    this.colliders.push(this.makeColliderAt(x, 0.6, z, 2.1, 1.2, 3.4, scene));
+  }
+
+  createWallTorch(x, y, z, scene) {
+    const bracket = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.15, 0.6), new THREE.MeshStandardMaterial({ color: 0x1f2937, metalness: 0.9 }));
+    bracket.position.set(x, y, z); scene.add(bracket);
+    const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.04, 0.8, 6), new THREE.MeshStandardMaterial({ color: 0x78350f }));
+    stick.position.set(x, y + 0.35, z + 0.25); stick.rotation.x = 0.4; scene.add(stick);
+    const flame = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.5, 6), new THREE.MeshBasicMaterial({ color: 0xff4500 }));
+    flame.position.set(x, y + 0.72, z + 0.42); scene.add(flame);
+    
+    const light = new THREE.PointLight(0xff6600, 1.8, 12);
+    light.position.set(x, y + 0.9, z + 0.5);
+    scene.add(light);
+    
+    if (!this.torchLights) this.torchLights = [];
+    this.torchLights.push(light);
+  }
+
+  updateTorches(dt) {
+    if (!this.torchLights) return;
+    this.torchLights.forEach(light => {
+      light.intensity = 1.4 + Math.random() * 0.8;
+    });
+  }
+
   createLaundryLine(x1, y1, z1, x2, y2, z2, scene) {
     this.createCable(x1, y1, z1, x2, y2, z2, scene);
     const clothColors = [0xef4444, 0xf59e0b, 0x3b82f6];
@@ -785,6 +878,89 @@ class RajdhaniMapBuilder {
       cloth.rotation.y = Math.atan2(lineDir.x, lineDir.z);
       scene.add(cloth);
     }
+  }
+
+  /* ══ PROCEDURAL CANVAS TEXTURE GENERATOR ══════════════════ */
+  createSandStoneTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    
+    // Base sand color
+    ctx.fillStyle = '#dfbe8f';
+    ctx.fillRect(0, 0, 512, 512);
+    
+    // Grain flecks
+    for (let i = 0; i < 9000; i++) {
+      const x = Math.random() * 512;
+      const y = Math.random() * 512;
+      const size = Math.random() * 2.5 + 1;
+      ctx.fillStyle = Math.random() < 0.5 ? '#ccaa78' : '#ebd4b0';
+      ctx.fillRect(x, y, size, size);
+    }
+    
+    // Sloped pavers outline
+    ctx.strokeStyle = '#bfa170';
+    ctx.lineWidth = 2.0;
+    for (let i = 0; i < 45; i++) {
+      const x = Math.random() * 512;
+      const y = Math.random() * 512;
+      const w = Math.random() * 90 + 50;
+      const h = Math.random() * 90 + 50;
+      ctx.strokeRect(x, y, w, h);
+    }
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(16, 16); // Tile it densely
+    return texture;
+  }
+
+  createPlasterBrickTexture(colorHexStr, isBrick = false) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+    
+    ctx.fillStyle = colorHexStr;
+    ctx.fillRect(0, 0, 256, 256);
+    
+    // Plaster stucco granularity noise
+    for (let i = 0; i < 4000; i++) {
+      const x = Math.random() * 256;
+      const y = Math.random() * 256;
+      ctx.fillStyle = Math.random() < 0.5 ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)';
+      ctx.fillRect(x, y, 1, 1);
+    }
+    
+    if (isBrick) {
+      ctx.strokeStyle = 'rgba(0,0,0,0.18)';
+      ctx.lineWidth = 1.2;
+      const rowHeight = 16;
+      const colWidth = 32;
+      for (let y = 0; y < 256; y += rowHeight) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(256, y);
+        ctx.stroke();
+        
+        const shift = (y / rowHeight) % 2 === 0 ? 0 : colWidth / 2;
+        for (let x = -shift; x < 256; x += colWidth) {
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineTo(x, y + rowHeight);
+          ctx.stroke();
+        }
+      }
+    }
+    
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(4, 2);
+    return texture;
   }
 
   getPlantZone(pos) {
