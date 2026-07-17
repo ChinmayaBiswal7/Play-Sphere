@@ -376,6 +376,12 @@ class RajdhaniMapBuilder {
     // Dusk fog
     scene.fog = new THREE.FogExp2(0x110820, 0.013);
 
+    // 23. Extra Decorative density to make map dense and detailed
+    this.addWallPanelsAndTrims(scene, sandMat, darkSand, brickMat, woodMat, techMat);
+    this.addMarketStallsAndCables(scene, woodMat, techMat, metalMat);
+    this.addResidentialDetails(scene, woodMat, techMat);
+    this.addCornerScatterProps(scene, woodMat, concMat, metalMat, techMat);
+
     // Ambient audio
     this.initAmbianceAudio();
   }
@@ -531,6 +537,246 @@ class RajdhaniMapBuilder {
     gain.gain.exponentialRampToValueAtTime(0.0001, t + 3.0);
     osc.connect(gain); gain.connect(window.SynthAudio.masterGain);
     osc.start(t); osc.stop(t + 3.0);
+  }
+
+  /* ══ DECORATIVE WALL PANELS & TRIMS ══════════════════════ */
+  addWallPanelsAndTrims(scene, sandMat, darkSand, brickMat, woodMat, techMat) {
+    const trimMat = new THREE.MeshStandardMaterial({ color: 0x3d2b1f, roughness: 0.85 });
+    const pipingMat = new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.4, metalness: 0.8 });
+    const glowRed = new THREE.MeshBasicMaterial({ color: 0xff3366 });
+    const glowCyan = new THREE.MeshBasicMaterial({ color: 0x00d2ff });
+
+    // Add horizontal trims on boundary walls to break height monotony
+    this.block(0, 2.5, -74.4, 158, 0.25, 0.4, trimMat, scene);
+    this.block(0, 4.5, -74.4, 158, 0.15, 0.4, trimMat, scene);
+    this.block(0, 2.5, 74.4, 158, 0.25, 0.4, trimMat, scene);
+    this.block(0, 4.5, 74.4, 158, 0.15, 0.4, trimMat, scene);
+    this.block(-74.4, 2.5, 0, 0.4, 0.25, 158, trimMat, scene);
+    this.block(-74.4, 4.5, 0, 0.4, 0.15, 158, trimMat, scene);
+    this.block(74.4, 2.5, 0, 0.4, 0.25, 158, trimMat, scene);
+    this.block(74.4, 4.5, 0, 0.4, 0.15, 158, trimMat, scene);
+
+    // Decorative columns along main corridors
+    for (let z = 5; z <= 55; z += 12) {
+      this.block(-38.3, 2.5, z, 0.7, 5, 0.7, darkSand, scene);
+      this.block(-38.3, 3.8, z, 0.2, 0.2, 12, pipingMat, scene);
+      this.block(-38.3, 3.8, z, 0.35, 0.35, 0.35, glowCyan, scene);
+    }
+    for (let z = 5; z <= 55; z += 12) {
+      this.block(38.3, 2.5, z, 0.7, 5, 0.7, darkSand, scene);
+      this.block(38.3, 3.8, z, 0.2, 0.2, 12, pipingMat, scene);
+      this.block(38.3, 3.8, z, 0.35, 0.35, 0.35, glowRed, scene);
+    }
+
+    // Mid Plaza Wall Pillars
+    this.block(-16.4, 2.5, 6, 0.8, 5, 0.8, darkSand, scene);
+    this.block(16.4, 2.5, 6, 0.8, 5, 0.8, darkSand, scene);
+    this.block(-16.4, 2.5, -6, 0.8, 5, 0.8, darkSand, scene);
+    this.block(16.4, 2.5, -6, 0.8, 5, 0.8, darkSand, scene);
+
+    // Arched support braces overhead crossing lanes (esports tactical feel)
+    const archB = this.block(-35, 5.0, 52, 8, 0.5, 1.8, sandMat, scene);
+    this.colliders.push(archB);
+    const archA = this.block(35, 5.0, 52, 8, 0.5, 1.8, sandMat, scene);
+    this.colliders.push(archA);
+  }
+
+  /* ══ MARKET STALLS & HANGING CABLES ══════════════════════ */
+  addMarketStallsAndCables(scene, woodMat, techMat, metalMat) {
+    const clothA = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.9, side: THREE.DoubleSide }); // Orange Canvas
+    const clothC = new THREE.MeshStandardMaterial({ color: 0x1d4ed8, roughness: 0.9, side: THREE.DoubleSide }); // Blue Canvas
+
+    // Mid Plaza Market Stall 1
+    this.createPillar(-12, 1.5, 2, 0.1, 3, woodMat, scene);
+    this.createPillar(-8, 1.5, 2, 0.1, 3, woodMat, scene);
+    this.createPillar(-12, 1.5, -2, 0.1, 3, woodMat, scene);
+    this.createPillar(-8, 1.5, -2, 0.1, 3, woodMat, scene);
+    const roof1 = new THREE.Mesh(new THREE.BoxGeometry(4.5, 0.08, 4.5), clothA);
+    roof1.position.set(-10, 3.0, 0);
+    roof1.rotation.z = 0.12;
+    scene.add(roof1);
+    this.colliders.push(roof1);
+    this.block(-10, 0.5, 0, 1.5, 0.8, 1.5, woodMat, scene);
+    this.block(-9.8, 1.1, 0, 0.8, 0.4, 0.8, new THREE.MeshStandardMaterial({ color: 0x059669 }), scene);
+
+    // Mid Plaza Market Stall 2
+    this.createPillar(12, 1.5, 2, 0.1, 3, woodMat, scene);
+    this.createPillar(8, 1.5, 2, 0.1, 3, woodMat, scene);
+    this.createPillar(12, 1.5, -2, 0.1, 3, woodMat, scene);
+    this.createPillar(8, 1.5, -2, 0.1, 3, woodMat, scene);
+    const roof2 = new THREE.Mesh(new THREE.BoxGeometry(4.5, 0.08, 4.5), clothC);
+    roof2.position.set(10, 3.0, 0);
+    roof2.rotation.z = -0.12;
+    scene.add(roof2);
+    this.colliders.push(roof2);
+    this.block(10, 0.5, 0, 1.5, 0.8, 1.5, woodMat, scene);
+
+    // Hanging cables running across streets
+    this.createCable(-39, 4.2, 35, -31, 4.8, 35, scene);
+    this.createCable(-39, 4.2, 20, -31, 4.8, 20, scene);
+    this.createCable(-17, 4.6, 5, 0, 5.2, -3, scene);
+    this.createCable(17, 4.6, 5, 0, 5.2, -3, scene);
+    this.createCable(-17, 4.6, -10, 0, 5.2, -27, scene);
+    this.createCable(17, 4.6, -10, 0, 5.2, -27, scene);
+
+    // Hanging lights
+    this.createHangingLight(-20, 3.2, 0, scene);
+    this.createHangingLight(20, 3.2, 0, scene);
+    this.createHangingLight(0, 3.5, 25, scene);
+  }
+
+  createCable(x1, y1, z1, x2, y2, z2, scene) {
+    const p1 = new THREE.Vector3(x1, y1, z1);
+    const p2 = new THREE.Vector3(x2, y2, z2);
+    const dist = p1.distanceTo(p2);
+    const geo = new THREE.CylinderGeometry(0.025, 0.025, dist, 6);
+    const mat = new THREE.MeshBasicMaterial({ color: 0x090d16 });
+    const cable = new THREE.Mesh(geo, mat);
+    cable.position.copy(p1).add(p2).multiplyScalar(0.5);
+    const direction = new THREE.Vector3().subVectors(p2, p1).normalize();
+    const up = new THREE.Vector3(0, 1, 0);
+    cable.quaternion.setFromUnitVectors(up, direction);
+    scene.add(cable);
+  }
+
+  createHangingLight(x, y, z, scene) {
+    const wire = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 1.2, 4), new THREE.MeshBasicMaterial({ color: 0x111827 }));
+    wire.position.set(x, y + 0.6, z); scene.add(wire);
+    const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 8), new THREE.MeshBasicMaterial({ color: 0xffddaa }));
+    bulb.position.set(x, y, z); scene.add(bulb);
+    const light = new THREE.PointLight(0xffaa44, 0.8, 10);
+    light.position.set(x, y - 0.2, z); scene.add(light);
+  }
+
+  /* ══ RESIDENTIAL WINDOWS, BALCONIES, ACS ══════════════════ */
+  addResidentialDetails(scene, woodMat, techMat) {
+    const windowGlass = new THREE.MeshBasicMaterial({ color: 0x1e3a8a, transparent: true, opacity: 0.6 });
+    const frameMat = new THREE.MeshStandardMaterial({ color: 0x27272a, roughness: 0.7 });
+    const metalMat = new THREE.MeshStandardMaterial({ color: 0x4b5563, roughness: 0.5, metalness: 0.8 });
+
+    const windowPositions = [
+      { x: -38.8, y: 3.5, z: 45, rotY: Math.PI/2 },
+      { x: -38.8, y: 3.5, z: 25, rotY: Math.PI/2 },
+      { x: -38.8, y: 3.5, z: 10, rotY: Math.PI/2 },
+      { x: 38.8, y: 3.5, z: 45, rotY: -Math.PI/2 },
+      { x: 38.8, y: 3.5, z: 25, rotY: -Math.PI/2 },
+      { x: 38.8, y: 3.5, z: 10, rotY: -Math.PI/2 },
+      { x: -16.8, y: 3.5, z: 8, rotY: Math.PI/2 },
+      { x: 16.8, y: 3.5, z: 8, rotY: -Math.PI/2 },
+    ];
+
+    windowPositions.forEach(p => {
+      const frame = this.block(p.x, p.y, p.z, 0.2, 1.6, 1.1, frameMat, scene);
+      frame.rotation.y = p.rotY;
+      const glass = this.block(p.x + (p.rotY > 0 ? 0.05 : -0.05), p.y, p.z, 0.1, 1.4, 0.9, windowGlass, scene);
+      glass.rotation.y = p.rotY;
+      const shutterL = this.block(p.x + (p.rotY > 0 ? 0.08 : -0.08), p.y, p.z - 0.65, 0.1, 1.4, 0.45, woodMat, scene);
+      shutterL.rotation.y = p.rotY;
+      const shutterR = this.block(p.x + (p.rotY > 0 ? 0.08 : -0.08), p.y, p.z + 0.65, 0.1, 1.4, 0.45, woodMat, scene);
+      shutterR.rotation.y = p.rotY;
+    });
+
+    const acPositions = [
+      { x: -38.7, y: 2.2, z: 32, rotY: Math.PI/2 },
+      { x: 38.7, y: 2.2, z: 32, rotY: -Math.PI/2 },
+      { x: -16.7, y: 2.8, z: 2, rotY: Math.PI/2 },
+      { x: 16.7, y: 2.8, z: 2, rotY: -Math.PI/2 },
+      { x: -5, y: 3.8, z: -27.2, rotY: 0 },
+      { x: 5, y: 3.8, z: -27.2, rotY: 0 }
+    ];
+
+    acPositions.forEach(p => {
+      const box = this.block(p.x, p.y, p.z, 1.2, 0.8, 0.6, metalMat, scene);
+      box.rotation.y = p.rotY;
+      const grill = this.block(p.x + (p.rotY === 0 ? 0 : (p.rotY > 0 ? 0.32 : -0.32)), p.y, p.z + (p.rotY === 0 ? -0.32 : 0), 0.1, 0.6, 0.6, frameMat, scene);
+      grill.rotation.y = p.rotY;
+    });
+
+    const sign1 = this.block(-30.8, 3.2, -12, 0.2, 0.8, 1.2, woodMat, scene);
+    sign1.rotation.y = Math.PI/2;
+    const sign2 = this.block(30.8, 3.2, -12, 0.2, 0.8, 1.2, woodMat, scene);
+    sign2.rotation.y = Math.PI/2;
+  }
+
+  /* ══ CORNER SCATTER PROPS ════════════════════════════════ */
+  addCornerScatterProps(scene, woodMat, concMat, metalMat, techMat) {
+    const greenContainerMat = new THREE.MeshStandardMaterial({ color: 0x14532d, roughness: 0.6, metalness: 0.7 });
+    const blueContainerMat = new THREE.MeshStandardMaterial({ color: 0x1e3a8a, roughness: 0.6, metalness: 0.7 });
+    const barrelMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.8 });
+    const ironMat = new THREE.MeshStandardMaterial({ color: 0x4b5563, roughness: 0.7, metalness: 0.6 });
+
+    // Attacker Spawn corner containers
+    const cont1 = this.W(-10, 71, 2.5, 2.5, 4.5, greenContainerMat, scene);
+    cont1.rotation.y = 0.15;
+    const cont2 = this.W(10, 71, 2.5, 2.5, 4.5, blueContainerMat, scene);
+    cont2.rotation.y = -0.15;
+
+    // Mid Plaza corner cover stacks
+    const midC1 = this.W(-14, -13, 2.2, 2.2, 2.2, techMat, scene);
+    this.block(-14, 1.7, -13, 1.8, 1.8, 1.8, woodMat, scene);
+    this.W(-14, 8, 2.0, 2.0, 2.0, concMat, scene);
+    this.block(-14, 1.5, 8, 1.6, 1.0, 1.6, woodMat, scene);
+
+    // Defender Spawn corners
+    this.W(-11, -66, 2.4, 2.4, 2.4, metalMat, scene);
+    this.W(11, -66, 2.4, 2.4, 2.4, metalMat, scene);
+
+    // Wooden barrels scatter
+    const barrelCoords = [
+      { x: -37, z: 49 }, { x: -37.5, z: 47.8 },
+      { x: 37, z: 49 }, { x: 36.5, z: 47.8 },
+      { x: -32, z: 6 },
+      { x: 32, z: 6 },
+      { x: -14, z: -15.5 }, { x: -15, z: -16.2 },
+      { x: 14, z: -15.5 }, { x: 15, z: -16.2 }
+    ];
+
+    barrelCoords.forEach(c => {
+      const b = this.createPillar(c.x, 0.7, c.z, 0.45, 1.4, barrelMat, scene);
+      this.colliders.push(b);
+      const ring = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.46, 0.1, 8), ironMat);
+      ring.position.set(c.x, 0.9, c.z);
+      scene.add(ring);
+    });
+
+    // Rubble piles
+    const rubbleCoords = [
+      { x: -37.8, z: 54 }, { x: 37.8, z: 54 },
+      { x: -37.8, z: 12 }, { x: 37.8, z: 12 },
+      { x: -56, z: -25 }, { x: 56, z: -25 }
+    ];
+
+    rubbleCoords.forEach(c => {
+      this.block(c.x, 0.3, c.z, 0.8, 0.4, 0.8, concMat, scene);
+      const b2 = this.block(c.x + 0.3, 0.25, c.z - 0.2, 0.6, 0.3, 0.6, concMat, scene); b2.rotation.y = 0.5;
+      const b3 = this.block(c.x - 0.2, 0.5, c.z + 0.1, 0.5, 0.4, 0.5, concMat, scene); b3.rotation.y = -0.3;
+    });
+
+    // Conduits/Pipes on floor
+    this.block(-25, 0.05, -7.4, 12, 0.3, 0.3, ironMat, scene);
+    this.block(25, 0.05, -7.4, 12, 0.3, 0.3, ironMat, scene);
+
+    // Hanging laundry/banners
+    this.createLaundryLine(-38.8, 3.8, 16, -31.2, 3.8, 16, scene);
+    this.createLaundryLine(38.8, 3.8, 16, 31.2, 3.8, 16, scene);
+  }
+
+  createLaundryLine(x1, y1, z1, x2, y2, z2, scene) {
+    this.createCable(x1, y1, z1, x2, y2, z2, scene);
+    const clothColors = [0xef4444, 0xf59e0b, 0x3b82f6];
+    const steps = 3;
+    for (let i = 1; i <= steps; i++) {
+      const t = i / (steps + 1);
+      const cx = x1 + (x2 - x1) * t;
+      const cy = y1 + (y2 - y1) * t - 0.4;
+      const cz = z1 + (z2 - z1) * t;
+      const clothMat = new THREE.MeshStandardMaterial({ color: clothColors[i - 1], roughness: 0.9, side: THREE.DoubleSide });
+      const cloth = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 1.2), clothMat);
+      cloth.position.set(cx, cy, cz);
+      const lineDir = new THREE.Vector3(x2 - x1, y2 - y1, z2 - z1).normalize();
+      cloth.rotation.y = Math.atan2(lineDir.x, lineDir.z);
+      scene.add(cloth);
+    }
   }
 
   getPlantZone(pos) {
