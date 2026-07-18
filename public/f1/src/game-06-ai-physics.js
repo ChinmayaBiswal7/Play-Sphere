@@ -428,6 +428,7 @@
     racers.forEach((racer) => {
 
       if (racer.isPlayer) return;
+      if (window.matchMode === 'PVP' && racers.indexOf(racer) === 1) return;
 
       racer.blueFlagActive = false;
       let avoidanceOffset = 0.0;

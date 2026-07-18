@@ -2527,6 +2527,18 @@
   }
   window.updateCarTyreColor = updateCarTyreColor;
 
+  // Expose key IIFE variables globally for the PvP sync module
+  window.f1GetPlayerKart = () => playerKart;
+  window.f1GetRacers = () => racers;
+  window.f1GetGameState = () => gameState;
+  window.f1SetGameState = (val) => { gameState = val; };
+  window.f1GetActiveTrack = () => activeTrack;
+  window.f1SetActiveTrack = (val) => { activeTrack = val; };
+  window.f1GetSelectedTeamIndex = () => selectedTeamIndex;
+  window.f1SetSelectedTeamIndex = (val) => { selectedTeamIndex = val; };
+  window.f1GetKeys = () => keys;
+  window.f1SetPlayerKart = (val) => { playerKart = val; };
+
 
 
 

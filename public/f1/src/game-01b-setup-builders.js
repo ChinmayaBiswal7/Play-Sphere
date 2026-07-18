@@ -1273,4 +1273,5 @@
     scene.add(mesh);
     window.playerPitBoxVisualMesh = mesh;
   }
+  window.f1SetupGame = setupGame;
 

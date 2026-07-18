@@ -398,10 +398,20 @@ io.on('connection', (socket) => {
     if (upperCode && !upperCode.startsWith('FPS-') && upperCode.length === 4) {
       upperCode = 'FPS-' + upperCode;
     }
-    console.log(`[FPS-PVP] Join attempt: roomCode="${roomCode}", upperCode="${upperCode}", existingRooms=`, Object.keys(fpsRooms));
-    const room = fpsRooms[upperCode];
+    console.log(`[FPS-PVP] Join attempt: roomCode="${roomCode}", upperCode="${upperCode}"`);
+    let room = fpsRooms[upperCode];
     if (!room) {
-      socket.emit('fps-pvp-error', `Lobby not found. Verify the room code. (Entered: "${roomCode}")`);
+      // Auto-create room if it doesn't exist yet
+      fpsRooms[upperCode] = {
+        players: [
+          { socketId: socket.id, agentId, username, status: 'LOBBY' }
+        ]
+      };
+      socket.join(upperCode);
+      socket.roomCode = upperCode;
+      socket.isFPS = true;
+      socket.emit('fps-pvp-room-created', { roomCode: upperCode, players: fpsRooms[upperCode].players });
+      console.log(`FPS PVP Room auto-created on join: ${upperCode} by ${socket.id}`);
       return;
     }
     if (room.players.length >= 2) {
