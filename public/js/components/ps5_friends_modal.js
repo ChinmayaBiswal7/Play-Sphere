@@ -154,27 +154,36 @@ class PlaySphereFriendsManager {
   renderFriendsWithPresence(presenceMap) {
     if (!this.activeFriendProfiles || this.activeFriendProfiles.length === 0) return;
 
+    // Store presence map so in-game ps_multiplayer.js panels can read it
+    this._lastPresenceMap = presenceMap;
+
     if (this.listContainer) {
       this.listContainer.innerHTML = this.activeFriendProfiles.map(p => {
         const presence = presenceMap[p.uid] || { online: false, activity: 'Offline', roomCode: null };
         const avatarChar = (p.username || 'G')[0].toUpperCase();
+        const safeUsername = (p.username || 'Player').replace(/'/g, '');
         return `
-          <div class="friend-row" style="display:flex; align-items:center; justify-content:space-between; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.04); border-radius:8px; padding:10px 12px; box-sizing:border-box;">
-            <div style="display:flex; align-items:center; gap:10px;">
-              <div style="position:relative; width:34px; height:34px; border-radius:50%; background:#2563eb; display:flex; align-items:center; justify-content:center; font-weight:700; color:#fff; font-size:0.95rem; font-family:inherit;">
+          <div class="friend-row" style="display:flex; align-items:center; justify-content:space-between; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.04); border-radius:8px; padding:10px 12px; box-sizing:border-box; gap:8px;">
+            <div style="display:flex; align-items:center; gap:10px; flex:1; min-width:0;">
+              <div style="position:relative; width:34px; height:34px; border-radius:50%; background:#2563eb; display:flex; align-items:center; justify-content:center; font-weight:700; color:#fff; font-size:0.95rem; font-family:inherit; flex-shrink:0;">
                 ${avatarChar}
                 <span style="position:absolute; bottom:-1px; right:-1px; width:10px; height:10px; border-radius:50%; border:2px solid #1e293b; background:${presence.online ? '#10b981' : '#6b7280'}; box-shadow:${presence.online ? '0 0 6px #10b981' : 'none'};"></span>
               </div>
-              <div style="display:flex; flex-direction:column; gap:2px; text-align:left;">
-                <span style="font-weight:700; color:#fff; font-size:0.85rem;">${p.username}</span>
+              <div style="display:flex; flex-direction:column; gap:2px; text-align:left; overflow:hidden;">
+                <span style="font-weight:700; color:#fff; font-size:0.85rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${p.username}</span>
                 <span style="font-size:0.7rem; color:${presence.online ? '#34d399' : '#94a3b8'}; font-weight:600;">
                   ${presence.online ? (presence.activity || 'Online') : 'Offline'}
                 </span>
               </div>
             </div>
-            ${presence.online && presence.roomCode ? `
-              <button onclick="window.friendsManager.joinGame('${presence.roomCode}')" style="background:#10b981; border:none; border-radius:4px; color:#fff; font-size:0.7rem; font-weight:700; padding:4px 10px; cursor:pointer; font-family:inherit; transition: background 0.2s;">JOIN GAME</button>
-            ` : ''}
+            <div style="display:flex; flex-direction:column; gap:5px; flex-shrink:0;">
+              ${presence.online && presence.roomCode ? `
+                <button onclick="window.friendsManager.joinGame('${presence.roomCode}')" style="background:#10b981; border:none; border-radius:4px; color:#fff; font-size:0.65rem; font-weight:700; padding:3px 8px; cursor:pointer; font-family:inherit; transition: background 0.2s;">JOIN GAME</button>
+              ` : ''}
+              ${presence.online ? `
+                <button onclick="window.friendsManager.sendChallenge('${p.uid}','${safeUsername}')" style="background:linear-gradient(135deg,#0ea5e9,#2563eb); border:none; border-radius:4px; color:#fff; font-size:0.65rem; font-weight:700; padding:3px 8px; cursor:pointer; font-family:inherit; white-space:nowrap;">⚔️ CHALLENGE</button>
+              ` : ''}
+            </div>
           </div>
         `;
       }).join('');
@@ -293,6 +302,39 @@ class PlaySphereFriendsManager {
     window.open(url, '_blank');
     
     console.log(`Launching controller layout to join room: ${roomCode}`);
+  }
+
+  sendChallenge(toUid, toUsername) {
+    if (!window.socket) { alert('Not connected to server.'); return; }
+    if (!window.currentUser) { alert('Please sign in first.'); return; }
+
+    const GAMES = [
+      { id: 'cricket',  label: '🏏 Cricket' },
+      { id: 'fps',      label: '🔫 Delhi Defiance (FPS)' },
+      { id: 'football', label: '⚽ Football' },
+      { id: 'f1',       label: '🏎️ F1 Racing' },
+      { id: 'tennis',   label: '🎾 Tennis' },
+      { id: 'wwe',      label: '🥊 WWE' },
+    ];
+
+    // Simple game picker
+    const gameOptions = GAMES.map((g, i) => `${i + 1}. ${g.label}`).join('\n');
+    const choice = prompt(
+      `Challenge ${toUsername} to:\n\n${gameOptions}\n\nEnter the number of the game:`
+    );
+    if (!choice) return;
+    const idx = parseInt(choice, 10) - 1;
+    if (isNaN(idx) || idx < 0 || idx >= GAMES.length) {
+      alert('Invalid selection.');
+      return;
+    }
+
+    const game = GAMES[idx].id;
+    const fromUsername = (window.profile && window.profile.username) || 'Player';
+
+    window.socket.emit('ps-challenge-send', { toUid, game, fromUsername });
+    this.closeFriendsModal();
+    console.log(`[Challenge] Sent ${game} challenge to ${toUsername}`);
   }
 }
 

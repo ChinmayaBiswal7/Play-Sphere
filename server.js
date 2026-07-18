@@ -9,6 +9,7 @@ import { fileURLToPath } from 'url';
 import fs from 'fs';
 import { roomManager, ROOM_STATES } from './server/roomManager.js';
 import { matchManager } from './server/matchManager.js';
+import { registerSocket as registerPvP } from './server/pvpManager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -122,6 +123,9 @@ function generateRoomCode() {
 
 io.on('connection', (socket) => {
   console.log(`Socket connected: ${socket.id}`);
+
+  // ── Universal PvP: Challenges + Matchmaking (all games) ──
+  registerPvP(socket, io, onlineUsers);
 
   // Presence & Friends Hub listeners
   socket.on('presence-update', ({ uid, username, activity, roomCode }) => {
