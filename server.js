@@ -390,7 +390,10 @@ io.on('connection', (socket) => {
   });
 
   socket.on('fps-pvp-join-room', ({ roomCode, agentId, username }) => {
-    const upperCode = roomCode ? roomCode.toUpperCase().trim() : '';
+    let upperCode = roomCode ? roomCode.toUpperCase().trim() : '';
+    if (upperCode && !upperCode.startsWith('FPS-') && upperCode.length === 4) {
+      upperCode = 'FPS-' + upperCode;
+    }
     const room = fpsRooms[upperCode];
     if (!room) {
       socket.emit('fps-pvp-error', 'Lobby not found. Verify the room code.');
