@@ -76,10 +76,9 @@ class RajdhaniMapBuilder {
     this.W(   0, 74, 28, this.WH, 1, colorAtk, scene); // S wall
     this.W( -14, 67,  1, this.WH,14, colorAtk, scene); // W wall
     this.W(  14, 67,  1, this.WH,14, colorAtk, scene); // E wall
-    // N wall with three exit gaps (left ~x=-9, mid ~x=0, right ~x=9)
-    this.W(-11, 60,  4, this.WH, 1, colorAtk, scene); // W segment
-    this.W( 11, 60,  4, this.WH, 1, colorAtk, scene); // E segment
-    // (middle ~8m gap for mid tunnel, so no center segment)
+    // N wall with exit gaps connected to tunnel and side corridors
+    this.W(-9.25, 60, 9.5, this.WH, 1, colorAtk, scene); // Left segment
+    this.W( 9.25, 60, 9.5, this.WH, 1, colorAtk, scene); // Right segment
 
     // ATK Spawn props
     this.block( 0, 1.5, 71,  8, 2.2, 0.3, new THREE.MeshBasicMaterial({ color: 0x00d2ff, transparent: true, opacity: 0.8 }), scene); // billboard
@@ -88,15 +87,14 @@ class RajdhaniMapBuilder {
     this.block( 0, 0.6, 66,  8, 0.3, 4, new THREE.MeshStandardMaterial({ color: 0x22ff22, roughness: 1 }), scene); // buy zone
 
     /* ─── 3. ATK → B MAIN (left branch connection) ──────────── */
-    // Hallway going west from ATK spawn left side: X: -14 to -30, Z: 57-63
-    this.W(-22, 57, 16, this.WH, 1, colorMain, scene); // top
-    this.W(-22, 63, 16, this.WH, 1, colorMain, scene); // bottom
-    this.W(-30, 60,  1, this.WH, 6, colorMain, scene); // end cap (connects to B Main right wall)
+    // Hallway going west from ATK spawn left side: X: -14 to -39, Z: 57-63
+    this.W(-22.5, 57, 17, this.WH, 1, colorMain, scene); // top
+    this.W(-26.5, 63, 25, this.WH, 1, colorMain, scene); // bottom (meets B Main outer wall)
 
     /* ─── 4. B MAIN CORRIDOR ─────────────────────────────────── */
-    // NS corridor, center X=-35, width 8m, Z: -2 to 57
-    // Left outer wall
-    this.W(-39, 27.5, 1, this.WH, 59, colorSiteB, scene);
+    // NS corridor, center X=-35, width 8m, Z: -2 to 63
+    // Left outer wall extended to meet connection bottom wall
+    this.W(-39, 30.5, 1, this.WH, 65, colorSiteB, scene);
     // Right wall (inner, has gap where B Link connects at Z: -7 to -17)
     // Top segment (Z:-2 to -5): right inner wall north of B Link
     this.W(-31, -3.5, 1, this.WH, 5, colorMain, scene);
@@ -121,13 +119,12 @@ class RajdhaniMapBuilder {
     scene.add(this.makeColliderAt(-33, 1.2, 28, 2.4, 2.2, 7, scene));
 
     /* ─── 5. ATK → A MAIN (right branch connection) ─────────── */
-    this.W( 22, 57, 16, this.WH, 1, colorMain, scene);
-    this.W( 22, 63, 16, this.WH, 1, colorMain, scene);
-    this.W( 30, 60,  1, this.WH, 6, colorMain, scene);
+    this.W( 22.5, 57, 17, this.WH, 1, colorMain, scene); // top
+    this.W( 26.5, 63, 25, this.WH, 1, colorMain, scene); // bottom
 
     /* ─── 6. A MAIN CORRIDOR ─────────────────────────────────── */
-    // NS corridor, center X=35, width 8m, Z: -2 to 57
-    this.W( 39, 27.5, 1, this.WH, 59, colorSiteA, scene); // Right outer
+    // NS corridor, center X=35, width 8m, Z: -2 to 63
+    this.W( 39, 30.5, 1, this.WH, 65, colorSiteA, scene); // Right outer
     this.W( 31, -3.5, 1, this.WH,  5, colorMain, scene);  // Left inner north of A Link
     this.W( 31, 31,   1, this.WH, 52, colorMain, scene);  // Left inner south
 
@@ -150,14 +147,19 @@ class RajdhaniMapBuilder {
     this.block(33, 1.0, 18, 3, 2.0, 0.4, woodMat.clone(), scene);
 
     /* ─── 7. MID TUNNEL (underground) ───────────────────────── */
-    // NS corridor, X: -4 to 4, Z: 14 to 57 (mouth to mid)
-    this.W(-4.5, 35.5, 1, 3.5, 43, colorDef, scene); // Left wall
-    this.W( 4.5, 35.5, 1, 3.5, 43, colorDef, scene); // Right wall
+    // NS corridor, X: -4 to 4, Z: 14 to 60 (mouth to mid)
+    this.W(-4.5, 37, 1, 3.5, 46, colorDef, scene); // Left wall
+    this.W( 4.5, 37, 1, 3.5, 46, colorDef, scene); // Right wall
     // Tunnel ceiling
-    const tunCeil = new THREE.Mesh(new THREE.BoxGeometry(10, 0.3, 43), colorDef);
-    tunCeil.position.set(0, 2.85, 35.5); scene.add(tunCeil);
+    const tunCeil = new THREE.Mesh(new THREE.BoxGeometry(10, 0.3, 46), colorDef);
+    tunCeil.position.set(0, 2.85, 37); scene.add(tunCeil);
     // Neon guide strip
-    this.neonLine(0, 2.7, 35.5,  9.5, 0.06, 43, new THREE.MeshBasicMaterial({ color: 0x00d2ff }), scene);
+    this.neonLine(0, 2.7, 37,  9.5, 0.06, 46, new THREE.MeshBasicMaterial({ color: 0x00d2ff }), scene);
+    
+    // Vertical seals to close gap between Mid Plaza south wall (Z:11) and Tunnel west/east walls (Z:14)
+    this.W(-4.5, 12.5, 1, this.WH, 3, colorMid, scene);
+    this.W( 4.5, 12.5, 1, this.WH, 3, colorMid, scene);
+
     // Tunnel cover and break wall
     this.addCover(-2, 48, this.CH, concMat, scene);
     this.addCover( 2, 24, this.CH, concMat, scene);
@@ -358,9 +360,11 @@ class RajdhaniMapBuilder {
     // Left corridor: X:-14 to -26, Z:-60 to -45
     this.W(-14, -52, 1, this.WH, 15, colorDef, scene);
     this.W(-26, -52, 1, this.WH, 15, colorDef, scene);
+    this.W(-20, -60, 12, this.WH, 1, colorDef, scene); // Left corridor seal wall
     // Right corridor
     this.W( 14, -52, 1, this.WH, 15, colorDef, scene);
     this.W( 26, -52, 1, this.WH, 15, colorDef, scene);
+    this.W( 20, -60, 12, this.WH, 1, colorDef, scene); // Right corridor seal wall
 
     /* ─── 19. MID TOWER SIDE WINGS → HEAVEN ACCESS ──────────── */
     // Left wing: X:-8 to -20, Z:-36 to -50
