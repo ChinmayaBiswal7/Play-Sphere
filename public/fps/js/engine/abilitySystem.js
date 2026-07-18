@@ -118,7 +118,11 @@ class AbilityManager {
     }
   }
 
-  triggerAgniAbility(key) {
+  triggerAgniAbility(key, isRemoteSync = false) {
+    if (!isRemoteSync && window.FPSGameLoop?.multiplayer?.isMultiplayer) {
+      window.FPSGameLoop.multiplayer.emitAbility(key, this.player.position, this.player.yaw);
+    }
+
     if (key === 'q') {
       // 1. MOLTEN WALL (Vision Block + Damage)
       if (window.SynthAudio) window.SynthAudio.playAbilityFlame();
@@ -134,12 +138,16 @@ class AbilityManager {
       });
       const wallMesh = new THREE.Mesh(wallGeo, wallMat);
 
-      // Position in front of camera
-      const dir = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.player.yaw);
-      const pos = this.player.position.clone().add(dir.multiplyScalar(4));
+      // Position in front of caster
+      const hasOpponent = isRemoteSync && window.FPSGameLoop?.multiplayer?.opponentMesh;
+      const baseYaw = hasOpponent ? window.FPSGameLoop.multiplayer.targetYaw : this.player.yaw;
+      const basePos = hasOpponent ? window.FPSGameLoop.multiplayer.opponentMesh.position.clone() : this.player.position.clone();
+
+      const dir = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), baseYaw);
+      const pos = basePos.add(dir.multiplyScalar(4));
       pos.y = 1.5; // sit near floor level
       wallMesh.position.copy(pos);
-      wallMesh.rotation.y = this.player.yaw;
+      wallMesh.rotation.y = baseYaw;
 
       this.scene.add(wallMesh);
       
@@ -350,7 +358,11 @@ class AbilityManager {
     });
   }
 
-  triggerVayuAbility(key) {
+  triggerVayuAbility(key, isRemoteSync = false) {
+    if (!isRemoteSync && window.FPSGameLoop?.multiplayer?.isMultiplayer) {
+      window.FPSGameLoop.multiplayer.emitAbility(key, this.player.position, this.player.yaw);
+    }
+
     if (key === 'q') {
       // 1. AIR PULSE (Intel Scanner)
       if (window.SynthAudio) window.SynthAudio.playAbilityPulse();
@@ -359,7 +371,9 @@ class AbilityManager {
         new THREE.RingGeometry(0.1, 1.0, 32),
         new THREE.MeshBasicMaterial({ color: 0x00d2ff, side: THREE.DoubleSide, transparent: true, opacity: 0.35 })
       );
-      pulseRing.position.copy(this.player.position).y = -0.4;
+      const hasOpponent = isRemoteSync && window.FPSGameLoop?.multiplayer?.opponentMesh;
+      const basePos = hasOpponent ? window.FPSGameLoop.multiplayer.opponentMesh.position : this.player.position;
+      pulseRing.position.copy(basePos).y = -0.4;
       pulseRing.rotation.x = Math.PI / 2;
       this.scene.add(pulseRing);
 
@@ -402,9 +416,13 @@ class AbilityManager {
       const blastMat = new THREE.MeshBasicMaterial({ color: 0x00d2ff, transparent: true, opacity: 0.15 });
       const blast = new THREE.Mesh(blastGeo, blastMat);
       
-      const dir = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.player.yaw).normalize();
-      blast.position.copy(this.player.position).add(dir.clone().multiplyScalar(6));
-      blast.rotation.y = this.player.yaw;
+      const hasOpponent = isRemoteSync && window.FPSGameLoop?.multiplayer?.opponentMesh;
+      const baseYaw = hasOpponent ? window.FPSGameLoop.multiplayer.targetYaw : this.player.yaw;
+      const basePos = hasOpponent ? window.FPSGameLoop.multiplayer.opponentMesh.position.clone() : this.player.position.clone();
+
+      const dir = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), baseYaw).normalize();
+      blast.position.copy(basePos).add(dir.clone().multiplyScalar(6));
+      blast.rotation.y = baseYaw;
       blast.rotation.x = Math.PI / 2;
       this.scene.add(blast);
 
@@ -436,9 +454,13 @@ class AbilityManager {
       // 3. CYCLONE FIELD (Tornado slow/damage zone)
       if (window.SynthAudio) window.SynthAudio.playAbilityCyclone();
 
+      const hasOpponent = isRemoteSync && window.FPSGameLoop?.multiplayer?.opponentMesh;
+      const baseYaw = hasOpponent ? window.FPSGameLoop.multiplayer.targetYaw : this.player.yaw;
+      const basePos = hasOpponent ? window.FPSGameLoop.multiplayer.opponentMesh.position.clone() : this.player.position.clone();
+
       // Spawn target cyclone on floor in front of player
-      const dir = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.player.yaw).normalize();
-      const pos = this.player.position.clone().add(dir.multiplyScalar(12));
+      const dir = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), baseYaw).normalize();
+      const pos = basePos.add(dir.multiplyScalar(12));
       pos.y = 0.5;
 
       const cyGeo = new THREE.CylinderGeometry(4.0, 4.0, 5.0, 16, 1, true);
@@ -478,8 +500,12 @@ class AbilityManager {
       const vorMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.28 });
       const vortex = new THREE.Mesh(vorGeo, vorMat);
       
-      const dir = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.player.yaw).normalize();
-      vortex.position.copy(this.player.position).add(dir.clone().multiplyScalar(4));
+      const hasOpponent = isRemoteSync && window.FPSGameLoop?.multiplayer?.opponentMesh;
+      const baseYaw = hasOpponent ? window.FPSGameLoop.multiplayer.targetYaw : this.player.yaw;
+      const basePos = hasOpponent ? window.FPSGameLoop.multiplayer.opponentMesh.position.clone() : this.player.position.clone();
+
+      const dir = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), baseYaw).normalize();
+      vortex.position.copy(basePos).add(dir.clone().multiplyScalar(4));
       vortex.position.y = 2.0;
       this.scene.add(vortex);
 

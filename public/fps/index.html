@@ -75,8 +75,20 @@
       </div>
       <button class="play-match-btn" id="btn-lobby-play">
         <span class="play-btn-icon">▶</span>
-        <span>PLAY MATCH</span>
+        <span>PLAY SOLO (BOTS)</span>
       </button>
+
+      <div class="multiplayer-lobby-panel" style="margin-top: 25px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
+        <h3 style="color:#00d2ff; font-size:14px; margin-bottom:12px; letter-spacing:1px;">ONLINE MULTIPLAYER</h3>
+        <div style="display:flex; gap:10px; margin-bottom:10px;">
+          <button class="fps-btn" id="btn-mp-host" style="flex:1; padding:10px; font-size:12px;">HOST ROOM</button>
+          <button class="fps-btn secondary-fps-btn" id="btn-mp-join" style="flex:1; padding:10px; font-size:12px;">JOIN ROOM</button>
+        </div>
+        <div id="mp-join-input-container" style="display:none; gap:10px;">
+          <input type="text" id="mp-room-code-input" placeholder="ROOM CODE" style="flex:2; padding:10px; background:rgba(0,0,0,0.6); border:1px solid #00d2ff; color:#fff; font-family:'Outfit',sans-serif; text-transform:uppercase; text-align:center; font-size:14px;" />
+          <button class="fps-btn" id="btn-mp-submit-join" style="flex:1; padding:10px; font-size:12px; background:#00d2ff; border-color:#00d2ff; color:#000;">GO</button>
+        </div>
+      </div>
     </div>
     <div class="lobby-center-spacer"></div>
     <div class="lobby-right-panel">
@@ -493,6 +505,35 @@
   </div>
 </div>
 
+<!-- MULTIPLAYER LOBBY OVERLAY -->
+<div id="multiplayer-lobby-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.95); z-index:9999; align-items:center; justify-content:center; font-family:'Outfit',sans-serif; color:#fff;">
+  <div style="background:rgba(30,41,59,0.9); border:2px solid #00d2ff; border-radius:8px; padding:40px; width:450px; text-align:center; box-shadow:0 0 30px rgba(0,210,255,0.25);">
+    <h2 style="color:#00d2ff; margin-bottom:10px; letter-spacing:2px; font-size: 24px;">TACTICAL LOBBY</h2>
+    <p style="color:#94a3b8; font-size:14px; margin-bottom:20px;">Share the code with your friend to play online PVP 1v1</p>
+    
+    <div style="background:rgba(15,23,42,0.8); border:1px dashed #00d2ff; border-radius:4px; padding:15px; margin-bottom:30px;">
+      <span style="font-size:12px; color:#64748b; display:block;">ROOM CODE</span>
+      <span id="lobby-code-display" style="font-size:32px; font-weight:700; color:#fff; letter-spacing:4px;">----</span>
+    </div>
+
+    <div style="text-align:left; margin-bottom:30px;">
+      <h4 style="color:#00d2ff; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:5px; margin-bottom:10px; font-size: 14px;">LOBBY PLAYERS</h4>
+      <div id="lobby-players-list" style="display:flex; flex-direction:column; gap:10px;">
+        <!-- Filled dynamically -->
+      </div>
+    </div>
+
+    <button id="lobby-start-button" class="fps-btn" style="width:100%; display:none; background:#10b981; border-color:#10b981; color:#fff; padding:12px; font-size:14px;">START MATCH</button>
+    <button id="lobby-leave-button" class="fps-btn secondary-fps-btn" style="width:100%; margin-top:10px; padding:12px; font-size:14px;">LEAVE LOBBY</button>
+  </div>
+</div>
+
+<!-- RESPAWN OVERLAY -->
+<div id="respawn-countdown-container" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9998; flex-direction:column; align-items:center; justify-content:center; color:#fff; font-family:'Outfit',sans-serif;">
+  <h1 style="color:#ef4444; font-size:48px; margin-bottom:10px; font-weight: 700;">ELIMINATED</h1>
+  <p style="font-size:18px; color:#94a3b8;">Respawning in 4 seconds...</p>
+</div>
+
 <!-- Scripts -->
 <script src="js/state.js"></script>
 <script src="js/audio/synthAudio.js"></script>
@@ -507,6 +548,7 @@
 <script src="js/engine/spikeSystem.js"></script>
 <script src="js/engine/abilitySystem.js"></script>
 <script src="js/engine/minimap.js"></script>
+<script src="js/engine/multiplayerSystem.js"></script>
 <script src="js/engine/gameLoop.js"></script>
 </body>
 </html>

@@ -57,6 +57,7 @@ class LobbyUIManager {
   }
 
   updateAgentsTabDetails(agentId) {
+    window.FPSState.selectedAgentId = agentId;
     const nameEl = document.getElementById('agents-info-name');
     const roleEl = document.getElementById('agents-info-role');
     const bioEl  = document.getElementById('agents-info-bio');
@@ -152,6 +153,69 @@ class LobbyUIManager {
       btnAI.classList.add('active');
       window.FPSState.gameMode = 'AI';
     });
+
+    // ── MULTIPLAYER ACTIONS ──
+    const btnHost = document.getElementById('btn-mp-host');
+    const btnJoin = document.getElementById('btn-mp-join');
+    const btnSubmitJoin = document.getElementById('btn-mp-submit-join');
+    const inputContainer = document.getElementById('mp-join-input-container');
+    const roomCodeInput = document.getElementById('mp-room-code-input');
+    const btnLeaveLobby = document.getElementById('lobby-leave-button');
+    const btnStartMatch = document.getElementById('lobby-start-button');
+
+    if (btnHost) {
+      btnHost.addEventListener('click', () => {
+        if (window.SynthAudio) window.SynthAudio.playClick();
+        const agent = window.FPSState.selectedAgentId || 'agni';
+        const name = window.FPSState.currentUser.username || 'Gamer';
+        if (window.FPSGameLoop && window.FPSGameLoop.multiplayer) {
+          window.FPSGameLoop.multiplayer.createRoom(agent, name);
+          document.getElementById('multiplayer-lobby-overlay').style.display = 'flex';
+        }
+      });
+    }
+
+    if (btnJoin) {
+      btnJoin.addEventListener('click', () => {
+        if (window.SynthAudio) window.SynthAudio.playClick();
+        if (inputContainer) {
+          inputContainer.style.display = inputContainer.style.display === 'none' ? 'flex' : 'none';
+        }
+      });
+    }
+
+    if (btnSubmitJoin) {
+      btnSubmitJoin.addEventListener('click', () => {
+        if (window.SynthAudio) window.SynthAudio.playClick();
+        const code = roomCodeInput ? roomCodeInput.value.trim() : '';
+        if (!code) {
+          alert('Please enter a room code.');
+          return;
+        }
+        const agent = window.FPSState.selectedAgentId || 'agni';
+        const name = window.FPSState.currentUser.username || 'Gamer';
+        if (window.FPSGameLoop && window.FPSGameLoop.multiplayer) {
+          window.FPSGameLoop.multiplayer.joinRoom(code, agent, name);
+          document.getElementById('multiplayer-lobby-overlay').style.display = 'flex';
+        }
+      });
+    }
+
+    if (btnLeaveLobby) {
+      btnLeaveLobby.addEventListener('click', () => {
+        if (window.SynthAudio) window.SynthAudio.playClick();
+        location.reload();
+      });
+    }
+
+    if (btnStartMatch) {
+      btnStartMatch.addEventListener('click', () => {
+        if (window.SynthAudio) window.SynthAudio.playClick();
+        if (window.FPSGameLoop && window.FPSGameLoop.multiplayer) {
+          window.FPSGameLoop.multiplayer.startMatch();
+        }
+      });
+    }
   }
 
   /* ── PROFILE SYNC ────────────────────────────── */

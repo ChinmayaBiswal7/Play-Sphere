@@ -106,6 +106,7 @@ const localIp = getLocalIp();
 // { [roomCode]: { pcSocketId, phoneSockets: [], layoutState, disconnectTimeout } }
 const rooms = {};
 const onlineUsers = {}; // uid -> { socketId, username, activity, roomCode }
+const fpsRooms = {}; // FPS PvP Rooms
 
 // Helper to generate a 4-letter room code
 function generateRoomCode() {
@@ -373,6 +374,87 @@ io.on('connection', (socket) => {
     }
   });
 
+  // ── FPS PVP LISTENERS ──
+  socket.on('fps-pvp-create-room', ({ agentId, username }) => {
+    const roomCode = 'FPS-' + generateRoomCode().substring(0, 4);
+    fpsRooms[roomCode] = {
+      players: [
+        { socketId: socket.id, agentId, username, status: 'LOBBY' }
+      ]
+    };
+    socket.join(roomCode);
+    socket.roomCode = roomCode;
+    socket.isFPS = true;
+    socket.emit('fps-pvp-room-created', { roomCode, players: fpsRooms[roomCode].players });
+    console.log(`FPS PVP Room created: ${roomCode} by socket ${socket.id}`);
+  });
+
+  socket.on('fps-pvp-join-room', ({ roomCode, agentId, username }) => {
+    const upperCode = roomCode ? roomCode.toUpperCase().trim() : '';
+    const room = fpsRooms[upperCode];
+    if (!room) {
+      socket.emit('fps-pvp-error', 'Lobby not found. Verify the room code.');
+      return;
+    }
+    if (room.players.length >= 2) {
+      socket.emit('fps-pvp-error', 'Lobby is full (Max 2 players for 1v1 PvP).');
+      return;
+    }
+
+    room.players.push({ socketId: socket.id, agentId, username, status: 'LOBBY' });
+    socket.join(upperCode);
+    socket.roomCode = upperCode;
+    socket.isFPS = true;
+
+    io.to(upperCode).emit('fps-pvp-room-joined', { roomCode: upperCode, players: room.players });
+    console.log(`FPS socket ${socket.id} joined FPS Room ${upperCode}`);
+  });
+
+  socket.on('fps-pvp-start-match', () => {
+    const roomCode = socket.roomCode;
+    const room = fpsRooms[roomCode];
+    if (room) {
+      io.to(roomCode).emit('fps-pvp-match-started');
+      console.log(`FPS Match started in room ${roomCode}`);
+    }
+  });
+
+  socket.on('fps-pvp-player-update', (data) => {
+    if (socket.roomCode) {
+      socket.to(socket.roomCode).emit('fps-pvp-player-update', data);
+    }
+  });
+
+  socket.on('fps-pvp-shoot', (data) => {
+    if (socket.roomCode) {
+      socket.to(socket.roomCode).emit('fps-pvp-shoot', data);
+    }
+  });
+
+  socket.on('fps-pvp-hit', (data) => {
+    if (socket.roomCode) {
+      socket.to(socket.roomCode).emit('fps-pvp-hit', data);
+    }
+  });
+
+  socket.on('fps-pvp-ability', (data) => {
+    if (socket.roomCode) {
+      socket.to(socket.roomCode).emit('fps-pvp-ability', data);
+    }
+  });
+
+  socket.on('fps-pvp-spike-plant', (data) => {
+    if (socket.roomCode) {
+      socket.to(socket.roomCode).emit('fps-pvp-spike-plant', data);
+    }
+  });
+
+  socket.on('fps-pvp-spike-defuse', (data) => {
+    if (socket.roomCode) {
+      socket.to(socket.roomCode).emit('fps-pvp-spike-defuse', data);
+    }
+  });
+
   // 6. Handle Disconnection
   socket.on('disconnect', () => {
     console.log(`Socket disconnected: ${socket.id}`);
@@ -391,6 +473,22 @@ io.on('connection', (socket) => {
       });
       console.log(`PVP socket ${socket.id} disconnected, cleaned up PVP Room ${roomCode}`);
       return;
+    }
+
+    // FPS PvP room cleanup
+    if (socket.roomCode && socket.roomCode.startsWith('FPS-')) {
+      const roomCode = socket.roomCode;
+      const room = fpsRooms[roomCode];
+      if (room) {
+        room.players = room.players.filter(p => p.socketId !== socket.id);
+        if (room.players.length === 0) {
+          delete fpsRooms[roomCode];
+          console.log(`FPS Room ${roomCode} empty. Cleaned up.`);
+        } else {
+          socket.to(roomCode).emit('fps-pvp-player-left');
+          console.log(`Player left FPS Room ${roomCode}. Informing remaining player.`);
+        }
+      }
     }
 
     // Presence registry cleanup on disconnect

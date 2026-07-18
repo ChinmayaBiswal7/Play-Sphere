@@ -119,6 +119,15 @@ class FPSWeaponSystem {
     const centerPoint = new THREE.Vector2(0, 0); 
     raycaster.setFromCamera(centerPoint, this.camera);
 
+    // Emit shoot packet to multiplayer room
+    const camPos = this.camera.position.clone();
+    const camDir = new THREE.Vector3();
+    this.camera.getWorldDirection(camDir);
+
+    if (window.FPSGameLoop?.multiplayer?.isMultiplayer) {
+      window.FPSGameLoop.multiplayer.emitShoot(camPos, camDir, this.activeWeapon);
+    }
+
     const intersects = raycaster.intersectObjects(this.colliders, true);
     
     // Default endpoint if no walls are hit
@@ -126,16 +135,41 @@ class FPSWeaponSystem {
     this.camera.getWorldDirection(hitPoint);
     hitPoint.multiplyScalar(80).add(this.camera.position);
 
+    let wallDistance = 9999;
+
     if (intersects.length > 0) {
       const hit = intersects[0];
       hitPoint.copy(hit.point);
+      wallDistance = hit.distance;
 
       // Spawn bullet hole decal on wall
       this.spawnDecal(hit.point, hit.face.normal);
 
-      // Check if we hit an AI combat bot capsule
-      if (hit.object.parent && hit.object.parent.isBot) {
-        hit.object.parent.registerHit(this.weaponsList[this.activeWeapon].damage);
+      // Check if we hit an AI combat bot capsule (only in singleplayer)
+      if (!(window.FPSGameLoop?.multiplayer?.isMultiplayer)) {
+        if (hit.object.parent && hit.object.parent.isBot) {
+          hit.object.parent.registerHit(this.weaponsList[this.activeWeapon].damage);
+        }
+      }
+    }
+
+    // Check hit on multiplayer opponent (if closer than wall intersection)
+    if (window.FPSGameLoop?.multiplayer?.isMultiplayer && window.FPSGameLoop.multiplayer.opponentMesh) {
+      const oppIntersects = raycaster.intersectObject(window.FPSGameLoop.multiplayer.opponentMesh, true);
+      if (oppIntersects.length > 0 && oppIntersects[0].distance < wallDistance) {
+        const hitObj = oppIntersects[0].object;
+        let damage = this.weaponsList[this.activeWeapon].damage;
+        let zone = 'body';
+
+        if (hitObj.isHead) {
+          damage *= 3.0; // Headshot deal 3x damage!
+          zone = 'head';
+          if (window.SynthAudio) window.SynthAudio.playHeadshot();
+        } else {
+          if (window.SynthAudio) window.SynthAudio.playHitMarker();
+        }
+
+        window.FPSGameLoop.multiplayer.emitHit(damage, zone);
       }
     }
 

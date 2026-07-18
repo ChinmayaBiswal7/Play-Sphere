@@ -49,6 +49,8 @@ class GameLoopManager {
     this.bots = new window.BotSystem(this.scene, window.RajdhaniMap.colliders, this.camera.position);
     this.spike = new window.SpikeSystem(this.scene, window.RajdhaniMap);
     this.abilities = new window.AbilityManager(this.scene, this.camera, window.RajdhaniMap.colliders, this.player);
+    this.multiplayer = new window.MultiplayerManager(this.scene, this.camera, this.player);
+    this.multiplayer.init();
 
     if (window.MiniMapRenderer) {
       window.MiniMapRenderer.init();
@@ -109,16 +111,27 @@ class GameLoopManager {
     // Reset plant systems
     this.spike.reset();
 
-    // Spawn bots
-    this.bots.spawnBots();
+    // Spawn bots (only if it is not a multiplayer match)
+    if (!(this.multiplayer && this.multiplayer.isMultiplayer)) {
+      this.bots.spawnBots();
+    }
 
     // Reset abilities
     if (this.abilities) {
       this.abilities.reset();
     }
 
-    // Position player at south spawn point
-    this.player.position.set(0, 1.3, 52);
+    // Position player (Host spawns South, Guest spawns North)
+    if (this.multiplayer && this.multiplayer.isMultiplayer) {
+      if (this.multiplayer.players[0].socketId === this.multiplayer.socket.id) {
+        this.player.position.set(0, 1.3, 52); // Attack Spawn
+      } else {
+        this.player.position.set(0, 1.3, -52); // Defend Spawn
+      }
+      this.multiplayer.spawnOpponentModel();
+    } else {
+      this.player.position.set(0, 1.3, 52);
+    }
     this.player.yaw = 0;
     this.player.pitch = 0;
 
@@ -144,8 +157,10 @@ class GameLoopManager {
       // Update gun recoil and ammo checks
       this.weapons.update(dt);
 
-      // Update bots movements & LoS shooting
-      this.bots.update(dt, this.player.position);
+      // Update bots movements (only in singleplayer)
+      if (!(this.multiplayer && this.multiplayer.isMultiplayer)) {
+        this.bots.update(dt, this.player.position);
+      }
 
       // Update Spike plant zones
       this.spike.update(dt, this.player);
@@ -153,6 +168,11 @@ class GameLoopManager {
       // Update active abilities and VFX
       if (this.abilities) {
         this.abilities.update(dt);
+      }
+
+      // Update multiplayer system updates (replication & interpolation)
+      if (this.multiplayer) {
+        this.multiplayer.update(dt);
       }
 
       // Flickering fire torches oscillation
@@ -217,6 +237,10 @@ class GameLoopManager {
   }
 
   exitMatchToLobby() {
+    if (this.multiplayer && this.multiplayer.isMultiplayer) {
+      location.reload();
+      return;
+    }
     this.isMatchRunning = false;
     document.exitPointerLock();
 
@@ -233,6 +257,36 @@ class GameLoopManager {
     if (window.lobbyUI) {
       window.lobbyUI.syncLobbyProfile();
     }
+  }
+
+  resetRound() {
+    // Reset local player health
+    window.FPSState.currentUser.hp = 100;
+    window.FPSState.currentUser.armor = 50;
+    const hpEl = document.getElementById('hud-hp-val');
+    const armEl = document.getElementById('hud-armor-val');
+    if (hpEl) hpEl.innerText = '100';
+    if (armEl) armEl.innerText = '50';
+
+    // Position player (Host spawns South, Guest spawns North)
+    if (this.multiplayer && this.multiplayer.isMultiplayer) {
+      if (this.multiplayer.players[0].socketId === this.multiplayer.socket.id) {
+        this.player.position.set(0, 1.3, 52); // Attack Spawn
+      } else {
+        this.player.position.set(0, 1.3, -52); // Defend Spawn
+      }
+    } else {
+      this.player.position.set(0, 1.3, 52);
+    }
+    this.player.yaw = 0;
+    this.player.pitch = 0;
+
+    // Refill ammo
+    this.weapons.activeWeapon = 'vandal';
+    const activeAmmo = this.weapons.weaponsList.vandal.maxAmmo;
+    this.weapons.weaponsList.vandal.currentAmmo = activeAmmo;
+    const ammoEl = document.getElementById('hud-ammo-val');
+    if (ammoEl) ammoEl.innerText = activeAmmo;
   }
 
   resizeViewport() {
