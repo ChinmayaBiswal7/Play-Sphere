@@ -343,4 +343,8 @@ class LobbyUIManager {
 }
 
 window.lobbyUI = new LobbyUIManager();
-document.addEventListener('DOMContentLoaded', () => window.lobbyUI.init());
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => window.lobbyUI.init());
+} else {
+  window.lobbyUI.init();
+}

@@ -3,7 +3,7 @@
    Handles loading animation then transitions directly to Lobby.
    ========================================================================== */
 
-document.addEventListener('DOMContentLoaded', () => {
+function initSplash() {
   const splashScreen   = document.getElementById('splash-screen');
   const progressBar    = document.getElementById('splash-progress-bar');
   const statusLabel    = document.getElementById('splash-status-lbl');
@@ -55,4 +55,10 @@ document.addEventListener('DOMContentLoaded', () => {
       }, 400);
     }
   }, 100);
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initSplash);
+} else {
+  initSplash();
+}

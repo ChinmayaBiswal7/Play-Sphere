@@ -389,14 +389,57 @@ body, html {
 }
 .ability-card strong { font-size: 13px; letter-spacing: 1px; }
 .ability-card span { font-size: 12px; color: var(--text-muted); }
-.agent-roster-selector { display: flex; flex-direction: column; gap: 12px; padding-top: 60px; }
-.agent-select-btn {
-  padding: 14px 24px; font-family: var(--font-logo); font-size: 13px; letter-spacing: 2px;
-  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
-  color: var(--text-primary); border-radius: 4px; cursor: pointer; transition: all 0.2s;
+.agent-roster-selector {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 10px !important;
+  padding-top: 15px !important;
+  max-height: 480px;
+  overflow-y: auto;
+  width: 380px;
 }
-.agent-select-btn.active, .agent-select-btn:hover {
-  background: rgba(255,51,102,0.15); border-color: var(--neon-red); color: var(--neon-red);
+.agent-select-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+.agent-face-icon {
+  width: 76px;
+  height: 76px;
+  border-radius: 4px;
+  object-fit: cover;
+  margin-bottom: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: all 0.2s;
+}
+.agent-btn-name {
+  font-family: var(--font-logo);
+  font-size: 11px;
+  letter-spacing: 1.2px;
+  color: var(--text-primary);
+  text-transform: uppercase;
+}
+.agent-select-btn:hover {
+  background: rgba(0, 210, 255, 0.08);
+  border-color: var(--neon-cyan);
+}
+.agent-select-btn.active {
+  background: rgba(255, 51, 102, 0.12);
+  border-color: var(--neon-red);
+  box-shadow: 0 0 15px rgba(255, 51, 102, 0.25);
+}
+.agent-select-btn.active .agent-face-icon {
+  border-color: var(--neon-red);
+  transform: scale(1.05);
 }
 .loadout-grid { display: flex; gap: 30px; }
 .loadout-weapon-card {

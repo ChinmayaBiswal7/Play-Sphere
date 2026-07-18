@@ -3,11 +3,20 @@
    ========================================================================== */
 
 class MultiplayerManager {
-  constructor(scene, camera, playerController) {
+  constructor(scene = null, camera = null, playerController = null) {
     this.scene = scene;
     this.camera = camera;
     this.player = playerController;
-    
+    this.initFields();
+  }
+
+  bindSceneAndPlayer(scene, camera, playerController) {
+    this.scene = scene;
+    this.camera = camera;
+    this.player = playerController;
+  }
+
+  initFields() {
     this.socket = null;
     this.roomCode = null;
     this.isMultiplayer = false;

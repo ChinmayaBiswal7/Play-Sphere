@@ -2,7 +2,7 @@
    DELHI DEFIANCE - USER PROFILE LOGIN HUB
    ========================================================================== */
 
-document.addEventListener('DOMContentLoaded', () => {
+function initLogin() {
   const loginScreen = document.getElementById('login-screen');
   const usernameInput = document.getElementById('login-username-input');
   const avatarOptions = document.querySelectorAll('.avatar-option');
@@ -29,22 +29,16 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Action Triggers
+  // Guest login flow
   btnGuest.addEventListener('click', () => {
     window.SynthAudio.playClick();
-    const val = usernameInput.value.trim();
-    if (!val) {
-      errorMsg.innerText = "PLEASE SPECIFY CALLSIGN!";
-      return;
-    }
-    
-    // Save to global state
+    const val = usernameInput.value.trim() || "GuestAgent";
     window.FPSState.currentUser.username = val;
     window.FPSState.currentUser.avatar = selectedAvatar;
-
     transitionToLobby();
   });
 
+  // Google sign-in flow
   btnGoogle.addEventListener('click', () => {
     window.SynthAudio.playClick();
     // Google Sign-in routing
@@ -65,4 +59,10 @@ document.addEventListener('DOMContentLoaded', () => {
       window.lobbyUI.initHologramScene();
     }
   }
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initLogin);
+} else {
+  initLogin();
+}

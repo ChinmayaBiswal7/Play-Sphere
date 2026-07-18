@@ -150,6 +150,8 @@ class AgentSelectUIManager {
 }
 
 window.agentSelectUI = new AgentSelectUIManager();
-document.addEventListener('DOMContentLoaded', () => {
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => window.agentSelectUI.init());
+} else {
   window.agentSelectUI.init();
-});
+}

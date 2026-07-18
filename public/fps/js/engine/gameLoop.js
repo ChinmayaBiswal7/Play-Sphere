@@ -14,6 +14,7 @@ class GameLoopManager {
     this.bots = null;
     this.spike = null;
     this.abilities = null;
+    this.multiplayer = null;
     
     this.clock = new THREE.Clock();
     this.animationId = null;
@@ -49,8 +50,9 @@ class GameLoopManager {
     this.bots = new window.BotSystem(this.scene, window.RajdhaniMap.colliders, this.camera.position);
     this.spike = new window.SpikeSystem(this.scene, window.RajdhaniMap);
     this.abilities = new window.AbilityManager(this.scene, this.camera, window.RajdhaniMap.colliders, this.player);
-    this.multiplayer = new window.MultiplayerManager(this.scene, this.camera, this.player);
-    this.multiplayer.init();
+    if (this.multiplayer) {
+      this.multiplayer.bindSceneAndPlayer(this.scene, this.camera, this.player);
+    }
 
     if (window.MiniMapRenderer) {
       window.MiniMapRenderer.init();
@@ -300,3 +302,7 @@ class GameLoopManager {
 }
 
 window.FPSGameLoop = new GameLoopManager();
+if (window.MultiplayerManager) {
+  window.FPSGameLoop.multiplayer = new window.MultiplayerManager();
+  window.FPSGameLoop.multiplayer.init();
+}
