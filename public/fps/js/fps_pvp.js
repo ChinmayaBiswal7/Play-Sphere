@@ -53,22 +53,10 @@
 
     mp.socket.on('fps-pvp-room-joined', ({ players }) => {
       console.log(`[FPS PvP Boot] Room joined event. Player count: ${players.length}`);
-      if (players.length === 2 && isHost) {
-        console.log("[FPS PvP Boot] Both players joined. Auto-starting match in 1.5 seconds...");
-        setTimeout(() => {
-          mp.startMatch();
-        }, 1500);
-      }
     });
 
     mp.socket.on('fps-pvp-room-created', ({ players }) => {
       console.log(`[FPS PvP Boot] Room created event. Player count: ${players.length}`);
-      if (players.length === 2 && isHost) {
-        console.log("[FPS PvP Boot] Both players joined. Auto-starting match in 1.5 seconds...");
-        setTimeout(() => {
-          mp.startMatch();
-        }, 1500);
-      }
     });
   }
 })();

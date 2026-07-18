@@ -1,5 +1,6 @@
 /**
  * APEX STARS: Chibi F1 — Real-time Online PvP Sync Module
+ * Reuses the native Grand Prix setup screens and launches 1v1 racing directly.
  */
 (function () {
   'use strict';
@@ -14,9 +15,9 @@
   window.matchMode = 'PVP';
   window.cricketPvPRole = (sessionStorage.getItem('ps_match_role') === 'host' || window.location.hash === '#host') ? 'host' : 'guest';
 
-  // Wait for game and socket to initialize
+  // Wait for game state to be ready
   const pollTimer = setInterval(() => {
-    if (window.socket && window.f1SetupGame) {
+    if (window.socket && window.f1SetupGame && window.openGrandPrixSetup) {
       clearInterval(pollTimer);
       initF1PvP();
     }
@@ -32,49 +33,80 @@
       isHost: window.cricketPvPRole === 'host'
     });
 
-    // Configure race setup to skip menus and launch directly
-    setTimeout(() => {
-      // Force Grand Prix Weekend configuration
-      window.f1SetSelectedTeamIndex(0);
-      window.f1SetActiveTrack(0);
-      window.f1SetGameState("RACING");
-      window.f1SetupGame();
+    // Show native Grand Prix Setup screen
+    if (typeof window.openGrandPrixSetup === 'function') {
+      window.openGrandPrixSetup();
+    }
 
-      // Hide landing and workstation UI overlays
-      const landing = document.getElementById('main-landing-screen');
-      if (landing) landing.classList.add('hidden');
-      const ws = document.getElementById('workstationScreen');
-      if (ws) ws.style.display = 'none';
+    // Hijack startGrandPrixWeekend
+    const originalStartGP = window.startGrandPrixWeekend;
+    window.startGrandPrixWeekend = function () {
+      if (window.cricketPvPRole === 'host') {
+        window.socket.emit('ps-game-message', {
+          roomCode: roomCode,
+          event: 'f1-start-race',
+          data: {
+            trackId: window.weekendConfig.selectedTrackId,
+            hostTeamId: window.weekendConfig.selectedTeamId,
+            hostDriverId: window.weekendConfig.selectedDriverId,
+            raceLaps: window.weekendConfig.raceLaps,
+            difficulty: window.weekendConfig.difficulty
+          }
+        });
+        document.getElementById('grandPrixSetupScreen').style.display = 'none';
+        launchF1Race(window.weekendConfig.selectedTrackId, window.weekendConfig.selectedTeamId, window.weekendConfig.selectedDriverId);
+      }
+    };
 
-      // Start network loops
-      startF1PvPUpdates();
-    }, 1000);
+    // Hijack continue step to update button for guest
+    const originalRenderStep = window.gpRenderStep;
+    window.gpRenderStep = function (step) {
+      if (typeof originalRenderStep === 'function') {
+        originalRenderStep(step);
+      }
+
+      if (window.cricketPvPRole === 'guest') {
+        const contBtn = document.getElementById('gp-btn-continue');
+        if (contBtn && step === 4) {
+          contBtn.innerText = "WAITING FOR HOST TO START...";
+          contBtn.disabled = true;
+          contBtn.style.opacity = '0.5';
+          contBtn.onclick = null;
+        }
+      }
+    };
+
+    bindPvPSocketListeners();
+  }
+
+  function launchF1Race(trackId, teamId, driverId) {
+    console.log(`[F1 PvP] Launching Race. Track: ${trackId}, Team: ${teamId}, Driver: ${driverId}`);
+
+    // Lock in configurations
+    window.f1SetActiveTrack(trackId);
+    window.f1SetSelectedTeamIndex(teamId);
+    if (window.weekendConfig) {
+      window.weekendConfig.selectedTrackId = trackId;
+      window.weekendConfig.selectedTeamId = teamId;
+      window.weekendConfig.selectedDriverId = driverId;
+    }
+
+    // Set race session directly
+    window.f1SetGameState("RACING");
+    window.f1SetupGame();
+
+    // Start network sync loop
+    startF1PvPUpdates();
   }
 
   function startF1PvPUpdates() {
     const socket = window.socket;
-    const isHost = (window.cricketPvPRole === 'host');
-
-    socket.on('ps-game-message', ({ event, data }) => {
-      if (event === 'f1-pos-sync') {
-        const racers = window.f1GetRacers ? window.f1GetRacers() : null;
-        if (racers && racers[1]) {
-          const remoteCar = racers[1];
-          // Sync position, heading and speed
-          if (remoteCar.mesh) {
-            remoteCar.mesh.position.set(data.pos.x, data.pos.y, data.pos.z);
-            remoteCar.mesh.rotation.y = data.rotY;
-          }
-          remoteCar.currentOffset = data.offset;
-          remoteCar.speed = data.speed;
-        }
-      }
-    });
 
     // Periodically broadcast local kart position to the opponent
     setInterval(() => {
       const player = window.f1GetPlayerKart ? window.f1GetPlayerKart() : null;
-      if (player && player.mesh && window.gameState === 'RACING') {
+      const state = window.f1GetGameState ? window.f1GetGameState() : null;
+      if (player && player.mesh && state === 'RACING') {
         socket.emit('ps-game-message', {
           roomCode: roomCode,
           event: 'f1-pos-sync',
@@ -87,6 +119,33 @@
         });
       }
     }, 80);
+  }
+
+  function bindPvPSocketListeners() {
+    const socket = window.socket;
+    if (!socket) return;
+
+    socket.on('ps-game-message', ({ event, data }) => {
+      switch (event) {
+        case 'f1-start-race':
+          document.getElementById('grandPrixSetupScreen').style.display = 'none';
+          launchF1Race(data.trackId, data.hostTeamId, data.hostDriverId);
+          break;
+
+        case 'f1-pos-sync':
+          const racers = window.f1GetRacers ? window.f1GetRacers() : null;
+          if (racers && racers[1]) {
+            const remoteCar = racers[1];
+            if (remoteCar.mesh) {
+              remoteCar.mesh.position.set(data.pos.x, data.pos.y, data.pos.z);
+              remoteCar.mesh.rotation.y = data.rotY;
+            }
+            remoteCar.currentOffset = data.offset;
+            remoteCar.speed = data.speed;
+          }
+          break;
+      }
+    });
   }
 
 })();

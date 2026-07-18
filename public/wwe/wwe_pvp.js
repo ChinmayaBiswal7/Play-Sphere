@@ -1,5 +1,6 @@
 /**
  * WWE Chibi Rumble — Real-time Online PvP Sync Module
+ * Reuses the native character selection screen and locks/readies selections turn-wise.
  */
 (function () {
   'use strict';
@@ -16,11 +17,13 @@
 
   // Wait for game state and socket to initialize
   const pollTimer = setInterval(() => {
-    if (window.socket && window.STATES) {
+    if (window.socket && window.STATES && window.lockWrestlersAndStartMatch) {
       clearInterval(pollTimer);
       initWWEPvP();
     }
   }, 100);
+
+  let originalLockAndStart = null;
 
   function initWWEPvP() {
     console.log("[WWE PvP] Initializing network sync layer...");
@@ -43,7 +46,25 @@
       if (lobby) lobby.classList.add('hidden');
       const charSelect = document.getElementById('char-select-screen');
       if (charSelect) charSelect.classList.remove('hidden');
+      updateReadyIndicatorUI();
     }, 800);
+
+    // Hijack lockWrestlersAndStartMatch for turn-ready
+    originalLockAndStart = window.lockWrestlersAndStartMatch;
+    window.lockWrestlersAndStartMatch = function () {
+      const mySlot = (window.cricketPvPRole === 'host') ? 'PLAYER_1' : 'PLAYER_2';
+      const nextReady = !window.controllerSlots[mySlot].ready;
+      window.controllerSlots[mySlot].ready = nextReady;
+
+      window.socket.emit('ps-game-message', {
+        roomCode: roomCode,
+        event: 'wwe-char-ready',
+        data: { role: window.cricketPvPRole, ready: nextReady }
+      });
+
+      updateReadyIndicatorUI();
+      checkStartBattle();
+    };
 
     bindWWEEvents();
   }
@@ -56,14 +77,12 @@
     socket.on('ps-game-message', ({ event, data }) => {
       switch (event) {
         case 'wwe-input':
-          // Update the other player's input state locally
           if (data.slot !== mySlot) {
             Object.assign(window.playerInputs[data.slot], data.input);
           }
           break;
 
         case 'wwe-pos-sync':
-          // Snap coordinates to prevent physics/position drifting
           if (window.fighters) {
             if (window.fighters.PLAYER_1) {
               window.fighters.PLAYER_1.x = data.p1.x;
@@ -85,6 +104,7 @@
             window.p2SelectedChar = data.char;
           }
           updateCharSelectUI();
+          updateReadyIndicatorUI();
           break;
 
         case 'wwe-char-ready':
@@ -93,6 +113,7 @@
           } else {
             window.controllerSlots.PLAYER_2.ready = data.ready;
           }
+          updateReadyIndicatorUI();
           checkStartBattle();
           break;
       }
@@ -106,7 +127,7 @@
       broadcastMyInput(mySlot);
     });
 
-    // Host periodically syncs positions as the authority
+    // Host periodically syncs positions
     setInterval(() => {
       if (window.gameState === window.STATES.BATTLE && isHost && window.fighters) {
         socket.emit('ps-game-message', {
@@ -120,8 +141,7 @@
       }
     }, 150);
 
-    // Sync character ready button clicks
-    setupWWEConfigSync();
+    setupWWERosterSync();
   }
 
   function broadcastMyInput(mySlot) {
@@ -136,30 +156,38 @@
   }
 
   function updateCharSelectUI() {
-    // Renders selected badges on roster slots
-    document.querySelectorAll('.roster-grid .char-card').forEach(card => {
+    document.querySelectorAll('.roster-grid .wrestler-card').forEach(card => {
       const charKey = card.getAttribute('data-char');
-      card.querySelectorAll('.player-badge').forEach(b => b.remove());
+      card.classList.remove('active');
 
       if (charKey === window.p1SelectedChar) {
-        const badge = document.createElement('div');
-        badge.className = 'player-badge p1';
-        badge.innerText = 'P1';
-        card.appendChild(badge);
+        card.classList.add('active');
       }
       if (charKey === window.p2SelectedChar) {
-        const badge = document.createElement('div');
-        badge.className = 'player-badge p2';
-        badge.innerText = 'P2';
-        card.appendChild(badge);
+        card.classList.add('active');
       }
     });
   }
 
-  function setupWWEConfigSync() {
-    // Intercept character selector clicks
-    document.querySelectorAll('.roster-grid .char-card').forEach(card => {
-      const originalClick = card.onclick;
+  function updateReadyIndicatorUI() {
+    const p1Ready = window.controllerSlots.PLAYER_1.ready;
+    const p2Ready = window.controllerSlots.PLAYER_2.ready;
+
+    const p1Badge = document.getElementById('p1-select-badge');
+    const p2Badge = document.getElementById('p2-select-badge');
+
+    if (p1Badge) {
+      const charName = window.ROSTER[window.p1SelectedChar]?.name || 'CODY RHODES';
+      p1Badge.innerText = `P1: ${charName} ${p1Ready ? '(READY ✓)' : '(CHOOSING...)'}`;
+    }
+    if (p2Badge) {
+      const charName = window.ROSTER[window.p2SelectedChar]?.name || 'ROMAN REIGNS';
+      p2Badge.innerText = `P2: ${charName} ${p2Ready ? '(READY ✓)' : '(CHOOSING...)'}`;
+    }
+  }
+
+  function setupWWERosterSync() {
+    document.querySelectorAll('.roster-grid .wrestler-card').forEach(card => {
       card.onclick = () => {
         const charKey = card.getAttribute('data-char');
         if (window.cricketPvPRole === 'host') {
@@ -168,6 +196,7 @@
           window.p2SelectedChar = charKey;
         }
         updateCharSelectUI();
+        updateReadyIndicatorUI();
 
         window.socket.emit('ps-game-message', {
           roomCode: roomCode,
@@ -176,42 +205,12 @@
         });
       };
     });
-
-    // Character Confirm / Ready button sync
-    const originalReadyBtn = document.getElementById('btn-confirm-char');
-    if (originalReadyBtn) {
-      originalReadyBtn.onclick = () => {
-        const mySlot = (window.cricketPvPRole === 'host') ? 'PLAYER_1' : 'PLAYER_2';
-        const nextReady = !window.controllerSlots[mySlot].ready;
-        window.controllerSlots[mySlot].ready = nextReady;
-
-        window.socket.emit('ps-game-message', {
-          roomCode: roomCode,
-          event: 'wwe-char-ready',
-          data: { role: window.cricketPvPRole, ready: nextReady }
-        });
-
-        checkStartBattle();
-      };
-    }
   }
 
   function checkStartBattle() {
-    const p1R = window.controllerSlots.PLAYER_1.ready ? 1 : 0;
-    const p2R = window.controllerSlots.PLAYER_2.ready ? 1 : 0;
-    const btn = document.getElementById('btn-confirm-char');
-    if (btn) btn.innerText = `CONFIRM (${p1R + p2R}/2 READY)`;
-
     if (window.controllerSlots.PLAYER_1.ready && window.controllerSlots.PLAYER_2.ready) {
-      // Transition to Countdown and Battle
-      window.gameState = window.STATES.COUNTDOWN;
-      const charScreen = document.getElementById('char-select-screen');
-      if (charScreen) charScreen.classList.add('hidden');
-      const countScreen = document.getElementById('countdown-screen');
-      if (countScreen) countScreen.classList.remove('hidden');
-      
-      if (typeof window.startCountdownSequence === 'function') {
-        window.startCountdownSequence();
+      if (typeof originalLockAndStart === 'function') {
+        originalLockAndStart();
       }
     }
   }

@@ -59,7 +59,13 @@
         case 'tennis-input':
           // Apply inputs from the other player
           if (data.slot !== (window.cricketPvPRole === 'host' ? 'PLAYER_1' : 'PLAYER_2')) {
+            const wasHit = window.playerInputs[data.slot].hit;
             Object.assign(window.playerInputs[data.slot], data.input);
+            if (data.input.hit && !wasHit) {
+              if (typeof window.handleButtonPress === 'function') {
+                window.handleButtonPress(data.slot, 'HIT');
+              }
+            }
           }
           break;
 

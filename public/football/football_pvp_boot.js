@@ -1,74 +1,51 @@
 /**
- * Football Pro 2026 — Online PvP Auto-Join and Match Launch Interceptor
+ * Football Pro 2026 — Online PvP Lobby Bootstrapper
+ * Simulates user navigation to launch the native multiplayer friendly lobby.
  */
 (function () {
   'use strict';
 
-  // Read room from URL or sessionStorage
   const params = new URLSearchParams(window.location.search);
   const roomCode = params.get('room') || (sessionStorage.getItem('ps_active_match') ? JSON.parse(sessionStorage.getItem('ps_active_match')).roomCode : null);
 
-  if (!roomCode) {
-    console.log("[PVP Boot] No PvP room code active. Running in standard local mode.");
-    return;
-  }
+  if (!roomCode) return;
 
-  console.log(`[PVP Boot] Intercepting match startup for Room: ${roomCode}`);
+  console.log(`[Football PvP] Intercepting match startup for Room: ${roomCode}`);
 
-  // Wait for SocketController to connect
+  // Wait for menu elements to fully render and load
   const pollTimer = setInterval(() => {
-    if (window.SocketController && window.SocketController.socket && window.SocketController.socket.connected) {
+    const tabBtn = document.getElementById('btn-tab-multiplayer');
+    const socket = window.SocketController && window.SocketController.socket;
+
+    if (tabBtn && socket && socket.connected) {
       clearInterval(pollTimer);
-      startPvPFlow(roomCode);
+      launchFriendlyLobby(tabBtn, roomCode);
     }
   }, 100);
 
-  function startPvPFlow(room) {
-    const socket = window.SocketController.socket;
-    console.log("[PVP Boot] Socket connected. Joining PvP room...");
+  function launchFriendlyLobby(tabBtn, room) {
+    console.log("[Football PvP] Switching to Multiplayer view...");
+    tabBtn.click();
 
-    // Auto-join the room on the server
-    socket.emit('pvp-join-room', { roomCode: room });
+    // Wait a brief moment for the tab content to render
+    setTimeout(() => {
+      const friendlyTab = document.getElementById('tab-friendly');
+      if (friendlyTab) {
+        friendlyTab.click(); // Switch to friendly sub-tab
+        
+        setTimeout(() => {
+          const input = document.getElementById('pvp-code-input');
+          const joinBtn = document.getElementById('btn-join-pvp');
 
-    // Handle room updates and ready signals
-    socket.on('pvp-room-created', (data) => {
-      console.log("[PVP Boot] Room created on server. Selecting team and setting ready...");
-      window.SocketController.pvpSlot = 1; // Host slot
-      socket.emit('pvp-select-team', { teamName: 'RED DEVILS' });
-      socket.emit('pvp-ready', { ready: true });
-    });
-
-    socket.on('pvp-room-joined', (data) => {
-      console.log("[PVP Boot] Joined room. Selecting opponent team and setting ready...");
-      window.SocketController.pvpSlot = 2; // Guest slot
-      socket.emit('pvp-select-team', { teamName: 'PARIS STARS' });
-      socket.emit('pvp-ready', { ready: true });
-    });
-
-    // Authoritative Match Start trigger
-    socket.on('pvp-match-started', (data) => {
-      console.log("[PVP Boot] Server started PvP match. Bypassing menu and launching match!");
-
-      // Hide main menu screen
-      const menuScreen = document.getElementById('main-menu-screen');
-      if (menuScreen) menuScreen.style.display = 'none';
-
-      const subScreen = document.getElementById('subscreen-view');
-      if (subScreen) subScreen.style.display = 'none';
-
-      // Dynamically load the PvP controller and start
-      import('./pvp.js').then(module => {
-        const slot = window.SocketController.pvpSlot || 2;
-        module.launchMatchInPvPMode(room, slot, data.homeTeam, data.awayTeam);
-      }).catch(err => {
-        console.error("[PVP Boot] Failed to launch PvP match:", err);
-      });
-    });
-
-    // Handle room error fallbacks
-    socket.on('pvp-error', (msg) => {
-      console.error("[PVP Boot] PvP connection error:", msg);
-      alert("PvP Room Error: " + msg);
-    });
+          if (input && joinBtn) {
+            console.log(`[Football PvP] Auto-entering room code: ${room}`);
+            input.value = room;
+            joinBtn.click();
+          } else {
+            console.warn("[Football PvP] Friendly inputs not found in DOM.");
+          }
+        }, 150);
+      }
+    }, 150);
   }
 })();
