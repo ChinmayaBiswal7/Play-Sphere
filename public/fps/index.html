@@ -142,9 +142,17 @@
           <div class="ability-card"><strong>[X] Inferno Storm</strong><span>Equip fiery projectiles that deal massive blast damage on impact.</span></div>
         </div>
       </div>
-      <div class="agent-roster-selector">
+      <div class="agent-roster-selector" style="max-height:300px; overflow-y:auto; display:flex; flex-direction:column; gap:5px; padding-right:5px;">
         <button class="agent-select-btn active" data-agent="agni">🔥 AGNI</button>
         <button class="agent-select-btn" data-agent="vayu">🌀 VAYU</button>
+        <button class="agent-select-btn" data-agent="shadow">🌑 SHADOW</button>
+        <button class="agent-select-btn" data-agent="vajra">⚡ VAJRA</button>
+        <button class="agent-select-btn" data-agent="naga">🐍 NAGA</button>
+        <button class="agent-select-btn" data-agent="astra">🌌 ASTRA-X</button>
+        <button class="agent-select-btn" data-agent="rakshak">🎖️ RAKSHAK</button>
+        <button class="agent-select-btn" data-agent="kali">⚔️ KALI</button>
+        <button class="agent-select-btn" data-agent="garuda">🦅 GARUDA</button>
+        <button class="agent-select-btn" data-agent="maya">🔮 MAYA</button>
       </div>
     </div>
   </div>
@@ -348,7 +356,7 @@
     <div class="select-timer-circle"><span id="agent-select-timer">30</span></div>
   </div>
   <div class="agent-select-layout">
-    <div class="agent-grid-panel">
+    <div class="agent-grid-panel" style="max-height:450px; overflow-y:auto; display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; padding-right:5px;">
       <div class="agent-grid-item active" data-agent="agni">
         <div class="agent-thumb">🔥</div>
         <div class="agent-grid-name">AGNI</div>
@@ -358,6 +366,46 @@
         <div class="agent-thumb">🌀</div>
         <div class="agent-grid-name">VAYU</div>
         <div class="agent-role-tag">INITIATOR</div>
+      </div>
+      <div class="agent-grid-item" data-agent="shadow">
+        <div class="agent-thumb">🌑</div>
+        <div class="agent-grid-name">SHADOW</div>
+        <div class="agent-role-tag">CONTROLLER</div>
+      </div>
+      <div class="agent-grid-item" data-agent="vajra">
+        <div class="agent-thumb">⚡</div>
+        <div class="agent-grid-name">VAJRA</div>
+        <div class="agent-role-tag">SENTINEL</div>
+      </div>
+      <div class="agent-grid-item" data-agent="naga">
+        <div class="agent-thumb">🐍</div>
+        <div class="agent-grid-name">NAGA</div>
+        <div class="agent-role-tag">CONTROLLER</div>
+      </div>
+      <div class="agent-grid-item" data-agent="astra">
+        <div class="agent-thumb">🌌</div>
+        <div class="agent-grid-name">ASTRA-X</div>
+        <div class="agent-role-tag">INITIATOR</div>
+      </div>
+      <div class="agent-grid-item" data-agent="rakshak">
+        <div class="agent-thumb">🎖️</div>
+        <div class="agent-grid-name">RAKSHAK</div>
+        <div class="agent-role-tag">SENTINEL</div>
+      </div>
+      <div class="agent-grid-item" data-agent="kali">
+        <div class="agent-thumb">⚔️</div>
+        <div class="agent-grid-name">KALI</div>
+        <div class="agent-role-tag">DUELIST</div>
+      </div>
+      <div class="agent-grid-item" data-agent="garuda">
+        <div class="agent-thumb">🦅</div>
+        <div class="agent-grid-name">GARUDA</div>
+        <div class="agent-role-tag">INITIATOR</div>
+      </div>
+      <div class="agent-grid-item" data-agent="maya">
+        <div class="agent-thumb">🔮</div>
+        <div class="agent-grid-name">MAYA</div>
+        <div class="agent-role-tag">CONTROLLER</div>
       </div>
     </div>
     <div class="agent-details-panel">

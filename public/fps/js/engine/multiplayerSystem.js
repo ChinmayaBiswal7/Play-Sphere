@@ -200,40 +200,58 @@ class MultiplayerManager {
 
     const group = new THREE.Group();
     
-    // Torso
+    // Torso (spans 0.6m to 1.6m height relative to feet)
     const torso = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.4, 0.4, 1.4, 8),
+      new THREE.CylinderGeometry(0.35, 0.35, 1.0, 8),
       new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.6 })
     );
-    torso.position.y = 0.7;
+    torso.position.y = 0.3; // Center of torso
     torso.castShadow = true;
     torso.isTorso = true;
     group.add(torso);
 
-    // Head
+    // Head (head center at 1.0m relative to origin)
     const head = new THREE.Mesh(
-      new THREE.SphereGeometry(0.3, 12, 12),
+      new THREE.SphereGeometry(0.25, 12, 12),
       new THREE.MeshStandardMaterial({ color: 0xfbcfe8, roughness: 0.5 })
     );
-    head.position.y = 1.6;
+    head.position.y = 1.0;
     head.castShadow = true;
     head.isHead = true;
     group.add(head);
 
-    // Shoulder stripes
+    // Shoulders
     const shoulders = new THREE.Mesh(
-      new THREE.BoxGeometry(0.9, 0.25, 0.35),
+      new THREE.BoxGeometry(0.8, 0.2, 0.3),
       new THREE.MeshStandardMaterial({ color: 0xff1133 })
     );
-    shoulders.position.y = 1.25;
+    shoulders.position.y = 0.75;
     group.add(shoulders);
+
+    // Left Leg (spans 0m to 0.6m height relative to feet)
+    const leftLeg = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.12, 0.12, 0.6, 8),
+      new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8 })
+    );
+    leftLeg.position.set(-0.16, -0.5, 0);
+    leftLeg.isLeg = true;
+    group.add(leftLeg);
+
+    // Right Leg
+    const rightLeg = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.12, 0.12, 0.6, 8),
+      new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8 })
+    );
+    rightLeg.position.set(0.16, -0.5, 0);
+    rightLeg.isLeg = true;
+    group.add(rightLeg);
 
     // Gun box
     const gun = new THREE.Mesh(
-      new THREE.BoxGeometry(0.15, 0.15, 0.95),
+      new THREE.BoxGeometry(0.12, 0.12, 0.85),
       new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.8 })
     );
-    gun.position.set(0.25, 0.7, -0.45);
+    gun.position.set(0.2, 0.3, -0.4);
     group.add(gun);
 
     this.scene.add(group);
@@ -242,13 +260,16 @@ class MultiplayerManager {
     // Start coordinates (opposite spawn side)
     this.targetPosition.set(0, 1.3, -52);
     this.opponentMesh.position.copy(this.targetPosition);
+    this.opponentMesh.position.y -= 0.5;
   }
 
   update(dt) {
     if (!this.isMultiplayer || !this.socket) return;
 
     if (this.opponentMesh) {
-      this.opponentMesh.position.lerp(this.targetPosition, 16.0 * dt);
+      const interpPos = this.targetPosition.clone();
+      interpPos.y -= 0.5; // Offset to align eyes/feet
+      this.opponentMesh.position.lerp(interpPos, 16.0 * dt);
       
       const curRotation = this.opponentMesh.rotation.y;
       let targetRot = this.targetYaw;

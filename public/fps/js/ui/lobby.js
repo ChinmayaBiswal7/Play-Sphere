@@ -64,24 +64,21 @@ class LobbyUIManager {
     const abEl   = document.querySelector('.abilities-list');
     if (!nameEl) return;
 
-    if (agentId === 'agni') {
-      nameEl.innerText = 'AGNI';
-      roleEl.innerText = 'DUELIST';
-      roleEl.style.color = 'var(--neon-red)';
-      bioEl.innerText   = 'Indian fire specialist. Commands thermal walls and charges aggressively into battle.';
+    const agent = window.AGENT_REGISTRY[agentId] || window.AGENT_REGISTRY['agni'];
+    nameEl.innerText = agent.name;
+    roleEl.innerText = agent.role;
+    
+    if (agent.role === 'DUELIST') roleEl.style.color = 'var(--neon-red)';
+    else if (agent.role === 'INITIATOR') roleEl.style.color = 'var(--neon-cyan)';
+    else if (agent.role === 'CONTROLLER') roleEl.style.color = '#a855f7';
+    else if (agent.role === 'SENTINEL') roleEl.style.color = '#eab308';
+
+    bioEl.innerText = agent.passiveDesc;
+    if (abEl) {
       abEl.innerHTML = `
-        <div class="ability-card"><strong>[Q] Molten Wall</strong><span>Raise a wall of fire that blocks sight and damages players passing through.</span></div>
-        <div class="ability-card"><strong>[E] Fire Dash</strong><span>Instantly dash forward, gaining increased movement speed.</span></div>
-        <div class="ability-card"><strong>[X] Inferno Storm</strong><span>Equip fiery projectiles that deal massive blast damage.</span></div>`;
-    } else {
-      nameEl.innerText = 'VAYU';
-      roleEl.innerText = 'INITIATOR';
-      roleEl.style.color = 'var(--neon-cyan)';
-      bioEl.innerText   = 'Wind controller. Detects enemies with air pulses and disrupts sites with micro-cyclones.';
-      abEl.innerHTML = `
-        <div class="ability-card"><strong>[Q] Air Pulse</strong><span>Emit a sound wave that highlights enemy positions behind walls.</span></div>
-        <div class="ability-card"><strong>[E] Wind Burst</strong><span>Release a blast of compressed air that knocks back opponents.</span></div>
-        <div class="ability-card"><strong>[X] Cyclone Field</strong><span>Spawn a giant tornado zone that deafens and disorients defenders.</span></div>`;
+        <div class="ability-card"><strong>[Q] ${agent.abilities.q.name}</strong><span>${agent.abilities.q.description}</span></div>
+        <div class="ability-card"><strong>[E] ${agent.abilities.e.name}</strong><span>${agent.abilities.e.description}</span></div>
+        <div class="ability-card"><strong>[X] ${agent.abilities.x.name}</strong><span>${agent.abilities.x.description}</span></div>`;
     }
     this.updateHologramAppearance(agentId);
   }
@@ -303,7 +300,13 @@ class LobbyUIManager {
 
   updateHologramAppearance(agentId) {
     if (!this.hologramMesh) return;
-    const c = agentId === 'agni' ? 0xff3366 : 0x00d2ff;
+    const agent = window.AGENT_REGISTRY[agentId] || window.AGENT_REGISTRY['agni'];
+    let c = 0x00d2ff;
+    if (agent.role === 'DUELIST') c = 0xff3366;
+    else if (agent.role === 'INITIATOR') c = 0x00d2ff;
+    else if (agent.role === 'CONTROLLER') c = 0xa855f7;
+    else if (agent.role === 'SENTINEL') c = 0xeab308;
+
     this.hologramMesh.material.color.setHex(c);
     if (this.particles) this.particles.material.color.setHex(c);
   }

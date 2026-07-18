@@ -56,25 +56,22 @@ class AgentSelectUIManager {
     const bioLabel = document.getElementById('select-agent-bio');
     const abilitiesBox = document.querySelector('.details-abilities-column');
 
-    if (agentId === 'agni') {
-      nameLabel.innerText = "AGNI";
-      roleLabel.innerText = "DUELIST";
-      roleLabel.style.color = "var(--neon-red)";
-      bioLabel.innerText = "Fire manipulator. Controls combat pacing with molten walls and dash maneuvers.";
+    const agent = window.AGENT_REGISTRY[agentId] || window.AGENT_REGISTRY['agni'];
+
+    if (nameLabel) nameLabel.innerText = agent.name;
+    if (roleLabel) {
+      roleLabel.innerText = agent.role;
+      if (agent.role === 'DUELIST') roleLabel.style.color = "var(--neon-red)";
+      else if (agent.role === 'INITIATOR') roleLabel.style.color = "var(--neon-cyan)";
+      else if (agent.role === 'CONTROLLER') roleLabel.style.color = "#a855f7";
+      else if (agent.role === 'SENTINEL') roleLabel.style.color = "#eab308";
+    }
+    if (bioLabel) bioLabel.innerText = agent.passiveDesc;
+    if (abilitiesBox) {
       abilitiesBox.innerHTML = `
-        <div class="detail-ability"><span class="ab-key">[Q]</span> <strong>MOLTEN WALL</strong></div>
-        <div class="detail-ability"><span class="ab-key">[E]</span> <strong>FIRE DASH</strong></div>
-        <div class="detail-ability"><span class="ab-key">[X]</span> <strong>INFERNO STORM</strong></div>
-      `;
-    } else {
-      nameLabel.innerText = "VAYU";
-      roleLabel.innerText = "INITIATOR";
-      roleLabel.style.color = "var(--neon-cyan)";
-      bioLabel.innerText = "Wind specialist. Highlights targets through obstacles and disorients defenders.";
-      abilitiesBox.innerHTML = `
-        <div class="detail-ability"><span class="ab-key">[Q]</span> <strong>AIR PULSE</strong></div>
-        <div class="detail-ability"><span class="ab-key">[E]</span> <strong>WIND BURST</strong></div>
-        <div class="detail-ability"><span class="ab-key">[X]</span> <strong>CYCLONE FIELD</strong></div>
+        <div class="detail-ability"><span class="ab-key">[Q]</span> <strong>${agent.abilities.q.name.toUpperCase()}</strong></div>
+        <div class="detail-ability"><span class="ab-key">[E]</span> <strong>${agent.abilities.e.name.toUpperCase()}</strong></div>
+        <div class="detail-ability"><span class="ab-key">[X]</span> <strong>${agent.abilities.x.name.toUpperCase()}</strong></div>
       `;
     }
   }
