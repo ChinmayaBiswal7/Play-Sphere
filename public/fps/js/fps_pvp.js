@@ -6,7 +6,7 @@
 
   // Read room from URL or sessionStorage
   const params = new URLSearchParams(window.location.search);
-  const roomCode = params.get('room') || (sessionStorage.getItem('ps_active_match') ? JSON.parse(sessionStorage.getItem('ps_active_match')).roomCode : null);
+  const roomCode = params.get('room');
 
   if (!roomCode) {
     console.log("[FPS PvP Boot] No PvP room code active. Running in standard local mode.");

@@ -6,7 +6,7 @@
   'use strict';
 
   const params = new URLSearchParams(window.location.search);
-  const roomCode = params.get('room') || (sessionStorage.getItem('ps_active_match') ? JSON.parse(sessionStorage.getItem('ps_active_match')).roomCode : null);
+  const roomCode = params.get('room');
 
   if (!roomCode) return;
 

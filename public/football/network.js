@@ -16,24 +16,22 @@ export const SocketController = {
   },
 
   init() {
-    const params = new URLSearchParams(window.location.search);
-    const room = params.get('room');
-    if (!room) {
-      console.log("No room code found in URL. Running standalone input controls.");
-      return;
-    }
-    this.roomCode = room.toUpperCase().trim();
-    
+    window.SocketController = this;
     if (typeof io === 'undefined') {
       console.warn("Socket.io client not loaded. Running in local control mode.");
       return;
     }
     this.socket = io();
 
-    this.socket.on('connect', () => {
-      console.log("Football client connected to WebSocket. Joining room:", this.roomCode);
-      this.socket.emit('rejoin-room-phone', { roomCode: this.roomCode });
-    });
+    const params = new URLSearchParams(window.location.search);
+    const room = params.get('room');
+    if (room) {
+      this.roomCode = room.toUpperCase().trim();
+      this.socket.on('connect', () => {
+        console.log("Football client connected to WebSocket. Joining room:", this.roomCode);
+        this.socket.emit('rejoin-room-phone', { roomCode: this.roomCode });
+      });
+    }
 
     this.socket.on('phone-joined', ({ phoneSlot }) => {
       this.setConnected(true);
