@@ -36,12 +36,13 @@
 
   let ps5MusicIndex   = 0;
   let ps5MusicPlaying = false;
-  let ps5MusicShuffle = false;
+  let ps5MusicShuffleActive = false;
   let ps5YtPlayer     = null;
   let ps5YtReady      = false;
 
   // Load YouTube IFrame API script once
   function ps5LoadYouTubeAPI() {
+    console.log('[Music] Loading YouTube API...');
     if (window.YT && window.YT.Player) { ps5OnYouTubeIframeAPIReady(); return; }
     if (document.getElementById('yt-api-script')) return;
     const tag = document.createElement('script');
@@ -56,8 +57,9 @@
   function ps5OnYouTubeIframeAPIReady() {
     const container = document.getElementById('ps5-yt-container');
     if (!container) return;
-    container.style.display = 'block';
+    // container.style.display = 'block'; // Avoid display:none toggle
 
+    console.log('[Music] Initializing YT.Player...');
     ps5YtPlayer = new YT.Player('ps5-yt-player', {
       width: '1',
       height: '1',
@@ -74,10 +76,11 @@
       },
       events: {
         onReady: (e) => {
+          console.log('[Music] YT.Player onReady fired');
           ps5YtReady = true;
           // Start on a random track each session
           ps5MusicIndex = Math.floor(Math.random() * PS5_PLAYLIST.length);
-          ps5MusicShuffle = true;
+          ps5MusicShuffleActive = true;
           const btn = document.getElementById('ps5-music-shufflebtn');
           if (btn) btn.style.color = '#a78bfa';
           const track = PS5_PLAYLIST[ps5MusicIndex];
@@ -87,6 +90,7 @@
           e.target.playVideo();
         },
         onStateChange: (e) => {
+          console.log('[Music] YT.Player State:', e.data);
           // YT.PlayerState.ENDED = 0
           if (e.data === 0) { ps5MusicNext(); }
           // YT.PlayerState.PLAYING = 1
@@ -95,7 +99,7 @@
           if (e.data === 2) { ps5SetVinylSpin(false); ps5SetPlayIcon(false); }
         },
         onError: (e) => {
-          console.warn('YouTube player error:', e.data, '— skipping to next track');
+          console.warn('[Music] YouTube player error:', e.data, '— skipping to next track');
           setTimeout(ps5MusicNext, 800);
         }
       }
@@ -128,45 +132,66 @@
     if (!ps5YtReady || !ps5YtPlayer) return;
     ps5MusicIndex = ((index % PS5_PLAYLIST.length) + PS5_PLAYLIST.length) % PS5_PLAYLIST.length;
     const track = PS5_PLAYLIST[ps5MusicIndex];
+    console.log('[Music] Loading track index:', ps5MusicIndex, track.title);
     ps5MusicSetTitle(track.title);
     ps5YtPlayer.loadVideoById(track.id);
     ps5YtPlayer.playVideo();
   }
 
   window.ps5MusicToggle = function() {
-    if (!ps5YtReady) {
+    console.log('[Music] ps5MusicToggle called. Ready:', ps5YtReady);
+    if (!ps5YtReady || !ps5YtPlayer) {
       // First interaction — load API and start playing
       ps5LoadYouTubeAPI();
-      ps5MusicPlaying = true;
       return;
     }
-    if (ps5MusicPlaying) {
-      ps5YtPlayer.pauseVideo();
-    } else {
-      ps5YtPlayer.playVideo();
+    
+    try {
+      const state = ps5YtPlayer.getPlayerState();
+      console.log('[Music] PlayerState on toggle:', state);
+      if (state === 1) { // YT.PlayerState.PLAYING = 1
+        ps5YtPlayer.pauseVideo();
+      } else {
+        ps5YtPlayer.playVideo();
+      }
+    } catch(e) {
+      console.warn('[Music] Error getting player state:', e);
+      // Fallback
+      if (ps5MusicPlaying) {
+        ps5YtPlayer.pauseVideo();
+      } else {
+        ps5YtPlayer.playVideo();
+      }
     }
   };
 
   window.ps5MusicNext = function() {
+    console.log('[Music] ps5MusicNext called');
     if (!ps5YtReady) { ps5LoadYouTubeAPI(); return; }
-    const next = ps5MusicShuffle
+    const next = ps5MusicShuffleActive
       ? Math.floor(Math.random() * PS5_PLAYLIST.length)
       : ps5MusicIndex + 1;
     ps5MusicLoad(next);
   };
 
   window.ps5MusicPrev = function() {
+    console.log('[Music] ps5MusicPrev called');
     if (!ps5YtReady) { ps5LoadYouTubeAPI(); return; }
     ps5MusicLoad(ps5MusicIndex - 1);
   };
 
   window.ps5MusicShuffle = function() {
-    ps5MusicShuffle = !ps5MusicShuffle;
+    ps5MusicShuffleActive = !ps5MusicShuffleActive;
+    console.log('[Music] Shuffle toggled. Active:', ps5MusicShuffleActive);
     const btn = document.getElementById('ps5-music-shufflebtn');
-    if (btn) btn.style.color = ps5MusicShuffle ? '#a78bfa' : 'rgba(100,116,139,0.7)';
+    if (btn) btn.style.color = ps5MusicShuffleActive ? '#a78bfa' : 'rgba(100,116,139,0.7)';
   };
 
   // Export so dashboard can see
   window.ps5LoadYouTubeAPI = ps5LoadYouTubeAPI;
 
+  // Run automatically if browser has loaded
+  if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    setTimeout(ps5LoadYouTubeAPI, 1000);
+  }
 })();

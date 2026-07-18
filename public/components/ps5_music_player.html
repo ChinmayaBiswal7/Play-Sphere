@@ -1,7 +1,8 @@
 <!-- Floating Music Player Widget (Bottom Right) -->
 <div id="ps5-music-player" style="display: none;">
   <!-- Hidden YouTube iframe -->
-  <div id="ps5-yt-container" style="display:none; width:1px; height:1px; overflow:hidden; position:absolute; top:0; left:0;">
+  <!-- Hidden YouTube iframe (avoiding display:none to allow API playback) -->
+  <div id="ps5-yt-container" style="width:1px; height:1px; overflow:hidden; position:absolute; top:0; left:-9999px; opacity:0.01; pointer-events:none;">
     <div id="ps5-yt-player"></div>
   </div>
 

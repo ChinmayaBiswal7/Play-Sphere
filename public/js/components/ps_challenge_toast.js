@@ -234,6 +234,36 @@
         window.ps5Sound.playNotification();
       }
     });
+
+    // Handle universal matchmaking and friend challenges start
+    const startMatchHandler = (matchData) => {
+      console.log('[PvP] Match start triggered:', matchData);
+      
+      // Save match details to sessionStorage so iframe multi-player script knows it's an active PvP match immediately on load
+      sessionStorage.setItem('ps_active_match', JSON.stringify(matchData));
+
+      // Trigger the premium transition overlay and load game iframe
+      if (typeof window.ps5LaunchGame === 'function') {
+        window.ps5LaunchGame(matchData.game, matchData.roomCode);
+      } else {
+        // Fallback if home script is not fully loaded
+        const route = GAME_ROUTES[matchData.game];
+        if (route) {
+          let iframe = document.getElementById('game-session-iframe');
+          if (!iframe) {
+            iframe = document.createElement('iframe');
+            iframe.id = 'game-session-iframe';
+            iframe.style.cssText = "position: fixed; inset: 0; width: 100vw; height: 100vh; border: none; z-index: 999999; background: #000;";
+            document.body.appendChild(iframe);
+          }
+          iframe.src = `${route}?room=${matchData.roomCode}`;
+          iframe.style.display = 'block';
+        }
+      }
+    };
+
+    socket.on('ps-match-start', startMatchHandler);
+    socket.on('ps-matchmaking-found', startMatchHandler);
   }
 
   // ── Init ─────────────────────────────────────────────────────────────────────

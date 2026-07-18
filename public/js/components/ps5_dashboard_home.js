@@ -187,14 +187,7 @@
   }
 
   // ── NAVIGATION & GAME LAUNCH ──
-  function launchActiveGame() {
-    // Only launch if dashboard game shelf is visible
-    const storeView = document.getElementById('ps5-store-view');
-    if (storeView && storeView.style.display === 'flex') return;
-
-    const meta = gamesMetadata[selectedGameIndex];
-    if (!meta || !meta.unlocked) return;
-
+  window.ps5LaunchGame = function(gameId, roomCode) {
     // Pause background music when entering the game
     if (window.ps5YtPlayer && window.ps5YtReady) {
       try { window.ps5YtPlayer.pauseVideo(); } catch(e) {}
@@ -212,20 +205,20 @@
     setTimeout(() => {
       const root = document.getElementById('ps5-console-root');
 
-      if (meta.id === 'cricket') {
+      if (gameId === 'cricket') {
         if (animationFrameId) cancelAnimationFrame(animationFrameId);
         window.removeEventListener('resize', resizeBgCanvas);
         if (root) root.remove();
         if (typeof window.launchCricketGame === 'function') {
           window.launchCricketGame();
         }
-      } else if (meta.id === 'football' || meta.id === 'f1' || meta.id === 'tennis' || meta.id === 'wwe' || meta.id === 'fps') {
-        const code = window.roomCode || '';
+      } else if (gameId === 'football' || gameId === 'f1' || gameId === 'tennis' || gameId === 'wwe' || gameId === 'fps') {
+        const code = roomCode || '';
         let url = `/f1/index.html?room=${code}`;
-        if (meta.id === 'football') url = `/football/index.html?room=${code}`;
-        else if (meta.id === 'tennis') url = `/tennis/index.html?room=${code}`;
-        else if (meta.id === 'wwe') url = `/wwe/index.html?room=${code}`;
-        else if (meta.id === 'fps') url = `/fps/index.html?room=${code}`;
+        if (gameId === 'football') url = `/football/index.html?room=${code}`;
+        else if (gameId === 'tennis') url = `/tennis/index.html?room=${code}`;
+        else if (gameId === 'wwe') url = `/wwe/index.html?room=${code}`;
+        else if (gameId === 'fps') url = `/fps/index.html?room=${code}`;
         
         let iframe = document.getElementById('game-session-iframe');
         if (!iframe) {
@@ -245,6 +238,18 @@
         };
       }
     }, 1200);
+  };
+
+  function launchActiveGame() {
+    // Only launch if dashboard game shelf is visible
+    const storeView = document.getElementById('ps5-store-view');
+    if (storeView && storeView.style.display === 'flex') return;
+
+    const meta = gamesMetadata[selectedGameIndex];
+    if (!meta || !meta.unlocked) return;
+
+    const code = window.roomCode || '';
+    window.ps5LaunchGame(meta.id, code);
   }
 
   function setupInputListeners() {

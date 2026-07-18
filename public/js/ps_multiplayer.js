@@ -678,6 +678,23 @@
 
     // Bind socket (may retry if socket not ready yet)
     bindSocketEvents();
+
+    // Check if there is an active match pending for this game session
+    try {
+      const activeMatchStr = sessionStorage.getItem('ps_active_match');
+      if (activeMatchStr) {
+        const matchData = JSON.parse(activeMatchStr);
+        if (matchData.game === CURRENT_GAME) {
+          sessionStorage.removeItem('ps_active_match');
+          // Delay briefly to allow the game logic scripts to fully load/register first
+          setTimeout(() => {
+            launchMatch(matchData);
+          }, 1000);
+        }
+      }
+    } catch(e) {
+      console.warn('[PvP] Error reading active match from storage:', e);
+    }
   }
 
   if (document.readyState === 'loading') {
