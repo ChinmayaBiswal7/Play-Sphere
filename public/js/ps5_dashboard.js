@@ -19,9 +19,6 @@
       'ps5-boot',
       'ps5-dash',
       'ps5-store-view',
-      'ps5-friends-modal',
-      'ps5-profile-modal',
-      'ps5-controller-modal',
       'ps5-launch'
     ];
 
@@ -29,6 +26,14 @@
       const el = document.getElementById(id);
       if (el) {
         root.appendChild(el);
+      }
+    });
+
+    // Ensure modals are kept as direct children of document.body for correct z-index rendering over iframes
+    ['ps5-friends-modal', 'ps5-profile-modal', 'ps5-controller-modal'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        document.body.appendChild(el);
       }
     });
 

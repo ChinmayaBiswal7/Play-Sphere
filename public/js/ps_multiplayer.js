@@ -67,7 +67,14 @@
   function getFriendsPresence() {
     try {
       if (window.parent && window.parent.friendsManager) {
-        return window.parent.friendsManager.activeFriendProfiles || [];
+        const fm = window.parent.friendsManager;
+        if (!fm.activeFriendProfiles) {
+          fm.activeFriendProfiles = [];
+          fm.fetchFriendsPresence().then(() => {
+            renderFriends();
+          }).catch(err => console.warn('[PvP Panel] fetchFriendsPresence error:', err));
+        }
+        return fm.activeFriendProfiles || [];
       }
     } catch(e) {}
     return [];
@@ -652,6 +659,14 @@
     fab.addEventListener('click', () => {
       panel.classList.toggle('open');
       if (panel.classList.contains('open')) {
+        // Trigger a background presence refresh when opening the panel
+        try {
+          if (window.parent && window.parent.friendsManager) {
+            window.parent.friendsManager.fetchFriendsPresence().then(() => {
+              renderFriends();
+            }).catch(e => {});
+          }
+        } catch(e) {}
         renderFriends();
       }
     });

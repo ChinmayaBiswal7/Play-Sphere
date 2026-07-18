@@ -67,6 +67,12 @@ export function renderMultiplayer(container, onPlayMatch) {
         createPvPRoom();
       };
 
+      document.getElementById('btn-challenge-friend').onclick = () => {
+        AudioSynth.playClick();
+        const fab = document.getElementById('ps-mp-fab');
+        if (fab) fab.click();
+      };
+
       document.getElementById('btn-join-pvp').onclick = () => {
         AudioSynth.playClick();
         const codeInput = document.getElementById('pvp-code-input').value.toUpperCase().trim();
@@ -111,7 +117,16 @@ export function renderMultiplayer(container, onPlayMatch) {
   `;
 
   const renderFriendlyView = () => `
-    <div class="multiplayer-hero-layout" style="gap: 24px;">
+    <div class="multiplayer-hero-layout" style="gap: 24px; flex-wrap: wrap;">
+      <!-- Challenge Friend Card -->
+      <div class="multi-quickplay-card" id="btn-challenge-friend" style="background: linear-gradient(135deg, rgba(168,85,247,0.15) 0%, rgba(88,28,135,0.4) 100%); border: 1.5px solid #a855f7;">
+        <div class="quickplay-details">
+          <strong class="purple-text" style="color: #c084fc;">CHALLENGE FRIEND</strong>
+          <p>Open friends list to invite online friends directly.</p>
+        </div>
+        <div class="quickplay-arrow">👥</div>
+      </div>
+
       <!-- Create PVP Room Card -->
       <div class="multi-quickplay-card" id="btn-create-pvp" style="background: linear-gradient(135deg, rgba(163,230,53,0.15) 0%, rgba(20,83,45,0.4) 100%); border: 1.5px solid var(--accent-lime);">
         <div class="quickplay-details">
@@ -122,7 +137,7 @@ export function renderMultiplayer(container, onPlayMatch) {
       </div>
 
       <!-- Join PVP Room Card -->
-      <div class="multi-invite-card" style="flex-direction: column; align-items: stretch; gap: 16px; padding: 24px;">
+      <div class="multi-invite-card" style="flex-direction: column; align-items: stretch; gap: 16px; padding: 24px; flex: 1; min-width: 285px;">
         <div>
           <strong>JOIN PVP LOBBY</strong>
           <p style="font-size: 0.8rem; color: rgba(255,255,255,0.6);">Enter the 8-character lobby code below:</p>
