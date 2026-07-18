@@ -117,11 +117,15 @@ function setupMenuListeners() {
 
   // Open the Dashboard Friends modal to challenge a friend online
   const pvpFriendBtn = document.getElementById('menu-btn-pvp-friend');
+  console.log("[DEBUG-UI-MENUS] pvpFriendBtn element found:", pvpFriendBtn);
   if (pvpFriendBtn) {
     pvpFriendBtn.onclick = () => {
+      console.log("[DEBUG-UI-MENUS] pvpFriendBtn clicked!");
       if (window.friendsManager && typeof window.friendsManager.openFriendsModal === 'function') {
+        console.log("[DEBUG-UI-MENUS] friendsManager found. Opening friends modal...");
         window.friendsManager.openFriendsModal();
       } else {
+        console.warn("[DEBUG-UI-MENUS] friendsManager or openFriendsModal missing!", window.friendsManager);
         alert("Please sign in from the profile hub to challenge online friends.");
       }
     };
@@ -130,11 +134,13 @@ function setupMenuListeners() {
   // Handle random matchmaking search for Cricket Pro
   let cricketSearching = false;
   const pvpRandomBtn = document.getElementById('menu-btn-pvp-random');
+  console.log("[DEBUG-UI-MENUS] pvpRandomBtn element found:", pvpRandomBtn);
   const mmStatus = document.getElementById('cricket-mm-status');
   const mmTitle = document.getElementById('cricket-mm-title');
 
   if (pvpRandomBtn) {
     pvpRandomBtn.onclick = () => {
+      console.log("[DEBUG-UI-MENUS] pvpRandomBtn clicked! currentUser:", window.currentUser);
       if (!window.currentUser) {
         alert("Please sign in from the profile hub to participate in online matchmaking.");
         return;

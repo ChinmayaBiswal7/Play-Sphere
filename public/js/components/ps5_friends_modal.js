@@ -78,9 +78,14 @@ class PlaySphereFriendsManager {
   }
 
   openFriendsModal() {
-    if (!this.modal) return;
+    console.log("[Friends Modal] openFriendsModal called. modal element:", this.modal);
+    if (!this.modal) {
+      console.warn("[Friends Modal] modal element is NULL!");
+      return;
+    }
     this.modal.style.display = '';
     this.modal.classList.add('show');
+    console.log("[Friends Modal] Added 'show' class to modal. ClassList:", this.modal.className);
     this.syncFriendsUI();
   }
 
