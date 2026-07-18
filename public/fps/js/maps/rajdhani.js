@@ -103,11 +103,17 @@ class RajdhaniMapBuilder {
     // Bottom segment (Z:5 to 57): right inner wall south of B Link
     this.W(-31, 31, 1, this.WH, 52, colorMain, scene);
 
-    // B Main props / cover
-    this.addCover(-35, 48, this.CH, woodMat,  scene);
-    this.addCover(-35, 35, this.CH, concMat,  scene);
-    this.addCover(-35, 20, this.CH, woodMat,  scene);
-    this.addCover(-35,  8, this.CH, concMat,  scene);
+    // B Main props / cover (placed every 5-7m to break sightlines)
+    this.addCover(-33, 53, this.CH, woodMat, scene);
+    this.addCover(-37, 48, this.CH, concMat, scene);
+    this.addCover(-33, 43, 2.0, metalMat, scene);
+    this.addCover(-37, 38, this.CH, woodMat, scene);
+    this.addCover(-33, 33, this.CH, concMat, scene);
+    this.addCover(-37, 23, 2.0, metalMat, scene);
+    this.addCover(-33, 18, this.CH, woodMat, scene);
+    this.addCover(-37, 12, this.CH, concMat, scene);
+    this.addCover(-33, 6, 2.0, woodMat, scene);
+
     // Rickshaw prop
     this.block(-37, 0.6, 42, 1.8, 1.2, 4.5, new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.6 }), scene);
     // Broken bus
@@ -126,10 +132,17 @@ class RajdhaniMapBuilder {
     this.W( 31, 31,   1, this.WH, 52, colorMain, scene);  // Left inner south
 
     // A Main props
-    this.addCover(35, 48, this.CH, woodMat, scene);
-    this.addCover(35, 35, this.CH, concMat, scene);
-    this.addCover(35, 20, this.CH, woodMat, scene);
-    this.addCover(35,  8, this.CH, concMat, scene);
+    // A Main props / cover (placed every 5-7m to break sightlines)
+    this.addCover(33, 53, this.CH, woodMat, scene);
+    this.addCover(37, 48, this.CH, concMat, scene);
+    this.addCover(33, 43, 2.0, metalMat, scene);
+    this.addCover(37, 38, this.CH, woodMat, scene);
+    this.addCover(33, 33, this.CH, concMat, scene);
+    this.addCover(37, 23, 2.0, metalMat, scene);
+    this.addCover(33, 18, this.CH, woodMat, scene);
+    this.addCover(37, 12, this.CH, concMat, scene);
+    this.addCover(33, 6, 2.0, woodMat, scene);
+
     // Cars
     this.block(37, 0.7, 42, 2, 1.5, 4.5, concMat.clone(), scene);
     this.block(33, 0.7, 28, 2, 1.5, 4.5, concMat.clone(), scene);
@@ -170,11 +183,29 @@ class RajdhaniMapBuilder {
       new THREE.MeshStandardMaterial({ color: 0xd4b080, roughness: 0.3, metalness: 0.2 }));
     cenStatue.position.set(0, 1.8, -3); scene.add(cenStatue);
 
-    // Market stall covers
+    // Market stall covers & extra dense Mid covers
     this.addCover(-9, -9, this.CH, woodMat, scene);
     this.addCover( 9, -9, this.CH, woodMat, scene);
     this.addCover(-9,  4, this.CH, woodMat, scene);
     this.addCover( 9,  4, this.CH, woodMat, scene);
+    this.addCover( 0,  5, this.CH, woodMat, scene);
+    this.addCover(-5,  0, 2.0, techMat, scene);
+    this.addCover( 5,  0, 2.0, techMat, scene);
+    this.addCover(-14, 5, this.CH, concMat, scene);
+    this.addCover( 14, 5, this.CH, concMat, scene);
+    
+    // Elevated wooden catwalk bridge across Mid Plaza (Z: -27 to 14)
+    const midBridge = new THREE.Mesh(new THREE.BoxGeometry(3, 0.3, 41), woodMat);
+    midBridge.position.set(0, 2.8, -6.5); scene.add(midBridge);
+    this.colliders.push(midBridge);
+    const bridgeRailL = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.8, 41), metalMat);
+    bridgeRailL.position.set(-1.5, 3.4, -6.5); scene.add(bridgeRailL);
+    const bridgeRailR = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.8, 41), metalMat);
+    bridgeRailR.position.set(1.5, 3.4, -6.5); scene.add(bridgeRailR);
+
+    // Stairs to climb the catwalk from Mid Plaza (south end)
+    this.createStairs(0, 18, 0, 12, -0.5, 2.95, 3, scene, woodMat);
+
     this.createStreetLamp(0, 0, scene);
 
     /* ─── 9. MID → MID TOWER CONNECTOR ─────────────────────── */
@@ -194,7 +225,8 @@ class RajdhaniMapBuilder {
     const towerBal = new THREE.Mesh(new THREE.BoxGeometry(16, 0.3, 14), colorDef);
     towerBal.position.set(0, 4.5, -33); scene.add(towerBal);
     this.colliders.push(towerBal);
-    // Sniper window on south face (slit opening — visually only)
+    // Walkable stairs inside Mid Tower leading up to balcony
+    this.createStairs(-5, -38, 5, -38, -0.5, 4.65, 2.0, scene, colorDef);
     // Balcony south railing
     const tBRail = new THREE.Mesh(new THREE.BoxGeometry(16, 0.8, 0.25), metalMat);
     tBRail.position.set(0, 5.2, -27); scene.add(tBRail);
@@ -287,12 +319,8 @@ class RajdhaniMapBuilder {
     const aHeavBackW = new THREE.Mesh(new THREE.BoxGeometry(20, 3, 1), colorSiteA);
     aHeavBackW.position.set(45, 6.0, -43); scene.add(aHeavBackW);
     this.colliders.push(aHeavBackW);
-    // Stairs leading up from A Main top
-    for (let i = 0; i < 5; i++) {
-      const step = new THREE.Mesh(new THREE.BoxGeometry(4, 0.5, 1), colorSiteA);
-      step.position.set(58, i * 0.9, -32 - i); scene.add(step);
-      this.colliders.push(step);
-    }
+    // Stairs leading up from A Main top (gradual 15m run)
+    this.createStairs(58, -26, 58, -41, -0.5, 4.9, 4, scene, colorSiteA);
     // AC Units on roof
     this.block(40, 5.6, -42, 2, 1, 2, techMat.clone(), scene);
     this.block(50, 5.6, -42, 2, 1, 2, techMat.clone(), scene);
@@ -306,11 +334,8 @@ class RajdhaniMapBuilder {
     const bHeavBackW = new THREE.Mesh(new THREE.BoxGeometry(20, 3, 1), colorSiteB);
     bHeavBackW.position.set(-45, 6.0, -43); scene.add(bHeavBackW);
     this.colliders.push(bHeavBackW);
-    for (let i = 0; i < 5; i++) {
-      const step = new THREE.Mesh(new THREE.BoxGeometry(4, 0.5, 1), colorSiteB);
-      step.position.set(-58, i * 0.9, -32 - i); scene.add(step);
-      this.colliders.push(step);
-    }
+    // Stairs leading up from B Main top
+    this.createStairs(-58, -26, -58, -41, -0.5, 4.9, 4, scene, colorSiteB);
     this.block(-40, 5.6, -42, 2, 1, 2, techMat.clone(), scene);
     this.block(-50, 5.6, -42, 2, 1, 2, techMat.clone(), scene);
 
@@ -610,6 +635,40 @@ class RajdhaniMapBuilder {
     this.colliders.push(archB);
     const archA = this.block(35, 5.0, 52, 8, 0.5, 1.8, sandMat, scene);
     this.colliders.push(archA);
+
+    // AC units and banners on B Main wall (X = -39) to break wall monotony
+    const acMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.5 });
+    const bannerMatRed = new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.9, side: THREE.DoubleSide });
+    const bannerMatBlue = new THREE.MeshStandardMaterial({ color: 0x1d4ed8, roughness: 0.9, side: THREE.DoubleSide });
+    
+    const bMainZPoints = [45, 30, 15, 0];
+    bMainZPoints.forEach(z => {
+      this.block(-38.6, 3.5, z, 0.6, 0.8, 1.4, acMat, scene);
+      const fan = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.1, 8), techMat);
+      fan.rotation.z = Math.PI / 2; fan.position.set(-38.25, 3.5, z); scene.add(fan);
+    });
+    
+    [37, 22].forEach(z => {
+      const banner = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 3.0), bannerMatBlue);
+      banner.position.set(-38.85, 2.5, z);
+      banner.rotation.y = Math.PI / 2;
+      scene.add(banner);
+    });
+
+    // AC units and banners on A Main wall (X = 39)
+    const aMainZPoints = [45, 30, 15, 0];
+    aMainZPoints.forEach(z => {
+      this.block(38.6, 3.5, z, 0.6, 0.8, 1.4, acMat, scene);
+      const fan = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.1, 8), techMat);
+      fan.rotation.z = Math.PI / 2; fan.position.set(38.25, 3.5, z); scene.add(fan);
+    });
+    
+    [37, 22].forEach(z => {
+      const banner = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 3.0), bannerMatRed);
+      banner.position.set(38.85, 2.5, z);
+      banner.rotation.y = -Math.PI / 2;
+      scene.add(banner);
+    });
   }
 
   /* ══ MARKET STALLS & HANGING CABLES ══════════════════════ */
@@ -790,6 +849,30 @@ class RajdhaniMapBuilder {
     // Hanging laundry/banners
     this.createLaundryLine(-38.8, 3.8, 16, -31.2, 3.8, 16, scene);
     this.createLaundryLine(38.8, 3.8, 16, 31.2, 3.8, 16, scene);
+  }
+
+  /* ══ GRADUAL WALKABLE STAIRS BUILDER ═════════════════════ */
+  createStairs(startX, startZ, endX, endZ, startY, endY, width, scene, mat) {
+    const steps = 14;
+    const dx = (endX - startX) / steps;
+    const dz = (endZ - startZ) / steps;
+    const dy = (endY - startY) / steps;
+    
+    for (let i = 0; i < steps; i++) {
+      // Step box
+      const stepW = Math.abs(dx) < 0.1 ? width : Math.abs(dx) * 1.5;
+      const stepD = Math.abs(dz) < 0.1 ? width : Math.abs(dz) * 1.5;
+      const stepH = dy;
+      
+      const step = new THREE.Mesh(new THREE.BoxGeometry(stepW, stepH, stepD), mat);
+      step.position.set(
+        startX + i * dx,
+        startY + i * dy + stepH / 2,
+        startZ + i * dz
+      );
+      scene.add(step);
+      this.colliders.push(step);
+    }
   }
 
   /* ══ LANDMARK & PROP HELPERS ══════════════════════════════ */

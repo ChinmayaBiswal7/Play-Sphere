@@ -122,7 +122,54 @@ class PlayerFPSController {
     const targetEyeHeight = this.keys.ctrl ? 0.95 : 1.65;
     this.eyeHeight += (targetEyeHeight - this.eyeHeight) * 15 * dt;
 
-    // 2. Vertical physics (gravity and jumps)
+    // 2. Horizontal movement inputs
+    let moveSpeed = this.speed;
+    if (this.keys.Shift) moveSpeed = this.walkSpeed;
+    if (this.keys.ctrl) moveSpeed = this.crouchSpeed;
+
+    const forwardVec = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.yaw);
+    const rightVec = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.yaw);
+
+    const moveDirection = new THREE.Vector3();
+    if (this.keys.w) moveDirection.add(forwardVec);
+    if (this.keys.s) moveDirection.add(forwardVec.clone().negate());
+    if (this.keys.a) moveDirection.add(rightVec.clone().negate());
+    if (this.keys.d) moveDirection.add(rightVec);
+
+    moveDirection.normalize().multiplyScalar(moveSpeed);
+
+    // 3. Horizontal collision check (sliding along walls)
+    const targetPos = this.position.clone().add(moveDirection.clone().multiplyScalar(dt));
+    const finalPos = this.checkCollisions(this.position, targetPos);
+    this.position.x = finalPos.x;
+    this.position.z = finalPos.z;
+
+    // 4. Find highest floor height underneath the player's updated horizontal position
+    const radius = this.playerRadius;
+    let floorHeight = -0.5; // ground default
+
+    for (let i = 0; i < this.colliders.length; i++) {
+      const obstacle = this.colliders[i];
+      // Skip triggers or non-solid collision volumes
+      if (obstacle.material && obstacle.material.visible === false && obstacle.name === "trigger") continue;
+
+      const box = new THREE.Box3().setFromObject(obstacle);
+      
+      const overlapX = (this.position.x - radius < box.max.x) && (this.position.x + radius > box.min.x);
+      const overlapZ = (this.position.z - radius < box.max.z) && (this.position.z + radius > box.min.z);
+      
+      if (overlapX && overlapZ) {
+        const feetY = this.position.y - this.eyeHeight;
+        // Step height limit: player can step up to 0.45m high obstacles
+        if (feetY >= box.max.y - 0.45 && box.max.y > floorHeight) {
+          floorHeight = box.max.y;
+        }
+      }
+    }
+
+    const groundLevel = floorHeight + this.eyeHeight;
+
+    // 5. Vertical physics (gravity and jump)
     if (!this.isGrounded) {
       this.velocity.y += this.gravity * dt;
     }
@@ -135,42 +182,20 @@ class PlayerFPSController {
     // Apply vertical travel
     this.position.y += this.velocity.y * dt;
 
-    // Check ground level bounds based on current eyeHeight
-    const groundLevel = -0.5 + this.eyeHeight;
-    if (this.isGrounded) {
+    // Snapping and landing checks
+    if (this.position.y <= groundLevel) {
       this.position.y = groundLevel;
       this.velocity.y = 0;
+      this.isGrounded = true;
     } else {
-      if (this.position.y <= groundLevel) {
+      // If player is standing on a platform, snap to changing heights (like stairs/ramps)
+      if (this.isGrounded && Math.abs(this.position.y - groundLevel) < 0.45) {
         this.position.y = groundLevel;
         this.velocity.y = 0;
-        this.isGrounded = true;
+      } else {
+        this.isGrounded = false;
       }
     }
-
-    // 3. Horizontal physics (WASD moves)
-    let moveSpeed = this.speed;
-    if (this.keys.Shift) moveSpeed = this.walkSpeed;
-    if (this.keys.ctrl) moveSpeed = this.crouchSpeed;
-
-    // Calculate move vectors relative to camera yaw
-    const forwardVec = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.yaw);
-    const rightVec = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.yaw);
-
-    const moveDirection = new THREE.Vector3();
-    if (this.keys.w) moveDirection.add(forwardVec);
-    if (this.keys.s) moveDirection.add(forwardVec.clone().negate());
-    if (this.keys.a) moveDirection.add(rightVec.clone().negate());
-    if (this.keys.d) moveDirection.add(rightVec);
-
-    moveDirection.normalize().multiplyScalar(moveSpeed);
-
-    // 4. Simple wall slide collision checks
-    const targetPos = this.position.clone().add(moveDirection.clone().multiplyScalar(dt));
-    const finalPos = this.checkCollisions(this.position, targetPos);
-    
-    this.position.x = finalPos.x;
-    this.position.z = finalPos.z;
 
     // Apply coordinates to camera node
     this.camera.position.copy(this.position);
@@ -183,26 +208,33 @@ class PlayerFPSController {
     let collideX = false;
     let collideZ = false;
 
-    // Create player bounding cylinder check box
     const radius = this.playerRadius;
 
     for (let i = 0; i < this.colliders.length; i++) {
       const obstacle = this.colliders[i];
       const box = new THREE.Box3().setFromObject(obstacle);
 
-      // Check X coordinate path
+      // Check X coordinate path - raise min Y by 0.45 so small steps don't block horizontally!
       const checkXBox = new THREE.Box3(
-        new THREE.Vector3(nextX.x - radius, nextX.y - 1.5, nextX.z - radius),
+        new THREE.Vector3(nextX.x - radius, nextX.y - 1.5 + 0.45, nextX.z - radius),
         new THREE.Vector3(nextX.x + radius, nextX.y + 0.5, nextX.z + radius)
       );
-      if (checkXBox.intersectsBox(box)) collideX = true;
+      if (checkXBox.intersectsBox(box)) {
+        if (box.max.y > nextX.y - 1.5 + 0.45) {
+          collideX = true;
+        }
+      }
 
       // Check Z coordinate path
       const checkZBox = new THREE.Box3(
-        new THREE.Vector3(nextZ.x - radius, nextZ.y - 1.5, nextZ.z - radius),
+        new THREE.Vector3(nextZ.x - radius, nextZ.y - 1.5 + 0.45, nextZ.z - radius),
         new THREE.Vector3(nextZ.x + radius, nextZ.y + 0.5, nextZ.z + radius)
       );
-      if (checkZBox.intersectsBox(box)) collideZ = true;
+      if (checkZBox.intersectsBox(box)) {
+        if (box.max.y > nextZ.y - 1.5 + 0.45) {
+          collideZ = true;
+        }
+      }
     }
 
     const result = target.clone();
