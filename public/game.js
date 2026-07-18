@@ -2811,6 +2811,55 @@ function start() {
   window.loadSettings();
   initKeyboard();
   initGamepad();
+
+  // Check for active network matchmaking or friend PvP session on startup
+  const activeMatchStr = sessionStorage.getItem('ps_active_match');
+  if (activeMatchStr) {
+    try {
+      const matchData = JSON.parse(activeMatchStr);
+      if (matchData.game === 'cricket') {
+        sessionStorage.removeItem('ps_active_match');
+        window.matchMode = window.MODES.PVP;
+        window.roomCode = matchData.roomCode;
+
+        // Skip default splash / menu sequence and load setup directly
+        setTimeout(() => {
+          if (window.ui.splash) {
+            window.ui.splash.style.opacity = 0;
+            window.ui.splash.style.visibility = 'hidden';
+          }
+          if (window.ui.mainMenu) window.ui.mainMenu.classList.add('hidden');
+
+          if (typeof window.cricketPvPInit === 'function') {
+            window.cricketPvPInit(matchData);
+          } else {
+            console.error('[PvP] cricketPvPInit function not loaded!');
+          }
+        }, 300);
+
+        // Bind global helper functions needed by cutscene modules and non-module scripts
+        window.triggerWicketsClatter = triggerWicketsClatter;
+        window.callRun = callRun;
+        window.cancelRun = cancelRun;
+        window.proceedFromMatchIntro = proceedFromMatchIntro;
+        window.proceedFromInningsBreak = proceedFromInningsBreak;
+
+        window.restartMatch        = restartMatch;
+        window.resetFieldForBowl   = resetFieldForBowl;
+        window.setupNextDelivery   = setupNextDelivery;
+        window.showBowlerSelection = showBowlerSelection;
+        window.setGameState        = setGameState;
+        window.bowlBall               = bowlBall;
+        window.triggerBowlingRelease  = triggerBowlingRelease;
+
+        animate();
+        return;
+      }
+    } catch (e) {
+      console.warn('[PvP] Error booting active match on start:', e);
+    }
+  }
+
   setGameState(STATES.SPLASH);
   
   // Bind global helper functions needed by cutscene modules and non-module scripts

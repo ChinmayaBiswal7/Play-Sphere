@@ -115,27 +115,91 @@ function setupMenuListeners() {
     if (typeof window.updateMatchupScreenUI === 'function') window.updateMatchupScreenUI();
   };
 
-  document.getElementById('menu-btn-pvp').onclick = () => {
-    const userTeamSelect = document.getElementById('pvp-user-team');
-    const oppTeamSelect  = document.getElementById('pvp-opp-team');
-    const oversSelect    = document.getElementById('pvp-overs');
-    const targetInput    = document.getElementById('pvp-target');
+  // Open the Dashboard Friends modal to challenge a friend online
+  const pvpFriendBtn = document.getElementById('menu-btn-pvp-friend');
+  if (pvpFriendBtn) {
+    pvpFriendBtn.onclick = () => {
+      if (window.friendsManager && typeof window.friendsManager.openFriendsModal === 'function') {
+        window.friendsManager.openFriendsModal();
+      } else {
+        alert("Please sign in from the profile hub to challenge online friends.");
+      }
+    };
+  }
 
-    if (userTeamSelect) window.MATCH.userTeam = userTeamSelect.value;
-    if (oppTeamSelect)  window.MATCH.oppTeam  = oppTeamSelect.value;
-    if (oversSelect)    window.MATCH.maxBalls  = parseInt(oversSelect.value) * 6;
-    if (targetInput)    window.MATCH.target    = parseInt(targetInput.value);
+  // Handle random matchmaking search for Cricket Pro
+  let cricketSearching = false;
+  const pvpRandomBtn = document.getElementById('menu-btn-pvp-random');
+  const mmStatus = document.getElementById('cricket-mm-status');
+  const mmTitle = document.getElementById('cricket-mm-title');
 
-    window.ui.mainMenu.classList.add('hidden');
-    window.ui.lobby.classList.remove('hidden');
-    window.ui.qrSpinner.style.display = 'flex';
-    window.ui.qrImageWrapper.style.display = 'none';
-    window.ui.roomCodeText.innerText = '----';
+  if (pvpRandomBtn) {
+    pvpRandomBtn.onclick = () => {
+      if (!window.currentUser) {
+        alert("Please sign in from the profile hub to participate in online matchmaking.");
+        return;
+      }
+      if (typeof window.initSocket === 'function') window.initSocket();
 
-    window.matchMode = window.MODES.PVP;
-    if (typeof window.setGameState === 'function') window.setGameState(window.STATES.WAITING_FOR_PHONE);
-    if (typeof window.initSocket === 'function') window.initSocket();
+      const socket = window.socket;
+      if (!socket) {
+        alert("Connecting to server... Please try again in a moment.");
+        return;
+      }
+
+      if (cricketSearching) {
+        // Cancel Search
+        socket.emit('ps-matchmaking-cancel');
+        cricketSearching = false;
+        if (mmStatus) mmStatus.classList.add('hidden');
+        pvpRandomBtn.innerHTML = `
+          <div>
+            <div style="font-weight: 800; font-size: 0.85rem; color: #fff; display: flex; align-items: center; gap: 6px;">🌐 QUICK MATCHMAKING</div>
+            <div style="font-size: 0.65rem; color: rgba(255,255,255,0.45); font-weight: 500; margin-top: 3px;">Search and match with another player instantly</div>
+          </div>
+          <span style="font-size: 1rem; color: rgba(255,255,255,0.45);">➔</span>
+        `;
+      } else {
+        // Join Matchmaking Queue
+        const profile = window.profile || {};
+        socket.emit('ps-matchmaking-join', {
+          game: 'cricket',
+          uid: window.currentUser.uid,
+          username: profile.username || 'Gamer'
+        });
+
+        // Set state to searching
+        cricketSearching = true;
+        if (mmStatus) mmStatus.classList.remove('hidden');
+        if (mmTitle) mmTitle.innerText = "SEARCHING OPPONENT...";
+        pvpRandomBtn.innerHTML = `
+          <div>
+            <div style="font-weight: 800; font-size: 0.85rem; color: #f87171; display: flex; align-items: center; gap: 6px;">🔴 CANCEL SEARCH</div>
+            <div style="font-size: 0.65rem; color: rgba(255,255,255,0.45); font-weight: 500; margin-top: 3px;">Click to cancel looking for matches</div>
+          </div>
+          <span style="font-size: 1rem; color: rgba(255,255,255,0.45);">➔</span>
+        `;
+      }
+    };
+  }
+
+  // Socket response for matchmaking cancelled/error
+  const bindCricketMMSocket = () => {
+    if (window.socket) {
+      window.socket.on('ps-matchmaking-cancelled', () => {
+        cricketSearching = false;
+        if (mmStatus) mmStatus.classList.add('hidden');
+      });
+      window.socket.on('ps-matchmaking-error', (msg) => {
+        cricketSearching = false;
+        if (mmStatus) mmStatus.classList.add('hidden');
+        alert("Matchmaking Error: " + msg);
+      });
+    } else {
+      setTimeout(bindCricketMMSocket, 800);
+    }
   };
+  bindCricketMMSocket();
 
   document.getElementById('menu-btn-help').onclick = () => {
     window.ui.mainMenu.classList.add('hidden');

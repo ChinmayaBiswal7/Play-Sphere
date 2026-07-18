@@ -138,6 +138,21 @@ function registerSocket(socket, io, onlineUsers) {
     console.log(`[Matchmaking] Socket ${socket.id} cancelled search`);
   });
 
+  // ── GAME SESSION JOIN & SYNC RELAY ──────────────────────────────────────────
+  socket.on('ps-game-join', ({ roomCode, game, isHost }) => {
+    socket.join(roomCode);
+    socket.roomCode = roomCode;
+    socket.activeGame = game;
+    console.log(`[PvP] Socket ${socket.id} joined game room ${roomCode} (${game}, isHost: ${isHost})`);
+  });
+
+  socket.on('ps-game-message', ({ roomCode, event, data }) => {
+    const rCode = roomCode || socket.roomCode;
+    if (rCode) {
+      socket.to(rCode).emit('ps-game-message', { event, data });
+    }
+  });
+
   // Clean up on disconnect
   socket.on('disconnect', () => {
     dequeueSocket(socket.id);

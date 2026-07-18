@@ -51,78 +51,39 @@
           </button>
         </div>
         
-        <div id="detail-pvp" class="detail-content hidden">
-          <div class="detail-subtitle">LOCAL DUEL</div>
-          <div class="detail-title">PVP MULTIPLAYER</div>
-          <div class="detail-desc">Connect your phone as a PlayStation 5 controller and bowl in real-time while a friend bats on the keyboard!</div>
-          <div class="stadium-select-container" style="margin-top: 8px;">
-            <label for="pvp-stadium-select" style="font-size: 0.8rem; font-weight: 700; color: #cbd5e1; margin-bottom: 6px; display: block;">SELECT STADIUM</label>
-            <select id="pvp-stadium-select" class="settings-select" style="width: 100%; max-width: 320px;">
-              <option value="default">Default Procedural Stadium</option>
-              <option value="ekana">Ekana Stadium (Lucknow)</option>
-              <option value="stadium_usdz">USDZ Stadium</option>
-              <option value="qaddafi">Qaddafi Stadium (Lahore)</option>
-              <option value="classic">Classic Cricket Stadium</option>
-              <option value="grand">Grand Cricket Stadium</option>
-              <option value="cricket_ground">Cricket Ground Arena</option>
-            </select>
-          </div>
+        <div id="detail-pvp" class="detail-content hidden" style="display: flex; flex-direction: column; gap: 14px; width: 100%;">
+          <div class="detail-subtitle">ONLINE ARENA</div>
+          <div class="detail-title">PLAYSPHERE MULTIPLAYER</div>
+          <div class="detail-desc" style="margin-bottom: 8px;">Compete online against friends or match with random players globally. Real-time bat-vs-bowl action!</div>
+          
+          <div class="mp-options-container" style="display: flex; flex-direction: column; gap: 12px; max-width: 320px;">
+            <!-- Option 1: Challenge Friend -->
+            <button id="menu-btn-pvp-friend" class="fc-action-btn" style="text-align: left; display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; height: auto; border: 1.5px solid rgba(99,102,241,0.25); background: rgba(99,102,241,0.06); box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+              <div>
+                <div style="font-weight: 800; font-size: 0.85rem; color: #fff; display: flex; align-items: center; gap: 6px;">⚔️ CHALLENGE FRIEND</div>
+                <div style="font-size: 0.65rem; color: rgba(255,255,255,0.45); font-weight: 500; margin-top: 3px;">Invite any online friend from your list</div>
+              </div>
+              <span style="font-size: 1rem; color: rgba(255,255,255,0.45);">➔</span>
+            </button>
 
-          <!-- PVP Team Selection -->
-          <div style="display: flex; gap: 12px; margin-top: 12px; max-width: 320px;">
-            <div style="flex: 1;">
-              <label for="pvp-user-team" style="font-size: 0.75rem; font-weight: 700; color: #cbd5e1; margin-bottom: 4px; display: block;">YOUR TEAM</label>
-              <select id="pvp-user-team" class="settings-select" style="width: 100%;">
-                <option value="IND">India</option>
-                <option value="AUS">Australia</option>
-                <option value="ENG">England</option>
-                <option value="PAK">Pakistan</option>
-                <option value="NZ">New Zealand</option>
-                <option value="SA">South Africa</option>
-                <option value="WI">West Indies</option>
-                <option value="SL">Sri Lanka</option>
-                <option value="BAN">Bangladesh</option>
-                <option value="AFG">Afghanistan</option>
-              </select>
-            </div>
-            <div style="flex: 1;">
-              <label for="pvp-opp-team" style="font-size: 0.75rem; font-weight: 700; color: #cbd5e1; margin-bottom: 4px; display: block;">OPPONENT TEAM</label>
-              <select id="pvp-opp-team" class="settings-select" style="width: 100%;">
-                <option value="AUS">Australia</option>
-                <option value="IND">India</option>
-                <option value="ENG">England</option>
-                <option value="PAK">Pakistan</option>
-                <option value="NZ">New Zealand</option>
-                <option value="SA">South Africa</option>
-                <option value="WI">West Indies</option>
-                <option value="SL">Sri Lanka</option>
-                <option value="BAN">Bangladesh</option>
-                <option value="AFG">Afghanistan</option>
-              </select>
+            <!-- Option 2: Random Matchmaking -->
+            <button id="menu-btn-pvp-random" class="fc-action-btn" style="text-align: left; display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; height: auto; border: 1.5px solid rgba(16,185,129,0.25); background: rgba(16,185,129,0.06); box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+              <div>
+                <div style="font-weight: 800; font-size: 0.85rem; color: #fff; display: flex; align-items: center; gap: 6px;">🌐 QUICK MATCHMAKING</div>
+                <div style="font-size: 0.65rem; color: rgba(255,255,255,0.45); font-weight: 500; margin-top: 3px;">Search and match with another player instantly</div>
+              </div>
+              <span style="font-size: 1rem; color: rgba(255,255,255,0.45);">➔</span>
+            </button>
+          </div>
+          
+          <!-- Matchmaking Status Indicator -->
+          <div id="cricket-mm-status" class="hidden" style="margin-top: 8px; background: rgba(15,23,42,0.6); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 10px 14px; max-width: 320px; box-sizing: border-box; display: flex; align-items: center; gap: 10px;">
+            <div style="width: 14px; height: 14px; border: 2.5px solid #10b981; border-top-color: transparent; border-radius: 50%; animation: ps-spin 0.8s linear infinite;" id="cricket-mm-spinner"></div>
+            <div style="text-align: left;">
+              <div id="cricket-mm-title" style="font-weight: 700; color: #fff; font-size: 0.75rem;">SEARCHING OPPONENT...</div>
+              <div id="cricket-mm-sub" style="font-size: 0.62rem; color: rgba(255,255,255,0.45); margin-top: 2px;">Searching PlaySphere networks</div>
             </div>
           </div>
-
-          <!-- PVP Match Length & Target -->
-          <div style="display: flex; gap: 12px; margin-top: 12px; max-width: 320px;">
-            <div style="flex: 1;">
-              <label for="pvp-overs" style="font-size: 0.75rem; font-weight: 700; color: #cbd5e1; margin-bottom: 4px; display: block;">OVERS</label>
-              <select id="pvp-overs" class="settings-select" style="width: 100%;">
-                <option value="1">1 Over</option>
-                <option value="2" selected>2 Overs</option>
-                <option value="5">5 Overs</option>
-                <option value="10">10 Overs</option>
-                <option value="20">20 Overs</option>
-              </select>
-            </div>
-            <div style="flex: 1;">
-              <label for="pvp-target" style="font-size: 0.75rem; font-weight: 700; color: #cbd5e1; margin-bottom: 4px; display: block;">TARGET RUNS</label>
-              <input type="number" id="pvp-target" min="1" max="999" value="24" class="settings-select" style="width: 100%; border: 1px solid rgba(255,255,255,0.15); border-radius: 4px; padding: 6px; box-sizing: border-box; text-align: center; color: #fff; background: rgba(30, 41, 59, 0.45);" />
-            </div>
-          </div>
-
-          <button id="menu-btn-pvp" class="fc-action-btn">
-            Host PvP Room
-          </button>
         </div>
 
         <div id="detail-controls" class="detail-content hidden">

@@ -504,8 +504,11 @@ window.friendsLoadProfiles = async (uids) => {
   if (!uids || uids.length === 0) return [];
   const loaded = await ensureFirebase();
   if (!loaded) return [];
+  
+  // Deduplicate array to ensure no duplicate requests or profile loads occur
+  const uniqueUids = [...new Set(uids)];
   const profiles = [];
-  for (const uid of uids) {
+  for (const uid of uniqueUids) {
     try {
       const userRef = fb_doc(window.fb_db, "users", uid);
       const snap = await fb_getDoc(userRef);
@@ -535,9 +538,9 @@ function startFriendRequestListener(uid, onSnapshot, docFn, dbRef) {
 
     // Sync latest profile data into window.profile
     if (window.profile) {
-      window.profile.friends = data.friends || [];
-      window.profile.friendRequestsReceived = data.friendRequestsReceived || [];
-      window.profile.friendRequestsSent = data.friendRequestsSent || [];
+      window.profile.friends = [...new Set(data.friends || [])];
+      window.profile.friendRequestsReceived = [...new Set(data.friendRequestsReceived || [])];
+      window.profile.friendRequestsSent = [...new Set(data.friendRequestsSent || [])];
     }
 
     const incoming = data.friendRequestsReceived || [];
