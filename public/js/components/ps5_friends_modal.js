@@ -85,6 +85,21 @@ class PlaySphereFriendsManager {
     }
     this.modal.style.display = '';
     this.modal.classList.add('show');
+    
+    // Diagnostic log: check computed styles
+    const computed = window.getComputedStyle(this.modal);
+    console.log("[Friends Modal] Computed styles:", {
+      display: computed.display,
+      opacity: computed.opacity,
+      zIndex: computed.zIndex,
+      visibility: computed.visibility,
+      position: computed.position,
+      width: computed.width,
+      height: computed.height,
+      top: computed.top,
+      left: computed.left
+    });
+
     console.log("[Friends Modal] Added 'show' class to modal. ClassList:", this.modal.className);
     this.syncFriendsUI();
   }
