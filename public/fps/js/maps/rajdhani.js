@@ -317,12 +317,15 @@ class RajdhaniMapBuilder {
     // Railing on south (overlooking A Site)
     const aRailS = new THREE.Mesh(new THREE.BoxGeometry(20, 0.8, 0.25), metalMat);
     aRailS.position.set(45, 5.3, -31.5); scene.add(aRailS);
-    // Back wall
-    const aHeavBackW = new THREE.Mesh(new THREE.BoxGeometry(20, 3, 1), colorSiteA);
-    aHeavBackW.position.set(45, 6.0, -43); scene.add(aHeavBackW);
-    this.colliders.push(aHeavBackW);
-    // Stairs leading up from A Main top (gradual 15m run)
-    this.createStairs(58, -26, 58, -41, -0.5, 4.9, 4, scene, colorSiteA);
+    // Back wall split with 4m doorway at center X=45
+    const aHeavBackL = new THREE.Mesh(new THREE.BoxGeometry(8, 3, 1), colorSiteA);
+    aHeavBackL.position.set(39, 6.0, -43); scene.add(aHeavBackL);
+    this.colliders.push(aHeavBackL);
+    const aHeavBackR = new THREE.Mesh(new THREE.BoxGeometry(8, 3, 1), colorSiteA);
+    aHeavBackR.position.set(51, 6.0, -43); scene.add(aHeavBackR);
+    this.colliders.push(aHeavBackR);
+    // Stairs leading up from Defender side corridor (gradual 15m run to center doorway)
+    this.createStairs(45, -58, 45, -43, -0.5, 4.9, 4, scene, colorSiteA);
     // AC Units on roof
     this.block(40, 5.6, -42, 2, 1, 2, techMat.clone(), scene);
     this.block(50, 5.6, -42, 2, 1, 2, techMat.clone(), scene);
@@ -333,11 +336,15 @@ class RajdhaniMapBuilder {
     this.colliders.push(bHeavenSlab);
     const bRailS = new THREE.Mesh(new THREE.BoxGeometry(20, 0.8, 0.25), metalMat);
     bRailS.position.set(-45, 5.3, -31.5); scene.add(bRailS);
-    const bHeavBackW = new THREE.Mesh(new THREE.BoxGeometry(20, 3, 1), colorSiteB);
-    bHeavBackW.position.set(-45, 6.0, -43); scene.add(bHeavBackW);
-    this.colliders.push(bHeavBackW);
-    // Stairs leading up from B Main top
-    this.createStairs(-58, -26, -58, -41, -0.5, 4.9, 4, scene, colorSiteB);
+    // Back wall split with 4m doorway at center X=-45
+    const bHeavBackL = new THREE.Mesh(new THREE.BoxGeometry(8, 3, 1), colorSiteB);
+    bHeavBackL.position.set(-51, 6.0, -43); scene.add(bHeavBackL);
+    this.colliders.push(bHeavBackL);
+    const bHeavBackR = new THREE.Mesh(new THREE.BoxGeometry(8, 3, 1), colorSiteB);
+    bHeavBackR.position.set(-39, 6.0, -43); scene.add(bHeavBackR);
+    this.colliders.push(bHeavBackR);
+    // Stairs leading up from Defender side corridor
+    this.createStairs(-45, -58, -45, -43, -0.5, 4.9, 4, scene, colorSiteB);
     this.block(-40, 5.6, -42, 2, 1, 2, techMat.clone(), scene);
     this.block(-50, 5.6, -42, 2, 1, 2, techMat.clone(), scene);
 
@@ -441,6 +448,9 @@ class RajdhaniMapBuilder {
     this.createWallTorch(31.2, 2.2, 20, scene);
     this.createWallTorch(32.2, 2.2, -18, scene);
     this.createWallTorch(57.8, 2.2, -18, scene);
+
+    // 25. Populate non-playable voids with tall building facades
+    this.addFillerBuildings(scene, colorDef, colorMid, techMat);
 
     // Ambient audio
     this.initAmbianceAudio();
@@ -1048,6 +1058,27 @@ class RajdhaniMapBuilder {
     texture.wrapT = THREE.RepeatWrapping;
     texture.repeat.set(4, 2);
     return texture;
+  }
+
+  /* ══ TALL URBAN FILLER BUILDINGS ══════════════════════════ */
+  addFillerBuildings(scene, colorDef, colorMid, techMat) {
+    // Left Void (between B Main and Mid Tunnel)
+    this.block(-17.5, 5, 35, 23, 10, 40, colorDef, scene);
+    // Right Void (between A Main and Mid Tunnel)
+    this.block(17.5, 5, 35, 23, 10, 40, colorDef, scene);
+
+    // Left Back Void (between B Site and DEF connector)
+    this.block(-19, 5, -47.5, 22, 10, 15, colorDef, scene);
+    // Right Back Void (between A Site and DEF connector)
+    this.block(19, 5, -47.5, 22, 10, 15, colorDef, scene);
+
+    // Mid Plaza Side Voids (flanking Mid Plaza)
+    this.block(-25, 5, -3, 14, 10, 26, colorMid, scene);
+    this.block(25, 5, -3, 14, 10, 26, colorMid, scene);
+
+    // Defender Spawn Back Fillers (behind DEF Spawn)
+    this.block(-25, 5, -67, 18, 10, 12, techMat, scene);
+    this.block(25, 5, -67, 18, 10, 12, techMat, scene);
   }
 
   getPlantZone(pos) {

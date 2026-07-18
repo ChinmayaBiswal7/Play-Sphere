@@ -123,13 +123,14 @@ class AbilityManager {
       // 1. MOLTEN WALL (Vision Block + Damage)
       if (window.SynthAudio) window.SynthAudio.playAbilityFlame();
 
-      const wallGeo = new THREE.BoxGeometry(16, 4, 0.4);
+      const wallGeo = new THREE.BoxGeometry(16, 4, 0.85);
       const wallMat = new THREE.MeshStandardMaterial({
         color: 0xff3300,
-        emissive: 0xff1100,
+        emissive: 0xff3300,
+        emissiveIntensity: 1.5,
+        roughness: 0.2,
         transparent: true,
-        opacity: 0.8,
-        wireframe: true
+        opacity: 0.92
       });
       const wallMesh = new THREE.Mesh(wallGeo, wallMat);
 
@@ -310,11 +311,13 @@ class AbilityManager {
 
     // Create explosion dome sphere
     const expGeo = new THREE.SphereGeometry(isUlt ? 6.0 : 3.5, 16, 16);
-    const expMat = new THREE.MeshBasicMaterial({
+    const expMat = new THREE.MeshStandardMaterial({
       color: isUlt ? 0xff3300 : 0xffaa00,
-      wireframe: true,
+      emissive: isUlt ? 0xff3300 : 0xffaa00,
+      emissiveIntensity: 1.2,
+      roughness: 0.1,
       transparent: true,
-      opacity: 0.8
+      opacity: 0.45
     });
     const expMesh = new THREE.Mesh(expGeo, expMat);
     expMesh.position.copy(pos);
@@ -354,7 +357,7 @@ class AbilityManager {
 
       const pulseRing = new THREE.Mesh(
         new THREE.RingGeometry(0.1, 1.0, 32),
-        new THREE.MeshBasicMaterial({ color: 0x00d2ff, side: THREE.DoubleSide, transparent: true, opacity: 0.6, wireframe: true })
+        new THREE.MeshBasicMaterial({ color: 0x00d2ff, side: THREE.DoubleSide, transparent: true, opacity: 0.35 })
       );
       pulseRing.position.copy(this.player.position).y = -0.4;
       pulseRing.rotation.x = Math.PI / 2;
@@ -366,7 +369,7 @@ class AbilityManager {
         age: 0,
         update: (dt) => {
           pulseRing.scale.addScalar(dt * 30.0);
-          pulseRing.material.opacity = 0.6 * (1.0 - (pulseRing.scale.x / 45.0));
+          pulseRing.material.opacity = 0.35 * (1.0 - (pulseRing.scale.x / 45.0));
           
           // Highlight scanned bots
           const currentRadius = pulseRing.scale.x;
@@ -396,7 +399,7 @@ class AbilityManager {
       if (window.SynthAudio) window.SynthAudio.playAbilityWind();
 
       const blastGeo = new THREE.CylinderGeometry(0.1, 3.5, 12, 16);
-      const blastMat = new THREE.MeshBasicMaterial({ color: 0x00d2ff, wireframe: true, transparent: true, opacity: 0.3 });
+      const blastMat = new THREE.MeshBasicMaterial({ color: 0x00d2ff, transparent: true, opacity: 0.15 });
       const blast = new THREE.Mesh(blastGeo, blastMat);
       
       const dir = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.player.yaw).normalize();
@@ -439,7 +442,7 @@ class AbilityManager {
       pos.y = 0.5;
 
       const cyGeo = new THREE.CylinderGeometry(4.0, 4.0, 5.0, 16, 1, true);
-      const cyMat = new THREE.MeshBasicMaterial({ color: 0x00d2ff, wireframe: true, transparent: true, opacity: 0.4 });
+      const cyMat = new THREE.MeshBasicMaterial({ color: 0x00d2ff, transparent: true, opacity: 0.22 });
       const cyclone = new THREE.Mesh(cyGeo, cyMat);
       cyclone.position.copy(pos);
       this.scene.add(cyclone);
@@ -472,7 +475,7 @@ class AbilityManager {
       if (window.SynthAudio) window.SynthAudio.playAbilityCyclone();
 
       const vorGeo = new THREE.CylinderGeometry(8.0, 8.0, 10.0, 24, 1, true);
-      const vorMat = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true, transparent: true, opacity: 0.5 });
+      const vorMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.28 });
       const vortex = new THREE.Mesh(vorGeo, vorMat);
       
       const dir = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.player.yaw).normalize();
