@@ -71,7 +71,9 @@
       `;
 
       card.onclick = () => {
-        selectTeam(key);
+        if (typeof window.selectTeam === 'function') {
+          window.selectTeam(key);
+        }
       };
 
       grid.appendChild(card);
@@ -155,7 +157,7 @@
       updateGridFocus();
     } else if (key === 'Enter' || key === 'Space') {
       const selectedKey = visibleTeams[focusedIndex];
-      if (selectedKey) selectTeam(selectedKey);
+      if (selectedKey && typeof window.selectTeam === 'function') window.selectTeam(selectedKey);
     } else if (key === 'Escape' || key === 'Backspace') {
       closeTeamSelection();
     } else if (key === 'PageUp' || key === 'KeyQ') {
@@ -215,4 +217,6 @@
       window.handleTeamSelNavigation(mappedKey);
     }
   }, true); // useCapture
+
+  window.selectTeam = selectTeam;
 })();

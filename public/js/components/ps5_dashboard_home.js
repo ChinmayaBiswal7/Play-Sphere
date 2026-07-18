@@ -208,7 +208,14 @@
       if (gameId === 'cricket') {
         if (animationFrameId) cancelAnimationFrame(animationFrameId);
         window.removeEventListener('resize', resizeBgCanvas);
-        if (root) root.remove();
+        if (root) {
+          // Safeguard the modals by appending them back to document.body before removing console root!
+          ['ps5-friends-modal', 'ps5-profile-modal', 'ps5-controller-modal'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) document.body.appendChild(el);
+          });
+          root.remove();
+        }
         if (typeof window.launchCricketGame === 'function') {
           window.launchCricketGame();
         }
