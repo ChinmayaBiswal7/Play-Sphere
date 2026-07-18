@@ -137,15 +137,19 @@ class PlaySphereFriendsManager {
 
     if (friendUids.length === 0) {
       if (this.listContainer) {
-        this.listContainer.innerHTML = `<div style="text-align:center; color:rgba(255,255,255,0.4); padding-top:60px; font-size:0.85rem;">No friends added yet.</div>`;
+        this.listContainer.innerHTML = `<div style="text-align:center; color:rgba(255,255,255,0.4); padding-top:60px; font-size:0.85rem;">No friends added yet.<br><span style="font-size:0.75rem; color:rgba(255,255,255,0.25);">Use the search above to find friends.</span></div>`;
       }
       return;
     }
 
-    // Load friend database profiles
+    // Load friend profiles from Firestore
     this.activeFriendProfiles = await window.friendsLoadProfiles(friendUids);
 
-    // Ask Node server for real-time presence data
+    // Render immediately using last known presence (or show as loading)
+    const lastMap = this._lastPresenceMap || {};
+    this.renderFriendsWithPresence(lastMap);
+
+    // Then ask server for fresh presence — socket reply will re-render with real status
     if (window.socket) {
       window.socket.emit('get-friends-presence', { friendUids });
     }
@@ -252,16 +256,15 @@ class PlaySphereFriendsManager {
   async acceptInvite(uid) {
     try {
       await window.friendsAcceptRequest(uid);
-      
+
       // Update local profile state
       window.profile.friends = window.profile.friends || [];
-      window.profile.friends.push(uid);
-      
-      window.profile.friendRequestsReceived = window.profile.friendRequestsReceived || [];
-      window.profile.friendRequestsReceived = window.profile.friendRequestsReceived.filter(id => id !== uid);
+      if (!window.profile.friends.includes(uid)) window.profile.friends.push(uid);
+      window.profile.friendRequestsReceived = (window.profile.friendRequestsReceived || []).filter(id => id !== uid);
 
-      this.syncFriendsUI();
-      console.log("Friend request accepted.");
+      await this.syncFriendsUI(); // re-render the requests panel
+      await this.fetchFriendsPresence(); // immediately load the new friend and their online status
+      console.log('Friend request accepted.');
     } catch (err) {
       console.error(err);
     }
@@ -305,36 +308,132 @@ class PlaySphereFriendsManager {
   }
 
   sendChallenge(toUid, toUsername) {
-    if (!window.socket) { alert('Not connected to server.'); return; }
-    if (!window.currentUser) { alert('Please sign in first.'); return; }
+    if (!window.socket) { this._showGamePicker(null, null, 'Not connected to server.'); return; }
+    if (!window.currentUser) { this._showGamePicker(null, null, 'Please sign in first.'); return; }
+    this._showGamePicker(toUid, toUsername);
+  }
+
+  _showGamePicker(toUid, toUsername, errorMsg) {
+    // Remove any existing picker
+    const old = document.getElementById('ps-game-picker-overlay');
+    if (old) old.remove();
 
     const GAMES = [
-      { id: 'cricket',  label: '🏏 Cricket' },
-      { id: 'fps',      label: '🔫 Delhi Defiance (FPS)' },
-      { id: 'football', label: '⚽ Football' },
-      { id: 'f1',       label: '🏎️ F1 Racing' },
-      { id: 'tennis',   label: '🎾 Tennis' },
-      { id: 'wwe',      label: '🥊 WWE' },
+      { id: 'cricket',  label: 'Cricket Pro 2026', emoji: '🏏', color: '#16a34a', desc: 'Sports / Simulation' },
+      { id: 'fps',      label: 'Delhi Defiance',   emoji: '🔫', color: '#dc2626', desc: 'Tactical FPS' },
+      { id: 'football', label: 'Football Pro',     emoji: '⚽', color: '#2563eb', desc: 'Sports / Arcade' },
+      { id: 'f1',       label: 'Apex Stars F1',    emoji: '🏎️', color: '#f59e0b', desc: 'Racing / Arcade' },
+      { id: 'tennis',   label: 'Chibi Tennis',     emoji: '🎾', color: '#0891b2', desc: 'Sports / Arcade' },
+      { id: 'wwe',      label: 'WWE Chibi Rumble', emoji: '🥊', color: '#9333ea', desc: 'Fighting / Action' },
     ];
 
-    // Simple game picker
-    const gameOptions = GAMES.map((g, i) => `${i + 1}. ${g.label}`).join('\n');
-    const choice = prompt(
-      `Challenge ${toUsername} to:\n\n${gameOptions}\n\nEnter the number of the game:`
-    );
-    if (!choice) return;
-    const idx = parseInt(choice, 10) - 1;
-    if (isNaN(idx) || idx < 0 || idx >= GAMES.length) {
-      alert('Invalid selection.');
-      return;
-    }
+    const overlay = document.createElement('div');
+    overlay.id = 'ps-game-picker-overlay';
+    overlay.style.cssText = `
+      position:fixed; inset:0; z-index:999999;
+      background:rgba(2,6,23,0.92); backdrop-filter:blur(20px);
+      display:flex; align-items:center; justify-content:center;
+      animation:ps-picker-fade 0.25s ease;
+    `;
 
-    const game = GAMES[idx].id;
-    const fromUsername = (window.profile && window.profile.username) || 'Player';
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes ps-picker-fade { from{opacity:0;transform:scale(0.96)} to{opacity:1;transform:scale(1)} }
+      @keyframes ps-card-in { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
+      .ps-gp-card {
+        background:rgba(255,255,255,0.04); border:1.5px solid rgba(255,255,255,0.08);
+        border-radius:14px; padding:18px 16px; cursor:pointer; text-align:center;
+        transition:all 0.2s cubic-bezier(0.34,1.56,0.64,1); position:relative; overflow:hidden;
+        animation:ps-card-in 0.3s ease both;
+      }
+      .ps-gp-card:hover {
+        transform:translateY(-4px) scale(1.04);
+        border-color:rgba(255,255,255,0.25);
+        box-shadow:0 12px 40px rgba(0,0,0,0.5);
+      }
+      .ps-gp-card:hover .ps-gp-glow { opacity:1; }
+      .ps-gp-glow {
+        position:absolute; inset:0; opacity:0;
+        transition:opacity 0.2s;
+        border-radius:14px;
+      }
+    `;
+    document.head.appendChild(style);
 
-    window.socket.emit('ps-challenge-send', { toUid, game, fromUsername });
-    this.closeFriendsModal();
-    console.log(`[Challenge] Sent ${game} challenge to ${toUsername}`);
+    overlay.innerHTML = `
+      <div style="max-width:600px; width:90%; font-family:'Inter','Segoe UI',sans-serif;">
+        <div style="text-align:center; margin-bottom:24px;">
+          <div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:3px; color:#6366f1; font-weight:800; margin-bottom:6px;">⚔️ CHALLENGE</div>
+          <div style="font-size:1.5rem; font-weight:900; color:#f8fafc;">${toUsername ? `Challenge <span style='color:#a5b4fc'>${toUsername}</span>` : 'Select a Game'}</div>
+          <div style="font-size:0.78rem; color:rgba(255,255,255,0.4); margin-top:4px;">Pick which game to play</div>
+          ${errorMsg ? `<div style="margin-top:10px; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); border-radius:8px; padding:8px 14px; color:#fca5a5; font-size:0.78rem;">${errorMsg}</div>` : ''}
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px;" id="ps-gp-grid"></div>
+        <div style="text-align:center; margin-top:20px;">
+          <button id="ps-gp-cancel" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:8px; color:rgba(255,255,255,0.5); font-size:0.8rem; font-weight:700; padding:10px 28px; cursor:pointer; font-family:inherit; transition:background 0.2s;">Cancel</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    // Populate game cards
+    const grid = document.getElementById('ps-gp-grid');
+    GAMES.forEach((g, i) => {
+      const card = document.createElement('div');
+      card.className = 'ps-gp-card';
+      card.style.animationDelay = `${i * 0.05}s`;
+      card.innerHTML = `
+        <div class="ps-gp-glow" style="background:radial-gradient(circle at 50% 50%, ${g.color}22, transparent 70%);"></div>
+        <div style="font-size:2.2rem; margin-bottom:10px; line-height:1;">${g.emoji}</div>
+        <div style="font-weight:800; color:#f8fafc; font-size:0.82rem; margin-bottom:4px;">${g.label}</div>
+        <div style="font-size:0.65rem; color:rgba(255,255,255,0.35); font-weight:600;">${g.desc}</div>
+        <div style="margin-top:10px; background:${g.color}; border-radius:6px; font-size:0.65rem; font-weight:800; color:#fff; padding:4px 0;">CHALLENGE</div>
+      `;
+      card.onclick = () => {
+        overlay.remove();
+        if (toUid) {
+          const fromUsername = (window.profile && window.profile.username) || 'Player';
+          window.socket.emit('ps-challenge-send', { toUid, game: g.id, fromUsername });
+          this.closeFriendsModal();
+          // Show a small confirmation
+          this._showChallengeConfirm(g.emoji, g.label, toUsername);
+          console.log(`[Challenge] Sent ${g.id} challenge to ${toUsername}`);
+        }
+      };
+      grid.appendChild(card);
+    });
+
+    // Cancel
+    document.getElementById('ps-gp-cancel').onclick = () => overlay.remove();
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  }
+
+  _showChallengeConfirm(emoji, gameLabel, toUsername) {
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+      position:fixed; bottom:28px; left:50%; transform:translateX(-50%);
+      z-index:999998; background:rgba(10,15,30,0.97);
+      border:1px solid rgba(99,102,241,0.5); border-radius:12px;
+      padding:14px 22px; display:flex; align-items:center; gap:12px;
+      font-family:'Inter','Segoe UI',sans-serif;
+      box-shadow:0 0 40px rgba(99,102,241,0.2), 0 16px 40px rgba(0,0,0,0.6);
+      animation:ps-toast-in2 0.35s cubic-bezier(0.34,1.56,0.64,1);
+      white-space:nowrap;
+    `;
+    toast.innerHTML = `
+      <span style="font-size:1.6rem;">${emoji}</span>
+      <div>
+        <div style="font-weight:800; color:#f1f5f9; font-size:0.82rem;">Challenge Sent!</div>
+        <div style="font-size:0.7rem; color:rgba(255,255,255,0.4);">${gameLabel} → ${toUsername}</div>
+      </div>
+    `;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+      toast.style.opacity = '0'; toast.style.transform = 'translateX(-50%) translateY(20px)';
+      toast.style.transition = 'all 0.3s ease';
+      setTimeout(() => toast.remove(), 300);
+    }, 3500);
   }
 }
 
