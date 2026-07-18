@@ -346,3 +346,35 @@ PlaySphereFriendsManager.prototype.reinit = function() {
   this.initialized = false;
   this.init();
 };
+
+// ── Auto-init: called after DOM is fully ready ───────────────────────────────
+// Components are loaded synchronously via document.write in index.html,
+// so DOMContentLoaded fires AFTER all component HTML is in the DOM.
+// This is why init() must wait for DOMContentLoaded — not be called inline.
+function initFriendsWhenReady() {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => window.friendsManager.init());
+  } else {
+    window.friendsManager.init();
+  }
+  // Also re-bind socket events once socket becomes available (socket init happens later)
+  const tryBindSocket = () => {
+    if (window.socket) {
+      if (!window.socket._friendsModalBound) {
+        window.socket._friendsModalBound = true;
+        window.socket.on('friends-presence-response', (presenceMap) => {
+          window.friendsManager.renderFriendsWithPresence(presenceMap);
+        });
+        window.socket.on('presence-changed', () => {
+          const m = window.friendsManager.modal;
+          if (m && m.classList.contains('show')) window.friendsManager.fetchFriendsPresence();
+        });
+      }
+    } else {
+      setTimeout(tryBindSocket, 600);
+    }
+  };
+  tryBindSocket();
+}
+
+initFriendsWhenReady();

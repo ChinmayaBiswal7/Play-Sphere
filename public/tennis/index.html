@@ -202,5 +202,20 @@
   <!-- Main Game Loop and Logic -->
   <script src="tennis.js"></script>
   <script src="/js/ps_multiplayer.js"></script>
+  <script>
+    (function(){
+      const KEY='tennis';
+      function save(){
+        try{if(window.parent&&window.parent.stopGameTimer)window.parent.stopGameTimer(KEY);}catch(e){}
+        if(typeof window.stopGameTimer==='function')window.stopGameTimer(KEY);
+      }
+      window.addEventListener('beforeunload',save);
+      document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')save();});
+      window.addEventListener('load',()=>{
+        try{if(window.parent&&window.parent.startGameTimer)window.parent.startGameTimer(KEY);}catch(e){}
+        if(typeof window.startGameTimer==='function')window.startGameTimer(KEY);
+      });
+    })();
+  </script>
 </body>
 </html>

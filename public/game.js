@@ -2864,6 +2864,7 @@ window.launchCricketGame = function() {
   if (typeof window.updatePresence === 'function') {
     window.updatePresence('Playing Cricket Pro');
   }
+  if (typeof window.startGameTimer === 'function') window.startGameTimer('cricket');
   start();
   resumeAudioOnInteraction();
 };

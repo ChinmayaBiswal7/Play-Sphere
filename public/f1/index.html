@@ -2987,6 +2987,23 @@
   <!-- Main physics and game logic -->
   <script src="game.js?v=3.26"></script>
   <script src="/js/ps_multiplayer.js"></script>
+  <script>
+    // Playtime tracker for F1
+    (function(){
+      const KEY='f1';
+      const start=Date.now();
+      function save(){
+        try{if(window.parent&&window.parent.stopGameTimer)window.parent.stopGameTimer(KEY);}catch(e){}
+        if(typeof window.stopGameTimer==='function')window.stopGameTimer(KEY);
+      }
+      window.addEventListener('beforeunload',save);
+      document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')save();});
+      window.addEventListener('load',()=>{
+        try{if(window.parent&&window.parent.startGameTimer)window.parent.startGameTimer(KEY);}catch(e){}
+        if(typeof window.startGameTimer==='function')window.startGameTimer(KEY);
+      });
+    })();
+  </script>
 
 </body>
 </html>

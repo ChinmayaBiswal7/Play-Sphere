@@ -358,6 +358,87 @@ export function setupProfileListeners() {
 
 window.loadProfile = loadProfile;
 window.saveProfile = saveProfile;
+
+// ── Game Playtime Tracker ─────────────────────────────────────────────────────
+// Tracks real seconds played per game and accumulates in Firestore.
+// Usage:
+//   window.startGameTimer('cricket')  — call when user enters a game
+//   window.stopGameTimer('cricket')   — call when user exits or page closes
+// Firestore stores: users/<uid>.gametime.<gameKey> (total seconds)
+//                   users/<uid>.lastPlayedAt.<gameKey> (timestamp ms)
+
+const _gameTimerSessions = {}; // gameKey -> { startMs, interval }
+
+window.startGameTimer = function(gameKey) {
+  if (!gameKey) return;
+  // Don't double-start
+  if (_gameTimerSessions[gameKey]) return;
+  const startMs = Date.now();
+  // Save every 60 seconds while playing (in case of crash/close)
+  const interval = setInterval(() => {
+    _flushGametime(gameKey, startMs);
+  }, 60000);
+  _gameTimerSessions[gameKey] = { startMs, interval };
+  console.log(`[Playtime] Session started for ${gameKey}`);
+};
+
+window.stopGameTimer = function(gameKey) {
+  if (!gameKey) return;
+  const session = _gameTimerSessions[gameKey];
+  if (!session) return;
+  clearInterval(session.interval);
+  delete _gameTimerSessions[gameKey];
+  _flushGametime(gameKey, session.startMs);
+  console.log(`[Playtime] Session ended for ${gameKey}`);
+};
+
+async function _flushGametime(gameKey, startMs) {
+  if (!window.currentUser) return;
+  const hasFirebase = await ensureFirebase();
+  if (!hasFirebase || !window.fb_db) return;
+  const elapsedSecs = Math.floor((Date.now() - startMs) / 1000);
+  if (elapsedSecs < 5) return; // ignore accidental tiny sessions
+
+  try {
+    const userRef = fb_doc(window.fb_db, 'users', window.currentUser.uid);
+    const updateData = {};
+    // Increment total seconds for this game
+    updateData[`gametime.${gameKey}`] = window.fb_increment
+      ? window.fb_increment(elapsedSecs)
+      : (((window.profile && window.profile.gametime && window.profile.gametime[gameKey]) || 0) + elapsedSecs);
+    // Update last played timestamp
+    updateData[`lastPlayedAt.${gameKey}`] = Date.now();
+    await window.fb_updateDoc(userRef, updateData);
+
+    // Also update local profile cache
+    if (window.profile) {
+      window.profile.gametime = window.profile.gametime || {};
+      window.profile.gametime[gameKey] = (window.profile.gametime[gameKey] || 0) + elapsedSecs;
+      window.profile.lastPlayedAt = window.profile.lastPlayedAt || {};
+      window.profile.lastPlayedAt[gameKey] = Date.now();
+    }
+    console.log(`[Playtime] Saved ${elapsedSecs}s for ${gameKey} to Firestore`);
+  } catch (err) {
+    console.warn(`[Playtime] Failed to save gametime for ${gameKey}:`, err);
+  }
+}
+
+// Flush all active sessions on page hide/unload (covers tab close, navigate away)
+window.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    Object.keys(_gameTimerSessions).forEach(key => window.stopGameTimer(key));
+  }
+});
+window.addEventListener('beforeunload', () => {
+  Object.keys(_gameTimerSessions).forEach(key => window.stopGameTimer(key));
+});
+
+// Load Firestore increment helper (needed for atomic increments)
+ensureFirebase().then(() => {
+  import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js').then(({ increment }) => {
+    window.fb_increment = increment;
+  }).catch(() => {});
+});
 window.updateProfileUI = updateProfileUI;
 window.setupProfileListeners = setupProfileListeners;
 window.ensureFirebase = ensureFirebase;

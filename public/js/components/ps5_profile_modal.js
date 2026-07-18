@@ -417,71 +417,82 @@
       }
     }
 
-    // 6. PvP Friends & Game Library Grid Selection Setup
+    // 6. PvP Friends & Game Library Grid Setup
     if (currentUser && !window.profileNeedsComplete) {
-      // 6a. Mix mock friends and real friends
-      const displayFriends = [...MOCK_FRIENDS];
-      if (window.friendsManager && window.friendsManager.activeFriendProfiles && window.friendsManager.activeFriendProfiles.length > 0) {
+      // 6a. Only show REAL accepted friends — no mock data
+      const realFriends = [];
+      if (window.friendsManager && window.friendsManager.activeFriendProfiles &&
+          window.friendsManager.activeFriendProfiles.length > 0) {
         window.friendsManager.activeFriendProfiles.forEach(p => {
-          if (!displayFriends.some(f => f.uid === p.uid)) {
-            displayFriends.unshift({
-              uid: p.uid,
-              username: p.username || 'Gamer',
-              online: true,
-              activity: 'Online'
-            });
-          }
+          realFriends.push({
+            uid: p.uid,
+            username: p.username || 'Gamer',
+            online: !!(window.friendsManager._lastPresenceMap &&
+                       window.friendsManager._lastPresenceMap[p.uid] &&
+                       window.friendsManager._lastPresenceMap[p.uid].online),
+            activity: (window.friendsManager._lastPresenceMap &&
+                       window.friendsManager._lastPresenceMap[p.uid] &&
+                       window.friendsManager._lastPresenceMap[p.uid].activity) || 'Offline'
+          });
         });
       }
-      currentDisplayFriends = displayFriends;
+      currentDisplayFriends = realFriends;
 
-      // 6b. Render and bind friends grid
+      // 6b. Render friends grid — empty state if no friends yet
       const friendsGrid = document.getElementById('profile-friends-grid');
       if (friendsGrid) {
-        friendsGrid.innerHTML = displayFriends.map((f, idx) => {
-          const initial = (f.username || 'G')[0].toUpperCase();
-          const matches = generatePvpMatchesForFriend(f);
-          const myWins = matches.filter(m => m.outcome === 'won').length;
-          const oppWins = matches.length - myWins;
-          const isSelected = (focusedRow === 0 && idx === focusedCol && activeProfileView === 'hub');
-
-          return `
-            <div class="profile-friend-card ${isSelected ? 'selected' : ''}" data-friend-uid="${f.uid}" tabindex="0">
-              <div class="profile-friend-card-content">
-                <div class="profile-friend-avatar-wrap">
-                  ${initial}
-                  <span class="profile-friend-presence-dot ${f.online ? 'online' : ''}"></span>
-                </div>
-                <div class="profile-friend-details">
-                  <div class="profile-friend-card-name">${f.username}</div>
-                  <div class="profile-friend-h2h">Record: ${myWins}W - ${oppWins}L</div>
+        if (realFriends.length === 0) {
+          friendsGrid.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:rgba(255,255,255,0.3); font-size:0.78rem; padding:20px 10px;">No friends added yet.<br><span style="font-size:0.7rem;">Open the Friends panel to add friends.</span></div>`;
+        } else {
+          friendsGrid.innerHTML = realFriends.map((f, idx) => {
+            const initial = (f.username || 'G')[0].toUpperCase();
+            const isSelected = (focusedRow === 0 && idx === focusedCol && activeProfileView === 'hub');
+            return `
+              <div class="profile-friend-card ${isSelected ? 'selected' : ''}" data-friend-uid="${f.uid}" tabindex="0">
+                <div class="profile-friend-card-content">
+                  <div class="profile-friend-avatar-wrap">
+                    ${initial}
+                    <span class="profile-friend-presence-dot ${f.online ? 'online' : ''}"></span>
+                  </div>
+                  <div class="profile-friend-details">
+                    <div class="profile-friend-card-name">${f.username}</div>
+                    <div class="profile-friend-h2h" style="color:${f.online ? '#34d399' : 'rgba(255,255,255,0.35)'}">${f.online ? (f.activity || 'Online') : 'Offline'}</div>
+                  </div>
                 </div>
               </div>
-            </div>
-          `;
-        }).join('');
+            `;
+          }).join('');
 
-        // Bind click listener for friend cards
-        const fCards = friendsGrid.querySelectorAll('.profile-friend-card');
-        fCards.forEach((card, idx) => {
-          card.onclick = () => {
-            focusedRow = 0;
-            focusedCol = idx;
-            const uid = card.getAttribute('data-friend-uid');
-            showPvpDetails(uid);
-            if (window.sounds && typeof window.sounds.play === 'function') window.sounds.play('click');
-          };
-        });
+          // Bind click listeners for friend cards
+          const fCards = friendsGrid.querySelectorAll('.profile-friend-card');
+          fCards.forEach((card, idx) => {
+            card.onclick = () => {
+              focusedRow = 0;
+              focusedCol = idx;
+              if (window.sounds && typeof window.sounds.play === 'function') window.sounds.play('click');
+            };
+          });
+        }
       }
 
-      // 6c. Render achievements percentages for game cards
-      const unlocked = profile.achievements || [];
+      // 6c. Render achievement percentages + REAL playtime for game cards
+      const gametime = profile.gametime || {};
+      const hoursMap = { cricket: 'cricket', f1: 'f1', mortal: 'wwe' };
       PROFILE_GAMES.forEach(key => {
+        // Achievement %
         const list = GAME_ACHIEVEMENTS[key];
-        const unlockedCount = list.filter(a => unlocked.includes(a.id)).length;
+        const unlocked2 = profile.achievements || [];
+        const unlockedCount = list.filter(a => unlocked2.includes(a.id)).length;
         const pct = list.length > 0 ? Math.round((unlockedCount / list.length) * 100) : 0;
         const pctEl = document.getElementById(`profile-ach-pct-${key}`);
         if (pctEl) pctEl.textContent = `${pct}% Achievements`;
+
+        // Real playtime (stored as seconds in Firestore under gametime.<gameKey>)
+        const gtKey = hoursMap[key] || key;
+        const secs = gametime[gtKey] || 0;
+        const hrs = (secs / 3600).toFixed(1);
+        const hoursEl = document.getElementById(`profile-hours-${key}`);
+        if (hoursEl) hoursEl.textContent = `${hrs} hrs`;
       });
 
       // 6d. Sync game library selections and bind click listeners
@@ -537,11 +548,7 @@
     }
   };
 
-  const MOCK_FRIENDS = [
-    { uid: 'mock_gamerx', username: 'GamerX', online: true },
-    { uid: 'mock_lucifer', username: 'RgC_Lucifer', online: true },
-    { uid: 'mock_alphacoder', username: 'AlphaCoder', online: false }
-  ];
+  const MOCK_FRIENDS = []; // Removed — only real friends from Firestore shown now
 
   function generatePvpMatchesForFriend(friend) {
     const seed = friend.uid || 'default';
@@ -748,8 +755,8 @@
     cricket: {
       title: 'Cricket Pro 2026',
       banner: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?q=80&w=600&auto=format&fit=crop',
-      playtime: '42.8 hrs',
-      lastplayed: 'Yesterday',
+      playtime: null, // populated from real data
+      lastplayed: null,
       developer: 'DeepMind Sports',
       publisher: 'PlaySphere Studios',
       genre: 'Sports / Simulation'
@@ -757,17 +764,17 @@
     f1: {
       title: 'Formula 1 Racer',
       banner: 'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?q=80&w=600&auto=format&fit=crop',
-      playtime: '18.3 hrs',
-      lastplayed: '2 days ago',
+      playtime: null,
+      lastplayed: null,
       developer: 'PlaySphere Racing',
       publisher: 'PlaySphere Studios',
       genre: 'Racing / Arcade'
     },
     mortal: {
-      title: 'Mortal Combat',
+      title: 'WWE Chibi Rumble',
       banner: 'https://images.unsplash.com/photo-1552820728-8b83bb6b773f?q=80&w=600&auto=format&fit=crop',
-      playtime: '5.4 hrs',
-      lastplayed: 'June 28, 2026',
+      playtime: null,
+      lastplayed: null,
       developer: 'PlaySphere Arcade',
       publisher: 'PlaySphere Studios',
       genre: 'Fighting / Action'
@@ -825,8 +832,27 @@
 
     if (titleEl) titleEl.textContent = info.title;
     if (imgEl) imgEl.src = info.banner;
-    if (playtimeEl) playtimeEl.textContent = info.playtime;
-    if (lastplayedEl) lastplayedEl.textContent = info.lastplayed;
+
+    // Real playtime from Firestore
+    const gtKeyMap = { cricket: 'cricket', f1: 'f1', mortal: 'wwe' };
+    const gametime = (window.profile && window.profile.gametime) || {};
+    const secs = gametime[gtKeyMap[gameKey] || gameKey] || 0;
+    const realHrs = (secs / 3600).toFixed(1);
+    if (playtimeEl) playtimeEl.textContent = `${realHrs} hrs`;
+
+    // Last played: derive from lastPlayedAt.<gameKey> if available
+    const lastPlayedMap = (window.profile && window.profile.lastPlayedAt) || {};
+    const lastTs = lastPlayedMap[gtKeyMap[gameKey] || gameKey];
+    if (lastplayedEl) {
+      if (lastTs) {
+        const d = new Date(lastTs);
+        const now = new Date();
+        const diffDays = Math.floor((now - d) / 86400000);
+        lastplayedEl.textContent = diffDays === 0 ? 'Today' : diffDays === 1 ? 'Yesterday' : `${diffDays} days ago`;
+      } else {
+        lastplayedEl.textContent = secs > 0 ? 'Recently' : 'Never played';
+      }
+    }
     if (devEl) devEl.textContent = info.developer;
     if (pubEl) pubEl.textContent = info.publisher;
     if (genreEl) genreEl.textContent = info.genre;
