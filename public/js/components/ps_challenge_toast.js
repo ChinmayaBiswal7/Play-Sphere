@@ -242,6 +242,16 @@
       // Save match details to sessionStorage so iframe multi-player script knows it's an active PvP match immediately on load
       sessionStorage.setItem('ps_active_match', JSON.stringify(matchData));
 
+      // Direct transition if Cricket is already active in parent window
+      if (matchData.game === 'cricket' && typeof window.cricketPvPInit === 'function') {
+        console.log('[PvP] Cricket is active. Launching Cricket PvP directly.');
+        if (window.ui && window.ui.mainMenu) {
+          window.ui.mainMenu.classList.add('hidden');
+        }
+        window.cricketPvPInit(matchData);
+        return;
+      }
+
       // Trigger the premium transition overlay and load game iframe
       if (typeof window.ps5LaunchGame === 'function') {
         window.ps5LaunchGame(matchData.game, matchData.roomCode);

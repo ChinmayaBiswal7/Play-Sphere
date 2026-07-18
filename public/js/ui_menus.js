@@ -201,6 +201,19 @@ function setupMenuListeners() {
         if (mmStatus) mmStatus.classList.add('hidden');
         alert("Matchmaking Error: " + msg);
       });
+      window.socket.on('ps-matchmaking-found', () => {
+        cricketSearching = false;
+        if (mmStatus) mmStatus.classList.add('hidden');
+        if (pvpRandomBtn) {
+          pvpRandomBtn.innerHTML = `
+            <div>
+              <div style="font-weight: 800; font-size: 0.85rem; color: #fff; display: flex; align-items: center; gap: 6px;">🌐 QUICK MATCHMAKING</div>
+              <div style="font-size: 0.65rem; color: rgba(255,255,255,0.45); font-weight: 500; margin-top: 3px;">Search and match with another player instantly</div>
+            </div>
+            <span style="font-size: 1rem; color: rgba(255,255,255,0.45);">➔</span>
+          `;
+        }
+      });
     } else {
       setTimeout(bindCricketMMSocket, 800);
     }
