@@ -56,7 +56,7 @@ export async function ensureFirebase() {
       const [
         { initializeApp },
         { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword },
-        { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs, updateDoc, arrayUnion, arrayRemove }
+        { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs, updateDoc, arrayUnion, arrayRemove, onSnapshot }
       ] = await Promise.all([
         import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js'),
         import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js'),
@@ -97,6 +97,9 @@ export async function ensureFirebase() {
         if (typeof window.updatePresence === 'function') {
           window.updatePresence('Idle');
         }
+
+        // Start real-time Firestore listener for friend requests
+        if (user) startFriendRequestListener(user.uid, onSnapshot, doc, db);
 
         // After profile loads, refresh the entire PS5 dashboard UI
         // This auto-closes the login modal for returning logged-in users
@@ -434,3 +437,120 @@ window.friendsLoadProfiles = async (uids) => {
   }
   return profiles;
 };
+
+// ── Real-time Friend Request Listener ────────────────────────────────────────
+// Fires instantly when someone sends a friend request via Firestore.
+let _friendListenerUnsubscribe = null;
+let _lastKnownRequestCount = -1;
+
+function startFriendRequestListener(uid, onSnapshot, docFn, dbRef) {
+  // Cancel any previous listener
+  if (_friendListenerUnsubscribe) _friendListenerUnsubscribe();
+
+  const userRef = docFn(dbRef, 'users', uid);
+  _friendListenerUnsubscribe = onSnapshot(userRef, (docSnap) => {
+    if (!docSnap.exists()) return;
+    const data = docSnap.data();
+
+    // Sync latest profile data into window.profile
+    if (window.profile) {
+      window.profile.friends = data.friends || [];
+      window.profile.friendRequestsReceived = data.friendRequestsReceived || [];
+      window.profile.friendRequestsSent = data.friendRequestsSent || [];
+    }
+
+    const incoming = data.friendRequestsReceived || [];
+    const count = incoming.length;
+
+    // Update the Friends button badge count
+    const badge = document.getElementById('ps5-friends-badge');
+    if (badge) {
+      if (count > 0) {
+        badge.classList.remove('hidden');
+        badge.textContent = count > 9 ? '9+' : String(count);
+      } else {
+        badge.classList.add('hidden');
+        badge.textContent = '';
+      }
+    }
+
+    // Show a toast for NEW requests only (skip first load)
+    if (_lastKnownRequestCount >= 0 && count > _lastKnownRequestCount) {
+      const newCount = count - _lastKnownRequestCount;
+      showFriendRequestToast(newCount);
+    }
+
+    _lastKnownRequestCount = count;
+
+    // Refresh the modal list if it is currently open
+    if (window.friendsManager && window.friendsManager.modal &&
+        window.friendsManager.modal.classList.contains('show')) {
+      window.friendsManager.syncFriendsUI();
+    }
+  });
+
+  console.log('[PlaySphere] Real-time friend request listener started for uid:', uid);
+}
+
+function showFriendRequestToast(count) {
+  // Inject toast styles once
+  if (!document.getElementById('ps-freq-toast-style')) {
+    const s = document.createElement('style');
+    s.id = 'ps-freq-toast-style';
+    s.textContent = `
+      .ps-freq-toast {
+        position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+        z-index:999998; background:rgba(10,15,30,0.97);
+        border:1px solid rgba(99,102,241,0.55); border-radius:14px;
+        box-shadow:0 0 40px rgba(99,102,241,0.25), 0 16px 40px rgba(0,0,0,0.7);
+        backdrop-filter:blur(18px); padding:14px 20px;
+        display:flex; align-items:center; gap:13px;
+        font-family:'Inter','Segoe UI',sans-serif;
+        animation:ps-toast-in2 0.35s cubic-bezier(0.34,1.56,0.64,1);
+        cursor:pointer;
+      }
+      @keyframes ps-toast-in2 {
+        from{opacity:0;transform:translateX(-50%) translateY(24px) scale(0.93);}
+        to{opacity:1;transform:translateX(-50%) translateY(0) scale(1);}
+      }
+      .ps-freq-toast.out { animation:ps-toast-out2 0.28s ease forwards; }
+      @keyframes ps-toast-out2 {
+        to{opacity:0;transform:translateX(-50%) translateY(20px);}
+      }
+      .ps-freq-toast-icon { font-size:1.9rem; }
+      .ps-freq-toast-title { font-weight:800; color:#f1f5f9; font-size:0.85rem; margin-bottom:2px; }
+      .ps-freq-toast-sub { font-size:0.7rem; color:rgba(255,255,255,0.45); font-weight:500; }
+      .ps-freq-toast-action {
+        background:linear-gradient(135deg,#6366f1,#4f46e5); border:none;
+        border-radius:7px; color:#fff; font-size:0.68rem; font-weight:800;
+        padding:5px 12px; cursor:pointer; font-family:inherit; white-space:nowrap;
+        box-shadow:0 3px 10px rgba(99,102,241,0.35);
+      }
+    `;
+    document.head.appendChild(s);
+  }
+
+  const toast = document.createElement('div');
+  toast.className = 'ps-freq-toast';
+  toast.innerHTML = `
+    <div class="ps-freq-toast-icon">👥</div>
+    <div style="flex:1">
+      <div class="ps-freq-toast-title">${count === 1 ? 'New Friend Request!' : `${count} New Friend Requests!`}</div>
+      <div class="ps-freq-toast-sub">Tap to view and accept</div>
+    </div>
+    <button class="ps-freq-toast-action">VIEW</button>
+  `;
+
+  const remove = () => {
+    toast.classList.add('out');
+    setTimeout(() => toast.remove(), 300);
+  };
+
+  toast.addEventListener('click', () => {
+    remove();
+    if (window.friendsManager) window.friendsManager.openFriendsModal();
+  });
+
+  document.body.appendChild(toast);
+  setTimeout(remove, 6000);
+}
