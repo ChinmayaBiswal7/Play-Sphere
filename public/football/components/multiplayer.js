@@ -28,26 +28,32 @@ export function renderMultiplayer(container, onPlayMatch) {
     // Bind action clicks
     document.getElementById('btn-pvp-friend').onclick = () => {
       AudioSynth.playPost();
-      if (window.parent && window.parent.friendsManager) {
-        window.parent.friendsManager.openFriendsModal();
+      const parentFriends = window.parent && window.parent.friendsManager;
+      if (parentFriends && typeof parentFriends.openFriendsModal === 'function') {
+        parentFriends.openFriendsModal();
       } else if (window.friendsManager) {
         window.friendsManager.openFriendsModal();
       } else {
-        const fab = document.getElementById('ps-mp-fab');
+        const parentDoc = window.parent && window.parent.document || document;
+        const fab = parentDoc.getElementById('ps-mp-fab');
         if (fab) fab.click();
       }
     };
 
     document.getElementById('btn-pvp-online').onclick = () => {
       AudioSynth.playWhistle();
-      if (window.PSMultiplayer && typeof window.PSMultiplayer.findMatch === 'function') {
+      const parentPSM = window.parent && window.parent.PSMultiplayer;
+      if (parentPSM && typeof parentPSM.findMatch === 'function') {
+        parentPSM.findMatch();
+      } else if (window.PSMultiplayer && typeof window.PSMultiplayer.findMatch === 'function') {
         window.PSMultiplayer.findMatch();
       } else {
-        const fab = document.getElementById('ps-mp-fab');
+        const parentDoc = window.parent && window.parent.document || document;
+        const fab = parentDoc.getElementById('ps-mp-fab');
         if (fab) {
           fab.click();
           setTimeout(() => {
-            const mmTab = document.querySelector('[data-tab="mm"]');
+            const mmTab = parentDoc.querySelector('[data-tab="mm"]');
             if (mmTab) mmTab.click();
           }, 300);
         }

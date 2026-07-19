@@ -4,7 +4,7 @@
 
 /* Overlay backdrop */
 .ps5-profile-modal {
-  position: absolute;
+  position: fixed;
   inset: 0;
   background: rgba(2, 6, 23, 0.85);
   backdrop-filter: blur(18px);
