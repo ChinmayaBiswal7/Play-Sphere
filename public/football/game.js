@@ -1449,6 +1449,11 @@ function initGame() {
 
   // Initialize Select Teams UI
   updateTeamSelectUI();
+  window.updateTeamSelectUI = updateTeamSelectUI;
+  window.userCountrySelect = userCountrySelect;
+  window.oppCountrySelect = oppCountrySelect;
+  window.gameState = gameState;
+  window.CLUBS_DATABASE = CLUBS_DATABASE;
 
   // Helper to resolve flag emojis for captain cards
   const getCrestFlagEmoji = (countryName) => {
