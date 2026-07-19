@@ -160,6 +160,10 @@ export const AudioSynth = {
     cheer.start();
   },
 
+  playClick() {
+    this.playPost();
+  },
+
   stopAll() {
     this.activeSources.forEach(s => {
       try { s.stop(); } catch(e) {}
