@@ -28,34 +28,34 @@ export function renderMultiplayer(container, onPlayMatch) {
     // Bind action clicks
     document.getElementById('btn-pvp-friend').onclick = () => {
       AudioSynth.playPost();
-      const parentFriends = window.parent && window.parent.friendsManager;
-      if (parentFriends && typeof parentFriends.openFriendsModal === 'function') {
-        parentFriends.openFriendsModal();
-      } else if (window.friendsManager) {
-        window.friendsManager.openFriendsModal();
-      } else {
-        const parentDoc = window.parent && window.parent.document || document;
-        const fab = parentDoc.getElementById('ps-mp-fab');
-        if (fab) fab.click();
+      const fab = document.getElementById('ps-mp-fab');
+      const panel = document.getElementById('ps-mp-panel');
+      if (fab && panel) {
+        if (!panel.classList.contains('open')) {
+          fab.click();
+        }
+        // Force select the PVP (Friends) tab
+        const pvpTab = panel.querySelector('[data-tab="pvp"]');
+        if (pvpTab) pvpTab.click();
       }
     };
 
     document.getElementById('btn-pvp-online').onclick = () => {
       AudioSynth.playWhistle();
-      const parentPSM = window.parent && window.parent.PSMultiplayer;
-      if (parentPSM && typeof parentPSM.findMatch === 'function') {
-        parentPSM.findMatch();
-      } else if (window.PSMultiplayer && typeof window.PSMultiplayer.findMatch === 'function') {
-        window.PSMultiplayer.findMatch();
-      } else {
-        const parentDoc = window.parent && window.parent.document || document;
-        const fab = parentDoc.getElementById('ps-mp-fab');
-        if (fab) {
+      const fab = document.getElementById('ps-mp-fab');
+      const panel = document.getElementById('ps-mp-panel');
+      if (fab && panel) {
+        if (!panel.classList.contains('open')) {
           fab.click();
-          setTimeout(() => {
-            const mmTab = parentDoc.querySelector('[data-tab="mm"]');
-            if (mmTab) mmTab.click();
-          }, 300);
+        }
+        // Force select the Matchmaking tab
+        const mmTab = panel.querySelector('[data-tab="mm"]');
+        if (mmTab) mmTab.click();
+        
+        // Auto-click FIND MATCH to begin matchmaking instantly
+        const mmBtn = document.getElementById('ps-mp-mm-btn');
+        if (mmBtn && mmBtn.classList.contains('find')) {
+          mmBtn.click();
         }
       }
     };
