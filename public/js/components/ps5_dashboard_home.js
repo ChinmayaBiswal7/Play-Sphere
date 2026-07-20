@@ -77,6 +77,7 @@
     cards.forEach((c, idx) => {
       if (idx === index) {
         c.classList.add('selected');
+        c.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
       } else {
         c.classList.remove('selected');
       }
