@@ -1497,6 +1497,71 @@
     updateMenuPreviewCar();
   };
 
+  window.openF1Multiplayer = () => {
+    window.ApexAudio.playClick();
+    document.getElementById('main-landing-screen').classList.add('hidden');
+    const screen = document.getElementById('f1-multiplayer-screen');
+    if (screen) {
+      screen.style.display = 'flex';
+      screen.classList.remove('hidden');
+    }
+  };
+
+  window.closeF1Multiplayer = () => {
+    window.ApexAudio.playClick();
+    const screen = document.getElementById('f1-multiplayer-screen');
+    if (screen) {
+      screen.classList.add('hidden');
+      setTimeout(() => { screen.style.display = 'none'; }, 350);
+    }
+    document.getElementById('main-landing-screen').classList.remove('hidden');
+  };
+
+  function bindF1MultiplayerClicks() {
+    const friendBtn = document.getElementById('btn-f1-pvp-friend');
+    if (friendBtn) {
+      friendBtn.onclick = () => {
+        window.ApexAudio.playClick();
+        const fab = document.getElementById('ps-mp-fab');
+        const panel = document.getElementById('ps-mp-panel');
+        if (fab && panel) {
+          if (!panel.classList.contains('open')) {
+            fab.click();
+          }
+          const pvpTab = panel.querySelector('[data-tab="pvp"]');
+          if (pvpTab) pvpTab.click();
+        }
+      };
+    }
+
+    const onlineBtn = document.getElementById('btn-f1-pvp-online');
+    if (onlineBtn) {
+      onlineBtn.onclick = () => {
+        window.ApexAudio.playClick();
+        const fab = document.getElementById('ps-mp-fab');
+        const panel = document.getElementById('ps-mp-panel');
+        if (fab && panel) {
+          if (!panel.classList.contains('open')) {
+            fab.click();
+          }
+          const mmTab = panel.querySelector('[data-tab="mm"]');
+          if (mmTab) mmTab.click();
+          
+          const mmBtn = document.getElementById('ps-mp-mm-btn');
+          if (mmBtn && mmBtn.classList.contains('find')) {
+            mmBtn.click();
+          }
+        }
+      };
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bindF1MultiplayerClicks);
+  } else {
+    setTimeout(bindF1MultiplayerClicks, 500);
+  }
+
   window.selectLandingTab = (idx, element) => {
     window.ApexAudio.playClick();
     const items = document.querySelectorAll('.f1-nav-item');
@@ -1507,6 +1572,8 @@
       document.getElementById('main-landing-screen').classList.add('hidden');
       document.getElementById('setup-wizard-overlay').classList.remove('hidden');
       navigateWizard(0); // Start wizard at step 1
+    } else if (idx === 2) {
+      window.openF1Multiplayer();
     }
   };
 
@@ -3936,11 +4003,21 @@
     const activeTeam = F1_TEAMS[selectedTeamIndex];
     const playerDriver = activeTeam.drivers[activeDriver];
 
+    let playerName = playerDriver.name;
+    if (window.matchMode === 'PVP') {
+      try {
+        const profile = (window.parent && window.parent.profile) || window.profile;
+        if (profile && profile.username) {
+          playerName = profile.username;
+        }
+      } catch(e) {}
+    }
+
     // Player Kart
     const pKartSetup = createProceduralKart(parseInt(activeTeam.color.replace('#', ''), 16), true);
     playerKart = {
       isPlayer: true,
-      name: playerDriver.name,
+      name: playerName,
       avatar: playerDriver.avatar,
       bonus: activeDriver === 0 ? "acceleration" : "topSpeed",
       mesh: pKartSetup.mesh,
@@ -4034,10 +4111,28 @@
     // Stagger teammate in P2 grid slot
     const mateDriver = activeTeam.drivers[activeDriver === 0 ? 1 : 0];
     const mateKartSetup = createProceduralKart(parseInt(activeTeam.color.replace('#', ''), 16), false);
+
+    let opponentName = mateDriver.name;
+    let opponentAvatar = mateDriver.avatar;
+    if (window.matchMode === 'PVP') {
+      opponentName = (window.cricketPvPRole === 'host') ? 'Opponent' : 'Host';
+      try {
+        const activeMatchStr = sessionStorage.getItem('ps_active_match');
+        if (activeMatchStr) {
+          const matchData = JSON.parse(activeMatchStr);
+          if (window.cricketPvPRole === 'host') {
+            opponentName = (matchData.guest && matchData.guest.username) || 'Guest';
+          } else {
+            opponentName = (matchData.host && matchData.host.username) || 'Host';
+          }
+        }
+      } catch(e) {}
+    }
+
     const teammateRacer = {
       isPlayer: false,
-      name: mateDriver.name,
-      avatar: mateDriver.avatar,
+      name: opponentName,
+      avatar: opponentAvatar,
       bonus: "handling",
       mesh: mateKartSetup.mesh,
       wheels: mateKartSetup.wheels,
@@ -4072,58 +4167,61 @@
     }
 
     // Populate remaining 14 slots from other teams to complete a 16-car F1 grid matrix
-    let gridSlot = 2; // Slots 0=player, 1=teammate
-    F1_TEAMS.forEach((team, tIdx) => {
-      if (tIdx === selectedTeamIndex) return; // skip player team
-      
-      // Spawn both drivers of each other team
-      team.drivers.forEach((driver, dIdx) => {
-        if (gridSlot >= 16) return;
+    const isOnlineQuickMatch = (window.matchMode === 'PVP' && sessionStorage.getItem('ps_pvp_submode') === 'quick_match');
+    if (!isOnlineQuickMatch) {
+      let gridSlot = 2; // Slots 0=player, 1=teammate
+      F1_TEAMS.forEach((team, tIdx) => {
+        if (tIdx === selectedTeamIndex) return; // skip player team
         
-        const aiKartSetup = createProceduralKart(parseInt(team.color.replace('#', ''), 16), false);
-        const row = Math.floor(gridSlot / 2);
-        const sideOffset = gridSlot % 2 === 0 ? -1.8 : 1.8;
-        const currentOffset = 1.0 - row * 0.009; // Wider gap so AI start further behind — prevents T1 rear collision
+        // Spawn both drivers of each other team
+        team.drivers.forEach((driver, dIdx) => {
+          if (gridSlot >= 16) return;
+          
+          const aiKartSetup = createProceduralKart(parseInt(team.color.replace('#', ''), 16), false);
+          const row = Math.floor(gridSlot / 2);
+          const sideOffset = gridSlot % 2 === 0 ? -1.8 : 1.8;
+          const currentOffset = 1.0 - row * 0.009; // Wider gap so AI start further behind — prevents T1 rear collision
 
-        const aiRacer = {
-          isPlayer: false,
-          name: driver.name,
-          avatar: driver.avatar,
-          bonus: "handling",
-          mesh: aiKartSetup.mesh,
-          wheels: aiKartSetup.wheels,
-          currentOffset: currentOffset,
-          sideOffset: sideOffset,
-          speed: 0.0,
-          boostTime: 0.0,
-          shieldActive: false,
-          spinoutTime: 0.0,
-          posRank: gridSlot + 1,
-          teamIndex: tIdx,
-          completedLaps: 0,
-          previousTrackProgress: currentOffset,
-          isPitting: false,
-          pitProgress: 0.0,
-          finished: false,
-          finishPos: null,
-          finishTime: null,
-          ersEnergy: ERS_MAX_ENERGY,
-          inPitLane: false,
-          pitZone: "MAIN_TRACK",
-          pitLimiterActive: false,
-          currentPath: "TRACK",
-          isTrackActive: true,
-          collisionEnabled: true
-        };
-        aiRacer.aiProfile      = buildAIProfile(team, driver);
-        aiRacer.carPerformance = buildCarPerformance(team);
-        racers.push(aiRacer);
-        if (typeof window.registerCollider === 'function') {
-          window.registerCollider(aiRacer.mesh, "CAR");
-        }
-        gridSlot++;
+          const aiRacer = {
+            isPlayer: false,
+            name: driver.name,
+            avatar: driver.avatar,
+            bonus: "handling",
+            mesh: aiKartSetup.mesh,
+            wheels: aiKartSetup.wheels,
+            currentOffset: currentOffset,
+            sideOffset: sideOffset,
+            speed: 0.0,
+            boostTime: 0.0,
+            shieldActive: false,
+            spinoutTime: 0.0,
+            posRank: gridSlot + 1,
+            teamIndex: tIdx,
+            completedLaps: 0,
+            previousTrackProgress: currentOffset,
+            isPitting: false,
+            pitProgress: 0.0,
+            finished: false,
+            finishPos: null,
+            finishTime: null,
+            ersEnergy: ERS_MAX_ENERGY,
+            inPitLane: false,
+            pitZone: "MAIN_TRACK",
+            pitLimiterActive: false,
+            currentPath: "TRACK",
+            isTrackActive: true,
+            collisionEnabled: true
+          };
+          aiRacer.aiProfile      = buildAIProfile(team, driver);
+          aiRacer.carPerformance = buildCarPerformance(team);
+          racers.push(aiRacer);
+          if (typeof window.registerCollider === 'function') {
+            window.registerCollider(aiRacer.mesh, "CAR");
+          }
+          gridSlot++;
+        });
       });
-    });
+    }
 
     // If we are in the main GP race (session index 2) and startingGrid exists,
     // re-sort racers to match window.startingGrid.
@@ -4146,16 +4244,22 @@
 
     // Assign grid starting positions, staggered grid offsets and sideOffsets based on sorted order
     racers.forEach((r, index) => {
-      const row = Math.floor(index / 2);
-      const sideOffset = index % 2 === 0 ? -1.8 : 1.8;
+      let gridIndex = index;
+      if (window.matchMode === 'PVP' && window.cricketPvPRole === 'guest') {
+        if (index === 0) gridIndex = 1;
+        else if (index === 1) gridIndex = 0;
+      }
+
+      const row = Math.floor(gridIndex / 2);
+      const sideOffset = gridIndex % 2 === 0 ? -1.8 : 1.8;
       const currentOffset = 1.0 - row * 0.009;
 
       r.currentOffset = currentOffset;
       r.previousTrackProgress = currentOffset;
       r.sideOffset = sideOffset;
-      r.posRank = index + 1;
-      r.gridStartPos = index + 1;
-      r.lastPosRank = index + 1;
+      r.posRank = gridIndex + 1;
+      r.gridStartPos = gridIndex + 1;
+      r.lastPosRank = gridIndex + 1;
       r.completedLaps = 0;
       r.finished = false;
       r.speed = 0.0;

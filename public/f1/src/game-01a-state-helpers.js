@@ -1489,6 +1489,71 @@
     updateMenuPreviewCar();
   };
 
+  window.openF1Multiplayer = () => {
+    window.ApexAudio.playClick();
+    document.getElementById('main-landing-screen').classList.add('hidden');
+    const screen = document.getElementById('f1-multiplayer-screen');
+    if (screen) {
+      screen.style.display = 'flex';
+      screen.classList.remove('hidden');
+    }
+  };
+
+  window.closeF1Multiplayer = () => {
+    window.ApexAudio.playClick();
+    const screen = document.getElementById('f1-multiplayer-screen');
+    if (screen) {
+      screen.classList.add('hidden');
+      setTimeout(() => { screen.style.display = 'none'; }, 350);
+    }
+    document.getElementById('main-landing-screen').classList.remove('hidden');
+  };
+
+  function bindF1MultiplayerClicks() {
+    const friendBtn = document.getElementById('btn-f1-pvp-friend');
+    if (friendBtn) {
+      friendBtn.onclick = () => {
+        window.ApexAudio.playClick();
+        const fab = document.getElementById('ps-mp-fab');
+        const panel = document.getElementById('ps-mp-panel');
+        if (fab && panel) {
+          if (!panel.classList.contains('open')) {
+            fab.click();
+          }
+          const pvpTab = panel.querySelector('[data-tab="pvp"]');
+          if (pvpTab) pvpTab.click();
+        }
+      };
+    }
+
+    const onlineBtn = document.getElementById('btn-f1-pvp-online');
+    if (onlineBtn) {
+      onlineBtn.onclick = () => {
+        window.ApexAudio.playClick();
+        const fab = document.getElementById('ps-mp-fab');
+        const panel = document.getElementById('ps-mp-panel');
+        if (fab && panel) {
+          if (!panel.classList.contains('open')) {
+            fab.click();
+          }
+          const mmTab = panel.querySelector('[data-tab="mm"]');
+          if (mmTab) mmTab.click();
+          
+          const mmBtn = document.getElementById('ps-mp-mm-btn');
+          if (mmBtn && mmBtn.classList.contains('find')) {
+            mmBtn.click();
+          }
+        }
+      };
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bindF1MultiplayerClicks);
+  } else {
+    setTimeout(bindF1MultiplayerClicks, 500);
+  }
+
   window.selectLandingTab = (idx, element) => {
     window.ApexAudio.playClick();
     const items = document.querySelectorAll('.f1-nav-item');
@@ -1499,6 +1564,8 @@
       document.getElementById('main-landing-screen').classList.add('hidden');
       document.getElementById('setup-wizard-overlay').classList.remove('hidden');
       navigateWizard(0); // Start wizard at step 1
+    } else if (idx === 2) {
+      window.openF1Multiplayer();
     }
   };
 

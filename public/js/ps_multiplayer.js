@@ -586,6 +586,7 @@
 
     socket.on('ps-matchmaking-found', matchData => {
       setSearching(false);
+      sessionStorage.setItem('ps_pvp_submode', 'quick_match');
       launchMatch(matchData);
     });
 
@@ -610,6 +611,7 @@
     });
 
     socket.on('ps-match-start', matchData => {
+      sessionStorage.setItem('ps_pvp_submode', 'friend_challenge');
       launchMatch(matchData);
     });
   }

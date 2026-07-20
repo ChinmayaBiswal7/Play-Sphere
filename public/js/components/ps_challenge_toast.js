@@ -235,12 +235,12 @@
       }
     });
 
-    // Handle universal matchmaking and friend challenges start
-    const startMatchHandler = (matchData) => {
+    const startMatchHandler = (matchData, isMatchmaking = false) => {
       console.log('[PvP] Match start triggered:', matchData);
       
       // Save match details to sessionStorage so iframe multi-player script knows it's an active PvP match immediately on load
       sessionStorage.setItem('ps_active_match', JSON.stringify(matchData));
+      sessionStorage.setItem('ps_pvp_submode', isMatchmaking ? 'quick_match' : 'friend_challenge');
 
       // Direct transition if Cricket is already active in parent window
       if (matchData.game === 'cricket' && typeof window.cricketPvPInit === 'function') {
@@ -266,14 +266,14 @@
             iframe.style.cssText = "position: fixed; inset: 0; width: 100vw; height: 100vh; border: none; z-index: 999999; background: #000;";
             document.body.appendChild(iframe);
           }
-          iframe.src = `${route}?room=${matchData.roomCode}`;
+          iframe.src = route + '?room=' + matchData.roomCode;
           iframe.style.display = 'block';
         }
       }
     };
 
-    socket.on('ps-match-start', startMatchHandler);
-    socket.on('ps-matchmaking-found', startMatchHandler);
+    socket.on('ps-match-start', (data) => startMatchHandler(data, false));
+    socket.on('ps-matchmaking-found', (data) => startMatchHandler(data, true));
   }
 
   // ── Init ─────────────────────────────────────────────────────────────────────

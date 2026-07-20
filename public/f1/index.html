@@ -1929,7 +1929,7 @@
           <span>🏎️</span> GRAND PRIX
         </div>
         <div class="f1-nav-item" onclick="selectLandingTab(2, this)">
-          <span>🌐</span> LOCAL MULTIPLAYER
+          <span>🌐</span> ONLINE MULTIPLAYER
         </div>
         <div class="f1-nav-item" onclick="selectLandingTab(3, this)">
           <span>🛒</span> CHIBI STORE
@@ -1965,6 +1965,56 @@
       <div style="position: absolute; bottom: 50px; right: 50px; text-align: right; font-family: 'Orbitron', sans-serif;">
         <span style="color: var(--neon-cyan); font-size: 0.72rem; letter-spacing: 2px; text-transform: uppercase;">CURRENT CAR PREVIEW</span>
         <h2 style="font-size: 1.8rem; margin: 4px 0 0; font-weight: 800;" id="preview-car-name">MINI MAX - RED BULL</h2>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══ SCREEN: F1 ONLINE MULTIPLAYER ══ -->
+  <div id="f1-multiplayer-screen" class="f1-wizard-overlay hidden" style="z-index: 10003; display: none;">
+    <style>
+      .mp-card:hover {
+        transform: translateY(-8px) scale(1.03);
+        box-shadow: 0 20px 40px rgba(255, 255, 255, 0.05);
+      }
+      #btn-f1-pvp-friend:hover {
+        border-color: rgba(99, 102, 241, 0.9) !important;
+        box-shadow: 0 20px 50px rgba(99, 102, 241, 0.3) !important;
+      }
+      #btn-f1-pvp-online:hover {
+        border-color: rgba(16, 185, 129, 0.9) !important;
+        box-shadow: 0 20px 50px rgba(16, 185, 129, 0.3) !important;
+      }
+    </style>
+    <!-- Wizard Header style -->
+    <div class="wizard-header">
+      <div>
+        <div style="font-size: 0.8rem; letter-spacing: 2px; color: #ef4444; font-weight: 800; text-transform: uppercase;">Apex Stars PvP</div>
+        <div style="font-size: 1.8rem; font-weight: 900; font-family: 'Orbitron', sans-serif;">MULTIPLAYER HUB</div>
+      </div>
+      <button class="back-arrow-btn" id="btn-f1-mp-back" onclick="closeF1Multiplayer()" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 10px 20px; font-family: 'Orbitron', sans-serif; font-size: 0.85rem; font-weight: 800; border-radius: 4px; cursor: pointer; transition: background 0.2s;">➔ BACK TO HOME</button>
+    </div>
+    
+    <!-- Cards grid -->
+    <div style="display: flex; flex: 1; align-items: center; justify-content: center; gap: 30px; padding: 40px 0;">
+      <!-- Card 1: PvP Friend Challenge -->
+      <div class="mp-card" id="btn-f1-pvp-friend" style="width: 320px; height: 380px; background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(99, 102, 241, 0.15) 100%); border: 2px solid rgba(99, 102, 241, 0.4); border-radius: 16px; padding: 30px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: space-between; cursor: pointer; transition: all 0.25s ease; box-shadow: 0 10px 30px rgba(99, 102, 241, 0.15);">
+        <div style="font-size: 3.5rem; margin-top: 20px;">⚔️</div>
+        <div style="text-align: center;">
+          <div style="font-family: 'Orbitron', sans-serif; font-size: 1.15rem; font-weight: 900; color: #fff; margin-bottom: 8px;">PVP FRIEND CHALLENGE</div>
+          <div style="font-size: 0.75rem; color: rgba(255,255,255,0.5); line-height: 1.4;">Challenge a friend from your lobby. Race up to 16 players/friends together!</div>
+        </div>
+        <button style="width: 100%; padding: 12px; background: #6366f1; border: none; border-radius: 6px; color: #fff; font-family: 'Orbitron', sans-serif; font-size: 0.8rem; font-weight: 900; letter-spacing: 1px; cursor: pointer; pointer-events: none;">CHALLENGE FRIEND</button>
+      </div>
+
+      <!-- Card 2: Online Quick Match -->
+      <div class="mp-card" id="btn-f1-pvp-online" style="width: 320px; height: 380px; background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(16, 185, 129, 0.15) 100%); border: 2px solid rgba(16, 185, 129, 0.4); border-radius: 16px; padding: 30px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: space-between; cursor: pointer; transition: all 0.25s ease; box-shadow: 0 10px 30px rgba(16, 185, 129, 0.15);">
+        <div style="font-size: 3.5rem; margin-top: 20px;">🌐</div>
+        <div style="text-align: center;">
+          <div style="font-family: 'Orbitron', sans-serif; font-size: 1.15rem; font-weight: 900; color: #fff; margin-bottom: 8px;">ONLINE QUICK MATCH</div>
+          <div style="font-size: 0.75rem; color: rgba(255,255,255,0.5); line-height: 1.4;">Get matched with any available racer. Fast 1v1 sprint battle!</div>
+        </div>
+        <button style="width: 100%; padding: 12px; background: #10b981; border: none; border-radius: 6px; color: #fff; font-family: 'Orbitron', sans-serif; font-size: 0.8rem; font-weight: 900; letter-spacing: 1px; cursor: pointer; pointer-events: none;">FIND MATCH</button>
       </div>
     </div>
   </div>
