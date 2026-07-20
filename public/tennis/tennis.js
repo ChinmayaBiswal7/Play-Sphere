@@ -373,7 +373,7 @@ class WorldPlayer {
     
     this.vx = 0;
     this.vy = 0;
-    this.speed = 460;
+    this.speed = 380; // Balanced movement speed (reduced from 460 for better sensitivity)
     this.swingTimer = 0;
     this.swingType = null;
     this.diveTimer = 0;
@@ -495,9 +495,12 @@ function checkRacketImpact(player) {
     // Vertical length aim (Y axis depth) controlled by joystick Y
     // UP on joystick (negative Y input) pushes deeper, DOWN draws shorter
     let depthMultiplier = 1.0;
-    if (Math.abs(input.moveY) > 0.1) {
-      // Pushing UP (moveY < 0) adds depth, pushing DOWN (moveY > 0) cuts short
-      depthMultiplier = lerp(1.0, 1.35, -input.moveY);
+    if (input.moveY < -0.15) {
+      // Pushing UP (moveY < 0) adds depth (safer range: max +15%)
+      depthMultiplier = lerp(1.0, 1.15, -input.moveY);
+    } else if (input.moveY > 0.15) {
+      // Pushing DOWN (moveY > 0) cuts short (safer range: max -20%)
+      depthMultiplier = lerp(1.0, 0.80, input.moveY);
     }
 
     // Hitter direction sign
@@ -512,11 +515,11 @@ function checkRacketImpact(player) {
     angleX += accuracyNoise;
 
     if (gameState === STATES.SERVE_PREPARE && currentServer === player.slot && serveStage === 1) {
-      // Strike Serve!
+      // Strike Serve! (Balanced speed to prevent easy double-faults/out of bounds)
       ball.inPlay = true;
       ball.vx = angleX;
-      ball.vy = 480 * dir;
-      ball.vh = 140; // toss lift
+      ball.vy = 410 * dir;
+      ball.vh = 130; // toss lift
       
       ballBounces = 0;
       ballLastBounceSide = null;
@@ -534,18 +537,28 @@ function checkRacketImpact(player) {
         serveTouchReceiver = true;
       }
 
-      let speedY = 560;
-      let speedH = 110;
+      let speedY = 380; // Safe 'MID' default shot
+      let speedH = 100;
+      let isSmash = false;
 
       if (player.swingType === 'LOB') {
-        speedY = 330;
-        speedH = 260;
+        // 'LONG' / deep baseline shot
+        speedY = 460;
+        speedH = 120;
       } else if (player.swingType === 'POWER') {
-        speedY = 740;
-        speedH = 60;
+        // 'SMASH' / high ball downward spike
+        if (ball.h > 45) {
+          speedY = 560; // fast downward slam
+          speedH = -35; // downward trajectory
+          isSmash = true;
+        } else {
+          // Low power shot (flat, fast but safe)
+          speedY = 480;
+          speedH = 65;
+        }
       }
 
-      // Slice Backspin simulation
+      // Slice Backspin simulation (if player holds down on joystick while hitting)
       if (player.swingType === 'LOB' && input.moveY > 0.3) {
         // Slice: slower, floats, lower bounce
         speedY *= 0.75;
@@ -563,8 +576,14 @@ function checkRacketImpact(player) {
       rallyActive = true;
 
       sounds.hit();
-      spawnParticles(ball.x, ball.y, player.color, 15);
-      triggerControllerVibration(player.slot, 85);
+      if (isSmash) {
+        showNotification('💥 SMASH!');
+        spawnParticles(ball.x, ball.y, '#eab308', 25);
+        triggerControllerVibration(player.slot, 100);
+      } else {
+        spawnParticles(ball.x, ball.y, player.color, 15);
+        triggerControllerVibration(player.slot, 85);
+      }
     }
 
     player.swingType = null;
