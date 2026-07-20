@@ -1756,16 +1756,26 @@ function resetMatchToSetup() {
   document.getElementById('game-over-screen').classList.add('hidden');
   
   controllerSlots.PLAYER_1.ready = false;
-  controllerSlots.PLAYER_2.ready = false;
+  controllerSlots.PLAYER_2.ready = window.isVSModeAI ? true : false;
+  
   const badge1 = document.getElementById('p1-ready-badge');
   const badge2 = document.getElementById('p2-ready-badge');
   if (badge1) {
-    badge1.innerText = 'PLAYER 1: WAITING';
+    if (window.isVSModeAI) {
+      badge1.innerText = 'P1: PRESS SPACE/J TO READY';
+    } else {
+      badge1.innerText = 'PLAYER 1: WAITING';
+    }
     badge1.className = 'ready-indicator p1-ready-indicator';
   }
   if (badge2) {
-    badge2.innerText = 'PLAYER 2: WAITING';
-    badge2.className = 'ready-indicator p2-ready-indicator';
+    if (window.isVSModeAI) {
+      badge2.innerText = 'PLAYER 2 (AI): READY';
+      badge2.className = 'ready-indicator p2-ready-indicator ready';
+    } else {
+      badge2.innerText = 'PLAYER 2: WAITING';
+      badge2.className = 'ready-indicator p2-ready-indicator';
+    }
   }
 
   transitionToMatchSetup();
@@ -1839,6 +1849,79 @@ function animate() {
       ball.update(dt);
     }
 
+    // Keyboard movement input for PLAYER_1 (if phone controller is not active/connected or playing solo)
+    if (!controllerSlots.PLAYER_1.connected || window.isVSModeAI) {
+      let moveX = 0;
+      let moveY = 0;
+      if (keysPressed['KeyA'] || keysPressed['ArrowLeft']) moveX = -1;
+      if (keysPressed['KeyD'] || keysPressed['ArrowRight']) moveX = 1;
+      if (keysPressed['KeyW'] || keysPressed['ArrowUp']) moveY = -1;
+      if (keysPressed['KeyS'] || keysPressed['ArrowDown']) moveY = 1;
+      playerInputs.PLAYER_1.moveX = moveX;
+      playerInputs.PLAYER_1.moveY = moveY;
+    }
+
+    // CPU AI behavior for Player 2
+    if (window.isVSModeAI) {
+      const aiInput = playerInputs.PLAYER_2;
+      aiInput.moveX = 0;
+      aiInput.moveY = 0;
+      aiInput.hit = false;
+      aiInput.lob = false;
+      aiInput.power = false;
+
+      const ballPos = ball;
+      const aiPlayer = players.PLAYER_2;
+      
+      const p2DirY = activeEndsSwapped ? 1 : -1;
+      
+      let targetX = ballPos.x;
+      let targetY = ballPos.y + p2DirY * 45;
+
+      targetX = clamp(targetX, -280, 280);
+      if (activeEndsSwapped) {
+        targetY = clamp(targetY, 45, 520);
+      } else {
+        targetY = clamp(targetY, -520, -45);
+      }
+
+      if (!ballPos.inPlay) {
+        targetX = 0;
+        targetY = activeEndsSwapped ? 420 : -420;
+      }
+
+      const dx = targetX - aiPlayer.x;
+      const dy = targetY - aiPlayer.y;
+      const dist = Math.hypot(dx, dy);
+
+      if (dist > 12) {
+        aiInput.moveX = Math.sign(dx) * 0.95;
+        aiInput.moveY = Math.sign(dy) * 0.95;
+      }
+
+      const distToBall = Math.hypot(ballPos.x - aiPlayer.x, ballPos.y - aiPlayer.y);
+      if (distToBall < 68 && ballPos.inPlay && ballPos.h < 120) {
+        const ballMovingToAI = (p2DirY > 0 && ballPos.vy > 0) || (p2DirY < 0 && ballPos.vy < 0);
+        if (ballMovingToAI || gameState === STATES.SERVE_PREPARE || gameState === STATES.SERVE_TOSS) {
+          if (gameState === STATES.SERVE_PREPARE && currentServer === 'PLAYER_2') {
+            if (serveStage === 0) {
+              handleButtonPress('PLAYER_2', 'HIT');
+            } else if (serveStage === 1) {
+              handleButtonPress('PLAYER_2', 'HIT');
+            }
+          } else {
+            if (ballPos.h > 45 && Math.random() < 0.8) {
+              handleButtonPress('PLAYER_2', 'POWER');
+            } else if (distToBall > 48 && Math.random() < 0.6) {
+              handleButtonPress('PLAYER_2', 'LOB');
+            } else {
+              handleButtonPress('PLAYER_2', 'HIT');
+            }
+          }
+        }
+      }
+    }
+
     // Update players
     players.PLAYER_1.update(dt, playerInputs.PLAYER_1);
     players.PLAYER_2.update(dt, playerInputs.PLAYER_2);
@@ -1891,12 +1974,197 @@ function animate() {
   ctx.stroke();
 }
 
+// Keyboard input state map for P1 local play
+const keysPressed = {};
+
+window.addEventListener('keydown', (e) => {
+  keysPressed[e.code] = true;
+  
+  if (e.key === 'Escape') {
+    togglePauseRulesModal();
+  }
+
+  // Keybind action triggers for PLAYER_1 (MID, LONG, SMASH, DIVE, and MATCH_SETUP Ready toggle)
+  const isP1Active = !controllerSlots.PLAYER_1.connected || window.isVSModeAI;
+  if (isP1Active) {
+    if (gameState === STATES.MATCH_SETUP) {
+      if (e.code === 'Space' || e.code === 'KeyJ') {
+        handleButtonPress('PLAYER_1', 'HIT');
+      }
+    } else if (gameState === STATES.SERVE_PREPARE && currentServer === 'PLAYER_1') {
+      if (e.code === 'Space' || e.code === 'KeyJ') {
+        handleButtonPress('PLAYER_1', 'HIT');
+      }
+    } else if (gameState === STATES.SERVE_TOSS && currentServer === 'PLAYER_1') {
+      if (e.code === 'Space' || e.code === 'KeyJ') {
+        handleButtonPress('PLAYER_1', 'HIT');
+      }
+    } else if (gameState === STATES.RALLY || (gameState === STATES.SERVE_TOSS && currentServer === 'PLAYER_2')) {
+      if (e.code === 'Space' || e.code === 'KeyJ') {
+        handleButtonPress('PLAYER_1', 'HIT');
+      } else if (e.code === 'KeyK') {
+        handleButtonPress('PLAYER_1', 'LOB');
+      } else if (e.code === 'KeyL') {
+        handleButtonPress('PLAYER_1', 'POWER');
+      } else if (e.code === 'KeyI') {
+        // Dive
+        const input = playerInputs.PLAYER_1;
+        if (Math.abs(input.moveX) > 0.1 || Math.abs(input.moveY) > 0.1) {
+          players.PLAYER_1.dive(input.moveX, input.moveY);
+        }
+      }
+    } else if (gameState === STATES.MATCH_END) {
+      if (e.code === 'Space' || e.code === 'KeyJ') {
+        handleButtonPress('PLAYER_1', 'HIT');
+      }
+    }
+  }
+});
+
+window.addEventListener('keyup', (e) => {
+  keysPressed[e.code] = false;
+});
+
 function start() {
   initSocketConnection();
   animate();
+
+  // Bind mouse-click handlers on PC screen Game Over overlays
+  const rematchBtn = document.getElementById('btn-rematch');
+  if (rematchBtn) {
+    rematchBtn.onclick = () => {
+      if (window.isVSModeAI) {
+        controllerSlots.PLAYER_1.ready = !controllerSlots.PLAYER_1.ready;
+        controllerSlots.PLAYER_2.ready = true;
+        const p1R = controllerSlots.PLAYER_1.ready ? 1 : 0;
+        rematchBtn.innerText = `REMATCH (${p1R + 1}/2 READY)`;
+        if (controllerSlots.PLAYER_1.ready) {
+          resetMatchToSetup();
+        }
+      } else {
+        // Toggle player 1 ready. Player 2 can click using phone or we toggle both if offline
+        controllerSlots.PLAYER_1.ready = !controllerSlots.PLAYER_1.ready;
+        const p1R = controllerSlots.PLAYER_1.ready ? 1 : 0;
+        const p2R = controllerSlots.PLAYER_2.ready ? 1 : 0;
+        rematchBtn.innerText = `REMATCH (${p1R + p2R}/2 READY)`;
+        if (controllerSlots.PLAYER_1.ready && controllerSlots.PLAYER_2.ready) {
+          resetMatchToSetup();
+        }
+      }
+    };
+  }
+
+  const exitBtn = document.getElementById('btn-exit');
+  if (exitBtn) {
+    exitBtn.onclick = () => {
+      document.getElementById('game-over-screen').classList.add('hidden');
+      document.getElementById('setup-screen').classList.add('hidden');
+      document.getElementById('lobby-screen').classList.add('hidden');
+      document.getElementById('hud-overlay').classList.add('hidden');
+      document.getElementById('tennis-home-screen').classList.remove('hidden');
+      window.isVSModeAI = false;
+    };
+  }
+
+  // 1. Simulate real-time console loading bar animation (2 seconds)
+  const loadBar = document.getElementById('tennis-load-bar');
+  let progress = 0;
+  const loadInterval = setInterval(() => {
+    progress += Math.random() * 9 + 4;
+    if (progress >= 100) {
+      progress = 100;
+      clearInterval(loadInterval);
+      setTimeout(() => {
+        const loadScreen = document.getElementById('tennis-loading-screen');
+        const homeScreen = document.getElementById('tennis-home-screen');
+        if (loadScreen) loadScreen.classList.add('hidden');
+        if (homeScreen) homeScreen.classList.remove('hidden');
+      }, 350);
+    }
+    if (loadBar) loadBar.style.width = `${progress}%`;
+  }, 90);
 }
 
 window.onload = start;
+
+// ── LANDING SCREEN NAVIGATION HANDLERS ─────────────────────────
+window.isVSModeAI = false;
+
+window.startTennisVSModeAI = () => {
+  window.isVSModeAI = true;
+  controllerSlots.PLAYER_2.connected = true;
+  controllerSlots.PLAYER_2.ready = true;
+  controllerSlots.PLAYER_1.connected = true; // allow P1 keyboard play
+
+  document.getElementById('tennis-home-screen').classList.add('hidden');
+  transitionToMatchSetup();
+
+  const badge1 = document.getElementById('p1-ready-badge');
+  const badge2 = document.getElementById('p2-ready-badge');
+  if (badge1) {
+    badge1.innerText = 'P1: PRESS SPACE/J TO READY';
+    badge1.className = 'ready-indicator p1-ready-indicator';
+  }
+  if (badge2) {
+    badge2.innerText = 'PLAYER 2 (AI): READY';
+    badge2.className = 'ready-indicator p2-ready-indicator ready';
+  }
+};
+
+window.openTennisLocalLobby = () => {
+  window.isVSModeAI = false;
+  controllerSlots.PLAYER_1.connected = false;
+  controllerSlots.PLAYER_1.ready = false;
+  controllerSlots.PLAYER_2.connected = false;
+  controllerSlots.PLAYER_2.ready = false;
+
+  const badge1 = document.getElementById('p1-ready-badge');
+  const badge2 = document.getElementById('p2-ready-badge');
+  if (badge1) {
+    badge1.innerText = 'PLAYER 1: WAITING';
+    badge1.className = 'ready-indicator p1-ready-indicator';
+  }
+  if (badge2) {
+    badge2.innerText = 'PLAYER 2: WAITING';
+    badge2.className = 'ready-indicator p2-ready-indicator';
+  }
+
+  document.getElementById('tennis-home-screen').classList.add('hidden');
+  document.getElementById('lobby-screen').classList.remove('hidden');
+};
+
+window.openTennisOnlinePvP = () => {
+  const fab = document.getElementById('ps-mp-fab');
+  const panel = document.getElementById('ps-mp-panel');
+  if (fab && panel) {
+    if (!panel.classList.contains('open')) {
+      fab.click();
+    }
+    const mmTab = panel.querySelector('[data-tab="mm"]');
+    if (mmTab) mmTab.click();
+  }
+};
+
+window.openTennisHowToPlay = () => {
+  const howTo = document.getElementById('tennis-howtoplay-screen');
+  if (howTo) howTo.classList.remove('hidden');
+};
+
+window.closeTennisHowToPlay = () => {
+  const howTo = document.getElementById('tennis-howtoplay-screen');
+  if (howTo) howTo.classList.add('hidden');
+};
+
+window.exitLobbyToHome = () => {
+  document.getElementById('lobby-screen').classList.add('hidden');
+  document.getElementById('tennis-home-screen').classList.remove('hidden');
+};
+
+window.exitSetupToHome = () => {
+  document.getElementById('setup-screen').classList.add('hidden');
+  document.getElementById('tennis-home-screen').classList.remove('hidden');
+  window.isVSModeAI = false;
+};
 
 function showNotification(txt) {
   const notif = document.getElementById('match-notification');
@@ -1931,12 +2199,6 @@ function togglePauseRulesModal() {
     }
   }
 }
-
-window.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
-    togglePauseRulesModal();
-  }
-});
 
 document.getElementById('btn-resume-rules').onclick = () => {
   togglePauseRulesModal();

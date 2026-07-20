@@ -10,6 +10,101 @@
   <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
+  <!-- A. Real-time Console Loading Screen -->
+  <div id="tennis-loading-screen" class="lobby-screen">
+    <div style="margin: auto; text-align: center; font-family: 'Orbitron', sans-serif;">
+      <!-- Glowing spinning logo -->
+      <div style="width: 100px; height: 100px; border-radius: 50%; border: 6px solid rgba(0, 210, 255, 0.2); border-top-color: var(--neon-blue); animation: tennis-spin 1.2s linear infinite; margin: 0 auto 30px; box-shadow: 0 0 20px rgba(0, 210, 255, 0.3);"></div>
+      <div style="font-size: 2.2rem; font-weight: 900; letter-spacing: 6px; background: linear-gradient(90deg, var(--neon-blue) 0%, var(--neon-pink) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 0 0 20px rgba(0,210,255,0.25);">CHIBI TENNIS DUEL</div>
+      <div style="font-size: 0.85rem; color: #64748b; letter-spacing: 5px; margin-top: 10px; text-transform: uppercase;">Loading Duel Parameters...</div>
+      
+      <!-- Progress Bar -->
+      <div style="width: 320px; height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; margin: 40px auto 0; overflow: hidden;">
+        <div id="tennis-load-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--neon-blue), var(--neon-pink)); transition: width 0.1s linear;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- B. Dynamic Home Screen Menu -->
+  <div id="tennis-home-screen" class="lobby-screen hidden">
+    <div style="margin: auto; width: 100%; max-width: 800px; text-align: center;">
+      <div style="font-size: 3.5rem; font-weight: 900; letter-spacing: 8px; background: linear-gradient(90deg, var(--neon-blue) 0%, var(--neon-pink) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 0 0 35px rgba(255,0,127,0.3); font-family: 'Orbitron', sans-serif;">CHIBI TENNIS DUEL</div>
+      <p style="font-size: 0.9rem; letter-spacing: 6px; color: #94a3b8; margin: 8px 0 50px; text-transform: uppercase;">PlaySphere Championship Series</p>
+
+      <!-- Menu options -->
+      <div class="tennis-home-menu-grid">
+        <button class="tennis-menu-btn" onclick="startTennisVSModeAI()">
+          <span style="font-size: 1.8rem;">🤖</span>
+          <div style="text-align: left;">
+            <div class="btn-main-txt">VS COMPUTER</div>
+            <div class="btn-sub-txt">Play solo against a smart AI opponent</div>
+          </div>
+        </button>
+        
+        <button class="tennis-menu-btn" onclick="openTennisLocalLobby()">
+          <span style="font-size: 1.8rem;">📱</span>
+          <div style="text-align: left;">
+            <div class="btn-main-txt">LOCAL MULTIPLAYER</div>
+            <div class="btn-sub-txt">Connect two phones as wireless gamepads</div>
+          </div>
+        </button>
+
+        <button class="tennis-menu-btn" onclick="openTennisOnlinePvP()">
+          <span style="font-size: 1.8rem;">🌐</span>
+          <div style="text-align: left;">
+            <div class="btn-main-txt">ONLINE PVP MATCH</div>
+            <div class="btn-sub-txt">Challenge network friends & randoms</div>
+          </div>
+        </button>
+
+        <button class="tennis-menu-btn" onclick="openTennisHowToPlay()">
+          <span style="font-size: 1.8rem;">📖</span>
+          <div style="text-align: left;">
+            <div class="btn-main-txt">HOW TO PLAY & CONTROLS</div>
+            <div class="btn-sub-txt">Keyboard bindings & gameplay tips</div>
+          </div>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- C. How to Play & Keybinds Overlay -->
+  <div id="tennis-howtoplay-screen" class="lobby-screen hidden" style="background: rgba(3,7,18,0.98); z-index: 1005;">
+    <div style="width: 100%; max-width: 900px; margin: auto; font-family: -apple-system, sans-serif;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid rgba(255,255,255,0.06); padding-bottom: 15px; margin-bottom: 30px;">
+        <div>
+          <div style="font-size: 0.75rem; letter-spacing: 2px; color: var(--neon-blue); font-weight: 800; text-transform: uppercase;">Rules & Controls</div>
+          <div style="font-size: 1.8rem; font-weight: 900; color: #fff;">GAMEPLAY HANDBOOK</div>
+        </div>
+        <button class="choice-btn highlight-btn" onclick="closeTennisHowToPlay()" style="width: auto; padding: 10px 24px; font-size: 0.8rem; font-weight: 800;">➔ RETURN TO HOME</button>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; text-align: left;">
+        <div>
+          <h3 style="color: var(--neon-blue); font-size: 1rem; letter-spacing: 1px; margin-bottom: 15px; text-transform: uppercase; border-left: 3px solid var(--neon-blue); padding-left: 8px;">🎮 Keyboard Controls (Player 1)</h3>
+          <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem; color: #cbd5e1;">
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);"><td style="padding: 8px 0; font-weight: 700; color: #fff; width: 40%;">W / A / S / D</td><td style="padding: 8px 0;">Move Chibi Player (or Arrow Keys)</td></tr>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);"><td style="padding: 8px 0; font-weight: 700; color: #fff;">Space / J</td><td style="padding: 8px 0;">MID Shot (Safe return, lands mid-court)</td></tr>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);"><td style="padding: 8px 0; font-weight: 700; color: #fff;">K</td><td style="padding: 8px 0;">LONG Shot (Aggressive, deep baseline hit)</td></tr>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);"><td style="padding: 8px 0; font-weight: 700; color: #fff;">L</td><td style="padding: 8px 0;">SMASH Shot (High ball spike or flat drive)</td></tr>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);"><td style="padding: 8px 0; font-weight: 700; color: #fff;">I</td><td style="padding: 8px 0;">DIVE Save (Press while moving)</td></tr>
+          </table>
+        </div>
+        <div>
+          <h3 style="color: var(--neon-pink); font-size: 1rem; letter-spacing: 1px; margin-bottom: 15px; text-transform: uppercase; border-left: 3px solid var(--neon-pink); padding-left: 8px;">📱 Phone Controller Layout</h3>
+          <p style="font-size: 0.8rem; color: #94a3b8; line-height: 1.5; margin-bottom: 12px;">Scan the QR code in Local Multiplayer mode to load the phone controller. Tap buttons to trigger swings:</p>
+          <ul style="font-size: 0.8rem; color: #cbd5e1; padding-left: 15px; line-height: 1.6;">
+            <li><strong>Virtual Stick:</strong> Responsive steering across court.</li>
+            <li><strong>MID:</strong> Safe green button for secure returns.</li>
+            <li><strong>LONG:</strong> Deep blue button targeting opponent baseline.</li>
+            <li><strong>SMASH:</strong> Orange button. Spikes the ball when high!</li>
+            <li><strong>DIVE:</strong> Pink button for athletic saves.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- 2D Canvas Container -->
   <div id="canvas-container">
     <canvas id="tennis-canvas"></canvas>
@@ -53,7 +148,8 @@
   </div>
 
   <!-- 1. Connection Lobby Screen -->
-  <div id="lobby-screen" class="lobby-screen">
+  <div id="lobby-screen" class="lobby-screen hidden">
+    <button class="choice-btn secondary-btn" style="position: absolute; top: 30px; left: 30px; width: auto; padding: 8px 16px; font-size: 0.8rem; z-index: 1010;" onclick="exitLobbyToHome()">➔ BACK TO MENU</button>
     <div class="lobby-divider"></div>
     <div class="lobby-title-bar">
       <h1>CHIBI TENNIS DUEL</h1>
@@ -98,6 +194,7 @@
 
   <!-- 2. Match Setup Screen -->
   <div id="setup-screen" class="setup-screen hidden">
+    <button class="choice-btn secondary-btn" style="position: absolute; top: 30px; left: 30px; width: auto; padding: 8px 16px; font-size: 0.8rem; z-index: 1010;" onclick="exitSetupToHome()">➔ BACK TO MENU</button>
     <div class="setup-box">
       <h2>MATCH SETUP</h2>
       <p class="setup-guide">Player 1 selects format and rules. Both players press <strong>HIT</strong> to Ready.</p>
@@ -185,12 +282,13 @@
           </ul>
         </div>
         <div class="rules-category">
-          <h3>🎮 CONTROLLER BUTTONS</h3>
+          <h3>🎮 CONTROLLER & KEYBOARD</h3>
           <ul>
-            <li><strong>Joystick:</strong> Move your chibi player. Direction controls auto-adjust when baseline ends swap.</li>
-            <li><strong>HIT:</strong> Low trajectory flat drive. Serve toss & hit are both triggered by this button.</li>
-            <li><strong>LOB / POWER:</strong> High lob shots vs high speed smash drives.</li>
-            <li><strong>DIVE:</strong> Push joystick in direction and press DIVE to execute a diving save.</li>
+            <li><strong>Keyboard (P1):</strong> WASD/Arrows to Move; <strong>Space / J</strong> for MID; <strong>K</strong> for LONG; <strong>L</strong> for SMASH; <strong>I</strong> to DIVE.</li>
+            <li><strong>Virtual Stick:</strong> Responsive steering across court.</li>
+            <li><strong>MID / LONG:</strong> Safe mid-court return vs deep baseline targeting.</li>
+            <li><strong>SMASH:</strong> Heavy downward spike shot when ball is high.</li>
+            <li><strong>DIVE:</strong> Execute athletic saving dives when moving.</li>
           </ul>
         </div>
       </div>
