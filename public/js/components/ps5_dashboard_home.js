@@ -77,7 +77,17 @@
     cards.forEach((c, idx) => {
       if (idx === index) {
         c.classList.add('selected');
-        c.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        const shelf = document.getElementById('ps5-shelf');
+        if (shelf) {
+          const cardOffsetLeft = c.offsetLeft;
+          const cardWidth = c.offsetWidth;
+          const shelfWidth = shelf.offsetWidth;
+          const targetScrollLeft = cardOffsetLeft - (shelfWidth / 2) + (cardWidth / 2);
+          shelf.scrollTo({
+            left: targetScrollLeft,
+            behavior: 'smooth'
+          });
+        }
       } else {
         c.classList.remove('selected');
       }
