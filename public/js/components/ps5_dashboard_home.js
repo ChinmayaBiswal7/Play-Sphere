@@ -26,6 +26,15 @@
       unlocked: true
     },
     {
+      id: 'rematch',
+      title: 'Rematch Football',
+      desc: 'Fast-paced 3D arcade soccer with zero rules! Experience physics-based ball bounce dynamics, dynamic goalkeeper diving, visual shot charging, sliding tackle dashes, and smart bot opponents.',
+      rating: '⭐ 4.9 Rating',
+      pill: 'ESRB: E',
+      dev: 'DeepMind Arcade',
+      unlocked: true
+    },
+    {
       id: 'f1',
       title: 'APEX STARS: CHIBI F1',
       desc: 'High-octane cartoon F1 kart racing! Choose your bobblehead driver, collect glowing power-up stars, drift around hairpins for speed boosts, and fire soda rockets to cross the line first!',
@@ -219,10 +228,11 @@
         if (typeof window.launchCricketGame === 'function') {
           window.launchCricketGame();
         }
-      } else if (gameId === 'football' || gameId === 'f1' || gameId === 'tennis' || gameId === 'wwe' || gameId === 'fps') {
+      } else if (gameId === 'football' || gameId === 'rematch' || gameId === 'f1' || gameId === 'tennis' || gameId === 'wwe' || gameId === 'fps') {
         const code = roomCode || '';
         let url = `/f1/index.html?room=${code}`;
         if (gameId === 'football') url = `/football/index.html?room=${code}`;
+        else if (gameId === 'rematch') url = `/rematch/index.html?room=${code}`;
         else if (gameId === 'tennis') url = `/tennis/index.html?room=${code}`;
         else if (gameId === 'wwe') url = `/wwe/index.html?room=${code}`;
         else if (gameId === 'fps') url = `/fps/index.html?room=${code}`;

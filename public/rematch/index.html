@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>F1 Racing — FRIDAY ENGINE</title>
+    <script>
+      function report(type, msg, stack) {
+        try {
+          fetch('http://localhost:3000/log', {
+            method: 'POST',
+            mode: 'cors',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify({ type, msg, stack })
+          });
+        } catch (e) {}
+      }
+      window.onerror = function(message, source, lineno, colno, error) {
+        report('error', message, error ? error.stack : '');
+      };
+      window.onunhandledrejection = function(event) {
+        report('unhandledrejection', event.reason ? event.reason.message : '', event.reason ? event.reason.stack : '');
+      };
+      const origError = console.error;
+      console.error = function(...args) {
+        report('console.error', args.join(' '), new Error().stack);
+        origError.apply(console, args);
+      };
+    </script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { background: #000; overflow: hidden; font-family: 'Courier New', monospace; }
+      #root { width: 100vw; height: 100vh; }
+    </style>
+    <script type="module" crossorigin src="/assets/index-C1Ir1XzH.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-t-AUh9ah.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
