@@ -7,9 +7,8 @@
     <script>
       function report(type, msg, stack) {
         try {
-          fetch('http://localhost:3000/log', {
+          fetch('/log', {
             method: 'POST',
-            mode: 'cors',
             headers: { 'Content-Type': 'text/plain' },
             body: JSON.stringify({ type, msg, stack })
           });
@@ -32,8 +31,8 @@
       body { background: #000; overflow: hidden; font-family: 'Courier New', monospace; }
       #root { width: 100vw; height: 100vh; }
     </style>
-    <script type="module" crossorigin src="/assets/index-C1Ir1XzH.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-t-AUh9ah.css">
+    <script type="module" crossorigin src="./assets/index-BV85AYvP.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-t-AUh9ah.css">
   </head>
   <body>
     <div id="root"></div>

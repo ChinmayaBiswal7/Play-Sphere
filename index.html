@@ -7,9 +7,8 @@
     <script>
       function report(type, msg, stack) {
         try {
-          fetch('http://localhost:3000/log', {
+          fetch('/log', {
             method: 'POST',
-            mode: 'cors',
             headers: { 'Content-Type': 'text/plain' },
             body: JSON.stringify({ type, msg, stack })
           });
