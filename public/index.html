@@ -66,22 +66,22 @@
   <title>PlaySphere Console</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='32' stroke='%233b82f6' stroke-width='6' fill='none'/><ellipse cx='50' cy='50' rx='42' ry='15' stroke='%233b82f6' stroke-width='4' fill='none' transform='rotate(-30 50 50)'/><ellipse cx='50' cy='50' rx='42' ry='15' stroke='%2360a5fa' stroke-width='3.5' fill='none' transform='rotate(30 50 50)'/><circle cx='50' cy='50' r='14' fill='%23ffffff'/></svg>">
   
-  <link rel="stylesheet" href="css/base.css?v=60">
-  <link rel="stylesheet" href="css/menus.css?v=60">
-  <link rel="stylesheet" href="css/hud.css?v=60">
-  <link rel="stylesheet" href="css/sidebars.css?v=60">
-  <link rel="stylesheet" href="css/overlays.css?v=60">
-  <link rel="stylesheet" href="css/ps5_dashboard.css?v=60">
-  <link rel="stylesheet" href="css/components/ps5_boot.css?v=60">
-  <link rel="stylesheet" href="css/components/ps5_dashboard_home.css?v=60">
-  <link rel="stylesheet" href="css/components/ps5_store.css?v=60">
-  <link rel="stylesheet" href="css/components/ps5_music_player.css?v=60">
-  <link rel="stylesheet" href="css/components/ps5_friends_modal.css?v=60">
-  <link rel="stylesheet" href="css/components/ps5_profile_modal.css?v=60">
-  <link rel="stylesheet" href="css/components/ps5_controller_modal.css?v=60">
-  <link rel="stylesheet" href="css/components/ps5_achievement_system.css?v=60">
-  <link rel="stylesheet" href="css/team_selection.css?v=60">
-  <link rel="stylesheet" href="css/faceoff_lineup.css?v=60">
+  <link rel="stylesheet" href="css/base.css?v=65">
+  <link rel="stylesheet" href="css/menus.css?v=65">
+  <link rel="stylesheet" href="css/hud.css?v=65">
+  <link rel="stylesheet" href="css/sidebars.css?v=65">
+  <link rel="stylesheet" href="css/overlays.css?v=65">
+  <link rel="stylesheet" href="css/ps5_dashboard.css?v=65">
+  <link rel="stylesheet" href="css/components/ps5_boot.css?v=65">
+  <link rel="stylesheet" href="css/components/ps5_dashboard_home.css?v=65">
+  <link rel="stylesheet" href="css/components/ps5_store.css?v=65">
+  <link rel="stylesheet" href="css/components/ps5_music_player.css?v=65">
+  <link rel="stylesheet" href="css/components/ps5_friends_modal.css?v=65">
+  <link rel="stylesheet" href="css/components/ps5_profile_modal.css?v=65">
+  <link rel="stylesheet" href="css/components/ps5_controller_modal.css?v=65">
+  <link rel="stylesheet" href="css/components/ps5_achievement_system.css?v=65">
+  <link rel="stylesheet" href="css/team_selection.css?v=65">
+  <link rel="stylesheet" href="css/faceoff_lineup.css?v=65">
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.147.0/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
@@ -106,7 +106,7 @@
       'ps5_friends_modal', 'ps5_profile_modal', 'ps5_controller_modal'
     ].forEach(name => {
       const xhr = new XMLHttpRequest();
-      xhr.open('GET', 'components/' + name + '.html?v=62', false);
+      xhr.open('GET', 'components/' + name + '.html?v=65', false);
       xhr.send(null);
       if (xhr.status === 200) {
         document.write(xhr.responseText);
@@ -116,43 +116,43 @@
     });
   </script>
 
-  <script src="js/gamepad_emulator.js?v=62"></script>
-  <script src="js/socket_controller.js?v=62"></script>
-  <script src="js/input_controller.js?v=62"></script>
-  <script src="js/game_state_manager.js?v=62"></script>
-  <script src="js/batting_controller.js?v=62"></script>
-  <script src="js/toss_cutscene.js?v=62"></script>
-  <script src="js/wicket_cutscene.js?v=62"></script>
-  <script src="js/entrance_cutscene.js?v=62"></script>
-  <script src="js/animation_system.js?v=62"></script>
+  <script src="js/gamepad_emulator.js?v=65"></script>
+  <script src="js/socket_controller.js?v=65"></script>
+  <script src="js/input_controller.js?v=65"></script>
+  <script src="js/game_state_manager.js?v=65"></script>
+  <script src="js/batting_controller.js?v=65"></script>
+  <script src="js/toss_cutscene.js?v=65"></script>
+  <script src="js/wicket_cutscene.js?v=65"></script>
+  <script src="js/entrance_cutscene.js?v=65"></script>
+  <script src="js/animation_system.js?v=65"></script>
 
-  <script src="js/socket_manager.js?v=62"></script>
-  <script src="js/ui_menus.js?v=62"></script>
-  <script src="js/bowling_hud.js?v=62"></script>
-  <script type="module" src="js/profile.js?v=62"></script>
-  <script src="js/components/ps5_sound_manager.js?v=62"></script>
-  <script src="js/components/ps5_achievement_system.js?v=62"></script>
-  <script src="js/components/ps5_music_player.js?v=62"></script>
-  <script src="js/components/ps5_store.js?v=62"></script>
-  <script src="js/components/ps5_friends_modal.js?v=62"></script>
-  <script src="js/components/ps5_profile_modal.js?v=62"></script>
-  <script src="js/components/ps5_controller_modal.js?v=62"></script>
-  <script src="js/components/ps5_dashboard_home.js?v=62"></script>
-  <script src="js/components/ps5_boot.js?v=62"></script>
-  <script src="js/ps5_dashboard.js?v=62"></script>
-  <script src="js/bowling_flow.js?v=62"></script>
-  <script src="js/field_placement.js?v=62"></script>
-  <script src="js/replay_system.js?v=62"></script>
-  <script src="js/drs_system.js?v=62"></script>
-  <script src="js/runout_system.js?v=62"></script>
-  <script src="js/qte_system.js?v=62"></script>
-  <script src="js/prematch_batsman_selection.js?v=62"></script>
-  <script src="js/intro_animation.js?v=62"></script>
-  <script src="js/team_selection.js?v=62"></script>
-  <script src="js/lineup_editor.js?v=62"></script>
-  <script src="js/cricket_pvp.js?v=62"></script>
-  <script type="module" src="game.js?v=62"></script>
+  <script src="js/socket_manager.js?v=65"></script>
+  <script src="js/ui_menus.js?v=65"></script>
+  <script src="js/bowling_hud.js?v=65"></script>
+  <script type="module" src="js/profile.js?v=65"></script>
+  <script src="js/components/ps5_sound_manager.js?v=65"></script>
+  <script src="js/components/ps5_achievement_system.js?v=65"></script>
+  <script src="js/components/ps5_music_player.js?v=65"></script>
+  <script src="js/components/ps5_store.js?v=65"></script>
+  <script src="js/components/ps5_friends_modal.js?v=65"></script>
+  <script src="js/components/ps5_profile_modal.js?v=65"></script>
+  <script src="js/components/ps5_controller_modal.js?v=65"></script>
+  <script src="js/components/ps5_dashboard_home.js?v=65"></script>
+  <script src="js/components/ps5_boot.js?v=65"></script>
+  <script src="js/ps5_dashboard.js?v=65"></script>
+  <script src="js/bowling_flow.js?v=65"></script>
+  <script src="js/field_placement.js?v=65"></script>
+  <script src="js/replay_system.js?v=65"></script>
+  <script src="js/drs_system.js?v=65"></script>
+  <script src="js/runout_system.js?v=65"></script>
+  <script src="js/qte_system.js?v=65"></script>
+  <script src="js/prematch_batsman_selection.js?v=65"></script>
+  <script src="js/intro_animation.js?v=65"></script>
+  <script src="js/team_selection.js?v=65"></script>
+  <script src="js/lineup_editor.js?v=65"></script>
+  <script src="js/cricket_pvp.js?v=65"></script>
+  <script type="module" src="game.js?v=65"></script>
   <!-- PlaySphere Challenge Notifications (dashboard only) -->
-  <script src="js/components/ps_challenge_toast.js?v=62"></script>
+  <script src="js/components/ps_challenge_toast.js?v=65"></script>
 </body>
 </html>
