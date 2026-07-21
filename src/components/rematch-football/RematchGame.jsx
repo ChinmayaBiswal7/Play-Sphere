@@ -1,6 +1,6 @@
 import React, { Suspense, useEffect } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { Physics } from '@react-three/rapier'
+import { Physics } from '@react-three/cannon'
 import { Environment, Stars, Sky } from '@react-three/drei'
 import { useFootballStore } from './footballStore'
 import { Arena } from './Arena'
@@ -9,31 +9,43 @@ import { Player } from './Player'
 import { Bot } from './Bot'
 import * as THREE from 'three'
 
-// Dynamic GK allocator
+// Dynamic GK allocator and goal detection coordinator
 function GoalkeeperManager() {
   const setGKs = useFootballStore((state) => state.setGKs)
+  const gameState = useFootballStore((state) => state.gameState)
+  const incrementScore = useFootballStore((state) => state.incrementScore)
 
   useFrame(() => {
-    const ballBody = window.footballBallBody
-    if (!ballBody) return
+    const ball = window.footballBall
+    if (!ball) return
 
-    const ballPos = ballBody.translation()
+    const ballPos = ball.position.current
+    const zPos = ballPos[2]
 
     // 1. Red team defends Z = 30. Who is closest to Z = 30?
     // P1 is the only player on Red team in 1v1.
     // If the ball is on Red half (Z > 0), set Red GK to 'player1' (user) so they get diving controls
-    const redGK = ballPos.z > 0 ? 'player1' : null
+    const redGK = zPos > 0 ? 'player1' : null
 
     // 2. Blue team defends Z = -30. Who is closest to Z = -30?
     // Bot is the only player on Blue team in 1v1.
     // If the ball is on Blue half (Z < 0), set Blue GK to 'bot1'
-    const blueGK = ballPos.z < 0 ? 'bot1' : null
+    const blueGK = zPos < 0 ? 'bot1' : null
 
     const currentRed = useFootballStore.getState().redGK
     const currentBlue = useFootballStore.getState().blueGK
 
     if (redGK !== currentRed || blueGK !== currentBlue) {
       setGKs(redGK, blueGK)
+    }
+
+    // 3. Goal Scoring Zone Triggers
+    if (gameState === 'PLAYING') {
+      if (zPos < -30.25 && Math.abs(ballPos[0]) < 5.0) {
+        incrementScore('red') // Red scores in Opponent's goal (Z = -30)
+      } else if (zPos > 30.25 && Math.abs(ballPos[0]) < 5.0) {
+        incrementScore('blue') // Blue scores in User's goal (Z = 30)
+      }
     }
   })
 
@@ -109,7 +121,7 @@ export function RematchGame({ onExit }) {
         <Stars radius={100} depth={50} count={1000} factor={4} saturation={0.5} fade speed={1} />
         <Environment preset="night" environmentIntensity={0.8} />
 
-        {/* Rapier Physics World */}
+        {/* Cannon Physics World */}
         <Suspense fallback={null}>
           <Physics gravity={[0, -15, 0]}>
             <Arena />

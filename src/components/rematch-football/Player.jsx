@@ -1,10 +1,10 @@
 import React, { useRef, useState, useEffect } from 'react'
+import { useSphere } from '@react-three/cannon'
 import { useFrame } from '@react-three/fiber'
-import { RigidBody, CapsuleCollider } from '@react-three/rapier'
 import { useFootballStore } from './footballStore'
+import { HumanModel } from './HumanModel'
 import * as THREE from 'three'
 
-// Simple Keyboard controls hook
 function useKeyboard() {
   const [keys, setKeys] = useState({
     w: false, a: false, s: false, d: false,
@@ -55,58 +55,82 @@ function useKeyboard() {
 }
 
 export function Player({ id = 'player1' }) {
-  const bodyRef = useRef()
+  // Use Cannon sphere instead of Rapier capsule
+  const [ref, api] = useSphere(() => ({
+    mass: 72,
+    position: [0, 1.2, 12],
+    args: [0.62],
+    fixedRotation: true,
+    linearDamping: 0.1
+  }))
+
   const keys = useKeyboard()
   
-  // Zustand States
+  // Zustand State bindings
   const stamina = useFootballStore((state) => state.stamina)
   const setStamina = useFootballStore((state) => state.setStamina)
   const gameState = useFootballStore((state) => state.gameState)
   const setPossession = useFootballStore((state) => state.setPossession)
   const redGK = useFootballStore((state) => state.redGK)
 
-  // Player state variables
+  // Local controller state variables
   const [shotCharge, setShotCharge] = useState(0)
   const isCharging = useRef(false)
+  
   const isTackling = useRef(false)
   const tackleTime = useRef(0)
   const tackleCooldown = useRef(0)
+  
   const isDiving = useRef(false)
   const diveTime = useRef(0)
   const diveCooldown = useRef(0)
+  
   const currentDir = useRef(new THREE.Vector3(0, 0, -1))
 
-  // Expose player position globally
-  useEffect(() => {
-    window.footballPlayerBody = bodyRef.current
-    return () => {
-      window.footballPlayerBody = null
-    }
-  }, [])
+  const playerPos = useRef([0, 1.2, 12])
+  const playerVel = useRef([0, 0, 0])
 
-  // Kickoff Position Reset
   useEffect(() => {
-    if ((gameState === 'KICKOFF' || gameState === 'LOBBY') && bodyRef.current) {
-      bodyRef.current.setTranslation({ x: 0, y: 1, z: 12 }, true)
-      bodyRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true)
+    // Subscribe to physics states
+    const unsubPos = api.position.subscribe(v => (playerPos.current = v))
+    const unsubVel = api.velocity.subscribe(v => (playerVel.current = v))
+
+    // Set globally on window
+    window.footballPlayer = {
+      position: playerPos,
+      velocity: playerVel,
+      api: api
+    }
+
+    return () => {
+      unsubPos()
+      unsubVel()
+      window.footballPlayer = null
+    }
+  }, [api])
+
+  // Reset positions at kickoff
+  useEffect(() => {
+    if (gameState === 'KICKOFF' || gameState === 'LOBBY') {
+      api.position.set(0, 1.2, 12)
+      api.velocity.set(0, 0, 0)
       isCharging.current = false
       setShotCharge(0)
     }
-  }, [gameState])
+  }, [gameState, api])
 
   useFrame((state, dt) => {
-    const body = bodyRef.current
-    if (!body || gameState === 'GOAL_SCRIBED' || gameState === 'GAMEOVER') return
+    if (gameState === 'GOAL_SCRIBED' || gameState === 'GAMEOVER') return
 
-    const pos = body.translation()
-    const vel = body.linvel()
+    const pos = playerPos.current
+    const vel = playerVel.current
 
     // ── 1. THIRD PERSON CAMERA FOLLOW ──
-    const targetCam = new THREE.Vector3(pos.x, pos.y + 5, pos.z + 9)
+    const targetCam = new THREE.Vector3(pos[0], pos[1] + 5, pos[2] + 9)
     state.camera.position.lerp(targetCam, 0.12)
-    state.camera.lookAt(pos.x, pos.y + 0.8, pos.z - 3)
+    state.camera.lookAt(pos[0], pos[1] + 0.8, pos[2] - 3)
 
-    // ── 2. MOVEMENT CONTROLS ──
+    // ── 2. KEYBOARD CONTROLS MOVEMENT ──
     let moveX = 0
     let moveZ = 0
     if (keys.w) moveZ = -1
@@ -119,29 +143,23 @@ export function Player({ id = 'player1' }) {
       currentDir.current.copy(direction)
     }
 
-    // Stamina sprint logic
+    // Sprint checks
     let currentSpeed = 7.5
     if (keys.Shift && stamina > 5 && direction.lengthSq() > 0.01) {
-      currentSpeed = 12.0
+      currentSpeed = 11.5
       setStamina(Math.max(0, stamina - 45 * dt))
     } else {
       setStamina(Math.min(100, stamina + 22 * dt))
     }
 
-    // Apply Slide Tackle velocity burst
+    // Tackle dash triggers
     if (keys.KeyQ && tackleCooldown.current <= 0 && !isTackling.current) {
       isTackling.current = true
-      tackleTime.current = 0.28 // dash duration
-      tackleCooldown.current = 2.0 // cooldown
-      // Snap dash direction
-      body.setLinvel({
-        x: currentDir.current.x * 22,
-        y: vel.y,
-        z: currentDir.current.z * 22
-      }, true)
+      tackleTime.current = 0.28
+      tackleCooldown.current = 2.0
+      api.velocity.set(currentDir.current.x * 20, vel[1], currentDir.current.z * 20)
     }
 
-    // Handle Slide Tackle timer
     if (isTackling.current) {
       tackleTime.current -= dt
       if (tackleTime.current <= 0) {
@@ -152,19 +170,14 @@ export function Player({ id = 'player1' }) {
       tackleCooldown.current -= dt
     }
 
-    // ── 3. DYNAMIC GOALKEEPER SAVING / DIVE ──
+    // Goalkeeper saving dive lunge
     const isGK = redGK === id
     if (isGK && keys.Space && diveCooldown.current <= 0 && !isDiving.current) {
       isDiving.current = true
       diveTime.current = 0.4
       diveCooldown.current = 2.5
-      // Save/Dive lunge sideways
       const diveSide = keys.a ? -1 : keys.d ? 1 : 0
-      body.setLinvel({
-        x: diveSide * 16,
-        y: 6,
-        z: -6 // dive slightly forward
-      }, true)
+      api.velocity.set(diveSide * 15, 5.5, -5.0)
     }
 
     if (isDiving.current) {
@@ -177,136 +190,115 @@ export function Player({ id = 'player1' }) {
       diveCooldown.current -= dt
     }
 
-    // Apply movement velocities if not active in a special state
+    // Apply movement velocity
     if (!isTackling.current && !isDiving.current) {
-      body.setLinvel({
-        x: direction.x * currentSpeed,
-        y: vel.y, // keep gravity
-        z: direction.z * currentSpeed
-      }, true)
+      api.velocity.set(direction.x * currentSpeed, vel[1], direction.z * currentSpeed)
     }
 
-    // ── 4. DRIBBLE MECHANIC ──
-    const ballBody = window.footballBallBody
-    if (ballBody) {
-      const ballPos = ballBody.translation()
-      const dist = Math.hypot(ballPos.x - pos.x, ballPos.z - pos.z)
-      
-      // If near the ball, dribble it
-      if (dist < 1.35 && Math.abs(ballPos.y - pos.y) < 1.5) {
+    // ── 3. DRIBBLING LOGIC ──
+    const ball = window.footballBall
+    if (ball) {
+      const bPos = ball.position.current
+      const dist = Math.hypot(bPos[0] - pos[0], bPos[2] - pos[2])
+
+      if (dist < 1.45 && Math.abs(bPos[1] - pos[1]) < 1.8) {
         setPossession(id)
+
+        // Pull the ball smoothly in front of the player
+        const targetX = pos[0] + currentDir.current.x * 0.8
+        const targetZ = pos[2] + currentDir.current.z * 0.8
         
-        // Push the ball loosely in front of the player's moving direction
-        const dribbleTarget = new THREE.Vector3()
-          .copy(pos)
-          .addScaledVector(currentDir.current, 0.75)
-          
-        dribbleTarget.y = 0.5 // roll on turf
+        const dx = targetX - bPos[0]
+        const dz = targetZ - bPos[2]
 
-        // Calculate force vector
-        const force = new THREE.Vector3()
-          .subVectors(dribbleTarget, ballPos)
-          .multiplyScalar(9 * dt)
-
-        ballBody.applyImpulse({ x: force.x, y: 0.1 * dt, z: force.z }, true)
+        ball.api.velocity.set(
+          playerVel.current[0] + dx * 8,
+          ball.velocity.current[1],
+          playerVel.current[2] + dz * 8
+        )
       } else {
-        // Lose possession if too far
         useFootballStore.getState().ballPossession === id && setPossession(null)
       }
     }
 
-    // ── 5. SHOOT & PASS CONTROLS ──
-    // Space or Click to shoot (hold to charge)
+    // ── 4. SHOOTING & PASSING CHARGES ──
     if (keys.Space && !isGK) {
       isCharging.current = true
       setShotCharge(prev => Math.min(100, prev + 150 * dt))
     } else {
       if (isCharging.current) {
-        // Strike shot!
         strikeBall(shotCharge)
         isCharging.current = false
         setShotCharge(0)
       }
     }
 
-    // KeyE for quick pass
     if (keys.KeyE) {
-      strikeBall(35, true) // quick soft pass forward
+      strikeBall(30, true)
     }
   })
 
-  // Strike ball function
   const strikeBall = (powerPercent, isPass = false) => {
-    const ballBody = window.footballBallBody
-    const playerBody = bodyRef.current
-    if (!ballBody || !playerBody) return
+    const ball = window.footballBall
+    if (!ball) return
 
-    const pos = playerBody.translation()
-    const ballPos = ballBody.translation()
-    const dist = Math.hypot(ballPos.x - pos.x, ballPos.z - pos.z)
+    const pos = playerPos.current
+    const bPos = ball.position.current
+    const dist = Math.hypot(bPos[0] - pos[0], bPos[2] - pos[2])
 
-    // Strike range
-    if (dist < 1.6) {
-      // Aim assists: shoot towards opponent goal (at Z = -30)
-      const targetGoal = new THREE.Vector3(0, 0.5, -30)
-      const shootDir = new THREE.Vector3()
-        .subVectors(targetGoal, ballPos)
-        .normalize()
+    if (dist < 1.65) {
+      // Direct shot vector targeting opponent goal line (Z = -30)
+      const targetGoalX = 0
+      const targetGoalZ = -30.0
       
-      // Lift trajectory slightly
-      shootDir.y = isPass ? 0.05 : 0.24
+      const dirX = targetGoalX - bPos[0]
+      const dirZ = targetGoalZ - bPos[2]
+      const len = Math.hypot(dirX, dirZ)
 
-      const forceMagnitude = isPass ? 12 : 18 + (powerPercent / 100) * 22
-      const impulse = shootDir.multiplyScalar(forceMagnitude)
+      const speedVal = isPass ? 11.5 : 17 + (powerPercent / 100) * 20
+      const targetVelY = isPass ? 0.8 : 3.5
 
-      // Apply kick physics
-      ballBody.setLinvel({ x: impulse.x, y: impulse.y, z: impulse.z }, true)
+      ball.api.velocity.set((dirX / len) * speedVal, targetVelY, (dirZ / len) * speedVal)
       setPossession(null)
     }
   }
 
-  // Choose player skin/color based on active goalkeeper state
   const isGK = redGK === id
-  const bodyColor = isGK ? '#fb7185' : '#ff0055' // rose-pink goalie vs crimson red host jersey
+  const playerVelocityVec = new THREE.Vector3(playerVel.current[0], playerVel.current[1], playerVel.current[2])
 
   return (
-    <RigidBody
-      ref={bodyRef}
-      position={[0, 1, 12]}
-      colliders={false}
-      enabledRotations={[false, false, false]}
-      angularDamping={0.5}
-      linearDamping={0.1}
-    >
-      <CapsuleCollider args={[0.5, 0.4]} friction={0.5} mass={2.0} />
-      
-      {/* Player Model: Simple Capsule-Humanoid */}
-      <mesh castShadow position={[0, 0, 0]}>
-        <capsuleGeometry args={[0.4, 1.0, 4, 8]} />
-        <meshStandardMaterial color={bodyColor} roughness={0.4} />
+    <group ref={ref}>
+      {/* Visual Human Model */}
+      <HumanModel 
+        teamColor="#ff0055" 
+        secColor="#00d2ff" 
+        number={7} 
+        isGoalkeeper={isGK}
+        velocity={playerVelocityVec}
+        isTackling={isTackling.current}
+      />
+
+      {/* Visor chevron selector indicators */}
+      <mesh position={[0, 2.5, 0]}>
+        <coneGeometry args={[0.2, 0.4, 4]} />
+        <meshBasicMaterial color="#facc15" />
       </mesh>
 
-      {/* Head Indicator / Eye visor pointing forward */}
-      <mesh position={[0, 0.65, -0.22]}>
-        <boxGeometry args={[0.5, 0.16, 0.2]} />
-        <meshBasicMaterial color="#ffffff" />
-      </mesh>
-
-      {/* Shot Charging Ring Ring under player feet */}
+      {/* Charge indicator rings */}
       {shotCharge > 0 && (
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.88, 0]}>
-          <ringGeometry args={[0.6, 0.6 + (shotCharge / 100) * 0.4, 32]} />
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.6, 0]}>
+          <ringGeometry args={[0.5, 0.5 + (shotCharge / 100) * 0.35, 32]} />
           <meshBasicMaterial color="#eab308" />
         </mesh>
       )}
 
-      {/* Goalkeeper Glow Aura */}
+      {/* GK Aura Ring */}
       {isGK && (
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.89, 0]}>
-          <ringGeometry args={[0.7, 0.8, 32]} />
-          <meshBasicMaterial color="#fb7185" />
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.61, 0]}>
+          <ringGeometry args={[0.6, 0.7, 32]} />
+          <meshBasicMaterial color="#00ffff" />
         </mesh>
       )}
-    </RigidBody>
+    </group>
   )
 }

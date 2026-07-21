@@ -1,73 +1,84 @@
 import React, { useRef, useEffect } from 'react'
-import { RigidBody, BallCollider } from '@react-three/rapier'
+import { useSphere } from '@react-three/cannon'
 import { useFrame } from '@react-three/fiber'
 import { useFootballStore } from './footballStore'
-import * as THREE from 'three'
 
 export function Ball() {
-  const bodyRef = useRef()
+  // Cannon Sphere body
+  const [ref, api] = useSphere(() => ({
+    mass: 1.3,
+    position: [0, 3, 0],
+    args: [0.55],
+    linearDamping: 0.15,
+    angularDamping: 0.22,
+    restitution: 0.72 // High bounce
+  }))
+
+  const ballPos = useRef([0, 3, 0])
+  const ballVel = useRef([0, 0, 0])
+
+  useEffect(() => {
+    // Subscribe to physics values
+    const unsubPos = api.position.subscribe(v => (ballPos.current = v))
+    const unsubVel = api.velocity.subscribe(v => (ballVel.current = v))
+    
+    // Save on window for Player & Bot AI
+    window.footballBall = {
+      position: ballPos,
+      velocity: ballVel,
+      api: api
+    }
+
+    return () => {
+      unsubPos()
+      unsubVel()
+      window.footballBall = null
+    }
+  }, [api])
+
   const gameState = useFootballStore((state) => state.gameState)
 
+  // Kickoff position resets
   useEffect(() => {
-    // Save ball body ref globally for bots & player scripts to query physics values in real-time
-    window.footballBallBody = bodyRef.current
-    return () => {
-      window.footballBallBody = null
+    if (gameState === 'KICKOFF' || gameState === 'LOBBY') {
+      api.position.set(0, 3.5, 0)
+      api.velocity.set(0, 0, 0)
+      api.angularVelocity.set(0, 0, 0)
     }
-  }, [])
+  }, [gameState, api])
 
-  // Kickoff / Goal reset handler
-  useEffect(() => {
-    if ((gameState === 'KICKOFF' || gameState === 'LOBBY') && bodyRef.current) {
-      bodyRef.current.setTranslation({ x: 0, y: 3, z: 0 }, true)
-      bodyRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true)
-      bodyRef.current.setAngvel({ x: 0, y: 0, z: 0 }, true)
-    }
-  }, [gameState])
-
-  // Exaggerated rotation based on linear velocity to feel arcade-y
+  // Rolling visual rotation based on speed
   const meshRef = useRef()
   useFrame(() => {
-    if (bodyRef.current && meshRef.current) {
-      const vel = bodyRef.current.linvel()
-      const speed = Math.hypot(vel.x, vel.z)
-      if (speed > 0.1) {
-        // Rotate around axes perpendicular to motion
-        meshRef.current.rotation.x += vel.z * 0.05
-        meshRef.current.rotation.z -= vel.x * 0.05
+    if (meshRef.current) {
+      const vx = ballVel.current[0]
+      const vz = ballVel.current[2]
+      const speed = Math.hypot(vx, vz)
+      if (speed > 0.15) {
+        meshRef.current.rotation.x += vz * 0.05
+        meshRef.current.rotation.z -= vx * 0.05
       }
     }
   })
 
   return (
-    <RigidBody
-      ref={bodyRef}
-      position={[0, 3, 0]}
-      colliders={false}
-      angularDamping={0.4}
-      linearDamping={0.2}
-      canSleep={false}
-    >
-      {/* Exaggerated arcade bounce: restitution 0.65 */}
-      <BallCollider args={[0.55]} restitution={0.65} friction={0.4} mass={1.2} />
-      
-      {/* Ball Visual Mesh */}
+    <group ref={ref}>
       <group ref={meshRef}>
         <mesh castShadow receiveShadow>
           <sphereGeometry args={[0.55, 16, 16]} />
           <meshStandardMaterial 
-            color="#fff" 
-            roughness={0.4} 
+            color="#ffffff" 
+            roughness={0.3} 
             metalness={0.1}
           />
         </mesh>
         
-        {/* Glow rings around the arcade ball */}
+        {/* Glow rings */}
         <mesh>
           <torusGeometry args={[0.56, 0.03, 8, 24]} />
           <meshBasicMaterial color="#00d2ff" />
         </mesh>
       </group>
-    </RigidBody>
+    </group>
   )
 }
