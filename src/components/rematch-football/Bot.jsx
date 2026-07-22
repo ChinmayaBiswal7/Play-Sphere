@@ -5,6 +5,20 @@ import { useFootballStore } from './footballStore'
 import { HumanModel } from './HumanModel'
 import * as THREE from 'three'
 
+function safePos(ref) {
+  if (ref && ref.position && Array.isArray(ref.position.current)) {
+    return ref.position.current
+  }
+  return [0, 1.2, -12]
+}
+
+function safeVel(ref) {
+  if (ref && ref.velocity && Array.isArray(ref.velocity.current)) {
+    return ref.velocity.current
+  }
+  return [0, 0, 0]
+}
+
 export function Bot({ id = 'bot1' }) {
   const [ref, api] = useSphere(() => ({
     mass: 72,
@@ -27,8 +41,8 @@ export function Bot({ id = 'bot1' }) {
   const botVel = useRef([0, 0, 0])
 
   useEffect(() => {
-    const unsubPos = api.position.subscribe(v => (botPos.current = v))
-    const unsubVel = api.velocity.subscribe(v => (botVel.current = v))
+    const unsubPos = api.position.subscribe(v => (botPos.current = v || [0, 1.2, -12]))
+    const unsubVel = api.velocity.subscribe(v => (botVel.current = v || [0, 0, 0]))
 
     window.footballBot = {
       position: botPos,
@@ -53,15 +67,15 @@ export function Bot({ id = 'bot1' }) {
   useFrame((state, dt) => {
     if (gameState === 'GOAL_SCRIBED' || gameState === 'GAMEOVER' || gameState === 'MENU') return
 
-    const pos = botPos.current
-    const vel = botVel.current
+    const pos = safePos(window.footballBot)
+    const vel = safeVel(window.footballBot)
     const isGK = blueGK === id
 
     const ball = window.footballBall
     const player = window.footballPlayer
     if (!ball) return
 
-    const bPos = ball.position.current
+    const bPos = safePos(ball)
     const distToBall = Math.hypot(bPos[0] - pos[0], bPos[2] - pos[2])
 
     if (diveCooldown.current > 0) diveCooldown.current -= dt
@@ -112,7 +126,7 @@ export function Bot({ id = 'bot1' }) {
         strikeBall(85)
       }
     } else {
-      const pPos = player ? player.position.current : [0, 1.2, 12]
+      const pPos = player ? safePos(player) : [0, 1.2, 12]
       const playerDistToBall = Math.hypot(bPos[0] - pPos[0], bPos[2] - pPos[2])
 
       if (bPos[2] < 6 || distToBall < playerDistToBall) {
@@ -155,9 +169,9 @@ export function Bot({ id = 'bot1' }) {
       const dz = targetZ - bPos[2]
 
       ball.api.velocity.set(
-        botVel.current[0] + dx * 9,
-        ball.velocity.current[1],
-        botVel.current[2] + dz * 9
+        vel[0] + dx * 9,
+        safeVel(ball)[1],
+        vel[2] + dz * 9
       )
 
       if (distToBall > 1.5) {
@@ -170,8 +184,8 @@ export function Bot({ id = 'bot1' }) {
     const ball = window.footballBall
     if (!ball) return
 
-    const pos = botPos.current
-    const bPos = ball.position.current
+    const pos = safePos(window.footballBot)
+    const bPos = safePos(ball)
     const dist = Math.hypot(bPos[0] - pos[0], bPos[2] - pos[2])
 
     if (dist < 1.65) {
@@ -189,7 +203,8 @@ export function Bot({ id = 'bot1' }) {
   }
 
   const isGK = blueGK === id
-  const botVelocityVec = new THREE.Vector3(botVel.current[0], botVel.current[1], botVel.current[2])
+  const vel = safeVel(window.footballBot)
+  const botVelocityVec = new THREE.Vector3(vel[0], vel[1], vel[2])
 
   return (
     <group ref={ref}>

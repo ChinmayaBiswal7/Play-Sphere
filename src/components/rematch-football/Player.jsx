@@ -54,6 +54,21 @@ function useKeyboard() {
   return keys
 }
 
+// 100% Null-Safe Physics Ref Readers
+function safePos(ref) {
+  if (ref && ref.position && Array.isArray(ref.position.current)) {
+    return ref.position.current
+  }
+  return [0, 1.2, 12]
+}
+
+function safeVel(ref) {
+  if (ref && ref.velocity && Array.isArray(ref.velocity.current)) {
+    return ref.velocity.current
+  }
+  return [0, 0, 0]
+}
+
 export function Player({ id = 'player1' }) {
   const [ref, api] = useSphere(() => ({
     mass: 72,
@@ -85,8 +100,8 @@ export function Player({ id = 'player1' }) {
   const playerVel = useRef([0, 0, 0])
 
   useEffect(() => {
-    const unsubPos = api.position.subscribe(v => (playerPos.current = v))
-    const unsubVel = api.velocity.subscribe(v => (playerVel.current = v))
+    const unsubPos = api.position.subscribe(v => (playerPos.current = v || [0, 1.2, 12]))
+    const unsubVel = api.velocity.subscribe(v => (playerVel.current = v || [0, 0, 0]))
 
     window.footballPlayer = {
       position: playerPos,
@@ -111,15 +126,15 @@ export function Player({ id = 'player1' }) {
   }, [gameState, api])
 
   useFrame((state, dt) => {
-    if (gameState === 'GOAL_SCRIBED' || gameState === 'GAMEOVER') return
+    if (gameState === 'GOAL_SCRIBED' || gameState === 'GAMEOVER' || gameState === 'MENU') return
 
-    const pos = playerPos.current
-    const vel = playerVel.current
+    const pos = safePos(window.footballPlayer)
+    const vel = safeVel(window.footballPlayer)
 
-    // ── 1. REAL OVER-THE-SHOULDER 3RD PERSON CAMERA (Sloclap Rematch Perspective) ──
-    const targetCamX = pos[0] * 0.85
-    const targetCamY = pos[1] + 2.1
-    const targetCamZ = pos[2] + 4.2
+    // ── 1. 3RD PERSON OVER-THE-SHOULDER CAMERA ──
+    const targetCamX = pos[0] * 0.8
+    const targetCamY = pos[1] + 2.2
+    const targetCamZ = pos[2] + 4.6
 
     state.camera.position.lerp(new THREE.Vector3(targetCamX, targetCamY, targetCamZ), 0.14)
     state.camera.lookAt(pos[0] * 0.3, pos[1] + 1.2, pos[2] - 12)
@@ -168,7 +183,7 @@ export function Player({ id = 'player1' }) {
     // ── 3. DRIBBLING LOGIC ──
     const ball = window.footballBall
     if (ball) {
-      const bPos = ball.position.current
+      const bPos = safePos(ball)
       const dist = Math.hypot(bPos[0] - pos[0], bPos[2] - pos[2])
 
       if (dist < 1.55 && Math.abs(bPos[1] - pos[1]) < 1.8) {
@@ -181,9 +196,9 @@ export function Player({ id = 'player1' }) {
         const dz = targetZ - bPos[2]
 
         ball.api.velocity.set(
-          playerVel.current[0] + dx * 9,
-          ball.velocity.current[1],
-          playerVel.current[2] + dz * 9
+          vel[0] + dx * 9,
+          safeVel(ball)[1],
+          vel[2] + dz * 9
         )
       } else {
         useFootballStore.getState().ballPossession === id && setPossession(null)
@@ -211,8 +226,8 @@ export function Player({ id = 'player1' }) {
     const ball = window.footballBall
     if (!ball) return
 
-    const pos = playerPos.current
-    const bPos = ball.position.current
+    const pos = safePos(window.footballPlayer)
+    const bPos = safePos(ball)
     const dist = Math.hypot(bPos[0] - pos[0], bPos[2] - pos[2])
 
     if (dist < 1.75) {
@@ -232,28 +247,31 @@ export function Player({ id = 'player1' }) {
   }
 
   const isGK = redGK === id
-  const playerVelocityVec = new THREE.Vector3(playerVel.current[0], playerVel.current[1], playerVel.current[2])
+  const vel = safeVel(window.footballPlayer)
+  const playerVelocityVec = new THREE.Vector3(vel[0], vel[1], vel[2])
 
   return (
     <group ref={ref}>
-      {/* High Quality Humanoid Character */}
-      <HumanModel 
-        preset={characterPreset}
-        teamColor="#ef4444" 
-        secColor="#0284c7" 
-        number={7} 
-        isGoalkeeper={isGK}
-        velocity={playerVelocityVec}
-        isTackling={isTackling.current}
-      />
+      {/* Player Model Facing Forward towards Opponent's Goal (-Z) */}
+      <group rotation={[0, Math.PI, 0]}>
+        <HumanModel 
+          preset={characterPreset}
+          teamColor="#ef4444" 
+          secColor="#0284c7" 
+          number={7} 
+          isGoalkeeper={isGK}
+          velocity={playerVelocityVec}
+          isTackling={isTackling.current}
+        />
+      </group>
 
-      {/* Visor chevron selector indicator */}
+      {/* Visor chevron indicator */}
       <mesh position={[0, 2.7, 0]}>
         <coneGeometry args={[0.2, 0.4, 4]} />
         <meshBasicMaterial color="#facc15" />
       </mesh>
 
-      {/* Charge Ring Indicator at Feet */}
+      {/* Charge Ring Indicator */}
       {shotCharge > 0 && (
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.6, 0]}>
           <ringGeometry args={[0.5, 0.5 + (shotCharge / 100) * 0.4, 32]} />
