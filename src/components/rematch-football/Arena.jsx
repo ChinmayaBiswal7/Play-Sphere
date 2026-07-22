@@ -4,7 +4,7 @@ import { useFootballStore } from './footballStore'
 import * as THREE from 'three'
 
 /**
- * Creates procedural grass turf texture with alternating horizontal stripes (matching Sloclap Rematch Screenshot 2)
+ * Creates procedural grass turf texture with alternating horizontal stripes
  */
 function createStripedTurfTexture(isDesert = false) {
   const canvas = document.createElement('canvas')
@@ -13,7 +13,6 @@ function createStripedTurfTexture(isDesert = false) {
   const ctx = canvas.getContext('2d')
 
   if (isDesert) {
-    // Sand tones
     const stripeCount = 20
     const stripeHeight = 1024 / stripeCount
     for (let i = 0; i < stripeCount; i++) {
@@ -21,11 +20,11 @@ function createStripedTurfTexture(isDesert = false) {
       ctx.fillRect(0, i * stripeHeight, 512, stripeHeight)
     }
   } else {
-    // Vibrant Green Soccer Turf
+    // Vibrant Soccer Turf
     const stripeCount = 24
     const stripeHeight = 1024 / stripeCount
     for (let i = 0; i < stripeCount; i++) {
-      ctx.fillStyle = i % 2 === 0 ? '#15803d' : '#166534'
+      ctx.fillStyle = i % 2 === 0 ? '#16a34a' : '#15803d'
       ctx.fillRect(0, i * stripeHeight, 512, stripeHeight)
     }
   }
@@ -71,9 +70,9 @@ function StaticWall({ position, args, color }) {
       <meshPhysicalMaterial 
         color={color} 
         transparent 
-        opacity={0.25} 
+        opacity={0.2} 
         roughness={0.1} 
-        transmission={0.65} 
+        transmission={0.8} 
         thickness={1}
       />
     </mesh>
@@ -87,16 +86,16 @@ function PalmTree({ position }) {
   return (
     <group position={position}>
       {/* Trunk */}
-      <mesh position={[0, 4, 0]} rotation={[0.1, 0, 0.05]}>
-        <cylinderGeometry args={[0.25, 0.45, 8, 12]} />
+      <mesh position={[0, 3.5, 0]} rotation={[0.08, 0, 0.05]}>
+        <cylinderGeometry args={[0.2, 0.38, 7, 12]} />
         <meshStandardMaterial color="#78350f" roughness={0.9} />
       </mesh>
       {/* Palm Fronds */}
-      <group position={[0, 7.8, 0]}>
+      <group position={[0, 6.8, 0]}>
         {[0, 60, 120, 180, 240, 300].map((angle, i) => (
           <mesh key={i} rotation={[0.4, (angle * Math.PI) / 180, 0]} position={[0, 0, 0]}>
-            <coneGeometry args={[1.2, 4.5, 4]} />
-            <meshStandardMaterial color="#15803d" roughness={0.5} />
+            <coneGeometry args={[1.1, 4.0, 4]} />
+            <meshStandardMaterial color="#16a34a" roughness={0.5} />
           </mesh>
         ))}
       </group>
@@ -166,18 +165,18 @@ export function Arena() {
       {/* 1. Ground Pitch Plane */}
       <mesh ref={floorRef} receiveShadow>
         <planeGeometry args={[38, 62]} />
-        <meshStandardMaterial map={turfTexture} roughness={0.7} />
+        <meshStandardMaterial map={turfTexture} roughness={0.65} />
       </mesh>
 
-      {/* 2. Side Walls & Glass Rink Barriers (Rink Style Arcade Football) */}
+      {/* 2. Sleek Cyan Rink Barriers (Arcade Football Rink) */}
       <StaticWall position={[-18, 2, 0]} args={[0.25, 4, 60]} color="#00d2ff" />
       <StaticWall position={[18, 2, 0]} args={[0.25, 4, 60]} color="#00d2ff" />
 
-      {/* Back Walls */}
-      <StaticWall position={[-11.5, 2, -30]} args={[13, 4, 0.2]} color="#ff007f" />
-      <StaticWall position={[11.5, 2, -30]} args={[13, 4, 0.2]} color="#ff007f" />
-      <StaticWall position={[-11.5, 2, 30]} args={[13, 4, 0.2]} color="#39ff14" />
-      <StaticWall position={[11.5, 2, 30]} args={[13, 4, 0.2]} color="#39ff14" />
+      {/* Back Glass Barriers */}
+      <StaticWall position={[-11.5, 2, -30]} args={[13, 4, 0.2]} color="#0284c7" />
+      <StaticWall position={[11.5, 2, -30]} args={[13, 4, 0.2]} color="#0284c7" />
+      <StaticWall position={[-11.5, 2, 30]} args={[13, 4, 0.2]} color="#0284c7" />
+      <StaticWall position={[11.5, 2, 30]} args={[13, 4, 0.2]} color="#0284c7" />
 
       {/* 3. Glowing Rematch Goal Nets */}
       {/* Goal 1 (Opponent Goal Z = -30) */}
@@ -194,7 +193,7 @@ export function Arena() {
           <boxGeometry args={[0.1, 4, 2]} />
           <meshStandardMaterial color="#00f2fe" wireframe />
         </mesh>
-        {/* Goal Frame Pillars */}
+        {/* White Goal Posts */}
         <mesh position={[-5, 2, 0]}>
           <cylinderGeometry args={[0.12, 0.12, 4, 16]} />
           <meshStandardMaterial color="#ffffff" metalness={0.8} />
@@ -237,7 +236,7 @@ export function Arena() {
         </mesh>
       </group>
 
-      {/* 4. LED Sponsor Boards & Stadium Props */}
+      {/* 4. LED Sponsor Boards & Perimeter Props */}
       {!isDesert ? (
         <>
           <SponsorBoard position={[-11.5, 0.6, -30]} text="SLOCLAP" />
@@ -245,38 +244,24 @@ export function Arena() {
           <SponsorBoard position={[-11.5, 0.6, 30]} rotation={[0, Math.PI, 0]} text="PLAYSPHERE" />
           <SponsorBoard position={[11.5, 0.6, 30]} rotation={[0, Math.PI, 0]} text="REMATCH 2026" />
 
-          {/* Palm Trees along perimeter */}
-          <PalmTree position={[-22, 0, -20]} />
-          <PalmTree position={[-22, 0, 0]} />
-          <PalmTree position={[-22, 0, 20]} />
-          <PalmTree position={[22, 0, -20]} />
-          <PalmTree position={[22, 0, 0]} />
-          <PalmTree position={[22, 0, 20]} />
-
-          {/* Stadium Arches along perimeter background */}
-          {[-25, -15, -5, 5, 15, 25].map((z, i) => (
-            <mesh key={i} position={[-24, 6, z]}>
-              <boxGeometry args={[1, 12, 8]} />
-              <meshStandardMaterial color="#1e1b4b" roughness={0.4} />
-            </mesh>
-          ))}
-          {[-25, -15, -5, 5, 15, 25].map((z, i) => (
-            <mesh key={i} position={[24, 6, z]}>
-              <boxGeometry args={[1, 12, 8]} />
-              <meshStandardMaterial color="#1e1b4b" roughness={0.4} />
-            </mesh>
-          ))}
+          {/* Palm Trees along side perimeter */}
+          <PalmTree position={[-21, 0, -20]} />
+          <PalmTree position={[-21, 0, 0]} />
+          <PalmTree position={[-21, 0, 20]} />
+          <PalmTree position={[21, 0, -20]} />
+          <PalmTree position={[21, 0, 0]} />
+          <PalmTree position={[21, 0, 20]} />
         </>
       ) : (
         <>
           {/* Desert Pink Tree (Screenshot 3 Signature) */}
-          <group position={[22, 0, -10]}>
-            <mesh position={[0, 6, 0]}>
-              <cylinderGeometry args={[1.5, 2.5, 12, 12]} />
+          <group position={[21, 0, -10]}>
+            <mesh position={[0, 5, 0]}>
+              <cylinderGeometry args={[1.2, 2.2, 10, 12]} />
               <meshStandardMaterial color="#701a75" roughness={0.8} />
             </mesh>
-            <mesh position={[0, 13, 0]}>
-              <sphereGeometry args={[7, 16, 16]} />
+            <mesh position={[0, 11, 0]}>
+              <sphereGeometry args={[6, 16, 16]} />
               <meshStandardMaterial color="#f472b6" roughness={0.5} emissive="#ec4899" emissiveIntensity={0.2} />
             </mesh>
           </group>
