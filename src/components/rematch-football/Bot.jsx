@@ -58,14 +58,17 @@ export function Bot({ id = 'bot1' }) {
   }, [api])
 
   useEffect(() => {
-    if (gameState === 'KICKOFF' || gameState === 'MENU') {
+    if (gameState === 'MENU') {
+      api.position.set(0, 1.2, -50)
+      api.velocity.set(0, 0, 0)
+    } else if (gameState === 'KICKOFF') {
       api.position.set(0, 1.2, -12)
       api.velocity.set(0, 0, 0)
     }
   }, [gameState, api])
 
   useFrame((state, dt) => {
-    if (gameState === 'GOAL_SCRIBED' || gameState === 'GAMEOVER' || gameState === 'MENU') return
+    if (gameState === 'GOAL_SCRIBED' || gameState === 'GAMEOVER' || gameState === 'MENU' || gameState === 'BOOT' || gameState === 'LOADING_MATCH') return
 
     const pos = safePos(window.footballBot)
     const vel = safeVel(window.footballBot)

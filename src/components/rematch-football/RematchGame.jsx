@@ -7,7 +7,6 @@ import { Arena } from './Arena'
 import { Ball } from './Ball'
 import { Player } from './Player'
 import { Bot } from './Bot'
-import { HumanModel } from './HumanModel'
 import * as THREE from 'three'
 
 // Dynamic Goalkeeper Allocator & Goal Trigger
@@ -17,8 +16,10 @@ function GoalkeeperManager() {
   const incrementScore = useFootballStore((state) => state.incrementScore)
 
   useFrame(() => {
+    if (gameState !== 'PLAYING') return
+
     const ball = window.footballBall
-    if (!ball) return
+    if (!ball || !ball.position || !Array.isArray(ball.position.current)) return
 
     const ballPos = ball.position.current
     const zPos = ballPos[2]
@@ -33,12 +34,10 @@ function GoalkeeperManager() {
       setGKs(redGK, blueGK)
     }
 
-    if (gameState === 'PLAYING') {
-      if (zPos < -30.25 && Math.abs(ballPos[0]) < 5.0) {
-        incrementScore('red')
-      } else if (zPos > 30.25 && Math.abs(ballPos[0]) < 5.0) {
-        incrementScore('blue')
-      }
+    if (zPos < -30.25 && Math.abs(ballPos[0]) < 5.0) {
+      incrementScore('red')
+    } else if (zPos > 30.25 && Math.abs(ballPos[0]) < 5.0) {
+      incrementScore('blue')
     }
   })
 
@@ -87,7 +86,7 @@ function MiniMapRadar() {
 
       // Player 1 (Red)
       const p = window.footballPlayer
-      if (p) {
+      if (p && p.position && Array.isArray(p.position.current)) {
         const px = mapX(p.position.current[0])
         const pz = mapZ(p.position.current[2])
         ctx.fillStyle = '#ef4444'
@@ -98,7 +97,7 @@ function MiniMapRadar() {
 
       // Bot (Blue)
       const b = window.footballBot
-      if (b) {
+      if (b && b.position && Array.isArray(b.position.current)) {
         const bx = mapX(b.position.current[0])
         const bz = mapZ(b.position.current[2])
         ctx.fillStyle = '#0284c7'
@@ -109,7 +108,7 @@ function MiniMapRadar() {
 
       // Ball
       const ball = window.footballBall
-      if (ball) {
+      if (ball && ball.position && Array.isArray(ball.position.current)) {
         const ballX = mapX(ball.position.current[0])
         const ballZ = mapZ(ball.position.current[2])
         ctx.fillStyle = '#ffffff'
@@ -143,9 +142,12 @@ function MiniMapRadar() {
 }
 
 function ShowcaseCamera() {
+  const gameState = useFootballStore((state) => state.gameState)
   useFrame((state) => {
-    state.camera.position.set(0, 1.8, 3.8)
-    state.camera.lookAt(0, 1.35, 0)
+    if (gameState === 'MENU') {
+      state.camera.position.set(0, 1.8, 3.8)
+      state.camera.lookAt(0, 1.35, 0)
+    }
   })
   return null
 }
@@ -241,7 +243,6 @@ export function RematchGame({ onExit }) {
 
           {/* Center Title Logo */}
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
-            {/* Generated REMATCH Logo or Styled Text */}
             <img 
               src="/rematch_logo.png" 
               alt="REMATCH" 
@@ -252,7 +253,6 @@ export function RematchGame({ onExit }) {
               }}
             />
 
-            {/* Fallback CSS REMATCH Logo with Cyan/Green Slash */}
             <div id="fallback-rematch-logo" style={{ display: 'none', alignItems: 'center', gap: '5px', fontSize: '5rem', fontWeight: '900', letterSpacing: '12px', color: '#fff', textShadow: '0 0 40px rgba(34, 197, 94, 0.6)' }}>
               <span>RE</span>
               <span style={{ color: '#22c55e', fontStyle: 'italic', transform: 'skewX(-15deg)', display: 'inline-block' }}>/</span>
@@ -260,21 +260,18 @@ export function RematchGame({ onExit }) {
             </div>
           </div>
 
-          {/* Bottom Info Row (Screenshot 1 Layout) */}
+          {/* Bottom Info Row */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', zIndex: 10 }}>
-            {/* Bottom Left Pro Tip */}
             <div style={{ maxWidth: '580px', color: '#94a3b8', fontSize: '0.9rem', lineHeight: '1.6', fontFamily: 'sans-serif', background: 'rgba(15, 23, 42, 0.6)', padding: '16px 20px', borderRadius: '8px', borderLeft: '3px solid #22c55e' }}>
               {PRO_TIPS[tipIndex]}
             </div>
 
-            {/* Bottom Right Connecting Indicator */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px', color: '#cbd5e1', fontSize: '0.95rem', fontWeight: '800' }}>
               <span>Connecting to server</span>
               <div style={{ width: '28px', height: '28px', borderRadius: '50%', border: '3px solid #22c55e', borderTopColor: 'transparent', animation: 'spin 1s linear infinite' }} />
             </div>
           </div>
 
-          {/* CSS Animation Keyframes */}
           <style>{`
             @keyframes spin {
               0% { transform: rotate(0deg); }
@@ -313,38 +310,21 @@ export function RematchGame({ onExit }) {
         <Suspense fallback={null}>
           <Physics gravity={[0, -15, 0]}>
             <Arena />
+            <ShowcaseCamera />
 
-            {/* Menu Character Showcase Mode */}
-            {gameState === 'MENU' ? (
-              <>
-                <ShowcaseCamera />
-                <group position={[0, 0, 0]}>
-                  <HumanModel 
-                    preset={characterPreset} 
-                    teamColor="#ef4444" 
-                    secColor="#1e293b" 
-                    number={7} 
-                  />
-                </group>
-              </>
-            ) : (
-              /* Active Match Mode */
-              <>
-                <Ball />
-                <Player id="player1" />
-                <Bot id="bot1" />
-                <GoalkeeperManager />
-              </>
-            )}
+            {/* Persistent Physics Entities (Prevents Worker Unmount/Remount Race Condition) */}
+            <Ball />
+            <Player id="player1" />
+            <Bot id="bot1" />
+            <GoalkeeperManager />
           </Physics>
         </Suspense>
       </Canvas>
 
-      {/* ── 3. MAIN MENU / LOBBY (Screenshots 4 & 5) ── */}
+      {/* ── 3. MAIN MENU / LOBBY ── */}
       {gameState === 'MENU' && (
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'auto', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '30px 40px', fontFamily: "'Orbitron', sans-serif" }}>
           
-          {/* Top Bar Navigation Tabs */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(15, 23, 42, 0.75)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '12px 24px', backdropFilter: 'blur(10px)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <span style={{ fontSize: '1.4rem' }}>⚽</span>
@@ -386,10 +366,8 @@ export function RematchGame({ onExit }) {
             </div>
           </div>
 
-          {/* TAB 1: PLAY MENU (Screenshot 4) */}
           {activeMenuTab === 'PLAY' && (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', width: '100%', marginBottom: '20px' }}>
-              
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', width: '320px', background: 'rgba(15, 23, 42, 0.8)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '24px', backdropFilter: 'blur(10px)' }}>
                 <button
                   onClick={startMatchWithLoading}
@@ -454,7 +432,6 @@ export function RematchGame({ onExit }) {
             </div>
           )}
 
-          {/* TAB 3: CUSTOMIZATION MENU (Screenshot 5) */}
           {activeMenuTab === 'CUSTOMIZATION' && (
             <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', marginBottom: '20px' }}>
               <div style={{ width: '320px', background: 'rgba(15, 23, 42, 0.85)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '20px', backdropFilter: 'blur(10px)' }}>

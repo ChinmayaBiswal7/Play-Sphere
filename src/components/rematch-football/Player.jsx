@@ -54,7 +54,6 @@ function useKeyboard() {
   return keys
 }
 
-// 100% Null-Safe Physics Ref Readers
 function safePos(ref) {
   if (ref && ref.position && Array.isArray(ref.position.current)) {
     return ref.position.current
@@ -80,7 +79,6 @@ export function Player({ id = 'player1' }) {
 
   const keys = useKeyboard()
   
-  // Zustand State
   const stamina = useFootballStore((state) => state.stamina)
   const setStamina = useFootballStore((state) => state.setStamina)
   const gameState = useFootballStore((state) => state.gameState)
@@ -116,8 +114,14 @@ export function Player({ id = 'player1' }) {
     }
   }, [api])
 
+  // Handle position state resets between Menu & Playing
   useEffect(() => {
-    if (gameState === 'KICKOFF' || gameState === 'MENU') {
+    if (gameState === 'MENU') {
+      api.position.set(0, 1.2, 0)
+      api.velocity.set(0, 0, 0)
+      isCharging.current = false
+      setShotCharge(0)
+    } else if (gameState === 'KICKOFF') {
       api.position.set(0, 1.2, 12)
       api.velocity.set(0, 0, 0)
       isCharging.current = false
@@ -126,12 +130,12 @@ export function Player({ id = 'player1' }) {
   }, [gameState, api])
 
   useFrame((state, dt) => {
-    if (gameState === 'GOAL_SCRIBED' || gameState === 'GAMEOVER' || gameState === 'MENU') return
+    if (gameState === 'GOAL_SCRIBED' || gameState === 'GAMEOVER' || gameState === 'MENU' || gameState === 'BOOT' || gameState === 'LOADING_MATCH') return
 
     const pos = safePos(window.footballPlayer)
     const vel = safeVel(window.footballPlayer)
 
-    // ── 1. 3RD PERSON OVER-THE-SHOULDER CAMERA ──
+    // ── 1. 3RD PERSON OVER-THE-SHOULDER CAMERA FOLLOW ──
     const targetCamX = pos[0] * 0.8
     const targetCamY = pos[1] + 2.2
     const targetCamZ = pos[2] + 4.6
@@ -252,7 +256,7 @@ export function Player({ id = 'player1' }) {
 
   return (
     <group ref={ref}>
-      {/* Player Model Facing Forward towards Opponent's Goal (-Z) */}
+      {/* Facing direction: in MENU mode face camera (PI), in match mode face goal (PI) */}
       <group rotation={[0, Math.PI, 0]}>
         <HumanModel 
           preset={characterPreset}
@@ -266,13 +270,15 @@ export function Player({ id = 'player1' }) {
       </group>
 
       {/* Visor chevron indicator */}
-      <mesh position={[0, 2.7, 0]}>
-        <coneGeometry args={[0.2, 0.4, 4]} />
-        <meshBasicMaterial color="#facc15" />
-      </mesh>
+      {gameState !== 'MENU' && (
+        <mesh position={[0, 2.7, 0]}>
+          <coneGeometry args={[0.2, 0.4, 4]} />
+          <meshBasicMaterial color="#facc15" />
+        </mesh>
+      )}
 
       {/* Charge Ring Indicator */}
-      {shotCharge > 0 && (
+      {shotCharge > 0 && gameState !== 'MENU' && (
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.6, 0]}>
           <ringGeometry args={[0.5, 0.5 + (shotCharge / 100) * 0.4, 32]} />
           <meshBasicMaterial color="#00d2ff" />
