@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useRef } from 'react'
+import React, { Suspense, useEffect, useRef, useState } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { Physics } from '@react-three/cannon'
 import { Environment, Stars, Sky } from '@react-three/drei'
@@ -10,7 +10,7 @@ import { Bot } from './Bot'
 import { HumanModel } from './HumanModel'
 import * as THREE from 'three'
 
-// Dynamic Goalkeeper Allocator and Goal Score Trigger
+// Dynamic Goalkeeper Allocator & Goal Trigger
 function GoalkeeperManager() {
   const setGKs = useFootballStore((state) => state.setGKs)
   const gameState = useFootballStore((state) => state.gameState)
@@ -46,7 +46,7 @@ function GoalkeeperManager() {
 }
 
 /**
- * 2D Circular Radar Mini-Map (Matching Rematch Screenshot 3)
+ * Circular Radar Mini-Map
  */
 function MiniMapRadar() {
   const canvasRef = useRef(null)
@@ -60,7 +60,7 @@ function MiniMapRadar() {
     const draw = () => {
       ctx.clearRect(0, 0, 140, 140)
 
-      // Radar Background Circle
+      // Radar Background
       ctx.fillStyle = 'rgba(15, 23, 42, 0.85)'
       ctx.beginPath()
       ctx.arc(70, 70, 64, 0, Math.PI * 2)
@@ -69,11 +69,10 @@ function MiniMapRadar() {
       ctx.lineWidth = 2
       ctx.stroke()
 
-      // Pitch Boundary Box (Mapped to canvas 140x140)
+      // Pitch Boundary
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)'
       ctx.strokeRect(35, 20, 70, 100)
 
-      // Center Line
       ctx.beginPath()
       ctx.moveTo(35, 70)
       ctx.lineTo(105, 70)
@@ -83,11 +82,10 @@ function MiniMapRadar() {
       ctx.strokeRect(55, 20, 30, 12)
       ctx.strokeRect(55, 108, 30, 12)
 
-      // Player Positions Mapping function (Pitch X: -18 to 18 -> Canvas 35 to 105; Z: -30 to 30 -> Canvas 20 to 120)
       const mapX = (x) => 70 + (x / 18) * 35
       const mapZ = (z) => 70 + (z / 30) * 50
 
-      // 1. Draw Player (Red Triangle)
+      // Player 1 (Red)
       const p = window.footballPlayer
       if (p) {
         const px = mapX(p.position.current[0])
@@ -98,7 +96,7 @@ function MiniMapRadar() {
         ctx.fill()
       }
 
-      // 2. Draw Bot (Blue Circle)
+      // Bot (Blue)
       const b = window.footballBot
       if (b) {
         const bx = mapX(b.position.current[0])
@@ -109,7 +107,7 @@ function MiniMapRadar() {
         ctx.fill()
       }
 
-      // 3. Draw Ball (White glowing dot)
+      // Ball
       const ball = window.footballBall
       if (ball) {
         const ballX = mapX(ball.position.current[0])
@@ -144,17 +142,20 @@ function MiniMapRadar() {
   )
 }
 
-/**
- * Main Camera showcase controller for Main Menu & Customization Screens
- */
 function ShowcaseCamera() {
   useFrame((state) => {
-    // Menu camera focused on front standing character
     state.camera.position.set(0, 1.8, 3.8)
-    state.camera.lookAt(0, 1.4, 0)
+    state.camera.lookAt(0, 1.35, 0)
   })
   return null
 }
+
+const PRO_TIPS = [
+  "Staying high up on the pitch allows to receive passes and counter-attack quickly but will leave your teammates in inferior numbers and vulnerable.",
+  "Wall rebounds are valid pass routes! Bounce the ball off side barriers to bypass aggressive defenders.",
+  "Hold SPACE to charge your shot power before releasing towards goal.",
+  "Use L-SHIFT to sprint down the wings when you spot open grass."
+]
 
 export function RematchGame({ onExit }) {
   const score = useFootballStore((state) => state.score)
@@ -173,7 +174,19 @@ export function RematchGame({ onExit }) {
   const arenaStyle = useFootballStore((state) => state.arenaStyle)
   const setArenaStyle = useFootballStore((state) => state.setArenaStyle)
 
-  // Timer countdown hook
+  const [tipIndex, setTipIndex] = useState(0)
+
+  // Boot Loading Screen Timer
+  useEffect(() => {
+    if (gameState === 'BOOT') {
+      const bootTimer = setTimeout(() => {
+        setGameState('MENU')
+      }, 2800)
+      return () => clearTimeout(bootTimer)
+    }
+  }, [gameState])
+
+  // Match Play Timer
   useEffect(() => {
     let interval
     if (gameState === 'PLAYING') {
@@ -184,7 +197,7 @@ export function RematchGame({ onExit }) {
     return () => clearInterval(interval)
   }, [gameState])
 
-  // Kickoff delay transition
+  // Kickoff delay
   useEffect(() => {
     if (gameState === 'KICKOFF' || gameState === 'GOAL_SCRIBED') {
       const timeout = setTimeout(() => {
@@ -194,6 +207,13 @@ export function RematchGame({ onExit }) {
     }
   }, [gameState])
 
+  const startMatchWithLoading = () => {
+    setGameState('LOADING_MATCH')
+    setTimeout(() => {
+      resetMatch()
+    }, 1800)
+  }
+
   const formatTime = (timeInSecs) => {
     const mins = Math.floor(timeInSecs / 60)
     const secs = timeInSecs % 60
@@ -201,9 +221,70 @@ export function RematchGame({ onExit }) {
   }
 
   return (
-    <div style={{ width: '100vw', height: '100vh', background: '#020617', position: 'relative', overflow: 'hidden', userSelect: 'none' }}>
+    <div style={{ width: '100vw', height: '100vh', background: '#090d16', position: 'relative', overflow: 'hidden', userSelect: 'none' }}>
       
-      {/* ── 1. 3D RENDER CANVAS ── */}
+      {/* ── 1. AUTHENTIC REMATCH BOOT / LOADING SCREEN (Matching Screenshot 1) ── */}
+      {(gameState === 'BOOT' || gameState === 'LOADING_MATCH') && (
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'radial-gradient(circle at center, #1e293b 0%, #090d16 100%)',
+          zIndex: 999,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          padding: '60px 80px',
+          fontFamily: "'Orbitron', sans-serif"
+        }}>
+          {/* Top Decorative Slash Lines */}
+          <div style={{ position: 'absolute', top: 0, right: '20%', width: '400px', height: '100%', background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.05) 0%, transparent 80%)', transform: 'skewX(-25deg)', pointerEvents: 'none' }} />
+
+          {/* Center Title Logo */}
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
+            {/* Generated REMATCH Logo or Styled Text */}
+            <img 
+              src="/rematch_logo.png" 
+              alt="REMATCH" 
+              style={{ maxWidth: '640px', width: '80%', height: 'auto', filter: 'drop-shadow(0 0 30px rgba(34, 197, 94, 0.4))' }} 
+              onError={(e) => {
+                e.currentTarget.style.display = 'none'
+                document.getElementById('fallback-rematch-logo').style.display = 'flex'
+              }}
+            />
+
+            {/* Fallback CSS REMATCH Logo with Cyan/Green Slash */}
+            <div id="fallback-rematch-logo" style={{ display: 'none', alignItems: 'center', gap: '5px', fontSize: '5rem', fontWeight: '900', letterSpacing: '12px', color: '#fff', textShadow: '0 0 40px rgba(34, 197, 94, 0.6)' }}>
+              <span>RE</span>
+              <span style={{ color: '#22c55e', fontStyle: 'italic', transform: 'skewX(-15deg)', display: 'inline-block' }}>/</span>
+              <span>MATCH</span>
+            </div>
+          </div>
+
+          {/* Bottom Info Row (Screenshot 1 Layout) */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', zIndex: 10 }}>
+            {/* Bottom Left Pro Tip */}
+            <div style={{ maxWidth: '580px', color: '#94a3b8', fontSize: '0.9rem', lineHeight: '1.6', fontFamily: 'sans-serif', background: 'rgba(15, 23, 42, 0.6)', padding: '16px 20px', borderRadius: '8px', borderLeft: '3px solid #22c55e' }}>
+              {PRO_TIPS[tipIndex]}
+            </div>
+
+            {/* Bottom Right Connecting Indicator */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', color: '#cbd5e1', fontSize: '0.95rem', fontWeight: '800' }}>
+              <span>Connecting to server</span>
+              <div style={{ width: '28px', height: '28px', borderRadius: '50%', border: '3px solid #22c55e', borderTopColor: 'transparent', animation: 'spin 1s linear infinite' }} />
+            </div>
+          </div>
+
+          {/* CSS Animation Keyframes */}
+          <style>{`
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+          `}</style>
+        </div>
+      )}
+
+      {/* ── 2. 3D SCENE CANVAS ── */}
       <Canvas
         shadows
         camera={{ fov: 65, position: [0, 2.2, 16] }}
@@ -212,7 +293,6 @@ export function RematchGame({ onExit }) {
         <color attach="background" args={arenaStyle === 'desert' ? ['#fdf4ff'] : ['#030712']} />
         <fog attach="fog" args={arenaStyle === 'desert' ? ['#fae8ff', 40, 100] : ['#030712', 30, 95]} />
 
-        {/* Lighting setup */}
         <ambientLight intensity={0.6} />
         <directionalLight 
           position={[15, 25, 10]} 
@@ -222,7 +302,6 @@ export function RematchGame({ onExit }) {
         />
         <directionalLight position={[-15, 20, -10]} intensity={0.6} />
 
-        {/* Atmosphere */}
         {arenaStyle !== 'desert' && (
           <>
             <Sky distance={450000} sunPosition={[10, 12, 10]} inclination={0.6} azimuth={0.25} />
@@ -231,7 +310,6 @@ export function RematchGame({ onExit }) {
           </>
         )}
 
-        {/* Physics & Scene Render */}
         <Suspense fallback={null}>
           <Physics gravity={[0, -15, 0]}>
             <Arena />
@@ -250,7 +328,7 @@ export function RematchGame({ onExit }) {
                 </group>
               </>
             ) : (
-              /* Active Gameplay Mode */
+              /* Active Match Mode */
               <>
                 <Ball />
                 <Player id="player1" />
@@ -262,21 +340,18 @@ export function RematchGame({ onExit }) {
         </Suspense>
       </Canvas>
 
-      {/* ── 2. SLOCLAP REMATCH MAIN MENU & LOBBY (Screenshots 4 & 5) ── */}
+      {/* ── 3. MAIN MENU / LOBBY (Screenshots 4 & 5) ── */}
       {gameState === 'MENU' && (
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'auto', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '30px 40px', fontFamily: "'Orbitron', sans-serif" }}>
           
-          {/* Top Bar Navigation Tabs (Matches Screenshot 4 & 5) */}
+          {/* Top Bar Navigation Tabs */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(15, 23, 42, 0.75)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '12px 24px', backdropFilter: 'blur(10px)' }}>
-            
-            {/* Left Brand Title */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <span style={{ fontSize: '1.4rem' }}>⚽</span>
               <span style={{ color: '#fff', fontSize: '1.2rem', fontWeight: '900', letterSpacing: '3px' }}>REMATCH</span>
               <span style={{ background: '#22c55e', color: '#000', fontSize: '0.65rem', fontWeight: '900', padding: '2px 8px', borderRadius: '4px' }}>SEASON 0</span>
             </div>
 
-            {/* Middle Nav Tabs */}
             <div style={{ display: 'flex', gap: '20px' }}>
               {['PLAY', 'SEASON 0', 'CUSTOMIZATION', 'PROFILE', 'STORE'].map((tab) => (
                 <button
@@ -300,7 +375,6 @@ export function RematchGame({ onExit }) {
               ))}
             </div>
 
-            {/* Right Social Info */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px', color: '#cbd5e1', fontSize: '0.8rem', fontWeight: '800' }}>
               <span>TAB SOCIAL</span>
               <button 
@@ -316,10 +390,9 @@ export function RematchGame({ onExit }) {
           {activeMenuTab === 'PLAY' && (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', width: '100%', marginBottom: '20px' }}>
               
-              {/* Left Modes Menu List */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', width: '320px', background: 'rgba(15, 23, 42, 0.8)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '24px', backdropFilter: 'blur(10px)' }}>
                 <button
-                  onClick={resetMatch}
+                  onClick={startMatchWithLoading}
                   style={{
                     background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
                     color: '#000',
@@ -340,7 +413,7 @@ export function RematchGame({ onExit }) {
                 {['RANKED MATCH 5VS5', 'CUSTOM MATCH', 'PRACTICE', 'PROLOGUE', 'SYSTEM'].map((mode, i) => (
                   <button
                     key={mode}
-                    onClick={resetMatch}
+                    onClick={startMatchWithLoading}
                     style={{
                       background: 'rgba(255,255,255,0.04)',
                       color: i === 0 ? '#fff' : '#64748b',
@@ -359,7 +432,6 @@ export function RematchGame({ onExit }) {
                 ))}
               </div>
 
-              {/* Right Level & Season 0 Info Card */}
               <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
                 <div style={{ background: 'rgba(15, 23, 42, 0.85)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '16px 24px', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', gap: '16px' }}>
                   <div style={{ background: '#0284c7', color: '#fff', padding: '10px 14px', borderRadius: '8px', fontWeight: '900' }}>
@@ -385,8 +457,6 @@ export function RematchGame({ onExit }) {
           {/* TAB 3: CUSTOMIZATION MENU (Screenshot 5) */}
           {activeMenuTab === 'CUSTOMIZATION' && (
             <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', marginBottom: '20px' }}>
-              
-              {/* Left Character Presets */}
               <div style={{ width: '320px', background: 'rgba(15, 23, 42, 0.85)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '20px', backdropFilter: 'blur(10px)' }}>
                 <h3 style={{ color: '#fff', fontSize: '1rem', margin: '0 0 15px', letterSpacing: '2px' }}>CHARACTER PRESETS</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -415,7 +485,6 @@ export function RematchGame({ onExit }) {
                 </div>
               </div>
 
-              {/* Right Arena Backdrops */}
               <div style={{ width: '300px', background: 'rgba(15, 23, 42, 0.85)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '20px', backdropFilter: 'blur(10px)' }}>
                 <h3 style={{ color: '#fff', fontSize: '1rem', margin: '0 0 15px', letterSpacing: '2px' }}>STADIUM ARENAS</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -455,7 +524,6 @@ export function RematchGame({ onExit }) {
             </div>
           )}
 
-          {/* Default view for other tabs */}
           {activeMenuTab !== 'PLAY' && activeMenuTab !== 'CUSTOMIZATION' && (
             <div style={{ background: 'rgba(15, 23, 42, 0.85)', padding: '30px', borderRadius: '14px', color: '#94a3b8', textAlign: 'center', marginBottom: '40px' }}>
               <h3 style={{ color: '#fff' }}>{activeMenuTab} MODULE</h3>
@@ -465,10 +533,9 @@ export function RematchGame({ onExit }) {
         </div>
       )}
 
-      {/* ── 3. IN-GAME HUD & OVERLAYS (Screenshots 2 & 3) ── */}
-      {gameState !== 'MENU' && (
+      {/* ── 4. IN-GAME HUD OVERLAYS ── */}
+      {gameState !== 'MENU' && gameState !== 'BOOT' && gameState !== 'LOADING_MATCH' && (
         <>
-          {/* Top-Left Scoreboard Badge (Matches Screenshot 3) */}
           <div style={{
             position: 'absolute',
             top: '25px',
@@ -486,12 +553,10 @@ export function RematchGame({ onExit }) {
             zIndex: 10,
             pointerEvents: 'none'
           }}>
-            {/* Timer */}
             <span style={{ color: '#ffffff', fontSize: '1.2rem', fontWeight: '900', letterSpacing: '1px' }}>
               {gameState === 'KICKOFF' ? '05:00' : formatTime(timer)}
             </span>
 
-            {/* Score Pill */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#090d16', padding: '6px 16px', borderRadius: '6px' }}>
               <span style={{ color: '#ef4444', fontWeight: '900', fontSize: '1.1rem' }}>{score.red}</span>
               <span style={{ color: '#64748b' }}>|</span>
@@ -499,13 +564,12 @@ export function RematchGame({ onExit }) {
             </div>
           </div>
 
-          {/* Top-Right FPS & Network Status */}
           <div style={{ position: 'absolute', top: '25px', right: '30px', color: '#64748b', fontSize: '0.75rem', fontFamily: 'monospace', textAlign: 'right', pointerEvents: 'none', zIndex: 10 }}>
             <div>PING: 24ms</div>
             <div>FPS: 60</div>
           </div>
 
-          {/* Bottom-Center Segmented Stamina Bar (Matches Screenshot 2 & 3) */}
+          {/* Segmented Cyan Stamina Bar */}
           <div style={{
             position: 'absolute',
             bottom: '35px',
@@ -538,10 +602,8 @@ export function RematchGame({ onExit }) {
             <span style={{ color: '#94a3b8', fontSize: '0.65rem', fontWeight: '900', letterSpacing: '1px', marginTop: '4px', fontFamily: "'Orbitron', sans-serif" }}>STAMINA [SHIFT]</span>
           </div>
 
-          {/* Bottom-Right Circular Radar Mini-Map */}
           <MiniMapRadar />
 
-          {/* Kickoff / Goal Flasher Alert Overlay */}
           {(gameState === 'KICKOFF' || gameState === 'GOAL_SCRIBED') && (
             <div style={{
               position: 'absolute',
@@ -567,7 +629,6 @@ export function RematchGame({ onExit }) {
             </div>
           )}
 
-          {/* Game Over Screen */}
           {gameState === 'GAMEOVER' && (
             <div style={{
               position: 'absolute',
@@ -595,7 +656,7 @@ export function RematchGame({ onExit }) {
               
               <div style={{ display: 'flex', gap: '20px' }}>
                 <button 
-                  onClick={resetMatch}
+                  onClick={startMatchWithLoading}
                   style={{
                     background: '#22c55e',
                     color: '#000',

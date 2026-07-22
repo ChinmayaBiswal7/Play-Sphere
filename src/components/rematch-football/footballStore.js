@@ -2,7 +2,7 @@ import { create } from 'zustand'
 
 export const useFootballStore = create((set) => ({
   score: { red: 0, blue: 0 },
-  gameState: 'MENU', // 'MENU' | 'CUSTOMIZATION' | 'KICKOFF' | 'PLAYING' | 'GOAL_SCRIBED' | 'GAMEOVER'
+  gameState: 'BOOT', // 'BOOT' | 'MENU' | 'LOADING_MATCH' | 'KICKOFF' | 'PLAYING' | 'GOAL_SCRIBED' | 'GAMEOVER'
   timer: 300, // 5 minutes in seconds
   stamina: 100,
   ballPossession: null, // ID of player holding ball
