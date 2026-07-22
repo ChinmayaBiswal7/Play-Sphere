@@ -6,7 +6,6 @@ import { HumanModel } from './HumanModel'
 import * as THREE from 'three'
 
 export function Bot({ id = 'bot1' }) {
-  // Use Cannon sphere instead of Rapier capsule
   const [ref, api] = useSphere(() => ({
     mass: 72,
     position: [0, 1.2, -12],
@@ -15,13 +14,11 @@ export function Bot({ id = 'bot1' }) {
     linearDamping: 0.1
   }))
 
-  // Zustand state subscriptions
   const gameState = useFootballStore((state) => state.gameState)
   const setPossession = useFootballStore((state) => state.setPossession)
   const ballPossession = useFootballStore((state) => state.ballPossession)
   const blueGK = useFootballStore((state) => state.blueGK)
 
-  // Dive and tackle timings
   const diveCooldown = useRef(0)
   const isDiving = useRef(false)
   const diveTime = useRef(0)
@@ -30,11 +27,9 @@ export function Bot({ id = 'bot1' }) {
   const botVel = useRef([0, 0, 0])
 
   useEffect(() => {
-    // Subscribe to physics states
     const unsubPos = api.position.subscribe(v => (botPos.current = v))
     const unsubVel = api.velocity.subscribe(v => (botVel.current = v))
 
-    // Set globally on window
     window.footballBot = {
       position: botPos,
       velocity: botVel,
@@ -48,22 +43,20 @@ export function Bot({ id = 'bot1' }) {
     }
   }, [api])
 
-  // Reset positions at kickoff
   useEffect(() => {
-    if (gameState === 'KICKOFF' || gameState === 'LOBBY') {
+    if (gameState === 'KICKOFF' || gameState === 'MENU') {
       api.position.set(0, 1.2, -12)
       api.velocity.set(0, 0, 0)
     }
   }, [gameState, api])
 
   useFrame((state, dt) => {
-    if (gameState === 'GOAL_SCRIBED' || gameState === 'GAMEOVER') return
+    if (gameState === 'GOAL_SCRIBED' || gameState === 'GAMEOVER' || gameState === 'MENU') return
 
     const pos = botPos.current
     const vel = botVel.current
     const isGK = blueGK === id
 
-    // Retrieve global positions
     const ball = window.footballBall
     const player = window.footballPlayer
     if (!ball) return
@@ -71,17 +64,15 @@ export function Bot({ id = 'bot1' }) {
     const bPos = ball.position.current
     const distToBall = Math.hypot(bPos[0] - pos[0], bPos[2] - pos[2])
 
-    // Update timers
     if (diveCooldown.current > 0) diveCooldown.current -= dt
     if (isDiving.current) {
       diveTime.current -= dt
       if (diveTime.current <= 0) isDiving.current = false
-      return // Lock normal AI logic during active dives/lunges
+      return
     }
 
-    // ── 1. GOALKEEPER ROLE BEHAVIOR ──
+    // Goalkeeper AI Behavior
     if (isGK) {
-      // Stand in front of its goal (Z = -30)
       const targetGKX = THREE.MathUtils.clamp(bPos[0], -4.5, 4.5)
       const targetGKZ = -29.0
       
@@ -90,12 +81,11 @@ export function Bot({ id = 'bot1' }) {
       const distToGKPos = Math.hypot(dx, dz)
 
       if (distToGKPos > 0.3) {
-        api.velocity.set(Math.sign(dx) * 7.0, vel[1], Math.sign(dz) * 7.0)
+        api.velocity.set(Math.sign(dx) * 7.5, vel[1], Math.sign(dz) * 7.5)
       } else {
         api.velocity.set(0, vel[1], 0)
       }
 
-      // Dive if ball comes close
       if (bPos[2] < -25 && Math.abs(bPos[0]) < 5.5 && diveCooldown.current <= 0) {
         isDiving.current = true
         diveTime.current = 0.4
@@ -106,52 +96,43 @@ export function Bot({ id = 'bot1' }) {
       return
     }
 
-    // ── 2. STATE MACHINE AI PATHFINDING ──
+    // Striker AI Behavior
     let targetX = 0
     let targetZ = 0
-    let speed = 6.2
+    let speed = 7.5
 
     const hasPossession = ballPossession === id
 
     if (hasPossession) {
-      // Run to player's goal (Z = 30)
       targetX = 0
       targetZ = 30
-      speed = 7.2
+      speed = 8.5
 
-      // Shoot if inside strike range
-      if (pos[2] > 14) {
+      if (pos[2] > 12) {
         strikeBall(85)
       }
     } else {
       const pPos = player ? player.position.current : [0, 1.2, 12]
-      
-      // Defending half ball checks
       const playerDistToBall = Math.hypot(bPos[0] - pPos[0], bPos[2] - pPos[2])
-      const botDistToBall = distToBall
 
-      if (bPos[2] < 6 || botDistToBall < playerDistToBall) {
-        // STATE: CHASE BALL
+      if (bPos[2] < 6 || distToBall < playerDistToBall) {
         targetX = bPos[0]
         targetZ = bPos[2]
       } else {
-        // STATE: MARK OPPONENT (Stay between player and goal at Z = -30)
         targetX = pPos[0] * 0.7
         targetZ = pPos[2] - 5.0
       }
 
-      // Slide tackle trigger if player is close
-      if (ballPossession === 'player1' && distToBall < 1.6 && Math.random() < 0.22) {
+      if (ballPossession === 'player1' && distToBall < 1.6 && Math.random() < 0.25) {
         isDiving.current = true
-        diveTime.current = 0.25
+        diveTime.current = 0.28
         const dashDirX = Math.sign(bPos[0] - pos[0])
         const dashDirZ = Math.sign(bPos[2] - pos[2])
-        api.velocity.set(dashDirX * 16, vel[1], dashDirZ * 16)
+        api.velocity.set(dashDirX * 18, vel[1], dashDirZ * 18)
         return
       }
     }
 
-    // Apply AI calculated velocities
     const dx = targetX - pos[0]
     const dz = targetZ - pos[2]
     const distToTarget = Math.hypot(dx, dz)
@@ -162,13 +143,11 @@ export function Bot({ id = 'bot1' }) {
       api.velocity.set(0, vel[1], 0)
     }
 
-    // Dribble trigger
-    if (distToBall < 1.3 && !hasPossession && ballPossession !== 'player1') {
+    if (distToBall < 1.4 && !hasPossession && ballPossession !== 'player1') {
       setPossession(id)
     }
 
     if (hasPossession) {
-      // Pull ball smoothly
       const targetX = pos[0]
       const targetZ = pos[2] + 0.8
       
@@ -176,18 +155,17 @@ export function Bot({ id = 'bot1' }) {
       const dz = targetZ - bPos[2]
 
       ball.api.velocity.set(
-        botVel.current[0] + dx * 8,
+        botVel.current[0] + dx * 9,
         ball.velocity.current[1],
-        botVel.current[2] + dz * 8
+        botVel.current[2] + dz * 9
       )
 
-      if (distToBall > 1.45) {
+      if (distToBall > 1.5) {
         setPossession(null)
       }
     }
   })
 
-  // Strike ball function
   const strikeBall = (powerPercent) => {
     const ball = window.footballBall
     if (!ball) return
@@ -196,7 +174,7 @@ export function Bot({ id = 'bot1' }) {
     const bPos = ball.position.current
     const dist = Math.hypot(bPos[0] - pos[0], bPos[2] - pos[2])
 
-    if (dist < 1.55) {
+    if (dist < 1.65) {
       const targetGoalX = 0
       const targetGoalZ = 30.0
       
@@ -204,8 +182,8 @@ export function Bot({ id = 'bot1' }) {
       const dirZ = targetGoalZ - bPos[2]
       const len = Math.hypot(dirX, dirZ)
 
-      const speedVal = 14 + (powerPercent / 100) * 16
-      ball.api.velocity.set((dirX / len) * speedVal, 3.2, (dirZ / len) * speedVal)
+      const speedVal = 15 + (powerPercent / 100) * 18
+      ball.api.velocity.set((dirX / len) * speedVal, 3.4, (dirZ / len) * speedVal)
       setPossession(null)
     }
   }
@@ -215,23 +193,15 @@ export function Bot({ id = 'bot1' }) {
 
   return (
     <group ref={ref}>
-      {/* Visual Human Model */}
       <HumanModel 
-        teamColor="#1d4ed8" 
-        secColor="#fb7185" 
+        preset="male_hoodie"
+        teamColor="#0284c7" 
+        secColor="#f43f5e" 
         number={9} 
         isGoalkeeper={isGK}
         velocity={botVelocityVec}
-        isTackling={isDiving.current && !isGK} // slide tackle triggers running lunge visual
+        isTackling={isDiving.current && !isGK}
       />
-
-      {/* GK Aura Ring */}
-      {isGK && (
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.61, 0]}>
-          <ringGeometry args={[0.6, 0.7, 32]} />
-          <meshBasicMaterial color="#3b82f6" />
-        </mesh>
-      )}
     </group>
   )
 }

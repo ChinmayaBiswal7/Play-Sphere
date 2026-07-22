@@ -55,7 +55,6 @@ function useKeyboard() {
 }
 
 export function Player({ id = 'player1' }) {
-  // Use Cannon sphere instead of Rapier capsule
   const [ref, api] = useSphere(() => ({
     mass: 72,
     position: [0, 1.2, 12],
@@ -66,14 +65,14 @@ export function Player({ id = 'player1' }) {
 
   const keys = useKeyboard()
   
-  // Zustand State bindings
+  // Zustand State
   const stamina = useFootballStore((state) => state.stamina)
   const setStamina = useFootballStore((state) => state.setStamina)
   const gameState = useFootballStore((state) => state.gameState)
   const setPossession = useFootballStore((state) => state.setPossession)
   const redGK = useFootballStore((state) => state.redGK)
+  const characterPreset = useFootballStore((state) => state.characterPreset)
 
-  // Local controller state variables
   const [shotCharge, setShotCharge] = useState(0)
   const isCharging = useRef(false)
   
@@ -81,21 +80,14 @@ export function Player({ id = 'player1' }) {
   const tackleTime = useRef(0)
   const tackleCooldown = useRef(0)
   
-  const isDiving = useRef(false)
-  const diveTime = useRef(0)
-  const diveCooldown = useRef(0)
-  
   const currentDir = useRef(new THREE.Vector3(0, 0, -1))
-
   const playerPos = useRef([0, 1.2, 12])
   const playerVel = useRef([0, 0, 0])
 
   useEffect(() => {
-    // Subscribe to physics states
     const unsubPos = api.position.subscribe(v => (playerPos.current = v))
     const unsubVel = api.velocity.subscribe(v => (playerVel.current = v))
 
-    // Set globally on window
     window.footballPlayer = {
       position: playerPos,
       velocity: playerVel,
@@ -109,9 +101,8 @@ export function Player({ id = 'player1' }) {
     }
   }, [api])
 
-  // Reset positions at kickoff
   useEffect(() => {
-    if (gameState === 'KICKOFF' || gameState === 'LOBBY') {
+    if (gameState === 'KICKOFF' || gameState === 'MENU') {
       api.position.set(0, 1.2, 12)
       api.velocity.set(0, 0, 0)
       isCharging.current = false
@@ -125,12 +116,15 @@ export function Player({ id = 'player1' }) {
     const pos = playerPos.current
     const vel = playerVel.current
 
-    // ── 1. THIRD PERSON CAMERA FOLLOW ──
-    const targetCam = new THREE.Vector3(pos[0], pos[1] + 5, pos[2] + 9)
-    state.camera.position.lerp(targetCam, 0.12)
-    state.camera.lookAt(pos[0], pos[1] + 0.8, pos[2] - 3)
+    // ── 1. REAL OVER-THE-SHOULDER 3RD PERSON CAMERA (Sloclap Rematch Perspective) ──
+    const targetCamX = pos[0] * 0.85
+    const targetCamY = pos[1] + 2.1
+    const targetCamZ = pos[2] + 4.2
 
-    // ── 2. KEYBOARD CONTROLS MOVEMENT ──
+    state.camera.position.lerp(new THREE.Vector3(targetCamX, targetCamY, targetCamZ), 0.14)
+    state.camera.lookAt(pos[0] * 0.3, pos[1] + 1.2, pos[2] - 12)
+
+    // ── 2. MOVEMENT CONTROLS ──
     let moveX = 0
     let moveZ = 0
     if (keys.w) moveZ = -1
@@ -144,54 +138,30 @@ export function Player({ id = 'player1' }) {
     }
 
     // Sprint checks
-    let currentSpeed = 7.5
+    let currentSpeed = 8.5
     if (keys.Shift && stamina > 5 && direction.lengthSq() > 0.01) {
-      currentSpeed = 11.5
-      setStamina(Math.max(0, stamina - 45 * dt))
+      currentSpeed = 13.5
+      setStamina(Math.max(0, stamina - 35 * dt))
     } else {
-      setStamina(Math.min(100, stamina + 22 * dt))
+      setStamina(Math.min(100, stamina + 25 * dt))
     }
 
-    // Tackle dash triggers
+    // Slide Tackle Dash
     if (keys.KeyQ && tackleCooldown.current <= 0 && !isTackling.current) {
       isTackling.current = true
-      tackleTime.current = 0.28
-      tackleCooldown.current = 2.0
-      api.velocity.set(currentDir.current.x * 20, vel[1], currentDir.current.z * 20)
+      tackleTime.current = 0.32
+      tackleCooldown.current = 1.8
+      api.velocity.set(currentDir.current.x * 22, vel[1], currentDir.current.z * 22)
     }
 
     if (isTackling.current) {
       tackleTime.current -= dt
-      if (tackleTime.current <= 0) {
-        isTackling.current = false
-      }
+      if (tackleTime.current <= 0) isTackling.current = false
     }
-    if (tackleCooldown.current > 0) {
-      tackleCooldown.current -= dt
-    }
+    if (tackleCooldown.current > 0) tackleCooldown.current -= dt
 
-    // Goalkeeper saving dive lunge
-    const isGK = redGK === id
-    if (isGK && keys.Space && diveCooldown.current <= 0 && !isDiving.current) {
-      isDiving.current = true
-      diveTime.current = 0.4
-      diveCooldown.current = 2.5
-      const diveSide = keys.a ? -1 : keys.d ? 1 : 0
-      api.velocity.set(diveSide * 15, 5.5, -5.0)
-    }
-
-    if (isDiving.current) {
-      diveTime.current -= dt
-      if (diveTime.current <= 0) {
-        isDiving.current = false
-      }
-    }
-    if (diveCooldown.current > 0) {
-      diveCooldown.current -= dt
-    }
-
-    // Apply movement velocity
-    if (!isTackling.current && !isDiving.current) {
+    // Velocity update
+    if (!isTackling.current) {
       api.velocity.set(direction.x * currentSpeed, vel[1], direction.z * currentSpeed)
     }
 
@@ -201,10 +171,9 @@ export function Player({ id = 'player1' }) {
       const bPos = ball.position.current
       const dist = Math.hypot(bPos[0] - pos[0], bPos[2] - pos[2])
 
-      if (dist < 1.45 && Math.abs(bPos[1] - pos[1]) < 1.8) {
+      if (dist < 1.55 && Math.abs(bPos[1] - pos[1]) < 1.8) {
         setPossession(id)
 
-        // Pull the ball smoothly in front of the player
         const targetX = pos[0] + currentDir.current.x * 0.8
         const targetZ = pos[2] + currentDir.current.z * 0.8
         
@@ -212,19 +181,19 @@ export function Player({ id = 'player1' }) {
         const dz = targetZ - bPos[2]
 
         ball.api.velocity.set(
-          playerVel.current[0] + dx * 8,
+          playerVel.current[0] + dx * 9,
           ball.velocity.current[1],
-          playerVel.current[2] + dz * 8
+          playerVel.current[2] + dz * 9
         )
       } else {
         useFootballStore.getState().ballPossession === id && setPossession(null)
       }
     }
 
-    // ── 4. SHOOTING & PASSING CHARGES ──
-    if (keys.Space && !isGK) {
+    // ── 4. SHOOTING CHARGE ──
+    if (keys.Space) {
       isCharging.current = true
-      setShotCharge(prev => Math.min(100, prev + 150 * dt))
+      setShotCharge(prev => Math.min(100, prev + 160 * dt))
     } else {
       if (isCharging.current) {
         strikeBall(shotCharge)
@@ -234,7 +203,7 @@ export function Player({ id = 'player1' }) {
     }
 
     if (keys.KeyE) {
-      strikeBall(30, true)
+      strikeBall(35, true)
     }
   })
 
@@ -246,8 +215,7 @@ export function Player({ id = 'player1' }) {
     const bPos = ball.position.current
     const dist = Math.hypot(bPos[0] - pos[0], bPos[2] - pos[2])
 
-    if (dist < 1.65) {
-      // Direct shot vector targeting opponent goal line (Z = -30)
+    if (dist < 1.75) {
       const targetGoalX = 0
       const targetGoalZ = -30.0
       
@@ -255,8 +223,8 @@ export function Player({ id = 'player1' }) {
       const dirZ = targetGoalZ - bPos[2]
       const len = Math.hypot(dirX, dirZ)
 
-      const speedVal = isPass ? 11.5 : 17 + (powerPercent / 100) * 20
-      const targetVelY = isPass ? 0.8 : 3.5
+      const speedVal = isPass ? 12.5 : 18 + (powerPercent / 100) * 22
+      const targetVelY = isPass ? 0.8 : 3.8
 
       ball.api.velocity.set((dirX / len) * speedVal, targetVelY, (dirZ / len) * speedVal)
       setPossession(null)
@@ -268,35 +236,28 @@ export function Player({ id = 'player1' }) {
 
   return (
     <group ref={ref}>
-      {/* Visual Human Model */}
+      {/* High Quality Humanoid Character */}
       <HumanModel 
-        teamColor="#ff0055" 
-        secColor="#00d2ff" 
+        preset={characterPreset}
+        teamColor="#ef4444" 
+        secColor="#0284c7" 
         number={7} 
         isGoalkeeper={isGK}
         velocity={playerVelocityVec}
         isTackling={isTackling.current}
       />
 
-      {/* Visor chevron selector indicators */}
-      <mesh position={[0, 2.5, 0]}>
+      {/* Visor chevron selector indicator */}
+      <mesh position={[0, 2.7, 0]}>
         <coneGeometry args={[0.2, 0.4, 4]} />
         <meshBasicMaterial color="#facc15" />
       </mesh>
 
-      {/* Charge indicator rings */}
+      {/* Charge Ring Indicator at Feet */}
       {shotCharge > 0 && (
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.6, 0]}>
-          <ringGeometry args={[0.5, 0.5 + (shotCharge / 100) * 0.35, 32]} />
-          <meshBasicMaterial color="#eab308" />
-        </mesh>
-      )}
-
-      {/* GK Aura Ring */}
-      {isGK && (
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.61, 0]}>
-          <ringGeometry args={[0.6, 0.7, 32]} />
-          <meshBasicMaterial color="#00ffff" />
+          <ringGeometry args={[0.5, 0.5 + (shotCharge / 100) * 0.4, 32]} />
+          <meshBasicMaterial color="#00d2ff" />
         </mesh>
       )}
     </group>

@@ -1,28 +1,54 @@
-import React, { useRef, useEffect } from 'react'
+import React, { useRef, useEffect, useMemo } from 'react'
 import { useSphere } from '@react-three/cannon'
 import { useFrame } from '@react-three/fiber'
 import { useFootballStore } from './footballStore'
+import * as THREE from 'three'
+
+/**
+ * Creates classic soccer ball texture
+ */
+function createSoccerBallTexture() {
+  const canvas = document.createElement('canvas')
+  canvas.width = 256
+  canvas.height = 256
+  const ctx = canvas.getContext('2d')
+
+  ctx.fillStyle = '#ffffff'
+  ctx.fillRect(0, 0, 256, 256)
+
+  // Black pentagon patterns
+  ctx.fillStyle = '#09090b'
+  const spots = [
+    [64, 64], [192, 64], [128, 128], [64, 192], [192, 192]
+  ]
+  spots.forEach(([x, y]) => {
+    ctx.beginPath()
+    ctx.arc(x, y, 28, 0, Math.PI * 2)
+    ctx.fill()
+  })
+
+  return new THREE.CanvasTexture(canvas)
+}
 
 export function Ball() {
-  // Cannon Sphere body
   const [ref, api] = useSphere(() => ({
     mass: 1.3,
     position: [0, 3, 0],
     args: [0.55],
     linearDamping: 0.15,
     angularDamping: 0.22,
-    restitution: 0.72 // High bounce
+    restitution: 0.75
   }))
 
   const ballPos = useRef([0, 3, 0])
   const ballVel = useRef([0, 0, 0])
 
+  const texture = useMemo(() => createSoccerBallTexture(), [])
+
   useEffect(() => {
-    // Subscribe to physics values
     const unsubPos = api.position.subscribe(v => (ballPos.current = v))
     const unsubVel = api.velocity.subscribe(v => (ballVel.current = v))
-    
-    // Save on window for Player & Bot AI
+
     window.footballBall = {
       position: ballPos,
       velocity: ballVel,
@@ -38,16 +64,14 @@ export function Ball() {
 
   const gameState = useFootballStore((state) => state.gameState)
 
-  // Kickoff position resets
   useEffect(() => {
-    if (gameState === 'KICKOFF' || gameState === 'LOBBY') {
+    if (gameState === 'KICKOFF' || gameState === 'MENU') {
       api.position.set(0, 3.5, 0)
       api.velocity.set(0, 0, 0)
       api.angularVelocity.set(0, 0, 0)
     }
   }, [gameState, api])
 
-  // Rolling visual rotation based on speed
   const meshRef = useRef()
   useFrame(() => {
     if (meshRef.current) {
@@ -65,18 +89,14 @@ export function Ball() {
     <group ref={ref}>
       <group ref={meshRef}>
         <mesh castShadow receiveShadow>
-          <sphereGeometry args={[0.55, 16, 16]} />
-          <meshStandardMaterial 
-            color="#ffffff" 
-            roughness={0.3} 
-            metalness={0.1}
-          />
+          <sphereGeometry args={[0.55, 24, 24]} />
+          <meshStandardMaterial map={texture} roughness={0.25} metalness={0.1} />
         </mesh>
-        
-        {/* Glow rings */}
+
+        {/* Arcade Neon Ring */}
         <mesh>
-          <torusGeometry args={[0.56, 0.03, 8, 24]} />
-          <meshBasicMaterial color="#00d2ff" />
+          <torusGeometry args={[0.56, 0.025, 8, 32]} />
+          <meshBasicMaterial color="#00f2fe" />
         </mesh>
       </group>
     </group>
