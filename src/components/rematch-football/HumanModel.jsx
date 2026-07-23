@@ -78,10 +78,11 @@ export function HumanModel({
 
   // Articulated joint movement animation frame loop
   useFrame((state, dt) => {
-    const speed = Math.hypot(velocity.x, velocity.z)
+    const horizontalSpeed = Math.hypot(velocity.x, velocity.z)
 
-    if (speed > 0.15) {
-      animTime.current += speed * dt * 1.35
+    // Strict speed threshold to prevent micro-jitter animation while stationary
+    if (horizontalSpeed > 0.8) {
+      animTime.current += horizontalSpeed * dt * 1.35
 
       const stride = Math.sin(animTime.current)
       const oppositeStride = -stride
@@ -123,7 +124,7 @@ export function HumanModel({
       }
     } else {
       animTime.current = 0
-      // Rest / Idle Pose
+      // Rest / Idle Pose (Completely Still)
       if (leftHipRef.current) leftHipRef.current.rotation.x = 0
       if (rightHipRef.current) rightHipRef.current.rotation.x = 0
       if (leftKneeRef.current) leftKneeRef.current.rotation.x = 0

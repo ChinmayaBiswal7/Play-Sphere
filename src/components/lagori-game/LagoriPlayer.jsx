@@ -78,7 +78,7 @@ export function LagoriPlayer({ id = 'player1' }) {
     position: [0, 0.65, 14],
     args: [0.62],
     fixedRotation: true,
-    linearDamping: 0.1
+    linearDamping: 0.15
   }))
 
   const keys = useKeyboard()
@@ -91,6 +91,7 @@ export function LagoriPlayer({ id = 'player1' }) {
   const stamina = useLagoriStore((state) => state.stamina)
   const setStamina = useLagoriStore((state) => state.setStamina)
 
+  const [isAiming, setIsAiming] = useState(false)
   const cameraYaw = useRef(Math.PI)
   const cameraPitch = useRef(0.24)
 
@@ -99,8 +100,20 @@ export function LagoriPlayer({ id = 'player1' }) {
   const playerVel = useRef([0, 0, 0])
   const eKeyCooldown = useRef(false)
 
-  // Mouse camera orbit & throw aim
+  // Mouse camera orbit & Right-click hold aiming
   useEffect(() => {
+    const handleMouseDown = (e) => {
+      if (e.button === 2) { // Right Click Hold to Aim
+        setIsAiming(true)
+      }
+    }
+
+    const handleMouseUp = (e) => {
+      if (e.button === 2) {
+        setIsAiming(false)
+      }
+    }
+
     const handleMouseMove = (e) => {
       if (document.pointerLockElement || e.buttons === 1 || e.buttons === 2) {
         cameraYaw.current -= e.movementX * 0.003
@@ -108,30 +121,40 @@ export function LagoriPlayer({ id = 'player1' }) {
       }
     }
 
-    const handleCanvasClick = () => {
-      if (useLagoriStore.getState().gameState === 'AIM_THROW' || useLagoriStore.getState().gameState === 'REBUILD_DEFEND') {
-        if (!document.pointerLockElement) {
-          document.body.requestPointerLock?.()
-        }
+    const handleCanvasClick = (e) => {
+      if (e.button === 0) { // Left Click Throw
+        if (useLagoriStore.getState().gameState === 'AIM_THROW' || useLagoriStore.getState().gameState === 'REBUILD_DEFEND') {
+          if (!document.pointerLockElement) {
+            document.body.requestPointerLock?.()
+          }
 
-        // Throw Ball during AIM_THROW phase
-        if (useLagoriStore.getState().gameState === 'AIM_THROW') {
-          const ball = window.lagoriBall
-          if (ball && ball.api) {
-            const throwSpeed = 24.0
-            const dirX = -Math.sin(cameraYaw.current)
-            const dirZ = -Math.cos(cameraYaw.current)
-            ball.api.velocity.set(dirX * throwSpeed, 2.2, dirZ * throwSpeed)
+          // Throw Ball during AIM_THROW phase
+          if (useLagoriStore.getState().gameState === 'AIM_THROW') {
+            const ball = window.lagoriBall
+            if (ball && ball.api) {
+              const throwSpeed = 26.0
+              const dirX = -Math.sin(cameraYaw.current)
+              const dirZ = -Math.cos(cameraYaw.current)
+              ball.api.velocity.set(dirX * throwSpeed, 2.4, dirZ * throwSpeed)
+            }
           }
         }
       }
     }
 
+    const handleContextMenu = (e) => e.preventDefault() // Prevent browser context menu on right click
+
+    window.addEventListener('mousedown', handleMouseDown)
+    window.addEventListener('mouseup', handleMouseUp)
     window.addEventListener('mousemove', handleMouseMove)
     window.addEventListener('click', handleCanvasClick)
+    window.addEventListener('contextmenu', handleContextMenu)
     return () => {
+      window.removeEventListener('mousedown', handleMouseDown)
+      window.removeEventListener('mouseup', handleMouseUp)
       window.removeEventListener('mousemove', handleMouseMove)
       window.removeEventListener('click', handleCanvasClick)
+      window.removeEventListener('contextmenu', handleContextMenu)
     }
   }, [])
 
@@ -172,7 +195,7 @@ export function LagoriPlayer({ id = 'player1' }) {
       const distToCenter = Math.hypot(pos[0], pos[2])
 
       // 1. Rebuild Stack at Center Pedestal
-      if (distToCenter < 2.0 && heldStonesCount > 0) {
+      if (distToCenter < 2.2 && heldStonesCount > 0) {
         setStonesRebuilt(stonesRebuilt + heldStonesCount)
         setHeldStonesCount(0)
       } else {
@@ -197,13 +220,13 @@ export function LagoriPlayer({ id = 'player1' }) {
     if (keys.ArrowLeft) cameraYaw.current += 1.8 * dt
     if (keys.ArrowRight) cameraYaw.current -= 1.8 * dt
 
-    // ── 3RD PERSON CAMERA RIG ──
+    // ── CAMERA RIG & AIM ZOOM ──
     const isSprinting = keys.Shift && stamina > 5
-    const targetFov = isSprinting ? 72 : 62
-    state.camera.fov = THREE.MathUtils.lerp(state.camera.fov, targetFov, 0.1)
+    const targetFov = isAiming ? 48 : (isSprinting ? 72 : 62)
+    state.camera.fov = THREE.MathUtils.lerp(state.camera.fov, targetFov, 0.12)
     state.camera.updateProjectionMatrix()
 
-    const camDistance = 5.6
+    const camDistance = isAiming ? 4.2 : 5.6
     const camX = pos[0] + Math.sin(cameraYaw.current) * Math.cos(cameraPitch.current) * camDistance
     const camY = pos[1] + Math.sin(cameraPitch.current) * camDistance + 2.4
     const camZ = pos[2] + Math.cos(cameraYaw.current) * Math.cos(cameraPitch.current) * camDistance
@@ -246,6 +269,9 @@ export function LagoriPlayer({ id = 'player1' }) {
 
     if (direction.lengthSq() > 0.01) {
       api.velocity.set(direction.x * moveSpeed, vel[1], direction.z * moveSpeed)
+    } else {
+      // Complete stop when keys are released
+      api.velocity.set(0, vel[1], 0)
     }
   })
 
@@ -267,7 +293,7 @@ export function LagoriPlayer({ id = 'player1' }) {
         />
       </group>
 
-      {/* OVERHEAD PLAYER NAME & STONES CARRIED BADGE */}
+      {/* OVERHEAD PLAYER NAME BADGE */}
       {showNameTag && (
         <Html position={[0, 2.7, 0]} center distanceFactor={14}>
           <div style={{
@@ -293,6 +319,25 @@ export function LagoriPlayer({ id = 'player1' }) {
                 🪨 x{heldStonesCount}
               </span>
             )}
+          </div>
+        </Html>
+      )}
+
+      {/* AIM CROSSHAIR & TRAJECTORY INDICATOR */}
+      {isAiming && (
+        <Html center distanceFactor={10}>
+          <div style={{
+            width: '28px',
+            height: '28px',
+            border: '2px solid #00f2fe',
+            borderRadius: '50%',
+            boxShadow: '0 0 16px #00f2fe',
+            pointerEvents: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <div style={{ width: '4px', height: '4px', background: '#00f2fe', borderRadius: '50%' }} />
           </div>
         </Html>
       )}

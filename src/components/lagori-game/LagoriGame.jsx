@@ -17,7 +17,6 @@ export function LagoriGame({ onExit }) {
   const stonesRebuilt = useLagoriStore((state) => state.stonesRebuilt)
   const heldStonesCount = useLagoriStore((state) => state.heldStonesCount)
   const stamina = useLagoriStore((state) => state.stamina)
-  const isStackKnockedDown = useLagoriStore((state) => state.isStackKnockedDown)
   const roundResultAlert = useLagoriStore((state) => state.roundResultAlert)
   const setGameState = useLagoriStore((state) => state.setGameState)
   const resetRound = useLagoriStore((state) => state.resetRound)
@@ -157,7 +156,7 @@ export function LagoriGame({ onExit }) {
           <div style={{ marginTop: '50px', background: 'rgba(15, 23, 42, 0.8)', border: '1px solid rgba(250, 204, 21, 0.3)', borderRadius: '12px', padding: '16px 24px', maxWidth: '500px', textAlign: 'center' }}>
             <h4 style={{ margin: '0 0 6px', color: '#facc15', fontSize: '0.95rem' }}>HOW TO PLAY</h4>
             <p style={{ margin: 0, color: '#cbd5e1', fontSize: '0.8rem', lineHeight: '1.5', fontFamily: 'sans-serif' }}>
-              1. <b>Left Click</b> to throw ball and knock down 7 stacked stones.<br />
+              1. <b>Hold Right Click</b> to aim, <b>Left Click</b> to throw ball at 7-stone stack.<br />
               2. <b>Press E</b> to pick up scattered stones on ground.<br />
               3. Run to center pedestal and <b>Press E</b> to rebuild all 7 stones before Defender hits you!
             </p>
@@ -165,10 +164,10 @@ export function LagoriGame({ onExit }) {
         </div>
       )}
 
-      {/* ── 4. IN-GAME HUD OVERLAYS ── */}
+      {/* ── 4. IN-GAME HUD OVERLAYS (NON-OVERLAPPING CLEAN LAYOUT) ── */}
       {(gameState === 'AIM_THROW' || gameState === 'REBUILD_DEFEND') && (
         <>
-          {/* Top Scorebar */}
+          {/* Top-Left Scorebar */}
           <div style={{
             position: 'absolute',
             top: '25px',
@@ -176,10 +175,10 @@ export function LagoriGame({ onExit }) {
             background: 'rgba(15, 23, 42, 0.88)',
             border: '1px solid rgba(255,255,255,0.1)',
             borderRadius: '10px',
-            padding: '10px 24px',
+            padding: '10px 20px',
             display: 'flex',
             alignItems: 'center',
-            gap: '24px',
+            gap: '16px',
             fontFamily: "'Orbitron', sans-serif",
             boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
             backdropFilter: 'blur(10px)',
@@ -189,32 +188,31 @@ export function LagoriGame({ onExit }) {
               ROUND {round}
             </span>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#090d16', padding: '6px 16px', borderRadius: '6px' }}>
-              <span style={{ color: '#ef4444', fontWeight: '900', fontSize: '1.1rem' }}>SEEKERS {score.seekers}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#090d16', padding: '6px 14px', borderRadius: '6px' }}>
+              <span style={{ color: '#ef4444', fontWeight: '900', fontSize: '1rem' }}>SEEKERS {score.seekers}</span>
               <span style={{ color: '#64748b' }}>|</span>
-              <span style={{ color: '#0284c7', fontWeight: '900', fontSize: '1.1rem' }}>{score.defenders} DEFENDERS</span>
+              <span style={{ color: '#0284c7', fontWeight: '900', fontSize: '1rem' }}>{score.defenders} DEFENDERS</span>
             </div>
           </div>
 
-          {/* Phase Banner */}
+          {/* Top-Right Phase Action Instruction Banner (Clean separation from Top-Left Scorebar) */}
           <div style={{
             position: 'absolute',
             top: '25px',
-            left: '50%',
-            transform: 'translateX(-50%)',
+            right: '30px',
             background: 'rgba(15, 23, 42, 0.9)',
             border: '2px solid #facc15',
             borderRadius: '30px',
-            padding: '10px 28px',
+            padding: '10px 24px',
             color: '#facc15',
             fontFamily: "'Orbitron', sans-serif",
             fontWeight: '900',
-            fontSize: '0.9rem',
-            letterSpacing: '2px',
+            fontSize: '0.85rem',
+            letterSpacing: '1px',
             boxShadow: '0 4px 20px rgba(250, 204, 21, 0.3)',
             zIndex: 10
           }}>
-            {gameState === 'AIM_THROW' ? '🎯 LEFT CLICK TO THROW BALL AT STACK!' : '🏃 REBUILD THE 7-STONE STACK!'}
+            {gameState === 'AIM_THROW' ? '🎯 HOLD RIGHT CLICK TO AIM, LEFT CLICK TO THROW!' : '🏃 REBUILD THE 7-STONE STACK!'}
           </div>
 
           {/* Stack Progress Counter & Inventory */}
