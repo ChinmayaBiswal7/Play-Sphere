@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useMemo } from 'react'
 import { useSphere } from '@react-three/cannon'
 import { useFrame } from '@react-three/fiber'
+import { Html } from '@react-three/drei'
 import { useLagoriStore } from './lagoriStore'
 import * as THREE from 'three'
 
@@ -31,7 +32,6 @@ function createTennisBallTexture() {
 
 export function LagoriBall() {
   const gameState = useLagoriStore((state) => state.gameState)
-  const ballCarrier = useLagoriStore((state) => state.ballCarrier)
   const eliminatePlayer = useLagoriStore((state) => state.eliminatePlayer)
 
   const [ref, api] = useSphere(() => ({
@@ -51,6 +51,7 @@ export function LagoriBall() {
 
   const ballPos = useRef([0, 1.2, 13])
   const ballVel = useRef([0, 0, 0])
+  const [playerNearBall, setPlayerNearBall] = useRef(false)
 
   const texture = useMemo(() => createTennisBallTexture(), [])
 
@@ -91,6 +92,18 @@ export function LagoriBall() {
         meshRef.current.rotation.z -= vx * 0.1
       }
 
+      // Check if player is near loose ball on ground
+      const p = window.lagoriPlayer
+      if (p && p.position && Array.isArray(p.position.current)) {
+        const pPos = p.position.current
+        const dist = Math.hypot(pPos[0] - ballPos.current[0], pPos[2] - ballPos.current[2])
+        if (dist < 1.8) {
+          window.lagoriBall_near = true
+        } else {
+          window.lagoriBall_near = false
+        }
+      }
+
       // Safety check: Reset ball if clipped below ground
       if (ballPos.current[1] < -4) {
         api.position.set(0, 1.2, 0)
@@ -107,6 +120,26 @@ export function LagoriBall() {
           <meshStandardMaterial map={texture} roughness={0.4} metalness={0.05} />
         </mesh>
       </group>
+
+      {/* Pickup Ball Prompt */}
+      {gameState === 'REBUILD_DEFEND' && window.lagoriBall_near && (
+        <Html position={[0, 0.4, 0]} center distanceFactor={10}>
+          <div style={{
+            background: 'rgba(34, 197, 94, 0.95)',
+            color: '#000',
+            fontWeight: '900',
+            fontSize: '11px',
+            padding: '3px 8px',
+            borderRadius: '6px',
+            fontFamily: "'Orbitron', sans-serif",
+            whiteSpace: 'nowrap',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+            pointerEvents: 'none'
+          }}>
+            [E] PICK UP TENNIS BALL
+          </div>
+        </Html>
+      )}
     </group>
   )
 }

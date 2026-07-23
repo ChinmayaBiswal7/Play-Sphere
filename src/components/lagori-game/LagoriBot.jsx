@@ -26,7 +26,7 @@ export function LagoriBot({ id = 'bot1', team = 'defenders' }) {
     position: [0, 0.65, -14],
     args: [0.62],
     fixedRotation: true,
-    linearDamping: 0.1
+    linearDamping: 0.15
   }))
 
   const gameState = useLagoriStore((state) => state.gameState)
@@ -36,6 +36,7 @@ export function LagoriBot({ id = 'bot1', team = 'defenders' }) {
   const botVel = useRef([0, 0, 0])
   const currentDir = useRef(new THREE.Vector3(0, 0, 1))
   const throwCooldown = useRef(0)
+  const dodgeDir = useRef(1)
 
   useEffect(() => {
     const unsubPos = api.position.subscribe(v => (botPos.current = v || [0, 0.65, -14]))
@@ -62,7 +63,7 @@ export function LagoriBot({ id = 'bot1', team = 'defenders' }) {
   }, [gameState, api])
 
   useFrame((state, dt) => {
-    if (gameState !== 'REBUILD_DEFEND') return
+    if (gameState === 'MENU' || gameState === 'BOOT' || gameState === 'ROUND_OVER') return
 
     const pos = safePos(window.lagoriBot)
     const vel = safeVel(window.lagoriBot)
@@ -75,33 +76,48 @@ export function LagoriBot({ id = 'bot1', team = 'defenders' }) {
 
     if (throwCooldown.current > 0) throwCooldown.current -= dt
 
-    // ── DEFENDER AI BEHAVIOR ──
-    // 1. Run towards tennis ball
-    const distToBall = Math.hypot(bPos[0] - pos[0], bPos[2] - pos[2])
-    const distToPlayer = Math.hypot(pPos[0] - pos[0], pPos[2] - pos[2])
+    // ── 1. THROW PHASE: AI DEFENDER DODGES THROWN BALL ──
+    if (gameState === 'AIM_THROW') {
+      const distBallToBot = Math.hypot(bPos[0] - pos[0], bPos[2] - pos[2])
 
-    if (distToBall > 1.2) {
-      // Sprint to pick up ball
-      const dx = bPos[0] - pos[0]
-      const dz = bPos[2] - pos[2]
-      const len = Math.hypot(dx, dz) || 1
-      api.velocity.set((dx / len) * 12.5, vel[1], (dz / len) * 12.5)
-      currentDir.current.set(dx / len, 0, dz / len)
-    } else {
-      // 2. Pick up ball and aim at player!
-      api.velocity.set(0, vel[1], 0)
+      // If ball is flying towards Defender, side-step dodge!
+      if (distBallToBot < 8.0 && bPos[2] < 5.0) {
+        api.velocity.set(dodgeDir.current * 14.0, vel[1], 0)
+        currentDir.current.set(dodgeDir.current, 0, 0)
+      } else {
+        api.velocity.set(0, vel[1], 0)
+      }
+      return
+    }
 
-      if (throwCooldown.current <= 0) {
-        throwCooldown.current = 2.8 // Throw interval
+    // ── 2. REBUILD & DEFEND PHASE: CHASE BALL & THROW AT PLAYER ──
+    if (gameState === 'REBUILD_DEFEND') {
+      const distToBall = Math.hypot(bPos[0] - pos[0], bPos[2] - pos[2])
+      const distToPlayer = Math.hypot(pPos[0] - pos[0], pPos[2] - pos[2])
 
-        // Aim vector at Seeker Player
-        const pdx = pPos[0] - pos[0]
-        const pdz = pPos[2] - pos[2]
-        const plen = Math.hypot(pdx, pdz) || 1
+      if (distToBall > 1.2) {
+        // Sprint to pick up ball
+        const dx = bPos[0] - pos[0]
+        const dz = bPos[2] - pos[2]
+        const len = Math.hypot(dx, dz) || 1
+        api.velocity.set((dx / len) * 13.5, vel[1], (dz / len) * 13.5)
+        currentDir.current.set(dx / len, 0, dz / len)
+      } else {
+        // Pick up ball and aim at player!
+        api.velocity.set(0, vel[1], 0)
 
-        const throwSpeed = 22.0
-        ball.api.position.set(pos[0] + (pdx / plen) * 1.0, 1.2, pos[2] + (pdz / plen) * 1.0)
-        ball.api.velocity.set((pdx / plen) * throwSpeed, 2.0, (pdz / plen) * throwSpeed)
+        if (throwCooldown.current <= 0) {
+          throwCooldown.current = 2.4 // Throw interval
+
+          // Aim vector at Seeker Player
+          const pdx = pPos[0] - pos[0]
+          const pdz = pPos[2] - pos[2]
+          const plen = Math.hypot(pdx, pdz) || 1
+
+          const throwSpeed = 24.0
+          ball.api.position.set(pos[0] + (pdx / plen) * 1.0, 1.2, pos[2] + (pdz / plen) * 1.0)
+          ball.api.velocity.set((pdx / plen) * throwSpeed, 2.0, (pdz / plen) * throwSpeed)
+        }
       }
     }
   })

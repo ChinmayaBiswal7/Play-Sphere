@@ -22,6 +22,9 @@ export function LagoriGame({ onExit }) {
   const resetRound = useLagoriStore((state) => state.resetRound)
   const resetMatch = useLagoriStore((state) => state.resetMatch)
 
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [audioVolume, setAudioVolume] = useState(80)
+
   useEffect(() => {
     if (gameState === 'BOOT') {
       const timer = setTimeout(() => {
@@ -30,6 +33,24 @@ export function LagoriGame({ onExit }) {
       return () => clearTimeout(timer)
     }
   }, [gameState])
+
+  // Fullscreen ('F') & Settings Modal ('ESC') keybinds
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.code === 'KeyF') {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen?.()
+        } else {
+          document.exitFullscreen?.()
+        }
+      } else if (e.code === 'Escape') {
+        setIsSettingsOpen((prev) => !prev)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   const startMatch = () => {
     resetMatch()
@@ -156,15 +177,41 @@ export function LagoriGame({ onExit }) {
           <div style={{ marginTop: '50px', background: 'rgba(15, 23, 42, 0.8)', border: '1px solid rgba(250, 204, 21, 0.3)', borderRadius: '12px', padding: '16px 24px', maxWidth: '500px', textAlign: 'center' }}>
             <h4 style={{ margin: '0 0 6px', color: '#facc15', fontSize: '0.95rem' }}>HOW TO PLAY</h4>
             <p style={{ margin: 0, color: '#cbd5e1', fontSize: '0.8rem', lineHeight: '1.5', fontFamily: 'sans-serif' }}>
-              1. <b>Hold Right Click</b> to aim, <b>Left Click</b> to throw ball at 7-stone stack.<br />
+              1. <b>Hold Right Click</b> to zoom/aim, <b>Left Click</b> to throw ball at 7-stone stack.<br />
               2. <b>Press E</b> to pick up scattered stones on ground.<br />
-              3. Run to center pedestal and <b>Press E</b> to rebuild all 7 stones before Defender hits you!
+              3. Run to center pedestal and <b>Press E</b> to rebuild all 7 stones before Defender hits you!<br />
+              4. <b>Press F</b> for Fullscreen, <b>ESC</b> for Settings Menu.
             </p>
           </div>
         </div>
       )}
 
-      {/* ── 4. IN-GAME HUD OVERLAYS (NON-OVERLAPPING CLEAN LAYOUT) ── */}
+      {/* ── 4. CENTER AIM CROSSHAIR RETICLE (DURING THROW PHASE) ── */}
+      {gameState === 'AIM_THROW' && (
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          pointerEvents: 'none',
+          zIndex: 50
+        }}>
+          <div style={{
+            width: '24px',
+            height: '24px',
+            border: '2px solid rgba(0, 242, 254, 0.85)',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 0 12px #00f2fe'
+          }}>
+            <div style={{ width: '4px', height: '4px', background: '#ffffff', borderRadius: '50%' }} />
+          </div>
+        </div>
+      )}
+
+      {/* ── 5. IN-GAME HUD OVERLAYS ── */}
       {(gameState === 'AIM_THROW' || gameState === 'REBUILD_DEFEND') && (
         <>
           {/* Top-Left Scorebar */}
@@ -195,24 +242,39 @@ export function LagoriGame({ onExit }) {
             </div>
           </div>
 
-          {/* Top-Right Phase Action Instruction Banner (Clean separation from Top-Left Scorebar) */}
-          <div style={{
-            position: 'absolute',
-            top: '25px',
-            right: '30px',
-            background: 'rgba(15, 23, 42, 0.9)',
-            border: '2px solid #facc15',
-            borderRadius: '30px',
-            padding: '10px 24px',
-            color: '#facc15',
-            fontFamily: "'Orbitron', sans-serif",
-            fontWeight: '900',
-            fontSize: '0.85rem',
-            letterSpacing: '1px',
-            boxShadow: '0 4px 20px rgba(250, 204, 21, 0.3)',
-            zIndex: 10
-          }}>
-            {gameState === 'AIM_THROW' ? '🎯 HOLD RIGHT CLICK TO AIM, LEFT CLICK TO THROW!' : '🏃 REBUILD THE 7-STONE STACK!'}
+          {/* Top-Right Action Pill & Settings Button */}
+          <div style={{ position: 'absolute', top: '25px', right: '30px', display: 'flex', gap: '12px', alignItems: 'center', zIndex: 10 }}>
+            <div style={{
+              background: 'rgba(15, 23, 42, 0.9)',
+              border: '2px solid #facc15',
+              borderRadius: '30px',
+              padding: '10px 24px',
+              color: '#facc15',
+              fontFamily: "'Orbitron', sans-serif",
+              fontWeight: '900',
+              fontSize: '0.85rem',
+              letterSpacing: '1px',
+              boxShadow: '0 4px 20px rgba(250, 204, 21, 0.3)'
+            }}>
+              {gameState === 'AIM_THROW' ? '🎯 HOLD RIGHT CLICK TO AIM, LEFT CLICK TO THROW!' : '🏃 REBUILD THE 7-STONE STACK!'}
+            </div>
+
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              style={{
+                background: 'rgba(15, 23, 42, 0.88)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                color: '#fff',
+                borderRadius: '8px',
+                padding: '10px 14px',
+                fontWeight: '900',
+                cursor: 'pointer',
+                fontFamily: "'Orbitron', sans-serif",
+                fontSize: '0.8rem'
+              }}
+            >
+              ⚙️ [ESC]
+            </button>
           </div>
 
           {/* Stack Progress Counter & Inventory */}
@@ -276,7 +338,92 @@ export function LagoriGame({ onExit }) {
         </>
       )}
 
-      {/* ── 5. ROUND RESULT OVERLAY ── */}
+      {/* ── 6. PAUSE SETTINGS MODAL ── */}
+      {isSettingsOpen && (
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'rgba(9, 13, 22, 0.92)',
+          backdropFilter: 'blur(10px)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 200,
+          fontFamily: "'Orbitron', sans-serif"
+        }}>
+          <div style={{ width: '420px', background: 'rgba(15, 23, 42, 0.95)', border: '1px solid rgba(250, 204, 21, 0.5)', borderRadius: '16px', padding: '30px', color: '#fff' }}>
+            <h2 style={{ color: '#facc15', fontSize: '1.4rem', margin: '0 0 20px', textAlign: 'center', letterSpacing: '3px' }}>
+              ⚙️ GAME SETTINGS
+            </h2>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', marginBottom: '30px' }}>
+              <div>
+                <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: '#cbd5e1', marginBottom: '8px' }}>
+                  <span>MASTER AUDIO VOLUME</span>
+                  <b>{audioVolume}%</b>
+                </label>
+                <input 
+                  type="range" 
+                  min="0" 
+                  max="100" 
+                  value={audioVolume} 
+                  onChange={(e) => setAudioVolume(e.target.value)}
+                  style={{ width: '100%', accentColor: '#facc15' }}
+                />
+              </div>
+
+              <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '14px', fontSize: '0.8rem', lineHeight: '1.6' }}>
+                <b style={{ color: '#facc15', display: 'block', marginBottom: '8px' }}>CONTROLS CHEAT SHEET:</b>
+                <div>• <b>WASD</b>: Move Character</div>
+                <div>• <b>HOLD RIGHT CLICK</b>: Zoom & Aim</div>
+                <div>• <b>LEFT CLICK</b>: Throw Ball at Stack</div>
+                <div>• <b>E KEY</b>: Pick Up Stones / Rebuild Base</div>
+                <div>• <b>L-SHIFT</b>: Sprint Boost</div>
+                <div>• <b>F KEY</b>: Toggle Fullscreen Mode</div>
+                <div>• <b>ESC KEY</b>: Pause Settings Menu</div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <button
+                onClick={() => setIsSettingsOpen(false)}
+                style={{
+                  background: '#facc15',
+                  color: '#000',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '14px',
+                  fontWeight: '900',
+                  fontSize: '0.95rem',
+                  letterSpacing: '2px',
+                  cursor: 'pointer'
+                }}
+              >
+                RESUME MATCH
+              </button>
+
+              <button
+                onClick={onExit}
+                style={{
+                  background: 'rgba(239, 68, 68, 0.2)',
+                  border: '1px solid #ef4444',
+                  color: '#ef4444',
+                  borderRadius: '8px',
+                  padding: '12px',
+                  fontWeight: '800',
+                  fontSize: '0.85rem',
+                  cursor: 'pointer'
+                }}
+              >
+                EXIT TO CONSOLE
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 7. ROUND RESULT OVERLAY ── */}
       {gameState === 'ROUND_OVER' && (
         <div style={{
           position: 'absolute',

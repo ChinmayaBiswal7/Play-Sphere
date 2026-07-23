@@ -58,10 +58,9 @@ function SingleStone({ config, index }) {
     mass: isStackKnockedDown ? config.mass : 0, // Static before hit, dynamic after hit!
     position: [0, config.yOffset, 0],
     args: [config.radius, config.radius, config.height, 16],
-    restitution: 0.2,
+    restitution: 0.3,
     friction: 0.8,
     onCollide: (e) => {
-      // If hit by tennis ball during throw phase, knock down entire stack!
       if (!useLagoriStore.getState().isStackKnockedDown && (gameState === 'AIM_THROW' || gameState === 'PLAYING')) {
         knockDownStack()
       }
@@ -70,7 +69,6 @@ function SingleStone({ config, index }) {
 
   const stonePos = useRef([0, config.yOffset, 0])
   const [pickedUp, setPickedUp] = useState(false)
-  const [rebuilt, setRebuilt] = useState(false)
 
   const texture = useMemo(() => createStoneTexture(config.id), [config.id])
 
@@ -83,18 +81,20 @@ function SingleStone({ config, index }) {
   useEffect(() => {
     if (!isStackKnockedDown) {
       setPickedUp(false)
-      setRebuilt(false)
       api.position.set(0, config.yOffset, 0)
       api.rotation.set(0, 0, 0)
       api.velocity.set(0, 0, 0)
       api.angularVelocity.set(0, 0, 0)
+    } else {
+      // Scatter impulse when knocked down!
+      const impulseX = (Math.random() - 0.5) * 8.0
+      const impulseZ = (Math.random() - 0.5) * 8.0
+      api.velocity.set(impulseX, 2.5, impulseZ)
     }
   }, [isStackKnockedDown, config, api])
 
-  // Check if this stone has been rebuilt into the stack
   const isRebuilt = index < stonesRebuilt
 
-  // Check if player is near this scattered stone to pick up
   useFrame(() => {
     if (isStackKnockedDown && !pickedUp && !isRebuilt) {
       const p = window.lagoriPlayer
@@ -102,8 +102,7 @@ function SingleStone({ config, index }) {
         const pPos = p.position.current
         const dist = Math.hypot(pPos[0] - stonePos.current[0], pPos[2] - stonePos.current[2])
 
-        // Player near stone pickup distance
-        if (dist < 1.6 && Math.abs(pPos[1] - stonePos.current[1]) < 1.5) {
+        if (dist < 1.8 && Math.abs(pPos[1] - stonePos.current[1]) < 1.8) {
           window[`lagoriStone_${config.id}_near`] = true
         } else {
           window[`lagoriStone_${config.id}_near`] = false
@@ -112,7 +111,6 @@ function SingleStone({ config, index }) {
     }
   })
 
-  // Hide picked up stone if it's currently held in inventory (not yet rebuilt)
   if (pickedUp && !isRebuilt) return null
 
   return (
@@ -148,6 +146,21 @@ function SingleStone({ config, index }) {
 export function StoneStack() {
   const stonesRebuilt = useLagoriStore((state) => state.stonesRebuilt)
   const isStackKnockedDown = useLagoriStore((state) => state.isStackKnockedDown)
+  const knockDownStack = useLagoriStore((state) => state.knockDownStack)
+
+  useFrame(() => {
+    // Proactive collision check: Knock down stack when ball gets near center stack!
+    if (!isStackKnockedDown) {
+      const ball = window.lagoriBall
+      if (ball && ball.position && Array.isArray(ball.position.current)) {
+        const bPos = ball.position.current
+        const distToCenter = Math.hypot(bPos[0], bPos[2])
+        if (distToCenter < 1.2 && bPos[1] < 1.8) {
+          knockDownStack()
+        }
+      }
+    }
+  })
 
   return (
     <group>

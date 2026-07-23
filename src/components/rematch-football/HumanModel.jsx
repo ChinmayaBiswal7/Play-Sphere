@@ -120,7 +120,7 @@ export function HumanModel({
       // 5. TORSO BOUNCE & FORWARD LEAN
       if (torsoRef.current) {
         torsoRef.current.rotation.x = 0.18
-        torsoRef.current.position.y = 1.35 + Math.abs(Math.sin(animTime.current * 2)) * 0.06
+        torsoRef.current.position.y = 0.95 + Math.abs(Math.sin(animTime.current * 2)) * 0.04
       }
     } else {
       animTime.current = 0
@@ -143,7 +143,7 @@ export function HumanModel({
 
       if (torsoRef.current) {
         torsoRef.current.rotation.x = 0
-        torsoRef.current.position.y = 1.35
+        torsoRef.current.position.y = 0.95
       }
     }
 
@@ -160,8 +160,8 @@ export function HumanModel({
   return (
     <group scale={[0.95, 0.95, 0.95]}>
       
-      {/* ── 1. ATHLETIC TORSO & HOODED JERSEY ── */}
-      <group ref={torsoRef} position={[0, 1.35, 0]}>
+      {/* ── 1. ATHLETIC TORSO & HOODED JERSEY (CONNECTED SEAMLESSLY AT Y = 0.95) ── */}
+      <group ref={torsoRef} position={[0, 0.95, 0]}>
         {/* Tapered Chest & Waist */}
         <mesh castShadow receiveShadow position={[0, 0.28, 0]}>
           <cylinderGeometry args={[0.34, 0.28, 0.76, 20]} />
