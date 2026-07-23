@@ -7,6 +7,7 @@ import { Arena } from './Arena'
 import { Ball } from './Ball'
 import { Player } from './Player'
 import { Bot } from './Bot'
+import { Referee } from './Referee'
 import * as THREE from 'three'
 
 // Dynamic Goalkeeper Allocator & Goal Trigger
@@ -81,18 +82,18 @@ function CinematicReplayCamera() {
 
   useFrame((state, dt) => {
     if (gameState === 'GOAL_CELEBRATION') {
-      animAngle.current += dt * 1.5
+      animAngle.current += dt * 2.0
 
       const scorerPos = lastScorer === 'red' 
         ? (window.footballPlayer ? window.footballPlayer.position.current : [0, 1.2, 0])
         : (window.footballBot ? window.footballBot.position.current : [0, 1.2, 0])
 
-      const camX = scorerPos[0] + Math.sin(animAngle.current) * 4.5
-      const camY = scorerPos[1] + 2.0
-      const camZ = scorerPos[2] + Math.cos(animAngle.current) * 4.5
+      const camX = scorerPos[0] + Math.sin(animAngle.current) * 4.2
+      const camY = scorerPos[1] + 1.8
+      const camZ = scorerPos[2] + Math.cos(animAngle.current) * 4.2
 
       state.camera.position.set(camX, camY, camZ)
-      state.camera.lookAt(scorerPos[0], scorerPos[1] + 1.2, scorerPos[2])
+      state.camera.lookAt(scorerPos[0], scorerPos[1] + 1.1, scorerPos[2])
 
     } else if (gameState === 'GOAL_REPLAY') {
       if (replayBuffer.length > 0) {
@@ -103,7 +104,7 @@ function CinematicReplayCamera() {
           const ballX = frame.bPos[0]
           const ballZ = frame.bPos[2]
 
-          state.camera.position.set(24, 10, ballZ + 8)
+          state.camera.position.set(22, 9, ballZ + 7)
           state.camera.lookAt(ballX, 1.0, ballZ)
         }
       }
@@ -215,14 +216,15 @@ export function RematchGame({ onExit }) {
   const score = useFootballStore((state) => state.score)
   const half = useFootballStore((state) => state.half)
   const gameState = useFootballStore((state) => state.gameState)
-  const timer = useFootballStore((state) => state.timer)
+  const matchMinute = useFootballStore((state) => state.matchMinute)
   const stamina = useFootballStore((state) => state.stamina)
   const goalAlert = useFootballStore((state) => state.goalAlert)
   const lastScorer = useFootballStore((state) => state.lastScorer)
+  const celebrationType = useFootballStore((state) => state.celebrationType)
   const setGameState = useFootballStore((state) => state.setGameState)
   const setGoalAlert = useFootballStore((state) => state.setGoalAlert)
   const resetMatch = useFootballStore((state) => state.resetMatch)
-  const tickTimer = useFootballStore((state) => state.tickTimer)
+  const tickMatchClock = useFootballStore((state) => state.tickMatchClock)
   
   const activeMenuTab = useFootballStore((state) => state.activeMenuTab)
   const setActiveMenuTab = useFootballStore((state) => state.setActiveMenuTab)
@@ -246,8 +248,54 @@ export function RematchGame({ onExit }) {
   const setConnectedPlayers = useFootballStore((state) => state.setConnectedPlayers)
 
   const [inputRoomCode, setInputRoomCode] = useState('')
-  const [multiplayerSubSection, setMultiplayerSubSection] = useState('ONLINE_MATCH') // 'ONLINE_MATCH' | 'PLAY_WITH_FRIEND'
+  const [multiplayerSubSection, setMultiplayerSubSection] = useState('ONLINE_MATCH')
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [tipIndex, setTipIndex] = useState(0)
+
+  // Key F = Fullscreen, Key ESC = Pause Settings Menu ONLY
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.code === 'KeyF') {
+        toggleFullscreen()
+      } else if (e.code === 'Escape') {
+        e.preventDefault()
+        setIsSettingsOpen((prev) => !prev)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
+  const toggleFullscreen = () => {
+    try {
+      let iframeEl = null
+      if (window.parent && window.parent.document) {
+        iframeEl = window.parent.document.getElementById('game-session-iframe')
+      }
+
+      const doc = (window.parent && window.parent.document) ? window.parent.document : document
+      const fullEl = doc.fullscreenElement || document.fullscreenElement
+
+      if (!fullEl) {
+        if (iframeEl && iframeEl.requestFullscreen) {
+          iframeEl.requestFullscreen().catch(() => {
+            if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen()
+          })
+        } else if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(() => {})
+        }
+      } else {
+        if (doc.exitFullscreen) {
+          doc.exitFullscreen().catch(() => {})
+        } else if (document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {})
+        }
+      }
+    } catch (err) {
+      console.warn('Fullscreen notice:', err)
+    }
+  }
 
   // Socket.io integration
   useEffect(() => {
@@ -268,7 +316,7 @@ export function RematchGame({ onExit }) {
       startMatchWithLoading()
     }
 
-    const handleSearching = ({ format, queuedCount }) => {
+    const handleSearching = () => {
       setMatchmakingStatus('SEARCHING')
     }
 
@@ -310,11 +358,12 @@ export function RematchGame({ onExit }) {
     }
   }, [gameState])
 
+  // EA FC 90-Minute Match Clock Ticker
   useEffect(() => {
     let interval
     if (gameState === 'PLAYING') {
       interval = setInterval(() => {
-        tickTimer()
+        tickMatchClock()
       }, 1000)
     }
     return () => clearInterval(interval)
@@ -329,7 +378,7 @@ export function RematchGame({ onExit }) {
     } else if (gameState === 'GOAL_CELEBRATION') {
       const timeout = setTimeout(() => {
         setGameState('GOAL_REPLAY')
-      }, 3500)
+      }, 4000)
       return () => clearTimeout(timeout)
     } else if (gameState === 'GOAL_REPLAY') {
       const timeout = setTimeout(() => {
@@ -340,10 +389,14 @@ export function RematchGame({ onExit }) {
     } else if (gameState === 'HALF_TIME') {
       const timeout = setTimeout(() => {
         setGameState('KICKOFF')
-      }, 3500)
+      }, 4000)
       return () => clearTimeout(timeout)
     }
   }, [gameState])
+
+  const skipCelebration = () => {
+    setGameState('GOAL_REPLAY')
+  }
 
   const skipReplay = () => {
     setGoalAlert('')
@@ -393,16 +446,16 @@ export function RematchGame({ onExit }) {
     }
   }
 
-  const formatTime = (timeInSecs) => {
-    const mins = Math.floor(timeInSecs / 60)
-    const secs = timeInSecs % 60
-    return `${mins}:${secs < 10 ? '0' : ''}${secs}`
+  const formatMatchClock = (mins) => {
+    const m = Math.floor(mins)
+    const s = Math.floor((mins - m) * 60)
+    return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}'`
   }
 
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#090d16', position: 'relative', overflow: 'hidden', userSelect: 'none' }}>
       
-      {/* ── 1. FULL-BLEED SEAMLESS REMATCH BOOT / LOADING SCREEN ── */}
+      {/* ── 1. BOOT / LOADING SCREEN ── */}
       {(gameState === 'BOOT' || gameState === 'LOADING_MATCH') && (
         <div style={{
           position: 'absolute',
@@ -415,13 +468,10 @@ export function RematchGame({ onExit }) {
           padding: '60px 80px',
           fontFamily: "'Orbitron', sans-serif"
         }}>
-          <div style={{ position: 'absolute', top: 0, right: '15%', width: '600px', height: '100%', background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, transparent 80%)', transform: 'skewX(-25deg)', pointerEvents: 'none' }} />
-          <div style={{ position: 'absolute', top: 0, left: '10%', width: '300px', height: '100%', background: 'linear-gradient(135deg, rgba(0, 210, 255, 0.05) 0%, transparent 80%)', transform: 'skewX(-25deg)', pointerEvents: 'none' }} />
-
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '6rem', fontWeight: '900', letterSpacing: '14px' }}>
               <span style={{ color: '#ffffff' }}>RE</span>
-              <span style={{ color: '#22c55e', fontStyle: 'italic', transform: 'skewX(-18deg)', display: 'inline-block', textShadow: '0 0 50px rgba(34, 197, 94, 0.8)' }}>/</span>
+              <span style={{ color: '#22c55e', fontStyle: 'italic', transform: 'skewX(-18deg)', display: 'inline-block' }}>/</span>
               <span style={{ color: '#ffffff' }}>MATCH</span>
             </div>
             <p style={{ color: '#94a3b8', letterSpacing: '6px', fontSize: '1rem', marginTop: '10px', fontWeight: '800' }}>
@@ -439,13 +489,6 @@ export function RematchGame({ onExit }) {
               <div style={{ width: '30px', height: '30px', borderRadius: '50%', border: '3px solid #22c55e', borderTopColor: 'transparent', animation: 'spin 1s linear infinite' }} />
             </div>
           </div>
-
-          <style>{`
-            @keyframes spin {
-              0% { transform: rotate(0deg); }
-              100% { transform: rotate(360deg); }
-            }
-          `}</style>
         </div>
       )}
 
@@ -473,6 +516,7 @@ export function RematchGame({ onExit }) {
         <Suspense fallback={null}>
           <Physics gravity={[0, -15, 0]}>
             <Arena />
+            <Referee />
             <CinematicReplayCamera />
             <ReplayRecorder />
 
@@ -488,35 +532,11 @@ export function RematchGame({ onExit }) {
       {gameState === 'MENU' && (
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'auto', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '30px 40px', fontFamily: "'Orbitron', sans-serif" }}>
           
-          {/* Header Navigation */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(15, 23, 42, 0.75)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '12px 24px', backdropFilter: 'blur(10px)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <span style={{ fontSize: '1.4rem' }}>⚽</span>
               <span style={{ color: '#fff', fontSize: '1.2rem', fontWeight: '900', letterSpacing: '3px' }}>REMATCH</span>
               <span style={{ background: '#22c55e', color: '#000', fontSize: '0.65rem', fontWeight: '900', padding: '2px 8px', borderRadius: '4px' }}>MULTIPLAYER 2026</span>
-            </div>
-
-            <div style={{ display: 'flex', gap: '16px' }}>
-              {['PLAY', 'CUSTOMIZATION', 'PROFILE'].map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveMenuTab(tab)}
-                  style={{
-                    background: activeMenuTab === tab ? '#22c55e' : 'transparent',
-                    color: activeMenuTab === tab ? '#000' : '#94a3b8',
-                    border: 'none',
-                    borderRadius: '6px',
-                    padding: '8px 20px',
-                    fontWeight: '900',
-                    fontSize: '0.85rem',
-                    letterSpacing: '1px',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  {tab}
-                </button>
-              ))}
             </div>
 
             <button 
@@ -527,11 +547,9 @@ export function RematchGame({ onExit }) {
             </button>
           </div>
 
-          {/* MAIN PLAY PANEL (SINGLE PLAYER VS MULTIPLAYER HUB) */}
           {activeMenuTab === 'PLAY' && (
             <div style={{ display: 'flex', gap: '30px', height: 'calc(100% - 120px)', marginTop: '20px' }}>
               
-              {/* Left Column: Mode Switcher */}
               <div style={{ width: '300px', display: 'flex', flexDirection: 'column', gap: '14px', background: 'rgba(15, 23, 42, 0.85)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '20px', backdropFilter: 'blur(10px)' }}>
                 <h3 style={{ color: '#94a3b8', fontSize: '0.8rem', letterSpacing: '2px', margin: '0 0 4px' }}>MATCH MODE</h3>
 
@@ -540,20 +558,15 @@ export function RematchGame({ onExit }) {
                   style={{
                     background: matchMode === 'SINGLE_PLAYER' ? 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)' : 'rgba(255,255,255,0.03)',
                     color: matchMode === 'SINGLE_PLAYER' ? '#000' : '#fff',
-                    border: matchMode === 'SINGLE_PLAYER' ? 'none' : '1px solid rgba(255,255,255,0.08)',
+                    border: 'none',
                     borderRadius: '10px',
                     padding: '16px',
                     fontWeight: '900',
-                    fontSize: '0.95rem',
                     textAlign: 'left',
-                    cursor: 'pointer',
-                    boxShadow: matchMode === 'SINGLE_PLAYER' ? '0 4px 20px rgba(34, 197, 94, 0.4)' : 'none'
+                    cursor: 'pointer'
                   }}
                 >
                   🤖 SINGLE PLAYER
-                  <small style={{ display: 'block', fontSize: '0.7rem', marginTop: '4px', opacity: 0.8, fontFamily: 'sans-serif' }}>
-                    Practice vs Smart AI Bots
-                  </small>
                 </button>
 
                 <button
@@ -561,36 +574,25 @@ export function RematchGame({ onExit }) {
                   style={{
                     background: matchMode === 'MULTIPLAYER' ? 'linear-gradient(135deg, #00d2ff 0%, #0284c7 100%)' : 'rgba(255,255,255,0.03)',
                     color: matchMode === 'MULTIPLAYER' ? '#000' : '#fff',
-                    border: matchMode === 'MULTIPLAYER' ? 'none' : '1px solid rgba(255,255,255,0.08)',
+                    border: 'none',
                     borderRadius: '10px',
                     padding: '16px',
                     fontWeight: '900',
-                    fontSize: '0.95rem',
                     textAlign: 'left',
-                    cursor: 'pointer',
-                    boxShadow: matchMode === 'MULTIPLAYER' ? '0 4px 20px rgba(0, 210, 255, 0.4)' : 'none'
+                    cursor: 'pointer'
                   }}
                 >
                   🌐 MULTIPLAYER HUB
-                  <small style={{ display: 'block', fontSize: '0.7rem', marginTop: '4px', opacity: 0.8, fontFamily: 'sans-serif' }}>
-                    Friends & Online Matchmaking
-                  </small>
                 </button>
               </div>
 
-              {/* Right Column: Mode Content */}
               <div style={{ flex: 1, background: 'rgba(15, 23, 42, 0.85)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '28px', backdropFilter: 'blur(10px)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                 
-                {/* 1. SINGLE PLAYER OPTIONS */}
                 {matchMode === 'SINGLE_PLAYER' && (
                   <div>
                     <h2 style={{ color: '#22c55e', fontSize: '1.4rem', margin: '0 0 10px', letterSpacing: '3px' }}>
                       🤖 SINGLE PLAYER vs AI BOTS
                     </h2>
-                    <p style={{ color: '#94a3b8', fontSize: '0.85rem', fontFamily: 'sans-serif', margin: '0 0 25px' }}>
-                      Jump directly into quick matches against adaptive AI bot opponents.
-                    </p>
-
                     <button
                       onClick={startMatchWithLoading}
                       style={{
@@ -602,8 +604,7 @@ export function RematchGame({ onExit }) {
                         fontWeight: '900',
                         fontSize: '1.1rem',
                         letterSpacing: '2px',
-                        cursor: 'pointer',
-                        boxShadow: '0 8px 30px rgba(34, 197, 94, 0.4)'
+                        cursor: 'pointer'
                       }}
                     >
                       ▶ START SINGLE PLAYER MATCH
@@ -611,11 +612,8 @@ export function RematchGame({ onExit }) {
                   </div>
                 )}
 
-                {/* 2. MULTIPLAYER HUB (2 SECTIONS: PLAY WITH FRIEND & ONLINE MATCHMAKING) */}
                 {matchMode === 'MULTIPLAYER' && (
                   <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                    
-                    {/* Section Switcher Tabs */}
                     <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
                       <button
                         onClick={() => setMultiplayerSubSection('ONLINE_MATCH')}
@@ -626,12 +624,10 @@ export function RematchGame({ onExit }) {
                           borderRadius: '8px',
                           padding: '10px 20px',
                           fontWeight: '900',
-                          fontSize: '0.85rem',
-                          letterSpacing: '1px',
                           cursor: 'pointer'
                         }}
                       >
-                        🌐 SECTION 1: ONLINE MATCHMAKING
+                        🌐 ONLINE MATCHMAKING
                       </button>
 
                       <button
@@ -643,20 +639,15 @@ export function RematchGame({ onExit }) {
                           borderRadius: '8px',
                           padding: '10px 20px',
                           fontWeight: '900',
-                          fontSize: '0.85rem',
-                          letterSpacing: '1px',
                           cursor: 'pointer'
                         }}
                       >
-                        🤝 SECTION 2: PLAY WITH FRIEND
+                        🤝 PLAY WITH FRIEND
                       </button>
                     </div>
 
-                    {/* Format Selector Pills (1v1, 2v2, 3v3, 5v5) */}
                     <div style={{ marginBottom: '24px' }}>
-                      <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.75rem', letterSpacing: '1px', marginBottom: '10px' }}>
-                        SELECT MATCH FORMAT:
-                      </label>
+                      <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.75rem', marginBottom: '10px' }}>SELECT FORMAT:</label>
                       <div style={{ display: 'flex', gap: '12px' }}>
                         {['1v1', '2v2', '3v3', '5v5'].map((fmt) => (
                           <button
@@ -665,13 +656,11 @@ export function RematchGame({ onExit }) {
                             style={{
                               background: multiplayerFormat === fmt ? '#22c55e' : 'rgba(255,255,255,0.04)',
                               color: multiplayerFormat === fmt ? '#000' : '#fff',
-                              border: multiplayerFormat === fmt ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                              border: 'none',
                               borderRadius: '8px',
                               padding: '12px 24px',
                               fontWeight: '900',
-                              fontSize: '1rem',
-                              cursor: 'pointer',
-                              boxShadow: multiplayerFormat === fmt ? '0 4px 16px rgba(34, 197, 94, 0.4)' : 'none'
+                              cursor: 'pointer'
                             }}
                           >
                             {fmt}
@@ -680,25 +669,8 @@ export function RematchGame({ onExit }) {
                       </div>
                     </div>
 
-                    {/* SECTION 1 CONTENT: ONLINE MATCHMAKING */}
                     {multiplayerSubSection === 'ONLINE_MATCH' && (
                       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                        <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '20px' }}>
-                          <h3 style={{ color: '#00d2ff', margin: '0 0 8px', fontSize: '1.1rem' }}>
-                            GLOBAL MATCHMAKING QUEUE ({multiplayerFormat})
-                          </h3>
-                          <p style={{ color: '#94a3b8', fontSize: '0.8rem', fontFamily: 'sans-serif', margin: 0 }}>
-                            Automatically pair with real online players in {multiplayerFormat} format.
-                          </p>
-
-                          {matchmakingStatus === 'SEARCHING' && (
-                            <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '12px', color: '#facc15', fontSize: '0.85rem' }}>
-                              <div style={{ width: '16px', height: '16px', border: '2px solid #facc15', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-                              <span>Searching for {multiplayerFormat} opponents...</span>
-                            </div>
-                          )}
-                        </div>
-
                         <button
                           onClick={handleFindOnlineMatch}
                           style={{
@@ -709,9 +681,7 @@ export function RematchGame({ onExit }) {
                             padding: '18px 36px',
                             fontWeight: '900',
                             fontSize: '1.1rem',
-                            letterSpacing: '2px',
                             cursor: 'pointer',
-                            boxShadow: '0 8px 30px rgba(0, 210, 255, 0.4)',
                             width: '320px'
                           }}
                         >
@@ -720,166 +690,24 @@ export function RematchGame({ onExit }) {
                       </div>
                     )}
 
-                    {/* SECTION 2 CONTENT: PLAY WITH FRIEND */}
                     {multiplayerSubSection === 'PLAY_WITH_FRIEND' && (
                       <div style={{ flex: 1, display: 'flex', gap: '24px' }}>
-                        
-                        {/* Host Private Room */}
-                        <div style={{ flex: 1, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                          <div>
-                            <h4 style={{ color: '#facc15', margin: '0 0 6px', fontSize: '1rem' }}>HOST PRIVATE ROOM</h4>
-                            <p style={{ color: '#94a3b8', fontSize: '0.75rem', fontFamily: 'sans-serif', margin: '0 0 16px' }}>
-                              Create a room code and invite friends to join your private {multiplayerFormat} lobby.
-                            </p>
-
-                            {roomCode && (
-                              <div style={{ background: '#090d16', border: '1px solid #facc15', padding: '10px 16px', borderRadius: '8px', color: '#facc15', fontWeight: '900', fontSize: '1.2rem', textAlign: 'center', marginBottom: '12px' }}>
-                                ROOM CODE: {roomCode}
-                              </div>
-                            )}
-                          </div>
-
-                          <button
-                            onClick={handleCreateFriendRoom}
-                            style={{
-                              background: '#facc15',
-                              color: '#000',
-                              border: 'none',
-                              borderRadius: '8px',
-                              padding: '14px',
-                              fontWeight: '900',
-                              fontSize: '0.9rem',
-                              letterSpacing: '1px',
-                              cursor: 'pointer'
-                            }}
-                          >
+                        <div style={{ flex: 1, background: 'rgba(255,255,255,0.02)', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                          <button onClick={handleCreateFriendRoom} style={{ background: '#facc15', color: '#000', border: 'none', borderRadius: '8px', padding: '14px', fontWeight: '900', cursor: 'pointer' }}>
                             ➕ CREATE ROOM CODE
                           </button>
                         </div>
-
-                        {/* Join Friend's Room */}
-                        <div style={{ flex: 1, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                          <div>
-                            <h4 style={{ color: '#22c55e', margin: '0 0 6px', fontSize: '1rem' }}>JOIN FRIEND'S ROOM</h4>
-                            <p style={{ color: '#94a3b8', fontSize: '0.75rem', fontFamily: 'sans-serif', margin: '0 0 16px' }}>
-                              Enter your friend's 4-letter room code to connect to their lobby.
-                            </p>
-
-                            <input
-                              type="text"
-                              maxLength={8}
-                              placeholder="e.g. FOOT-ABCD"
-                              value={inputRoomCode}
-                              onChange={(e) => setInputRoomCode(e.target.value.toUpperCase())}
-                              style={{
-                                width: '100%',
-                                background: '#090d16',
-                                border: '1px solid rgba(255,255,255,0.15)',
-                                color: '#fff',
-                                padding: '12px 16px',
-                                borderRadius: '8px',
-                                fontFamily: "'Orbitron', sans-serif",
-                                fontWeight: '900',
-                                fontSize: '1rem',
-                                outline: 'none',
-                                marginBottom: '12px'
-                              }}
-                            />
-                          </div>
-
-                          <button
-                            onClick={handleJoinFriendRoom}
-                            style={{
-                              background: '#22c55e',
-                              color: '#000',
-                              border: 'none',
-                              borderRadius: '8px',
-                              padding: '14px',
-                              fontWeight: '900',
-                              fontSize: '0.9rem',
-                              letterSpacing: '1px',
-                              cursor: 'pointer'
-                            }}
-                          >
+                        <div style={{ flex: 1, background: 'rgba(255,255,255,0.02)', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                          <input type="text" placeholder="ROOM CODE" value={inputRoomCode} onChange={(e) => setInputRoomCode(e.target.value.toUpperCase())} style={{ width: '100%', background: '#090d16', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', padding: '12px', borderRadius: '8px', fontWeight: '900', marginBottom: '12px' }} />
+                          <button onClick={handleJoinFriendRoom} style={{ background: '#22c55e', color: '#000', border: 'none', borderRadius: '8px', padding: '14px', fontWeight: '900', cursor: 'pointer' }}>
                             ➡️ JOIN ROOM
                           </button>
                         </div>
-
                       </div>
                     )}
-
                   </div>
                 )}
 
-              </div>
-            </div>
-          )}
-
-          {activeMenuTab === 'CUSTOMIZATION' && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', marginBottom: '20px' }}>
-              <div style={{ width: '320px', background: 'rgba(15, 23, 42, 0.85)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '20px', backdropFilter: 'blur(10px)' }}>
-                <h3 style={{ color: '#fff', fontSize: '1rem', margin: '0 0 15px', letterSpacing: '2px' }}>CHARACTER PRESETS</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {[
-                    { id: 'female_striker', name: 'Female Striker (Red Hoodie)', desc: 'Sloclap Signature' },
-                    { id: 'male_hoodie', name: 'Male Striker (Blue Hoodie)', desc: 'Athletic Cut' },
-                    { id: 'captain_pro', name: 'Captain Pro (Gold Kit)', desc: 'Veteran Leader' }
-                  ].map((p) => (
-                    <button
-                      key={p.id}
-                      onClick={() => setCharacterPreset(p.id)}
-                      style={{
-                        background: characterPreset === p.id ? 'rgba(34, 197, 94, 0.2)' : 'rgba(255,255,255,0.03)',
-                        border: characterPreset === p.id ? '2px solid #22c55e' : '1px solid rgba(255,255,255,0.08)',
-                        borderRadius: '10px',
-                        padding: '14px',
-                        textAlign: 'left',
-                        cursor: 'pointer',
-                        color: '#fff'
-                      }}
-                    >
-                      <b style={{ display: 'block', fontSize: '0.85rem', color: characterPreset === p.id ? '#22c55e' : '#fff' }}>{p.name}</b>
-                      <small style={{ color: '#64748b' }}>{p.desc}</small>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div style={{ width: '300px', background: 'rgba(15, 23, 42, 0.85)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '20px', backdropFilter: 'blur(10px)' }}>
-                <h3 style={{ color: '#fff', fontSize: '1rem', margin: '0 0 15px', letterSpacing: '2px' }}>STADIUM ARENAS</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <button
-                    onClick={() => setArenaStyle('neon')}
-                    style={{
-                      background: arenaStyle === 'neon' ? 'rgba(0, 210, 255, 0.2)' : 'rgba(255,255,255,0.03)',
-                      border: arenaStyle === 'neon' ? '2px solid #00d2ff' : '1px solid rgba(255,255,255,0.08)',
-                      borderRadius: '10px',
-                      padding: '14px',
-                      textAlign: 'left',
-                      cursor: 'pointer',
-                      color: '#fff'
-                    }}
-                  >
-                    <b style={{ display: 'block', fontSize: '0.85rem', color: '#00d2ff' }}>Neon Palms Stadium</b>
-                    <small style={{ color: '#64748b' }}>Striped Grass & Neon Skyline</small>
-                  </button>
-
-                  <button
-                    onClick={() => setArenaStyle('desert')}
-                    style={{
-                      background: arenaStyle === 'desert' ? 'rgba(234, 179, 8, 0.2)' : 'rgba(255,255,255,0.03)',
-                      border: arenaStyle === 'desert' ? '2px solid #eab308' : '1px solid rgba(255,255,255,0.08)',
-                      borderRadius: '10px',
-                      padding: '14px',
-                      textAlign: 'left',
-                      cursor: 'pointer',
-                      color: '#fff'
-                    }}
-                  >
-                    <b style={{ display: 'block', fontSize: '0.85rem', color: '#eab308' }}>Desert Oasis Arena</b>
-                    <small style={{ color: '#64748b' }}>Golden Sand & Pink Tree</small>
-                  </button>
-                </div>
               </div>
             </div>
           )}
@@ -889,6 +717,7 @@ export function RematchGame({ onExit }) {
       {/* ── 4. IN-GAME HUD OVERLAYS ── */}
       {gameState !== 'MENU' && gameState !== 'BOOT' && gameState !== 'LOADING_MATCH' && (
         <>
+          {/* Top-Left EA FC Scorebar with 90-Min Clock */}
           <div style={{
             position: 'absolute',
             top: '25px',
@@ -906,12 +735,12 @@ export function RematchGame({ onExit }) {
             zIndex: 10,
             pointerEvents: 'none'
           }}>
-            <span style={{ background: '#22c55e', color: '#000', fontSize: '0.7rem', fontWeight: '900', padding: '3px 8px', borderRadius: '4px' }}>
+            <span style={{ background: '#22c55e', color: '#000', fontSize: '0.75rem', fontWeight: '900', padding: '3px 8px', borderRadius: '4px' }}>
               {half === 1 ? '1ST HALF' : '2ND HALF'}
             </span>
 
-            <span style={{ color: '#ffffff', fontSize: '1.2rem', fontWeight: '900', letterSpacing: '1px' }}>
-              {gameState === 'KICKOFF' ? '02:30' : formatTime(timer)}
+            <span style={{ color: '#facc15', fontSize: '1.2rem', fontWeight: '900', letterSpacing: '1px' }}>
+              {formatMatchClock(matchMinute)}
             </span>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#090d16', padding: '6px 16px', borderRadius: '6px' }}>
@@ -921,8 +750,180 @@ export function RematchGame({ onExit }) {
             </div>
           </div>
 
+          {/* Top-Right Fullscreen & Settings Buttons */}
+          <div style={{ position: 'absolute', top: '25px', right: '30px', display: 'flex', gap: '12px', zIndex: 10 }}>
+            <button
+              onClick={toggleFullscreen}
+              style={{
+                background: 'rgba(15, 23, 42, 0.88)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                color: '#fff',
+                borderRadius: '8px',
+                padding: '10px 14px',
+                fontWeight: '900',
+                cursor: 'pointer',
+                fontFamily: "'Orbitron', sans-serif",
+                fontSize: '0.8rem'
+              }}
+            >
+              ⛶ [F]
+            </button>
+
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              style={{
+                background: 'rgba(15, 23, 42, 0.88)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                color: '#fff',
+                borderRadius: '8px',
+                padding: '10px 14px',
+                fontWeight: '900',
+                cursor: 'pointer',
+                fontFamily: "'Orbitron', sans-serif",
+                fontSize: '0.8rem'
+              }}
+            >
+              ⚙️ [ESC]
+            </button>
+          </div>
+
           <MiniMapRadar />
+
+          {/* ── 5. GOAL CELEBRATION CUTSCENE ── */}
+          {gameState === 'GOAL_CELEBRATION' && (
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'radial-gradient(circle at center, transparent 30%, rgba(2, 6, 23, 0.85) 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexDirection: 'column',
+              zIndex: 120,
+              fontFamily: "'Orbitron', sans-serif",
+              pointerEvents: 'auto'
+            }}>
+              <h1 style={{
+                fontSize: '5rem',
+                fontWeight: '900',
+                letterSpacing: '10px',
+                color: lastScorer === 'red' ? '#ef4444' : '#0284c7',
+                textShadow: lastScorer === 'red' ? '0 0 50px rgba(239, 68, 68, 0.9)' : '0 0 50px rgba(2, 132, 199, 0.9)',
+                margin: 0
+              }}>
+                GOAL!
+              </h1>
+              <p style={{ color: '#ffffff', fontSize: '1.4rem', letterSpacing: '4px', marginTop: '10px', fontWeight: '800' }}>
+                {celebrationType.toUpperCase()} CELEBRATION
+              </p>
+
+              <button
+                onClick={skipCelebration}
+                style={{
+                  marginTop: '30px',
+                  background: '#facc15',
+                  color: '#000',
+                  border: 'none',
+                  borderRadius: '30px',
+                  padding: '14px 36px',
+                  fontWeight: '900',
+                  fontSize: '0.9rem',
+                  letterSpacing: '2px',
+                  cursor: 'pointer',
+                  boxShadow: '0 8px 30px rgba(250, 204, 21, 0.5)'
+                }}
+              >
+                ⏭ SKIP CELEBRATION
+              </button>
+            </div>
+          )}
+
+          {/* ── 6. GOAL REPLAY VIEW WITH SKIP BUTTON ── */}
+          {gameState === 'GOAL_REPLAY' && (
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              zIndex: 130,
+              fontFamily: "'Orbitron', sans-serif",
+              pointerEvents: 'auto'
+            }}>
+              <div style={{ position: 'absolute', top: '35px', left: '40px', background: 'rgba(239, 68, 68, 0.9)', color: '#fff', padding: '8px 20px', borderRadius: '6px', fontWeight: '900', fontSize: '1rem', letterSpacing: '3px' }}>
+                ⏺ GOAL REPLAY (CINEMATIC)
+              </div>
+
+              <div style={{ position: 'absolute', bottom: '50px', left: '50%', transform: 'translateX(-50%)', zIndex: 140 }}>
+                <button
+                  onClick={skipReplay}
+                  style={{
+                    background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                    color: '#000',
+                    border: 'none',
+                    borderRadius: '30px',
+                    padding: '16px 40px',
+                    fontWeight: '900',
+                    fontSize: '1rem',
+                    letterSpacing: '3px',
+                    cursor: 'pointer',
+                    boxShadow: '0 8px 30px rgba(34, 197, 94, 0.5)'
+                  }}
+                >
+                  ⏭ SKIP REPLAY
+                </button>
+              </div>
+            </div>
+          )}
         </>
+      )}
+
+      {/* ── 7. PAUSE SETTINGS MODAL ── */}
+      {isSettingsOpen && (
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'rgba(9, 13, 22, 0.92)',
+          backdropFilter: 'blur(10px)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 200,
+          fontFamily: "'Orbitron', sans-serif"
+        }}>
+          <div style={{ width: '420px', background: 'rgba(15, 23, 42, 0.95)', border: '1px solid rgba(34, 197, 94, 0.5)', borderRadius: '16px', padding: '30px', color: '#fff' }}>
+            <h2 style={{ color: '#22c55e', fontSize: '1.4rem', margin: '0 0 20px', textAlign: 'center', letterSpacing: '3px' }}>
+              ⚙️ REMATCH GAME SETTINGS
+            </h2>
+
+            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '14px', fontSize: '0.8rem', lineHeight: '1.6', marginBottom: '24px' }}>
+              <b style={{ color: '#22c55e', display: 'block', marginBottom: '8px' }}>CONTROLS CHEAT SHEET:</b>
+              <div>• <b>WASD</b>: Move Striker</div>
+              <div>• <b>SPACE / LEFT CLICK</b>: Charge Power Shot</div>
+              <div>• <b>E KEY</b>: Short Ground Pass</div>
+              <div>• <b>Q KEY / RIGHT CLICK</b>: Slide Tackle / Dive</div>
+              <div>• <b>R KEY</b>: Speed Surge Ability</div>
+              <div>• <b>L-SHIFT</b>: Sprint Boost</div>
+              <div>• <b>F KEY</b>: Fullscreen Mode</div>
+              <div>• <b>ESC KEY</b>: Pause Settings Menu</div>
+            </div>
+
+            <button
+              onClick={() => setIsSettingsOpen(false)}
+              style={{
+                width: '100%',
+                background: '#22c55e',
+                color: '#000',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '14px',
+                fontWeight: '900',
+                fontSize: '0.95rem',
+                cursor: 'pointer'
+              }}
+            >
+              RESUME MATCH
+            </button>
+          </div>
+        </div>
       )}
     </div>
   )

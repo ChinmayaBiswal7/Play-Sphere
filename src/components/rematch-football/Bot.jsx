@@ -130,7 +130,7 @@ export function Bot({ id = 'bot1' }) {
       targetZ = 58.0
       speed = 12.5
 
-      // Strike ball when in shooting range (Z > 22)
+      // Strike ball when in shooting range
       if (pos[2] > 22.0) {
         strikeBall(90)
       }
@@ -138,12 +138,10 @@ export function Bot({ id = 'bot1' }) {
       const pPos = player ? safePos(player) : [0, 0.65, 18]
       const playerDistToBall = Math.hypot(bPos[0] - pPos[0], bPos[2] - pPos[2])
 
-      // Aggressive pursuit if ball is in neutral zone or closer to bot
       if (bPos[2] < 12 || distToBall < playerDistToBall + 2.0) {
         targetX = bPos[0]
         targetZ = bPos[2]
       } else {
-        // Defensive coverage
         targetX = pPos[0] * 0.75
         targetZ = pPos[2] - 6.0
       }
@@ -222,7 +220,8 @@ export function Bot({ id = 'bot1' }) {
   const isGK = blueGK === id
   const vel = safeVel(window.footballBot)
   const botVelocityVec = new THREE.Vector3(vel[0], vel[1], vel[2])
-  const modelRotationY = Math.atan2(-currentDir.current.x, -currentDir.current.z)
+  // FIX: Added + Math.PI so the AI faces forward towards its movement vector instead of backwards at player
+  const modelRotationY = Math.atan2(-currentDir.current.x, -currentDir.current.z) + Math.PI
 
   const showNameTag = gameState === 'PLAYING' || gameState === 'KICKOFF'
 
@@ -240,7 +239,7 @@ export function Bot({ id = 'bot1' }) {
         />
       </group>
 
-      {/* OVERHEAD BOT NAME TAG - STRICTLY CONTROLLED */}
+      {/* OVERHEAD BOT NAME TAG */}
       {showNameTag && (
         <Html position={[0, 2.7, 0]} center distanceFactor={14}>
           <div style={{
