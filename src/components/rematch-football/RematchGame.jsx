@@ -60,11 +60,11 @@ function MiniMapRadar() {
       ctx.clearRect(0, 0, 140, 140)
 
       // Radar Background
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)'
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.88)'
       ctx.beginPath()
       ctx.arc(70, 70, 64, 0, Math.PI * 2)
       ctx.fill()
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)'
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)'
       ctx.lineWidth = 2
       ctx.stroke()
 
@@ -161,6 +161,7 @@ const PRO_TIPS = [
 
 export function RematchGame({ onExit }) {
   const score = useFootballStore((state) => state.score)
+  const half = useFootballStore((state) => state.half)
   const gameState = useFootballStore((state) => state.gameState)
   const timer = useFootballStore((state) => state.timer)
   const stamina = useFootballStore((state) => state.stamina)
@@ -201,10 +202,15 @@ export function RematchGame({ onExit }) {
 
   // Kickoff delay
   useEffect(() => {
-    if (gameState === 'KICKOFF' || gameState === 'GOAL_SCRIBED') {
+    if (gameState === 'KICKOFF' || gameState === 'GOAL_SCORED') {
       const timeout = setTimeout(() => {
         setGameState('PLAYING')
       }, 2500)
+      return () => clearTimeout(timeout)
+    } else if (gameState === 'HALF_TIME') {
+      const timeout = setTimeout(() => {
+        setGameState('KICKOFF')
+      }, 3500)
       return () => clearTimeout(timeout)
     }
   }, [gameState])
@@ -225,7 +231,7 @@ export function RematchGame({ onExit }) {
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#090d16', position: 'relative', overflow: 'hidden', userSelect: 'none' }}>
       
-      {/* ── 1. AUTHENTIC REMATCH BOOT / LOADING SCREEN (Matching Screenshot 1) ── */}
+      {/* ── 1. FULL-BLEED SEAMLESS REMATCH BOOT / LOADING SCREEN ── */}
       {(gameState === 'BOOT' || gameState === 'LOADING_MATCH') && (
         <div style={{
           position: 'absolute',
@@ -238,37 +244,29 @@ export function RematchGame({ onExit }) {
           padding: '60px 80px',
           fontFamily: "'Orbitron', sans-serif"
         }}>
-          {/* Top Decorative Slash Lines */}
-          <div style={{ position: 'absolute', top: 0, right: '20%', width: '400px', height: '100%', background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.05) 0%, transparent 80%)', transform: 'skewX(-25deg)', pointerEvents: 'none' }} />
+          {/* Dynamic Full-Bleed Slashes */}
+          <div style={{ position: 'absolute', top: 0, right: '15%', width: '600px', height: '100%', background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, transparent 80%)', transform: 'skewX(-25deg)', pointerEvents: 'none' }} />
+          <div style={{ position: 'absolute', top: 0, left: '10%', width: '300px', height: '100%', background: 'linear-gradient(135deg, rgba(0, 210, 255, 0.05) 0%, transparent 80%)', transform: 'skewX(-25deg)', pointerEvents: 'none' }} />
 
-          {/* Center Title Logo */}
+          {/* Full-Bleed Glowing REMATCH Title */}
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
-            <img 
-              src="/rematch_logo.png" 
-              alt="REMATCH" 
-              style={{ maxWidth: '640px', width: '80%', height: 'auto', filter: 'drop-shadow(0 0 30px rgba(34, 197, 94, 0.4))' }} 
-              onError={(e) => {
-                e.currentTarget.style.display = 'none'
-                document.getElementById('fallback-rematch-logo').style.display = 'flex'
-              }}
-            />
-
-            <div id="fallback-rematch-logo" style={{ display: 'none', alignItems: 'center', gap: '5px', fontSize: '5rem', fontWeight: '900', letterSpacing: '12px', color: '#fff', textShadow: '0 0 40px rgba(34, 197, 94, 0.6)' }}>
-              <span>RE</span>
-              <span style={{ color: '#22c55e', fontStyle: 'italic', transform: 'skewX(-15deg)', display: 'inline-block' }}>/</span>
-              <span>MATCH</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '6rem', fontWeight: '900', letterSpacing: '14px' }}>
+              <span style={{ color: '#ffffff' }}>RE</span>
+              <span style={{ color: '#22c55e', fontStyle: 'italic', transform: 'skewX(-18deg)', display: 'inline-block', textShadow: '0 0 50px rgba(34, 197, 94, 0.8)' }}>/</span>
+              <span style={{ color: '#ffffff' }}>MATCH</span>
             </div>
+            <p style={{ color: '#94a3b8', letterSpacing: '6px', fontSize: '1rem', marginTop: '10px', fontWeight: '800' }}>ARCADE FOOTBALL 2026</p>
           </div>
 
-          {/* Bottom Info Row */}
+          {/* Bottom Info Bar */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', zIndex: 10 }}>
-            <div style={{ maxWidth: '580px', color: '#94a3b8', fontSize: '0.9rem', lineHeight: '1.6', fontFamily: 'sans-serif', background: 'rgba(15, 23, 42, 0.6)', padding: '16px 20px', borderRadius: '8px', borderLeft: '3px solid #22c55e' }}>
+            <div style={{ maxWidth: '620px', color: '#94a3b8', fontSize: '0.9rem', lineHeight: '1.6', fontFamily: 'sans-serif', background: 'rgba(15, 23, 42, 0.75)', padding: '18px 24px', borderRadius: '10px', borderLeft: '4px solid #22c55e', backdropFilter: 'blur(10px)' }}>
               {PRO_TIPS[tipIndex]}
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', color: '#cbd5e1', fontSize: '0.95rem', fontWeight: '800' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', color: '#cbd5e1', fontSize: '0.95rem', fontWeight: '800' }}>
               <span>Connecting to server</span>
-              <div style={{ width: '28px', height: '28px', borderRadius: '50%', border: '3px solid #22c55e', borderTopColor: 'transparent', animation: 'spin 1s linear infinite' }} />
+              <div style={{ width: '30px', height: '30px', borderRadius: '50%', border: '3px solid #22c55e', borderTopColor: 'transparent', animation: 'spin 1s linear infinite' }} />
             </div>
           </div>
 
@@ -290,7 +288,7 @@ export function RematchGame({ onExit }) {
         <color attach="background" args={arenaStyle === 'desert' ? ['#fdf4ff'] : ['#030712']} />
         <fog attach="fog" args={arenaStyle === 'desert' ? ['#fae8ff', 40, 100] : ['#030712', 30, 95]} />
 
-        <ambientLight intensity={0.6} />
+        <ambientLight intensity={0.65} />
         <directionalLight 
           position={[15, 25, 10]} 
           intensity={1.8} 
@@ -312,7 +310,6 @@ export function RematchGame({ onExit }) {
             <Arena />
             <ShowcaseCamera />
 
-            {/* Persistent Physics Entities (Prevents Worker Unmount/Remount Race Condition) */}
             <Ball />
             <Player id="player1" />
             <Bot id="bot1" />
@@ -530,8 +527,12 @@ export function RematchGame({ onExit }) {
             zIndex: 10,
             pointerEvents: 'none'
           }}>
+            <span style={{ background: '#22c55e', color: '#000', fontSize: '0.7rem', fontWeight: '900', padding: '3px 8px', borderRadius: '4px' }}>
+              {half === 1 ? '1ST HALF' : '2ND HALF'}
+            </span>
+
             <span style={{ color: '#ffffff', fontSize: '1.2rem', fontWeight: '900', letterSpacing: '1px' }}>
-              {gameState === 'KICKOFF' ? '05:00' : formatTime(timer)}
+              {gameState === 'KICKOFF' ? (half === 1 ? '02:30' : '02:30') : formatTime(timer)}
             </span>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#090d16', padding: '6px 16px', borderRadius: '6px' }}>
@@ -581,7 +582,8 @@ export function RematchGame({ onExit }) {
 
           <MiniMapRadar />
 
-          {(gameState === 'KICKOFF' || gameState === 'GOAL_SCRIBED') && (
+          {/* Kickoff & Goal Alert Overlay */}
+          {(gameState === 'KICKOFF' || gameState === 'GOAL_SCORED') && (
             <div style={{
               position: 'absolute',
               inset: 0,
@@ -606,7 +608,27 @@ export function RematchGame({ onExit }) {
             </div>
           )}
 
-          {gameState === 'GAMEOVER' && (
+          {/* Half Time Overlay */}
+          {gameState === 'HALF_TIME' && (
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'rgba(2, 6, 23, 0.88)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexDirection: 'column',
+              zIndex: 140,
+              fontFamily: "'Orbitron', sans-serif"
+            }}>
+              <h1 style={{ fontSize: '4rem', fontWeight: '900', color: '#facc15', letterSpacing: '6px', margin: 0 }}>HALF TIME</h1>
+              <p style={{ color: '#cbd5e1', fontSize: '1.5rem', margin: '20px 0 0' }}>Current Score: RED {score.red} - {score.blue} BLUE</p>
+              <small style={{ color: '#94a3b8', marginTop: '10px' }}>Swapping pitch sides for 2nd Half...</small>
+            </div>
+          )}
+
+          {/* Full Time Match Over Overlay */}
+          {gameState === 'FULL_TIME' && (
             <div style={{
               position: 'absolute',
               inset: 0,
@@ -622,13 +644,13 @@ export function RematchGame({ onExit }) {
                 fontSize: '3.6rem',
                 fontWeight: '900',
                 letterSpacing: '6px',
-                color: score.red > score.blue ? '#ef4444' : '#0284c7',
+                color: score.red > score.blue ? '#ef4444' : score.blue > score.red ? '#0284c7' : '#facc15',
                 marginBottom: '10px'
               }}>
-                {score.red > score.blue ? 'RED VICTORY!' : 'BLUE VICTORY!'}
+                {score.red > score.blue ? 'RED VICTORY!' : score.blue > score.red ? 'BLUE VICTORY!' : 'DRAW MATCH!'}
               </h1>
               <p style={{ fontFamily: 'monospace', fontSize: '1.4rem', color: '#94a3b8', margin: '0 0 40px' }}>
-                Final Score: {score.red} - {score.blue}
+                Final Score: RED {score.red} - {score.blue} BLUE
               </p>
               
               <div style={{ display: 'flex', gap: '20px' }}>

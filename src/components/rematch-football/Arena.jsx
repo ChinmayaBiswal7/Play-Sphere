@@ -70,42 +70,45 @@ function StaticWall({ position, args, color }) {
       <meshPhysicalMaterial 
         color={color} 
         transparent 
-        opacity={0.2} 
+        opacity={0.18} 
         roughness={0.1} 
-        transmission={0.8} 
+        transmission={0.85} 
         thickness={1}
       />
     </mesh>
   )
 }
 
-/**
- * Palm Trees for Neon Palms Stadium
- */
-function PalmTree({ position }) {
+function FloodlightTower({ position }) {
   return (
     <group position={position}>
-      {/* Trunk */}
-      <mesh position={[0, 3.5, 0]} rotation={[0.08, 0, 0.05]}>
-        <cylinderGeometry args={[0.2, 0.38, 7, 12]} />
-        <meshStandardMaterial color="#78350f" roughness={0.9} />
+      {/* Tower Pole */}
+      <mesh position={[0, 7.5, 0]}>
+        <cylinderGeometry args={[0.22, 0.45, 15, 12]} />
+        <meshStandardMaterial color="#334155" metalness={0.8} roughness={0.3} />
       </mesh>
-      {/* Palm Fronds */}
-      <group position={[0, 6.8, 0]}>
-        {[0, 60, 120, 180, 240, 300].map((angle, i) => (
-          <mesh key={i} rotation={[0.4, (angle * Math.PI) / 180, 0]} position={[0, 0, 0]}>
-            <coneGeometry args={[1.1, 4.0, 4]} />
-            <meshStandardMaterial color="#16a34a" roughness={0.5} />
-          </mesh>
-        ))}
-      </group>
+      {/* Light Head Frame */}
+      <mesh position={[0, 15.2, 0]} rotation={[0.4, 0, 0]}>
+        <boxGeometry args={[3.2, 1.8, 0.4]} />
+        <meshStandardMaterial color="#0f172a" metalness={0.9} />
+      </mesh>
+      {/* Glowing Light Bulbs */}
+      <mesh position={[0, 15.2, 0.25]} rotation={[0.4, 0, 0]}>
+        <boxGeometry args={[3.0, 1.6, 0.1]} />
+        <meshBasicMaterial color="#ffffff" />
+      </mesh>
+      <spotLight 
+        position={[0, 15.5, 0.5]} 
+        target-position={[0, 0, 0]} 
+        intensity={2.2} 
+        angle={0.6} 
+        penumbra={0.5} 
+        color="#f8fafc" 
+      />
     </group>
   )
 }
 
-/**
- * LED Sponsor Board
- */
 function SponsorBoard({ position, rotation = [0, 0, 0], text = 'REMATCH' }) {
   const texture = useMemo(() => {
     const canvas = document.createElement('canvas')
@@ -115,7 +118,7 @@ function SponsorBoard({ position, rotation = [0, 0, 0], text = 'REMATCH' }) {
 
     ctx.fillStyle = '#0f172a'
     ctx.fillRect(0, 0, 256, 64)
-    ctx.strokeStyle = '#00d2ff'
+    ctx.strokeStyle = '#22c55e'
     ctx.lineWidth = 4
     ctx.strokeRect(4, 4, 248, 56)
 
@@ -168,7 +171,7 @@ export function Arena() {
         <meshStandardMaterial map={turfTexture} roughness={0.65} />
       </mesh>
 
-      {/* 2. Sleek Cyan Rink Barriers (Arcade Football Rink) */}
+      {/* 2. Sleek Cyan Rink Glass Barriers */}
       <StaticWall position={[-18, 2, 0]} args={[0.25, 4, 60]} color="#00d2ff" />
       <StaticWall position={[18, 2, 0]} args={[0.25, 4, 60]} color="#00d2ff" />
 
@@ -178,7 +181,7 @@ export function Arena() {
       <StaticWall position={[-11.5, 2, 30]} args={[13, 4, 0.2]} color="#0284c7" />
       <StaticWall position={[11.5, 2, 30]} args={[13, 4, 0.2]} color="#0284c7" />
 
-      {/* 3. Glowing Rematch Goal Nets */}
+      {/* 3. Glowing Goal Nets */}
       {/* Goal 1 (Opponent Goal Z = -30) */}
       <group position={[0, 0, -30]}>
         <mesh ref={redGoalBackRef}>
@@ -193,7 +196,7 @@ export function Arena() {
           <boxGeometry args={[0.1, 4, 2]} />
           <meshStandardMaterial color="#00f2fe" wireframe />
         </mesh>
-        {/* White Goal Posts */}
+        {/* Goal Posts */}
         <mesh position={[-5, 2, 0]}>
           <cylinderGeometry args={[0.12, 0.12, 4, 16]} />
           <meshStandardMaterial color="#ffffff" metalness={0.8} />
@@ -236,37 +239,16 @@ export function Arena() {
         </mesh>
       </group>
 
-      {/* 4. LED Sponsor Boards & Perimeter Props */}
-      {!isDesert ? (
-        <>
-          <SponsorBoard position={[-11.5, 0.6, -30]} text="SLOCLAP" />
-          <SponsorBoard position={[11.5, 0.6, -30]} text="REMATCH" />
-          <SponsorBoard position={[-11.5, 0.6, 30]} rotation={[0, Math.PI, 0]} text="PLAYSPHERE" />
-          <SponsorBoard position={[11.5, 0.6, 30]} rotation={[0, Math.PI, 0]} text="REMATCH 2026" />
+      {/* 4. Stadium Floodlights & LED Sponsor Boards */}
+      <FloodlightTower position={[-20, 0, -32]} />
+      <FloodlightTower position={[20, 0, -32]} />
+      <FloodlightTower position={[-20, 0, 32]} />
+      <FloodlightTower position={[20, 0, 32]} />
 
-          {/* Palm Trees along side perimeter */}
-          <PalmTree position={[-21, 0, -20]} />
-          <PalmTree position={[-21, 0, 0]} />
-          <PalmTree position={[-21, 0, 20]} />
-          <PalmTree position={[21, 0, -20]} />
-          <PalmTree position={[21, 0, 0]} />
-          <PalmTree position={[21, 0, 20]} />
-        </>
-      ) : (
-        <>
-          {/* Desert Pink Tree (Screenshot 3 Signature) */}
-          <group position={[21, 0, -10]}>
-            <mesh position={[0, 5, 0]}>
-              <cylinderGeometry args={[1.2, 2.2, 10, 12]} />
-              <meshStandardMaterial color="#701a75" roughness={0.8} />
-            </mesh>
-            <mesh position={[0, 11, 0]}>
-              <sphereGeometry args={[6, 16, 16]} />
-              <meshStandardMaterial color="#f472b6" roughness={0.5} emissive="#ec4899" emissiveIntensity={0.2} />
-            </mesh>
-          </group>
-        </>
-      )}
+      <SponsorBoard position={[-11.5, 0.6, -30]} text="SLOCLAP" />
+      <SponsorBoard position={[11.5, 0.6, -30]} text="REMATCH" />
+      <SponsorBoard position={[-11.5, 0.6, 30]} rotation={[0, Math.PI, 0]} text="PLAYSPHERE" />
+      <SponsorBoard position={[11.5, 0.6, 30]} rotation={[0, Math.PI, 0]} text="SEASON 0" />
     </group>
   )
 }
