@@ -8,12 +8,21 @@
   let selectedGameIndex = 0;
   const gamesMetadata = [
     {
-      id: 'cricket',
-      title: 'Cricket Pro 2026',
-      desc: 'Experience next-generation 3D physics-driven cricket gameplay. Take control of professional matches with timing-based batting, circular catch dials, throw QTEs, and slow-motion 3rd umpire referrals.',
+      id: 'lagori',
+      title: 'Lagori 7 Stones 3D',
+      desc: 'Traditional Indian 3D street game! Throw the tennis ball to knock down the 7-stone stack, run to pick up scattered stones, and rebuild the tower at the center pedestal while dodging defender throws!',
+      rating: '⭐ 5.0 Rating',
+      pill: 'ESRB: E',
+      dev: 'DeepMind India Arcade',
+      unlocked: true
+    },
+    {
+      id: 'rematch',
+      title: 'Rematch Football',
+      desc: 'Fast-paced 3D arcade soccer with zero rules! Experience physics-based ball bounce dynamics, dynamic goalkeeper diving, visual shot charging, sliding tackle dashes, and smart bot opponents.',
       rating: '⭐ 4.9 Rating',
       pill: 'ESRB: E',
-      dev: 'DeepMind Sports',
+      dev: 'DeepMind Arcade',
       unlocked: true
     },
     {
@@ -26,12 +35,12 @@
       unlocked: true
     },
     {
-      id: 'rematch',
-      title: 'Rematch Football',
-      desc: 'Fast-paced 3D arcade soccer with zero rules! Experience physics-based ball bounce dynamics, dynamic goalkeeper diving, visual shot charging, sliding tackle dashes, and smart bot opponents.',
+      id: 'cricket',
+      title: 'Cricket Pro 2026',
+      desc: 'Experience next-generation 3D physics-driven cricket gameplay. Take control of professional matches with timing-based batting, circular catch dials, throw QTEs, and slow-motion 3rd umpire referrals.',
       rating: '⭐ 4.9 Rating',
       pill: 'ESRB: E',
-      dev: 'DeepMind Arcade',
+      dev: 'DeepMind Sports',
       unlocked: true
     },
     {
@@ -239,11 +248,12 @@
         if (typeof window.launchCricketGame === 'function') {
           window.launchCricketGame();
         }
-      } else if (gameId === 'football' || gameId === 'rematch' || gameId === 'f1' || gameId === 'tennis' || gameId === 'wwe' || gameId === 'fps') {
+      } else if (gameId === 'football' || gameId === 'rematch' || gameId === 'lagori' || gameId === 'f1' || gameId === 'tennis' || gameId === 'wwe' || gameId === 'fps') {
         const code = roomCode || '';
         let url = `/f1/index.html?room=${code}`;
         if (gameId === 'football') url = `/football/index.html?room=${code}`;
-        else if (gameId === 'rematch') url = `/rematch/index.html?room=${code}`;
+        else if (gameId === 'rematch') url = `/rematch/index.html?game=rematch&room=${code}`;
+        else if (gameId === 'lagori') url = `/rematch/index.html?game=lagori&room=${code}`;
         else if (gameId === 'tennis') url = `/tennis/index.html?room=${code}`;
         else if (gameId === 'wwe') url = `/wwe/index.html?room=${code}`;
         else if (gameId === 'fps') url = `/fps/index.html?room=${code}`;
