@@ -11,12 +11,12 @@ function useKeyboard() {
   const [keys, setKeys] = useState({
     w: false, a: false, s: false, d: false,
     ArrowLeft: false, ArrowRight: false,
-    Shift: false, Space: false, KeyE: false, KeyQ: false, KeyR: false
+    Shift: false, Space: false, KeyE: false, KeyQ: false, KeyR: false, KeyC: false
   })
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'Space', 'KeyE', 'KeyQ', 'KeyR'].includes(e.code)) {
+      if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'Space', 'KeyE', 'KeyQ', 'KeyR', 'KeyC'].includes(e.code)) {
         setKeys(prev => ({
           ...prev,
           w: e.code === 'KeyW' || prev.w,
@@ -29,12 +29,13 @@ function useKeyboard() {
           Space: e.code === 'Space' || prev.Space,
           KeyE: e.code === 'KeyE' || prev.KeyE,
           KeyQ: e.code === 'KeyQ' || prev.KeyQ,
-          KeyR: e.code === 'KeyR' || prev.KeyR
+          KeyR: e.code === 'KeyR' || prev.KeyR,
+          KeyC: e.code === 'KeyC' || prev.KeyC
         }))
       }
     }
     const handleKeyUp = (e) => {
-      if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'Space', 'KeyE', 'KeyQ', 'KeyR'].includes(e.code)) {
+      if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'Space', 'KeyE', 'KeyQ', 'KeyR', 'KeyC'].includes(e.code)) {
         setKeys(prev => ({
           ...prev,
           w: e.code === 'KeyW' ? false : prev.w,
@@ -47,7 +48,8 @@ function useKeyboard() {
           Space: e.code === 'Space' ? false : prev.Space,
           KeyE: e.code === 'KeyE' ? false : prev.KeyE,
           KeyQ: e.code === 'KeyQ' ? false : prev.KeyQ,
-          KeyR: e.code === 'KeyR' ? false : prev.KeyR
+          KeyR: e.code === 'KeyR' ? false : prev.KeyR,
+          KeyC: e.code === 'KeyC' ? false : prev.KeyC
         }))
       }
     }
@@ -96,13 +98,16 @@ export function Player({ id = 'player1' }) {
   const setPossession = useFootballStore((state) => state.setPossession)
   const redGK = useFootballStore((state) => state.redGK)
   const characterPreset = useFootballStore((state) => state.characterPreset)
+  const cameraMode = useFootballStore((state) => state.cameraMode)
+  const toggleCameraMode = useFootballStore((state) => state.toggleCameraMode)
 
   const [shotCharge, setShotCharge] = useState(0)
   const isCharging = useRef(false)
   const isTackling = useRef(false)
   const mouseDownRef = useRef(false)
   
-  const cameraYaw = useRef(Math.PI)
+  // Initialize cameraYaw = 0 so camera starts directly BEHIND player's back facing opponent's goal North (-Z)!
+  const cameraYaw = useRef(0)
   const cameraPitch = useRef(0.22)
 
   const currentDir = useRef(new THREE.Vector3(0, 0, -1))
@@ -176,7 +181,8 @@ export function Player({ id = 'player1' }) {
       const spawnZ = kickoffTeam === 'red' ? 3.5 : 22.0
       api.position.set(0, 0.65, spawnZ)
       api.velocity.set(0, 0, 0)
-      cameraYaw.current = Math.PI
+      // Camera faces opponent's goal North (-Z) from behind player's back!
+      cameraYaw.current = 0
       cameraPitch.current = 0.22
     }
   }, [gameState, kickoffTeam, api])
@@ -190,23 +196,37 @@ export function Player({ id = 'player1' }) {
     if (keys.ArrowLeft) cameraYaw.current += 1.8 * dt
     if (keys.ArrowRight) cameraYaw.current -= 1.8 * dt
 
-    // ── REMATCH 3RD PERSON CAMERA RIG ──
+    // ── CAMERA RIG (FOLLOW VS AUTO_BALL MODE) ──
     const isSprinting = keys.Shift && stamina > 5
     const targetFov = isSprinting ? 72 : 62
     state.camera.fov = THREE.MathUtils.lerp(state.camera.fov, targetFov, 0.1)
     state.camera.updateProjectionMatrix()
 
-    const camDistance = 5.4
-    const camX = pos[0] + Math.sin(cameraYaw.current) * Math.cos(cameraPitch.current) * camDistance
-    const camY = pos[1] + Math.sin(cameraPitch.current) * camDistance + 2.4
-    const camZ = pos[2] + Math.cos(cameraYaw.current) * Math.cos(cameraPitch.current) * camDistance
+    if (cameraMode === 'AUTO_BALL') {
+      // Broadcast TV View tracking ball & action
+      const ball = window.footballBall
+      const bPos = ball ? safePos(ball) : [0, 0, 0]
+      
+      const midX = (pos[0] + bPos[0]) / 2
+      const midZ = (pos[2] + bPos[2]) / 2
 
-    state.camera.position.lerp(new THREE.Vector3(camX, camY, camZ), 0.22)
+      state.camera.position.lerp(new THREE.Vector3(midX + 22, 14, midZ + 12), 0.1)
+      state.camera.lookAt(midX, 1.0, midZ)
 
-    const lookTargetX = pos[0] - Math.sin(cameraYaw.current) * 8.0
-    const lookTargetY = pos[1] + 1.2
-    const lookTargetZ = pos[2] - Math.cos(cameraYaw.current) * 8.0
-    state.camera.lookAt(lookTargetX, lookTargetY, lookTargetZ)
+    } else {
+      // 3rd Person View directly behind player's back
+      const camDistance = 5.4
+      const camX = pos[0] + Math.sin(cameraYaw.current) * Math.cos(cameraPitch.current) * camDistance
+      const camY = pos[1] + Math.sin(cameraPitch.current) * camDistance + 2.4
+      const camZ = pos[2] + Math.cos(cameraYaw.current) * Math.cos(cameraPitch.current) * camDistance
+
+      state.camera.position.lerp(new THREE.Vector3(camX, camY, camZ), 0.22)
+
+      const lookTargetX = pos[0] - Math.sin(cameraYaw.current) * 8.0
+      const lookTargetY = pos[1] + 1.2
+      const lookTargetZ = pos[2] - Math.cos(cameraYaw.current) * 8.0
+      state.camera.lookAt(lookTargetX, lookTargetY, lookTargetZ)
+    }
 
     if (gameState !== 'PLAYING') return
 
@@ -312,10 +332,10 @@ export function Player({ id = 'player1' }) {
       setShotCharge(prev => Math.min(100, prev + 180 * dt))
     } else {
       if (isCharging.current) {
-        const power = Math.max(25, shotCharge)
-        const shotVelX = currentDir.current.x * (20 + (power / 100) * 28)
-        const shotVelY = 3.5 + (power / 100) * 8.0
-        const shotVelZ = currentDir.current.z * (20 + (power / 100) * 28)
+        const power = Math.max(30, shotCharge)
+        const shotVelX = currentDir.current.x * (22 + (power / 100) * 30)
+        const shotVelY = 4.0 + (power / 100) * 9.0
+        const shotVelZ = currentDir.current.z * (22 + (power / 100) * 30)
 
         if (ball) {
           ball.api.velocity.set(shotVelX, shotVelY, shotVelZ)

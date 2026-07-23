@@ -4,7 +4,7 @@ export const useFootballStore = create((set) => ({
   score: { red: 0, blue: 0 },
   half: 1, // 1 for 1st Half (0-45 mins), 2 for 2nd Half (45-90 mins)
   gameState: 'BOOT', // 'BOOT' | 'MENU' | 'LOADING_MATCH' | 'KICKOFF' | 'PLAYING' | 'GOAL_CELEBRATION' | 'GOAL_REPLAY' | 'HALF_TIME' | 'FULL_TIME'
-  matchMinute: 0, // 0 to 90 minutes
+  matchMinute: 0,
   stamina: 100,
   ballPossession: null,
   goalAlert: '',
@@ -16,6 +16,9 @@ export const useFootballStore = create((set) => ({
   // Celebration cutscene state
   celebrationType: 'slide', // 'slide' | 'pole' | 'jump'
   
+  // Camera Mode: 'FOLLOW' (3rd person behind player) | 'AUTO_BALL' (Broadcast camera tracking ball)
+  cameraMode: 'FOLLOW',
+  
   // Replay frame buffer
   replayBuffer: [],
   
@@ -25,7 +28,7 @@ export const useFootballStore = create((set) => ({
   activeMenuTab: 'PLAY',
 
   // ── MULTIPLAYER STATE ──
-  matchMode: 'SINGLE_PLAYER', // 'SINGLE_PLAYER' | 'FRIEND_ROOM' | 'ONLINE_MATCH'
+  matchMode: 'SINGLE_PLAYER',
   multiplayerFormat: '1v1',
   roomCode: '',
   isHost: false,
@@ -40,6 +43,10 @@ export const useFootballStore = create((set) => ({
   setIsHost: (isHost) => set({ isHost }),
   setMatchmakingStatus: (status) => set({ matchmakingStatus: status }),
   setConnectedPlayers: (players) => set({ connectedPlayers: players }),
+  
+  toggleCameraMode: () => set((state) => ({
+    cameraMode: state.cameraMode === 'FOLLOW' ? 'AUTO_BALL' : 'FOLLOW'
+  })),
 
   pushReplayFrame: (frameData) => set((state) => {
     const newBuf = [...state.replayBuffer, frameData]
