@@ -1,10 +1,10 @@
 import React, { useMemo } from 'react'
-import { usePlane, useBox } from '@react-three/cannon'
+import { useBox } from '@react-three/cannon'
 import { useFootballStore } from './footballStore'
 import * as THREE from 'three'
 
 /**
- * Creates procedural grass turf texture for huge 60x100 pitch
+ * Creates procedural grass turf texture for colossal 100x160 pitch
  */
 function createStripedTurfTexture(isDesert = false) {
   const canvas = document.createElement('canvas')
@@ -13,15 +13,15 @@ function createStripedTurfTexture(isDesert = false) {
   const ctx = canvas.getContext('2d')
 
   if (isDesert) {
-    const stripeCount = 28
+    const stripeCount = 32
     const stripeHeight = 2048 / stripeCount
     for (let i = 0; i < stripeCount; i++) {
       ctx.fillStyle = i % 2 === 0 ? '#eab308' : '#d97706'
       ctx.fillRect(0, i * stripeHeight, 1024, stripeHeight)
     }
   } else {
-    // Vibrant Soccer Turf
-    const stripeCount = 32
+    // Vibrant Pro Soccer Turf
+    const stripeCount = 40
     const stripeHeight = 2048 / stripeCount
     for (let i = 0; i < stripeCount; i++) {
       ctx.fillStyle = i % 2 === 0 ? '#16a34a' : '#15803d'
@@ -32,22 +32,22 @@ function createStripedTurfTexture(isDesert = false) {
   // Pitch Field Boundary Lines
   ctx.strokeStyle = '#ffffff'
   ctx.lineWidth = 14
-  ctx.strokeRect(40, 40, 944, 1968)
+  ctx.strokeRect(30, 30, 964, 1988)
 
   // Halfway line
   ctx.beginPath()
-  ctx.moveTo(40, 1024)
-  ctx.lineTo(984, 1024)
+  ctx.moveTo(30, 1024)
+  ctx.lineTo(994, 1024)
   ctx.stroke()
 
   // Center Circle
   ctx.beginPath()
-  ctx.arc(512, 1024, 180, 0, Math.PI * 2)
+  ctx.arc(512, 1024, 220, 0, Math.PI * 2)
   ctx.stroke()
 
   // Goal Penalty Boxes
-  ctx.strokeRect(262, 40, 500, 320)
-  ctx.strokeRect(262, 1688, 500, 320)
+  ctx.strokeRect(212, 30, 600, 400)
+  ctx.strokeRect(212, 1618, 600, 400)
 
   const texture = new THREE.CanvasTexture(canvas)
   texture.wrapS = THREE.ClampToEdgeWrapping
@@ -60,7 +60,7 @@ function StaticWall({ position, args, color }) {
     type: 'Static',
     position,
     args,
-    restitution: 0.72,
+    restitution: 0.75,
     friction: 0.1
   }))
 
@@ -70,41 +70,41 @@ function StaticWall({ position, args, color }) {
       <meshPhysicalMaterial 
         color={color} 
         transparent 
-        opacity={0.16} 
+        opacity={0.18} 
         roughness={0.1} 
         transmission={0.85} 
-        thickness={1}
+        thickness={1.5}
       />
     </mesh>
   )
 }
 
 /**
- * Colossal Stadium Floodlight Tower
+ * Colossal $50\text{m}$ High Stadium Light Tower
  */
 function GiantFloodlightTower({ position }) {
   return (
     <group position={position}>
       {/* Tower Support Shaft */}
-      <mesh position={[0, 15, 0]}>
-        <cylinderGeometry args={[0.4, 0.9, 30, 14]} />
+      <mesh position={[0, 24, 0]}>
+        <cylinderGeometry args={[0.6, 1.4, 48, 16]} />
         <meshStandardMaterial color="#1e293b" metalness={0.85} roughness={0.2} />
       </mesh>
       {/* Light Head Frame */}
-      <mesh position={[0, 30.5, 0]} rotation={[0.45, 0, 0]}>
-        <boxGeometry args={[6.5, 3.2, 0.6]} />
+      <mesh position={[0, 49.5, 0]} rotation={[0.45, 0, 0]}>
+        <boxGeometry args={[12, 5.5, 1.2]} />
         <meshStandardMaterial color="#0f172a" metalness={0.9} />
       </mesh>
       {/* Glowing Light Panel */}
-      <mesh position={[0, 30.5, 0.35]} rotation={[0.45, 0, 0]}>
-        <boxGeometry args={[6.2, 2.9, 0.1]} />
+      <mesh position={[0, 49.5, 0.65]} rotation={[0.45, 0, 0]}>
+        <boxGeometry args={[11.5, 5.0, 0.2]} />
         <meshBasicMaterial color="#ffffff" />
       </mesh>
       <spotLight 
-        position={[0, 31, 1]} 
+        position={[0, 50, 2]} 
         target-position={[0, 0, 0]} 
-        intensity={3.5} 
-        angle={0.7} 
+        intensity={6.0} 
+        angle={0.85} 
         penumbra={0.4} 
         color="#f8fafc" 
       />
@@ -113,27 +113,41 @@ function GiantFloodlightTower({ position }) {
 }
 
 /**
- * Colossal Grandstand Crowd Seating Tier (Matching Screenshot 1 & 2)
+ * Colossal 3-Tiered Stadium Grandstand Structure
  */
-function GrandstandTier({ position, rotation = [0, 0, 0] }) {
+function ColossalGrandstand({ position, rotation = [0, 0, 0], width = 140 }) {
   return (
     <group position={position} rotation={rotation}>
-      {/* Multi-tiered seating slope */}
-      <mesh position={[0, 10, 0]} rotation={[-0.4, 0, 0]}>
-        <boxGeometry args={[80, 24, 2]} />
+      {/* Lower Tier Seating */}
+      <mesh position={[0, 8, 0]} rotation={[-0.35, 0, 0]}>
+        <boxGeometry args={[width, 24, 2]} />
         <meshStandardMaterial color="#0284c7" roughness={0.6} />
       </mesh>
+      <mesh position={[0, 8, 0.9]} rotation={[-0.35, 0, 0]}>
+        <boxGeometry args={[width - 2, 22, 0.2]} />
+        <meshStandardMaterial color="#ef4444" roughness={0.7} />
+      </mesh>
 
-      {/* Red Crowd Seating Texture Strip */}
-      <mesh position={[0, 10, 0.8]} rotation={[-0.4, 0, 0]}>
-        <boxGeometry args={[78, 22, 0.2]} />
+      {/* Middle Tier Promenade & Executive Boxes */}
+      <mesh position={[0, 18, -6]}>
+        <boxGeometry args={[width, 6, 8]} />
+        <meshStandardMaterial color="#0f172a" metalness={0.8} />
+      </mesh>
+
+      {/* Upper Tier Seating */}
+      <mesh position={[0, 32, -16]} rotation={[-0.45, 0, 0]}>
+        <boxGeometry args={[width, 32, 2]} />
+        <meshStandardMaterial color="#0369a1" roughness={0.6} />
+      </mesh>
+      <mesh position={[0, 32, -15.1]} rotation={[-0.45, 0, 0]}>
+        <boxGeometry args={[width - 2, 30, 0.2]} />
         <meshStandardMaterial color="#dc2626" roughness={0.7} />
       </mesh>
 
-      {/* Overarching Blue Stadium Canopy Roof (Screenshot 2 Architecture) */}
-      <mesh position={[0, 28, -6]} rotation={[0.2, 0, 0]}>
-        <cylinderGeometry args={[42, 45, 12, 16, 1, true, 0, Math.PI]} />
-        <meshStandardMaterial color="#0284c7" metalness={0.7} roughness={0.2} side={THREE.DoubleSide} />
+      {/* Massive Arched Stadium Roof Canopy */}
+      <mesh position={[0, 52, -18]} rotation={[0.15, 0, 0]}>
+        <cylinderGeometry args={[width / 2 + 10, width / 2 + 15, 20, 24, 1, true, 0, Math.PI]} />
+        <meshStandardMaterial color="#0284c7" metalness={0.75} roughness={0.25} side={THREE.DoubleSide} />
       </mesh>
     </group>
   )
@@ -163,7 +177,7 @@ function SponsorBoard({ position, rotation = [0, 0, 0], text = 'REMATCH' }) {
 
   return (
     <mesh position={position} rotation={rotation}>
-      <boxGeometry args={[18, 2.2, 0.3]} />
+      <boxGeometry args={[24, 3.0, 0.4]} />
       <meshStandardMaterial map={texture} roughness={0.2} />
     </mesh>
   )
@@ -173,119 +187,116 @@ export function Arena() {
   const arenaStyle = useFootballStore((state) => state.arenaStyle)
   const isDesert = arenaStyle === 'desert'
 
-  // Pitch Ground Plane (Expanded to 60x100 Units!)
-  const [floorRef] = usePlane(() => ({
-    rotation: [-Math.PI / 2, 0, 0],
-    position: [0, 0, 0],
+  // THICK GROUND BOX COLLIDER (Prevents Ball Falling Through Floor Forever!)
+  const [floorRef] = useBox(() => ({
     type: 'Static',
-    restitution: 0.45,
+    position: [0, -2, 0],
+    args: [160, 4, 260],
+    restitution: 0.5,
     friction: 0.6
   }))
 
   const turfTexture = useMemo(() => createStripedTurfTexture(isDesert), [isDesert])
 
-  // Goal Post Colliders (Width 14, Height 5, Depth 3.5)
-  const [redGoalBackRef] = useBox(() => ({ type: 'Static', position: [0, 2.5, -51.5], args: [14, 5, 0.2] }))
-  const [redGoalLeftRef] = useBox(() => ({ type: 'Static', position: [-7, 2.5, -50.2], args: [0.2, 5, 3] }))
-  const [redGoalRightRef] = useBox(() => ({ type: 'Static', position: [7, 2.5, -50.2], args: [0.2, 5, 3] }))
+  // Goal Post Colliders (Width 18, Height 6, Depth 4 at Z = ±80)
+  const [redGoalBackRef] = useBox(() => ({ type: 'Static', position: [0, 3, -82.0], args: [18, 6, 0.2] }))
+  const [redGoalLeftRef] = useBox(() => ({ type: 'Static', position: [-9, 3, -80.2], args: [0.2, 6, 4] }))
+  const [redGoalRightRef] = useBox(() => ({ type: 'Static', position: [9, 3, -80.2], args: [0.2, 6, 4] }))
 
-  const [blueGoalBackRef] = useBox(() => ({ type: 'Static', position: [0, 2.5, 51.5], args: [14, 5, 0.2] }))
-  const [blueGoalLeftRef] = useBox(() => ({ type: 'Static', position: [-7, 2.5, 50.2], args: [0.2, 5, 3] }))
-  const [blueGoalRightRef] = useBox(() => ({ type: 'Static', position: [7, 2.5, 50.2], args: [0.2, 5, 3] }))
+  const [blueGoalBackRef] = useBox(() => ({ type: 'Static', position: [0, 3, 82.0], args: [18, 6, 0.2] }))
+  const [blueGoalLeftRef] = useBox(() => ({ type: 'Static', position: [-9, 3, 80.2], args: [0.2, 6, 4] }))
+  const [blueGoalRightRef] = useBox(() => ({ type: 'Static', position: [9, 3, 80.2], args: [0.2, 6, 4] }))
 
   return (
     <group>
-      {/* 1. Ground Pitch Plane (60 x 100 units) */}
-      <mesh ref={floorRef} receiveShadow>
-        <planeGeometry args={[60, 100]} />
+      {/* 1. Thick Ground Box Physics (100 x 160 units top surface) */}
+      <mesh ref={floorRef} receiveShadow position={[0, -2, 0]}>
+        <boxGeometry args={[160, 4, 260]} />
         <meshStandardMaterial map={turfTexture} roughness={0.65} />
       </mesh>
 
-      {/* 2. Sleek Cyan Rink Glass Barriers (Width 60, Length 100) */}
-      <StaticWall position={[-30, 3, 0]} args={[0.3, 6, 100]} color="#00d2ff" />
-      <StaticWall position={[30, 3, 0]} args={[0.3, 6, 100]} color="#00d2ff" />
+      {/* 2. Glass Rink Side Barriers (Width 100, Length 160) */}
+      <StaticWall position={[-50, 4, 0]} args={[0.4, 8, 160]} color="#00d2ff" />
+      <StaticWall position={[50, 4, 0]} args={[0.4, 8, 160]} color="#00d2ff" />
 
       {/* End Glass Barriers */}
-      <StaticWall position={[-21, 3, -50]} args={[18, 6, 0.3]} color="#0284c7" />
-      <StaticWall position={[21, 3, -50]} args={[18, 6, 0.3]} color="#0284c7" />
-      <StaticWall position={[-21, 3, 50]} args={[18, 6, 0.3]} color="#0284c7" />
-      <StaticWall position={[21, 3, 50]} args={[18, 6, 0.3]} color="#0284c7" />
+      <StaticWall position={[-34, 4, -80]} args={[32, 8, 0.4]} color="#0284c7" />
+      <StaticWall position={[34, 4, -80]} args={[32, 8, 0.4]} color="#0284c7" />
+      <StaticWall position={[-34, 4, 80]} args={[32, 8, 0.4]} color="#0284c7" />
+      <StaticWall position={[34, 4, 80]} args={[32, 8, 0.4]} color="#0284c7" />
 
-      {/* 3. Glowing Goal Nets */}
-      {/* Goal 1 (Opponent Goal Z = -50) */}
-      <group position={[0, 0, -50]}>
+      {/* 3. Glowing Goal Nets (Z = ±80) */}
+      <group position={[0, 0, -80]}>
         <mesh ref={redGoalBackRef}>
-          <boxGeometry args={[14, 5, 0.1]} />
+          <boxGeometry args={[18, 6, 0.1]} />
           <meshStandardMaterial color="#00f2fe" wireframe />
         </mesh>
         <mesh ref={redGoalLeftRef}>
-          <boxGeometry args={[0.1, 5, 3]} />
+          <boxGeometry args={[0.1, 6, 4]} />
           <meshStandardMaterial color="#00f2fe" wireframe />
         </mesh>
         <mesh ref={redGoalRightRef}>
-          <boxGeometry args={[0.1, 5, 3]} />
+          <boxGeometry args={[0.1, 6, 4]} />
           <meshStandardMaterial color="#00f2fe" wireframe />
         </mesh>
-        {/* White Goal Posts */}
-        <mesh position={[-7, 2.5, 0]}>
-          <cylinderGeometry args={[0.16, 0.16, 5, 16]} />
-          <meshStandardMaterial color="#ffffff" metalness={0.8} />
+        <mesh position={[-9, 3, 0]}>
+          <cylinderGeometry args={[0.2, 0.2, 6, 16]} />
+          <meshStandardMaterial color="#ffffff" metalness={0.85} />
         </mesh>
-        <mesh position={[7, 2.5, 0]}>
-          <cylinderGeometry args={[0.16, 0.16, 5, 16]} />
-          <meshStandardMaterial color="#ffffff" metalness={0.8} />
+        <mesh position={[9, 3, 0]}>
+          <cylinderGeometry args={[0.2, 0.2, 6, 16]} />
+          <meshStandardMaterial color="#ffffff" metalness={0.85} />
         </mesh>
-        <mesh position={[0, 5, 0]} rotation={[0, 0, Math.PI / 2]}>
-          <cylinderGeometry args={[0.16, 0.16, 14.2, 16]} />
-          <meshStandardMaterial color="#ffffff" metalness={0.8} />
+        <mesh position={[0, 6, 0]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.2, 0.2, 18.2, 16]} />
+          <meshStandardMaterial color="#ffffff" metalness={0.85} />
         </mesh>
       </group>
 
-      {/* Goal 2 (User Goal Z = 50) */}
-      <group position={[0, 0, 50]}>
+      <group position={[0, 0, 80]}>
         <mesh ref={blueGoalBackRef}>
-          <boxGeometry args={[14, 5, 0.1]} />
+          <boxGeometry args={[18, 6, 0.1]} />
           <meshStandardMaterial color="#00f2fe" wireframe />
         </mesh>
         <mesh ref={blueGoalLeftRef}>
-          <boxGeometry args={[0.1, 5, 3]} />
+          <boxGeometry args={[0.1, 6, 4]} />
           <meshStandardMaterial color="#00f2fe" wireframe />
         </mesh>
         <mesh ref={blueGoalRightRef}>
-          <boxGeometry args={[0.1, 5, 3]} />
+          <boxGeometry args={[0.1, 6, 4]} />
           <meshStandardMaterial color="#00f2fe" wireframe />
         </mesh>
-        <mesh position={[-7, 2.5, 0]}>
-          <cylinderGeometry args={[0.16, 0.16, 5, 16]} />
-          <meshStandardMaterial color="#ffffff" metalness={0.8} />
+        <mesh position={[-9, 3, 0]}>
+          <cylinderGeometry args={[0.2, 0.2, 6, 16]} />
+          <meshStandardMaterial color="#ffffff" metalness={0.85} />
         </mesh>
-        <mesh position={[7, 2.5, 0]}>
-          <cylinderGeometry args={[0.16, 0.16, 5, 16]} />
-          <meshStandardMaterial color="#ffffff" metalness={0.8} />
+        <mesh position={[9, 3, 0]}>
+          <cylinderGeometry args={[0.2, 0.2, 6, 16]} />
+          <meshStandardMaterial color="#ffffff" metalness={0.85} />
         </mesh>
-        <mesh position={[0, 5, 0]} rotation={[0, 0, Math.PI / 2]}>
-          <cylinderGeometry args={[0.16, 0.16, 14.2, 16]} />
-          <meshStandardMaterial color="#ffffff" metalness={0.8} />
+        <mesh position={[0, 6, 0]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.2, 0.2, 18.2, 16]} />
+          <meshStandardMaterial color="#ffffff" metalness={0.85} />
         </mesh>
       </group>
 
-      {/* 4. Colossal Grandstands & Stadium Architecture (Matching Screenshots 1 & 2) */}
-      <GrandstandTier position={[-38, 0, 0]} rotation={[0, Math.PI / 2, 0]} />
-      <GrandstandTier position={[38, 0, 0]} rotation={[0, -Math.PI / 2, 0]} />
-      <GrandstandTier position={[0, 0, -58]} rotation={[0, 0, 0]} />
-      <GrandstandTier position={[0, 0, 58]} rotation={[0, Math.PI, 0]} />
+      {/* 4. Colossal Multi-Tier Stadium Arena Structure */}
+      <ColossalGrandstand position={[-65, 0, 0]} rotation={[0, Math.PI / 2, 0]} width={180} />
+      <ColossalGrandstand position={[65, 0, 0]} rotation={[0, -Math.PI / 2, 0]} width={180} />
+      <ColossalGrandstand position={[0, 0, -95]} rotation={[0, 0, 0]} width={130} />
+      <ColossalGrandstand position={[0, 0, 95]} rotation={[0, Math.PI, 0]} width={130} />
 
-      {/* Giant Floodlight Towers */}
-      <GiantFloodlightTower position={[-34, 0, -52]} />
-      <GiantFloodlightTower position={[34, 0, -52]} />
-      <GiantFloodlightTower position={[-34, 0, 52]} />
-      <GiantFloodlightTower position={[34, 0, 52]} />
+      {/* 50m High Floodlight Towers */}
+      <GiantFloodlightTower position={[-58, 0, -88]} />
+      <GiantFloodlightTower position={[58, 0, -88]} />
+      <GiantFloodlightTower position={[-58, 0, 88]} />
+      <GiantFloodlightTower position={[58, 0, 88]} />
 
       {/* Oversized LED Sponsor Boards */}
-      <SponsorBoard position={[-20, 1.2, -50]} text="NOVA" />
-      <SponsorBoard position={[20, 1.2, -50]} text="REMATCH" />
-      <SponsorBoard position={[-20, 1.2, 50]} rotation={[0, Math.PI, 0]} text="PLAYSPHERE" />
-      <SponsorBoard position={[20, 1.2, 50]} rotation={[0, Math.PI, 0]} text="SLOCLAP" />
+      <SponsorBoard position={[-32, 1.5, -80]} text="NOVA" />
+      <SponsorBoard position={[32, 1.5, -80]} text="REMATCH" />
+      <SponsorBoard position={[-32, 1.5, 80]} rotation={[0, Math.PI, 0]} text="PLAYSPHERE" />
+      <SponsorBoard position={[32, 1.5, 80]} rotation={[0, Math.PI, 0]} text="SLOCLAP" />
     </group>
   )
 }

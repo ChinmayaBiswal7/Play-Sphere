@@ -10,7 +10,7 @@ function safePos(ref) {
   if (ref && ref.position && Array.isArray(ref.position.current)) {
     return ref.position.current
   }
-  return [0, 1.2, -12]
+  return [0, 0.65, -25]
 }
 
 function safeVel(ref) {
@@ -23,7 +23,7 @@ function safeVel(ref) {
 export function Bot({ id = 'bot1' }) {
   const [ref, api] = useSphere(() => ({
     mass: 72,
-    position: [0, 1.2, -12],
+    position: [0, 0.65, -25],
     args: [0.62],
     fixedRotation: true,
     linearDamping: 0.1
@@ -39,12 +39,12 @@ export function Bot({ id = 'bot1' }) {
   const isDiving = useRef(false)
   const diveTime = useRef(0)
 
-  const botPos = useRef([0, 1.2, -12])
+  const botPos = useRef([0, 0.65, -25])
   const botVel = useRef([0, 0, 0])
   const currentDir = useRef(new THREE.Vector3(0, 0, 1))
 
   useEffect(() => {
-    const unsubPos = api.position.subscribe(v => (botPos.current = v || [0, 1.2, -12]))
+    const unsubPos = api.position.subscribe(v => (botPos.current = v || [0, 0.65, -25]))
     const unsubVel = api.velocity.subscribe(v => (botVel.current = v || [0, 0, 0]))
 
     window.footballBot = {
@@ -62,11 +62,11 @@ export function Bot({ id = 'bot1' }) {
 
   useEffect(() => {
     if (gameState === 'MENU') {
-      api.position.set(0, 1.2, -50)
+      api.position.set(0, 0.65, -50)
       api.velocity.set(0, 0, 0)
     } else if (gameState === 'KICKOFF') {
-      const spawnZ = kickoffTeam === 'blue' ? -1.2 : -8.0
-      api.position.set(0, 1.2, spawnZ)
+      const spawnZ = kickoffTeam === 'blue' ? -4.0 : -25.0
+      api.position.set(0, 0.65, spawnZ)
       api.velocity.set(0, 0, 0)
     }
   }, [gameState, kickoffTeam, api])
@@ -92,28 +92,28 @@ export function Bot({ id = 'bot1' }) {
       return
     }
 
-    // Goalkeeper AI Behavior
+    // Goalkeeper AI Behavior (Patrols Z = -78.0)
     if (isGK) {
-      const targetGKX = THREE.MathUtils.clamp(bPos[0], -4.5, 4.5)
-      const targetGKZ = -29.0
+      const targetGKX = THREE.MathUtils.clamp(bPos[0], -6.5, 6.5)
+      const targetGKZ = -78.0
       
       const dx = targetGKX - pos[0]
       const dz = targetGKZ - pos[2]
       const distToGKPos = Math.hypot(dx, dz)
 
       if (distToGKPos > 0.3) {
-        api.velocity.set(Math.sign(dx) * 7.5, vel[1], Math.sign(dz) * 7.5)
+        api.velocity.set(Math.sign(dx) * 9.5, vel[1], Math.sign(dz) * 9.5)
         currentDir.current.set(Math.sign(dx), 0, Math.sign(dz)).normalize()
       } else {
         api.velocity.set(0, vel[1], 0)
       }
 
-      if (bPos[2] < -25 && Math.abs(bPos[0]) < 5.5 && diveCooldown.current <= 0) {
+      if (bPos[2] < -70 && Math.abs(bPos[0]) < 8.5 && diveCooldown.current <= 0) {
         isDiving.current = true
         diveTime.current = 0.4
         diveCooldown.current = 2.5
         const diveDirection = Math.sign(bPos[0] - pos[0]) || (Math.random() > 0.5 ? 1 : -1)
-        api.velocity.set(diveDirection * 15, 5.5, 5.0)
+        api.velocity.set(diveDirection * 18, 6.5, 6.0)
       }
       return
     }
@@ -121,36 +121,36 @@ export function Bot({ id = 'bot1' }) {
     // Striker AI Behavior
     let targetX = 0
     let targetZ = 0
-    let speed = 7.5
+    let speed = 9.5
 
     const hasPossession = ballPossession === id
 
     if (hasPossession) {
       targetX = 0
-      targetZ = 30
-      speed = 8.5
+      targetZ = 75
+      speed = 11.0
 
-      if (pos[2] > 12) {
+      if (pos[2] > 35) {
         strikeBall(85)
       }
     } else {
-      const pPos = player ? safePos(player) : [0, 1.2, 12]
+      const pPos = player ? safePos(player) : [0, 0.65, 25]
       const playerDistToBall = Math.hypot(bPos[0] - pPos[0], bPos[2] - pPos[2])
 
-      if (bPos[2] < 6 || distToBall < playerDistToBall) {
+      if (bPos[2] < 15 || distToBall < playerDistToBall) {
         targetX = bPos[0]
         targetZ = bPos[2]
       } else {
         targetX = pPos[0] * 0.7
-        targetZ = pPos[2] - 5.0
+        targetZ = pPos[2] - 8.0
       }
 
-      if (ballPossession === 'player1' && distToBall < 1.6 && Math.random() < 0.25) {
+      if (ballPossession === 'player1' && distToBall < 1.8 && Math.random() < 0.25) {
         isDiving.current = true
         diveTime.current = 0.28
         const dashDirX = Math.sign(bPos[0] - pos[0])
         const dashDirZ = Math.sign(bPos[2] - pos[2])
-        api.velocity.set(dashDirX * 18, vel[1], dashDirZ * 18)
+        api.velocity.set(dashDirX * 22, vel[1], dashDirZ * 22)
         return
       }
     }
@@ -168,13 +168,13 @@ export function Bot({ id = 'bot1' }) {
       api.velocity.set(0, vel[1], 0)
     }
 
-    if (distToBall < 1.4 && !hasPossession && ballPossession !== 'player1') {
+    if (distToBall < 1.5 && !hasPossession && ballPossession !== 'player1') {
       setPossession(id)
     }
 
     if (hasPossession) {
       const targetX = pos[0]
-      const targetZ = pos[2] + 0.8
+      const targetZ = pos[2] + 1.0
       
       const dx = targetX - bPos[0]
       const dz = targetZ - bPos[2]
@@ -185,7 +185,7 @@ export function Bot({ id = 'bot1' }) {
         vel[2] + dz * 9
       )
 
-      if (distToBall > 1.5) {
+      if (distToBall > 1.6) {
         setPossession(null)
       }
     }
@@ -199,16 +199,16 @@ export function Bot({ id = 'bot1' }) {
     const bPos = safePos(ball)
     const dist = Math.hypot(bPos[0] - pos[0], bPos[2] - pos[2])
 
-    if (dist < 1.65) {
+    if (dist < 1.8) {
       const targetGoalX = 0
-      const targetGoalZ = 30.0
+      const targetGoalZ = 80.0
       
       const dirX = targetGoalX - bPos[0]
       const dirZ = targetGoalZ - bPos[2]
       const len = Math.hypot(dirX, dirZ)
 
-      const speedVal = 15 + (powerPercent / 100) * 18
-      ball.api.velocity.set((dirX / len) * speedVal, 3.4, (dirZ / len) * speedVal)
+      const speedVal = 22 + (powerPercent / 100) * 22
+      ball.api.velocity.set((dirX / len) * speedVal, 4.2, (dirZ / len) * speedVal)
       setPossession(null)
     }
   }

@@ -28,9 +28,9 @@ function createSoccerBallTexture() {
 
 export function Ball() {
   const [ref, api] = useSphere(() => ({
-    mass: 1.3,
-    position: [0, -50, 0], // Spawn hidden underground for MENU
-    args: [0.55],
+    mass: 1.4,
+    position: [0, -50, 0],
+    args: [0.65],
     linearDamping: 0.15,
     angularDamping: 0.22,
     restitution: 0.75
@@ -59,14 +59,14 @@ export function Ball() {
     }
   }, [api])
 
-  // Move ball underground in MENU mode, and reset to center pitch in KICKOFF
+  // Move ball underground in MENU mode, and spawn cleanly at [0, 1.2, 0] in KICKOFF
   useEffect(() => {
     if (gameState === 'MENU' || gameState === 'BOOT') {
       api.position.set(0, -50, 0)
       api.velocity.set(0, 0, 0)
       api.angularVelocity.set(0, 0, 0)
     } else if (gameState === 'KICKOFF') {
-      api.position.set(0, 2.5, 0)
+      api.position.set(0, 1.2, 0)
       api.velocity.set(0, 0, 0)
       api.angularVelocity.set(0, 0, 0)
     }
@@ -82,22 +82,27 @@ export function Ball() {
         meshRef.current.rotation.x += vz * 0.05
         meshRef.current.rotation.z -= vx * 0.05
       }
+
+      // Safety check: Reset ball if it somehow clips below ground
+      if (ballPos.current[1] < -5) {
+        api.position.set(0, 1.2, 0)
+        api.velocity.set(0, 0, 0)
+      }
     }
   })
 
-  // Hide ball visually during MENU state
   if (gameState === 'MENU' || gameState === 'BOOT') return null
 
   return (
     <group ref={ref}>
       <group ref={meshRef}>
         <mesh castShadow receiveShadow>
-          <sphereGeometry args={[0.55, 24, 24]} />
+          <sphereGeometry args={[0.65, 24, 24]} />
           <meshStandardMaterial map={texture} roughness={0.25} metalness={0.1} />
         </mesh>
 
         <mesh>
-          <torusGeometry args={[0.56, 0.025, 8, 32]} />
+          <torusGeometry args={[0.66, 0.025, 8, 32]} />
           <meshBasicMaterial color="#00f2fe" />
         </mesh>
       </group>
