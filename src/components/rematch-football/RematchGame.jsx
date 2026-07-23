@@ -86,7 +86,6 @@ function CinematicReplayCamera() {
       const scorerRef = lastScorer === 'red' ? window.footballPlayer : window.footballBot
       const scorerPos = scorerRef && Array.isArray(scorerRef.position.current) ? scorerRef.position.current : [0, 0.65, 0]
 
-      // Move scorer forward along celebration path
       if (scorerRef && scorerRef.api) {
         const celSpeedX = Math.sin(animAngle.current * 0.5) * 4.0
         const celSpeedZ = lastScorer === 'red' ? -6.0 : 6.0
@@ -106,7 +105,6 @@ function CinematicReplayCamera() {
         const frame = replayBuffer[replayFrameIdx.current]
 
         if (frame) {
-          // Playback positions on 3D meshes for clean action replay!
           if (frame.bPos && window.footballBall && window.footballBall.api) {
             window.footballBall.api.position.set(frame.bPos[0], frame.bPos[1], frame.bPos[2])
             window.footballBall.api.velocity.set(0, 0, 0)
@@ -237,7 +235,7 @@ export function RematchGame({ onExit }) {
   const score = useFootballStore((state) => state.score)
   const half = useFootballStore((state) => state.half)
   const gameState = useFootballStore((state) => state.gameState)
-  const matchMinute = useFootballStore((state) => state.matchMinute)
+  const matchSeconds = useFootballStore((state) => state.matchSeconds)
   const stamina = useFootballStore((state) => state.stamina)
   const goalAlert = useFootballStore((state) => state.goalAlert)
   const lastScorer = useFootballStore((state) => state.lastScorer)
@@ -404,7 +402,7 @@ export function RematchGame({ onExit }) {
     }
   }, [gameState])
 
-  // EA FC 90-Minute Match Clock Ticker
+  // EA FC 90-Minute Match Clock Ticker (+9 in-game seconds every 1 real second)
   useEffect(() => {
     let interval
     if (gameState === 'PLAYING') {
@@ -487,9 +485,10 @@ export function RematchGame({ onExit }) {
     }
   }
 
-  const formatMatchClock = (mins) => {
-    const m = Math.floor(mins)
-    const s = Math.floor((mins - m) * 60)
+  const formatMatchClock = (totalInGameSecs) => {
+    const totalSecs = Math.floor(totalInGameSecs || 0)
+    const m = Math.floor(totalSecs / 60)
+    const s = totalSecs % 60
     return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}'`
   }
 
@@ -795,7 +794,7 @@ export function RematchGame({ onExit }) {
       {/* ── 5. IN-GAME HUD OVERLAYS ── */}
       {gameState !== 'MENU' && gameState !== 'BOOT' && gameState !== 'LOADING_MATCH' && (
         <>
-          {/* Top-Left EA FC Scorebar with 90-Min Clock */}
+          {/* Top-Left EA FC Scorebar with Smooth 90-Min Clock */}
           <div style={{
             position: 'absolute',
             top: '25px',
@@ -818,7 +817,7 @@ export function RematchGame({ onExit }) {
             </span>
 
             <span style={{ color: '#facc15', fontSize: '1.2rem', fontWeight: '900', letterSpacing: '1px' }}>
-              {formatMatchClock(matchMinute)}
+              {formatMatchClock(matchSeconds)}
             </span>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#090d16', padding: '6px 16px', borderRadius: '6px' }}>

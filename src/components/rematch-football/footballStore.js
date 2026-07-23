@@ -4,7 +4,7 @@ export const useFootballStore = create((set) => ({
   score: { red: 0, blue: 0 },
   half: 1, // 1 for 1st Half (0-45 mins), 2 for 2nd Half (45-90 mins)
   gameState: 'BOOT', // 'BOOT' | 'MENU' | 'LOADING_MATCH' | 'KICKOFF' | 'PLAYING' | 'GOAL_CELEBRATION' | 'GOAL_REPLAY' | 'HALF_TIME' | 'FULL_TIME'
-  matchMinute: 0,
+  matchSeconds: 0, // In-game seconds (0 to 5400)
   stamina: 100,
   ballPossession: null,
   goalAlert: '',
@@ -16,7 +16,7 @@ export const useFootballStore = create((set) => ({
   // Celebration cutscene state
   celebrationType: 'slide', // 'slide' | 'pole' | 'jump'
   
-  // Camera Mode: 'FOLLOW' (3rd person behind player) | 'AUTO_BALL' (Broadcast camera tracking ball)
+  // Camera Mode: 'FOLLOW' | 'AUTO_BALL'
   cameraMode: 'FOLLOW',
   
   // Replay frame buffer
@@ -81,25 +81,26 @@ export const useFootballStore = create((set) => ({
   setStamina: (val) => set({ stamina: val }),
   setGKs: (red, blue) => set({ redGK: red, blueGK: blue }),
   
-  // EA FC Style 90-Minute Match Clock (10 real minutes = 90 match minutes)
+  // EA FC 90-Minute Match Clock (10 real minutes = 90 in-game minutes = 5400 seconds)
+  // Ticks +9 in-game seconds every real second for smooth, continuous clock progression!
   tickMatchClock: () => set((state) => {
     if (state.gameState !== 'PLAYING') return state
 
-    const newMinute = state.matchMinute + 0.15 // ~6.6s per match minute
+    const nextSecs = state.matchSeconds + 9 // +9 in-game seconds per real second
     
-    if (state.half === 1 && newMinute >= 45) {
-      return { matchMinute: 45, half: 2, gameState: 'HALF_TIME' }
-    } else if (state.half === 2 && newMinute >= 90) {
-      return { matchMinute: 90, gameState: 'FULL_TIME' }
+    if (state.half === 1 && nextSecs >= 2700) {
+      return { matchSeconds: 2700, half: 2, gameState: 'HALF_TIME' }
+    } else if (state.half === 2 && nextSecs >= 5400) {
+      return { matchSeconds: 5400, gameState: 'FULL_TIME' }
     }
     
-    return { matchMinute: newMinute }
+    return { matchSeconds: nextSecs }
   }),
 
   resetMatch: () => set({
     score: { red: 0, blue: 0 },
     half: 1,
-    matchMinute: 0,
+    matchSeconds: 0,
     gameState: 'KICKOFF',
     stamina: 100,
     ballPossession: null,

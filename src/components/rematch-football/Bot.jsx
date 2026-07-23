@@ -86,8 +86,9 @@ export function Bot({ id = 'bot1' }) {
     const bPos = safePos(ball)
     const bVel = safeVel(ball)
     const pPos = player ? safePos(player) : [0, 0.65, 18]
-
     const distToBall = Math.hypot(bPos[0] - pos[0], bPos[2] - pos[2])
+
+    const isPlayerHasBall = ballPossession === 'player1'
 
     // AI GK Defensive Mode
     const isGK = blueGK === id
@@ -122,15 +123,11 @@ export function Bot({ id = 'bot1' }) {
 
       const goalDist = Math.hypot(targetX - pos[0], targetZ - pos[2])
       if (goalDist < 30.0) {
-        // AI SHOTS TOWARDS PLAYER'S GOAL!
         const aimX = (Math.random() - 0.5) * 10.0
         ball.api.velocity.set(aimX, 4.5 + Math.random() * 4, 34 + Math.random() * 10)
         setPossession(null)
       }
     } else {
-      // AI OFFENSE / DEFENSE PASS INTERCEPT & SLIDE TACKLE DASH
-      const isPlayerHasBall = useFootballStore.getState().ballPossession === 'player1'
-      
       if (isPlayerHasBall && distToBall < 4.0 && diveCooldown.current <= 0) {
         // AI SLIDE TACKLE DASH!
         isDiving.current = true
@@ -146,7 +143,6 @@ export function Bot({ id = 'bot1' }) {
           setPossession(null)
         }
       } else {
-        // Intercept Ball trajectory
         targetX = bPos[0] + bVel[0] * 0.3
         targetZ = bPos[2] + bVel[2] * 0.3
       }
