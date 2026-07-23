@@ -65,7 +65,7 @@ function safePos(ref) {
   if (ref && ref.position && Array.isArray(ref.position.current)) {
     return ref.position.current
   }
-  return [0, 1.2, 12]
+  return [0, 1.2, 20]
 }
 
 function safeVel(ref) {
@@ -78,7 +78,7 @@ function safeVel(ref) {
 export function Player({ id = 'player1' }) {
   const [ref, api] = useSphere(() => ({
     mass: 72,
-    position: [0, 1.2, 12],
+    position: [0, 1.2, 20],
     args: [0.62],
     fixedRotation: true,
     linearDamping: 0.1
@@ -100,17 +100,17 @@ export function Player({ id = 'player1' }) {
   const isTackling = useRef(false)
   
   const cameraYaw = useRef(Math.PI)
-  const cameraPitch = useRef(0.28)
+  const cameraPitch = useRef(0.38) // Downward pitch angle
 
   const currentDir = useRef(new THREE.Vector3(0, 0, -1))
-  const playerPos = useRef([0, 1.2, 12])
+  const playerPos = useRef([0, 1.2, 20])
   const playerVel = useRef([0, 0, 0])
 
   useEffect(() => {
     const handleMouseMove = (e) => {
       if (document.pointerLockElement || e.buttons === 1 || e.buttons === 2) {
         cameraYaw.current -= e.movementX * 0.003
-        cameraPitch.current = THREE.MathUtils.clamp(cameraPitch.current + e.movementY * 0.002, 0.05, 0.65)
+        cameraPitch.current = THREE.MathUtils.clamp(cameraPitch.current + e.movementY * 0.002, 0.1, 0.62)
       }
     }
     window.addEventListener('mousemove', handleMouseMove)
@@ -118,7 +118,7 @@ export function Player({ id = 'player1' }) {
   }, [])
 
   useEffect(() => {
-    const unsubPos = api.position.subscribe(v => (playerPos.current = v || [0, 1.2, 12]))
+    const unsubPos = api.position.subscribe(v => (playerPos.current = v || [0, 1.2, 20]))
     const unsubVel = api.velocity.subscribe(v => (playerVel.current = v || [0, 0, 0]))
 
     window.footballPlayer = {
@@ -134,17 +134,16 @@ export function Player({ id = 'player1' }) {
     }
   }, [api])
 
-  // Reposition player based on Kickoff Team (Red or Blue)
   useEffect(() => {
     if (gameState === 'MENU') {
       api.position.set(0, 1.2, 0)
       api.velocity.set(0, 0, 0)
     } else if (gameState === 'KICKOFF') {
-      const spawnZ = kickoffTeam === 'red' ? 1.2 : 8.0
+      const spawnZ = kickoffTeam === 'red' ? 2.5 : 18.0
       api.position.set(0, 1.2, spawnZ)
       api.velocity.set(0, 0, 0)
       cameraYaw.current = Math.PI
-      cameraPitch.current = 0.28
+      cameraPitch.current = 0.38
     }
   }, [gameState, kickoffTeam, api])
 
@@ -157,22 +156,23 @@ export function Player({ id = 'player1' }) {
     if (keys.ArrowLeft) cameraYaw.current += 1.8 * dt
     if (keys.ArrowRight) cameraYaw.current -= 1.8 * dt
 
-    // ── 1. DYNAMIC ORBIT CAMERA ──
+    // ── 1. GIANT FIELD BROADCAST CAMERA RIG ──
     const isSprinting = keys.Shift && stamina > 5
-    const targetFov = isSprinting ? 74 : 65
+    const targetFov = isSprinting ? 62 : 54 // Lower FOV = Pitch reads as massive!
     state.camera.fov = THREE.MathUtils.lerp(state.camera.fov, targetFov, 0.1)
     state.camera.updateProjectionMatrix()
 
-    const camDistance = 4.8
+    const camDistance = 12.5
     const camX = pos[0] + Math.sin(cameraYaw.current) * Math.cos(cameraPitch.current) * camDistance
-    const camY = pos[1] + Math.sin(cameraPitch.current) * camDistance + 1.4
+    const camY = pos[1] + Math.sin(cameraPitch.current) * camDistance + 6.8
     const camZ = pos[2] + Math.cos(cameraYaw.current) * Math.cos(cameraPitch.current) * camDistance
 
     state.camera.position.lerp(new THREE.Vector3(camX, camY, camZ), 0.18)
 
-    const lookTargetX = pos[0] - Math.sin(cameraYaw.current) * 6
+    // Look-ahead offset: target is player + (aimDirection * 10)
+    const lookTargetX = pos[0] - Math.sin(cameraYaw.current) * 10.0
     const lookTargetY = pos[1] + 1.2
-    const lookTargetZ = pos[2] - Math.cos(cameraYaw.current) * 6
+    const lookTargetZ = pos[2] - Math.cos(cameraYaw.current) * 10.0
     state.camera.lookAt(lookTargetX, lookTargetY, lookTargetZ)
 
     // ── 2. MOVEMENT CONTROLS ──
@@ -202,7 +202,7 @@ export function Player({ id = 'player1' }) {
     } else {
       setStamina(Math.min(100, stamina + 25 * dt))
       if (direction.lengthSq() > 0.01) {
-        api.velocity.set(direction.x * 8.5, vel[1], direction.z * 8.5)
+        api.velocity.set(direction.x * 10.5, vel[1], direction.z * 10.5)
       }
     }
 
@@ -222,11 +222,11 @@ export function Player({ id = 'player1' }) {
       const bPos = safePos(ball)
       const dist = Math.hypot(bPos[0] - pos[0], bPos[2] - pos[2])
 
-      if (dist < 1.55 && Math.abs(bPos[1] - pos[1]) < 1.8) {
+      if (dist < 1.65 && Math.abs(bPos[1] - pos[1]) < 1.8) {
         setPossession(id)
 
-        const targetX = pos[0] + currentDir.current.x * 0.8
-        const targetZ = pos[2] + currentDir.current.z * 0.8
+        const targetX = pos[0] + currentDir.current.x * 0.9
+        const targetZ = pos[2] + currentDir.current.z * 0.9
         
         const dx = targetX - bPos[0]
         const dz = targetZ - bPos[2]

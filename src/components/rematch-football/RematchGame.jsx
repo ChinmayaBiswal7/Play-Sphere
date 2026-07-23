@@ -35,9 +35,10 @@ function GoalkeeperManager() {
       setGKs(redGK, blueGK)
     }
 
-    if (zPos < -30.25 && Math.abs(ballPos[0]) < 5.0) {
+    // Expanded goal lines at Z = ±50.25
+    if (zPos < -50.25 && Math.abs(ballPos[0]) < 7.0) {
       incrementScore('red')
-    } else if (zPos > 30.25 && Math.abs(ballPos[0]) < 5.0) {
+    } else if (zPos > 50.25 && Math.abs(ballPos[0]) < 7.0) {
       incrementScore('blue')
     }
   })
@@ -45,9 +46,6 @@ function GoalkeeperManager() {
   return null
 }
 
-/**
- * Continuous Replay Buffer Recorder
- */
 function ReplayRecorder() {
   const gameState = useFootballStore((state) => state.gameState)
   const pushReplayFrame = useFootballStore((state) => state.pushReplayFrame)
@@ -57,7 +55,7 @@ function ReplayRecorder() {
     if (gameState !== 'PLAYING') return
 
     const now = state.clock.getElapsedTime()
-    if (now - lastRecordTime.current > 0.06) { // Record every 60ms
+    if (now - lastRecordTime.current > 0.06) {
       lastRecordTime.current = now
 
       const ball = window.footballBall
@@ -75,9 +73,6 @@ function ReplayRecorder() {
   return null
 }
 
-/**
- * Cinematic Celebration & Replay Camera Controller
- */
 function CinematicReplayCamera() {
   const gameState = useFootballStore((state) => state.gameState)
   const lastScorer = useFootballStore((state) => state.lastScorer)
@@ -89,7 +84,6 @@ function CinematicReplayCamera() {
     if (gameState === 'GOAL_CELEBRATION') {
       animAngle.current += dt * 1.5
 
-      // Orbit camera around scoring player
       const scorerPos = lastScorer === 'red' 
         ? (window.footballPlayer ? window.footballPlayer.position.current : [0, 1.2, 0])
         : (window.footballBot ? window.footballBot.position.current : [0, 1.2, 0])
@@ -102,7 +96,6 @@ function CinematicReplayCamera() {
       state.camera.lookAt(scorerPos[0], scorerPos[1] + 1.2, scorerPos[2])
 
     } else if (gameState === 'GOAL_REPLAY') {
-      // Play back recorded frames
       if (replayBuffer.length > 0) {
         replayFrameIdx.current = (replayFrameIdx.current + 1) % replayBuffer.length
         const frame = replayBuffer[replayFrameIdx.current]
@@ -111,7 +104,7 @@ function CinematicReplayCamera() {
           const ballX = frame.bPos[0]
           const ballZ = frame.bPos[2]
 
-          state.camera.position.set(16, 6, ballZ + 4)
+          state.camera.position.set(24, 10, ballZ + 8)
           state.camera.lookAt(ballX, 1.0, ballZ)
         }
       }
@@ -124,9 +117,6 @@ function CinematicReplayCamera() {
   return null
 }
 
-/**
- * Ability Power Meter & Cooldown HUD Widget
- */
 function AbilityHudWidget() {
   const pData = useAbilityStore((state) => state.abilities.player1) || { meter: 100, cooldowns: {}, states: {} }
   
@@ -198,9 +188,6 @@ function AbilityHudWidget() {
   )
 }
 
-/**
- * Circular Radar Mini-Map
- */
 function MiniMapRadar() {
   const canvasRef = useRef(null)
 
@@ -222,18 +209,18 @@ function MiniMapRadar() {
       ctx.stroke()
 
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)'
-      ctx.strokeRect(35, 20, 70, 100)
+      ctx.strokeRect(35, 15, 70, 110)
 
       ctx.beginPath()
       ctx.moveTo(35, 70)
       ctx.lineTo(105, 70)
       ctx.stroke()
 
-      ctx.strokeRect(55, 20, 30, 12)
-      ctx.strokeRect(55, 108, 30, 12)
+      ctx.strokeRect(55, 15, 30, 14)
+      ctx.strokeRect(55, 111, 30, 14)
 
-      const mapX = (x) => 70 + (x / 18) * 35
-      const mapZ = (z) => 70 + (z / 30) * 50
+      const mapX = (x) => 70 + (x / 30) * 35
+      const mapZ = (z) => 70 + (z / 50) * 55
 
       const p = window.footballPlayer
       if (p && p.position && Array.isArray(p.position.current)) {
@@ -337,7 +324,6 @@ export function RematchGame({ onExit }) {
     return () => clearInterval(interval)
   }, [gameState])
 
-  // State Transitions: GOAL_CELEBRATION -> GOAL_REPLAY -> KICKOFF
   useEffect(() => {
     if (gameState === 'KICKOFF') {
       const timeout = setTimeout(() => {
@@ -429,29 +415,29 @@ export function RematchGame({ onExit }) {
         </div>
       )}
 
-      {/* ── 2. 3D SCENE CANVAS ── */}
+      {/* ── 2. 3D SCENE CANVAS WITH DEPTH FOG ── */}
       <Canvas
         shadows
-        camera={{ fov: 65, position: [0, 2.2, 16] }}
+        camera={{ fov: 54, position: [0, 2.2, 16] }}
         gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping }}
       >
         <color attach="background" args={arenaStyle === 'desert' ? ['#fdf4ff'] : ['#030712']} />
-        <fog attach="fog" args={arenaStyle === 'desert' ? ['#fae8ff', 40, 100] : ['#030712', 30, 95]} />
+        <fog attach="fog" args={arenaStyle === 'desert' ? ['#fae8ff', 60, 160] : ['#030712', 60, 180]} />
 
         <ambientLight intensity={0.65} />
         <directionalLight 
-          position={[15, 25, 10]} 
-          intensity={1.8} 
+          position={[25, 45, 20]} 
+          intensity={2.2} 
           castShadow 
-          shadow-mapSize={[1024, 1024]}
+          shadow-mapSize={[2048, 2048]}
         />
-        <directionalLight position={[-15, 20, -10]} intensity={0.6} />
+        <directionalLight position={[-25, 35, -20]} intensity={0.8} />
 
         {arenaStyle !== 'desert' && (
           <>
             <Sky distance={450000} sunPosition={[10, 12, 10]} inclination={0.6} azimuth={0.25} />
-            <Stars radius={100} depth={50} count={1000} factor={4} saturation={0.5} fade speed={1} />
-            <Environment preset="night" environmentIntensity={0.8} />
+            <Stars radius={120} depth={60} count={1200} factor={4} saturation={0.5} fade speed={1} />
+            <Environment preset="night" environmentIntensity={0.85} />
           </>
         )}
 
@@ -800,12 +786,10 @@ export function RematchGame({ onExit }) {
               fontFamily: "'Orbitron', sans-serif",
               pointerEvents: 'auto'
             }}>
-              {/* Top Left Replay Watermark */}
               <div style={{ position: 'absolute', top: '35px', left: '40px', background: 'rgba(239, 68, 68, 0.9)', color: '#fff', padding: '8px 20px', borderRadius: '6px', fontWeight: '900', fontSize: '1rem', letterSpacing: '3px', boxShadow: '0 4px 20px rgba(239,68,68,0.5)' }}>
                 ⏺ REPLAY (0.75X)
               </div>
 
-              {/* Bottom Center SKIP REPLAY Button */}
               <div style={{ position: 'absolute', bottom: '50px', left: '50%', transform: 'translateX(-50%)', zIndex: 140 }}>
                 <button
                   onClick={skipReplay}
