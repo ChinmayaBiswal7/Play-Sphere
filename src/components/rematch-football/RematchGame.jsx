@@ -54,7 +54,7 @@ function ReplayRecorder() {
     if (gameState !== 'PLAYING') return
 
     const now = state.clock.getElapsedTime()
-    if (now - lastRecordTime.current > 0.06) {
+    if (now - lastRecordTime.current > 0.05) {
       lastRecordTime.current = now
 
       const ball = window.footballBall
@@ -83,13 +83,19 @@ function CinematicReplayCamera() {
     if (gameState === 'GOAL_CELEBRATION') {
       animAngle.current += dt * 2.2
 
-      const scorerPos = lastScorer === 'red' 
-        ? (window.footballPlayer ? window.footballPlayer.position.current : [0, 1.2, 0])
-        : (window.footballBot ? window.footballBot.position.current : [0, 1.2, 0])
+      const scorerRef = lastScorer === 'red' ? window.footballPlayer : window.footballBot
+      const scorerPos = scorerRef && Array.isArray(scorerRef.position.current) ? scorerRef.position.current : [0, 0.65, 0]
 
-      const camX = scorerPos[0] + Math.sin(animAngle.current) * 4.2
+      // Move scorer forward along celebration path
+      if (scorerRef && scorerRef.api) {
+        const celSpeedX = Math.sin(animAngle.current * 0.5) * 4.0
+        const celSpeedZ = lastScorer === 'red' ? -6.0 : 6.0
+        scorerRef.api.velocity.set(celSpeedX, 0, celSpeedZ)
+      }
+
+      const camX = scorerPos[0] + Math.sin(animAngle.current) * 4.5
       const camY = scorerPos[1] + 1.8
-      const camZ = scorerPos[2] + Math.cos(animAngle.current) * 4.2
+      const camZ = scorerPos[2] + Math.cos(animAngle.current) * 4.5
 
       state.camera.position.set(camX, camY, camZ)
       state.camera.lookAt(scorerPos[0], scorerPos[1] + 1.1, scorerPos[2])
@@ -99,12 +105,28 @@ function CinematicReplayCamera() {
         replayFrameIdx.current = (replayFrameIdx.current + 1) % replayBuffer.length
         const frame = replayBuffer[replayFrameIdx.current]
 
-        if (frame && frame.bPos) {
-          const ballX = frame.bPos[0]
-          const ballZ = frame.bPos[2]
+        if (frame) {
+          // Playback positions on 3D meshes for clean action replay!
+          if (frame.bPos && window.footballBall && window.footballBall.api) {
+            window.footballBall.api.position.set(frame.bPos[0], frame.bPos[1], frame.bPos[2])
+            window.footballBall.api.velocity.set(0, 0, 0)
+          }
+          if (frame.pPos && window.footballPlayer && window.footballPlayer.api) {
+            window.footballPlayer.api.position.set(frame.pPos[0], frame.pPos[1], frame.pPos[2])
+            window.footballPlayer.api.velocity.set(0, 0, 0)
+          }
+          if (frame.botPos && window.footballBot && window.footballBot.api) {
+            window.footballBot.api.position.set(frame.botPos[0], frame.botPos[1], frame.botPos[2])
+            window.footballBot.api.velocity.set(0, 0, 0)
+          }
 
-          state.camera.position.set(22, 9, ballZ + 7)
-          state.camera.lookAt(ballX, 1.0, ballZ)
+          if (frame.bPos) {
+            const ballX = frame.bPos[0]
+            const ballZ = frame.bPos[2]
+
+            state.camera.position.set(ballX + 14, 8, ballZ + 12)
+            state.camera.lookAt(ballX, 1.0, ballZ)
+          }
         }
       }
     } else if (gameState === 'MENU') {
@@ -546,7 +568,7 @@ export function RematchGame({ onExit }) {
         </Suspense>
       </Canvas>
 
-      {/* ── 3. AUTHENTIC REMATCH HOME SCREEN (TOP NAVBAR + LEFT SIDE LIST MENU) ── */}
+      {/* ── 3. AUTHENTIC REMATCH HOME SCREEN ── */}
       {gameState === 'MENU' && (
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'auto', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '24px 40px', fontFamily: "'Orbitron', sans-serif" }}>
           
@@ -589,11 +611,10 @@ export function RematchGame({ onExit }) {
             </div>
           </div>
 
-          {/* Left Vertical Menu List & Bottom Right Badge (Exact Rematch Layout) */}
+          {/* Left Vertical Menu List */}
           {activeMenuTab === 'PLAY' && (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', height: '100%', paddingBottom: '30px' }}>
               
-              {/* Left Menu Items (Clean list layout matching reference image!) */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', width: '280px' }}>
                 <button
                   onClick={startMatchWithLoading}
@@ -719,7 +740,7 @@ export function RematchGame({ onExit }) {
         </div>
       )}
 
-      {/* ── 4. MULTIPLAYER LOBBY MODAL (WHEN TRIGGERED FROM MENU) ── */}
+      {/* ── 4. MULTIPLAYER LOBBY MODAL ── */}
       {showMultiplayerModal && gameState === 'MENU' && (
         <div style={{ position: 'absolute', inset: 0, background: 'rgba(9, 13, 22, 0.9)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 150, fontFamily: "'Orbitron', sans-serif" }}>
           <div style={{ width: '540px', background: 'rgba(15, 23, 42, 0.95)', border: '1px solid #00d2ff', borderRadius: '16px', padding: '30px', color: '#fff' }}>
@@ -832,7 +853,7 @@ export function RematchGame({ onExit }) {
             </div>
           )}
 
-          {/* ── CLEAN HUD BOTTOM BAR (STAMINA + ABILITY GAUGE ONLY - NO KEYBIND TEXT) ── */}
+          {/* ── CLEAN HUD BOTTOM BAR (STAMINA + ABILITY GAUGE ONLY) ── */}
           <div style={{
             position: 'absolute',
             bottom: '30px',
@@ -871,6 +892,55 @@ export function RematchGame({ onExit }) {
               <span style={{ color: '#a855f7', fontSize: '0.75rem', fontWeight: '900' }}>SPEED SURGE</span>
             </div>
           </div>
+
+          {/* ── GOAL CELEBRATION CUTSCENE OVERLAY ── */}
+          {gameState === 'GOAL_CELEBRATION' && (
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'radial-gradient(circle at center, transparent 30%, rgba(2, 6, 23, 0.85) 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexDirection: 'column',
+              zIndex: 120,
+              fontFamily: "'Orbitron', sans-serif",
+              pointerEvents: 'auto'
+            }}>
+              <h1 style={{
+                fontSize: '5rem',
+                fontWeight: '900',
+                letterSpacing: '10px',
+                color: lastScorer === 'red' ? '#ef4444' : '#0284c7',
+                textShadow: lastScorer === 'red' ? '0 0 50px rgba(239, 68, 68, 0.9)' : '0 0 50px rgba(2, 132, 199, 0.9)',
+                margin: 0
+              }}>
+                GOAL!
+              </h1>
+              <p style={{ color: '#ffffff', fontSize: '1.4rem', letterSpacing: '4px', marginTop: '10px', fontWeight: '800' }}>
+                {(celebrationType || 'KNEE SLIDE').toUpperCase()} CELEBRATION
+              </p>
+
+              <button
+                onClick={skipCelebration}
+                style={{
+                  marginTop: '30px',
+                  background: '#facc15',
+                  color: '#000',
+                  border: 'none',
+                  borderRadius: '30px',
+                  padding: '14px 36px',
+                  fontWeight: '900',
+                  fontSize: '0.9rem',
+                  letterSpacing: '2px',
+                  cursor: 'pointer',
+                  boxShadow: '0 8px 30px rgba(250, 204, 21, 0.5)'
+                }}
+              >
+                ⏭ SKIP CELEBRATION
+              </button>
+            </div>
+          )}
 
           {/* Clean Skip Replay Button */}
           {gameState === 'GOAL_REPLAY' && (

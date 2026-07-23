@@ -30,6 +30,8 @@ export function Bot({ id = 'bot1' }) {
   }))
 
   const gameState = useFootballStore((state) => state.gameState)
+  const lastScorer = useFootballStore((state) => state.lastScorer)
+  const celebrationType = useFootballStore((state) => state.celebrationType)
   const kickoffTeam = useFootballStore((state) => state.kickoffTeam)
   const setPossession = useFootballStore((state) => state.setPossession)
   const ballPossession = useFootballStore((state) => state.ballPossession)
@@ -61,8 +63,8 @@ export function Bot({ id = 'bot1' }) {
   }, [api])
 
   useEffect(() => {
-    if (gameState === 'MENU' || gameState === 'BOOT' || gameState === 'LOADING_MATCH') {
-      api.position.set(0, 0.65, -50)
+    if (gameState === 'MENU') {
+      api.position.set(0, 0.65, 0)
       api.velocity.set(0, 0, 0)
     } else if (gameState === 'KICKOFF') {
       const spawnZ = kickoffTeam === 'blue' ? -3.5 : -22.0
@@ -76,154 +78,117 @@ export function Bot({ id = 'bot1' }) {
 
     const pos = safePos(window.footballBot)
     const vel = safeVel(window.footballBot)
-    const isGK = blueGK === id
-
     const ball = window.footballBall
     const player = window.footballPlayer
+
     if (!ball) return
 
     const bPos = safePos(ball)
+    const bVel = safeVel(ball)
+    const pPos = player ? safePos(player) : [0, 0.65, 18]
+
     const distToBall = Math.hypot(bPos[0] - pos[0], bPos[2] - pos[2])
 
-    if (diveCooldown.current > 0) diveCooldown.current -= dt
-    if (isDiving.current) {
-      diveTime.current -= dt
-      if (diveTime.current <= 0) isDiving.current = false
-      return
-    }
-
-    // ── GOALKEEPER AI ──
+    // AI GK Defensive Mode
+    const isGK = blueGK === id
     if (isGK) {
-      const targetGKX = THREE.MathUtils.clamp(bPos[0], -7.5, 7.5)
-      const targetGKZ = -58.0
-      
-      const dx = targetGKX - pos[0]
-      const dz = targetGKZ - pos[2]
-      const distToGKPos = Math.hypot(dx, dz)
+      const targetX = THREE.MathUtils.clamp(bPos[0] * 0.6, -6.5, 6.5)
+      const targetZ = -58.0
+      const dx = targetX - pos[0]
+      const dz = targetZ - pos[2]
+      const dist = Math.hypot(dx, dz)
 
-      if (distToGKPos > 0.3) {
-        api.velocity.set(Math.sign(dx) * 10.5, vel[1], Math.sign(dz) * 10.5)
-        currentDir.current.set(Math.sign(dx), 0, Math.sign(dz)).normalize()
+      if (dist > 0.4) {
+        currentDir.current.set(dx, 0, dz).normalize()
+        api.velocity.set(currentDir.current.x * 12, vel[1], currentDir.current.z * 12)
       } else {
         api.velocity.set(0, vel[1], 0)
       }
 
-      if (bPos[2] < -50 && Math.abs(bPos[0]) < 9.5 && diveCooldown.current <= 0) {
-        isDiving.current = true
-        diveTime.current = 0.4
-        diveCooldown.current = 2.5
-        const diveDirection = Math.sign(bPos[0] - pos[0]) || (Math.random() > 0.5 ? 1 : -1)
-        api.velocity.set(diveDirection * 18, 5.5, 5.0)
+      if (distToBall < 3.2) {
+        ball.api.velocity.set((Math.random() - 0.5) * 16, 8, 32)
       }
       return
     }
 
-    // ── SMART STRIKER AI ──
-    let targetX = 0
-    let targetZ = 0
-    let speed = 11.5
+    // Advanced Attack / Defend AI Logic
+    let targetX = bPos[0]
+    let targetZ = bPos[2]
 
-    const hasPossession = ballPossession === id
-
-    if (hasPossession) {
-      targetX = 0
+    if (ballPossession === id) {
+      // AI HAS BALL -> Sprint towards Opponent Goal (Z = 60) & Shoot!
+      targetX = 0.0
       targetZ = 58.0
-      speed = 12.5
 
-      // Strike ball when in shooting range
-      if (pos[2] > 22.0) {
-        strikeBall(90)
+      const goalDist = Math.hypot(targetX - pos[0], targetZ - pos[2])
+      if (goalDist < 30.0) {
+        // AI SHOTS TOWARDS PLAYER'S GOAL!
+        const aimX = (Math.random() - 0.5) * 10.0
+        ball.api.velocity.set(aimX, 4.5 + Math.random() * 4, 34 + Math.random() * 10)
+        setPossession(null)
       }
     } else {
-      const pPos = player ? safePos(player) : [0, 0.65, 18]
-      const playerDistToBall = Math.hypot(bPos[0] - pPos[0], bPos[2] - pPos[2])
-
-      if (bPos[2] < 12 || distToBall < playerDistToBall + 2.0) {
-        targetX = bPos[0]
-        targetZ = bPos[2]
-      } else {
-        targetX = pPos[0] * 0.75
-        targetZ = pPos[2] - 6.0
-      }
-
-      // Slide tackle when close to ball carrier
-      if (ballPossession === 'player1' && distToBall < 1.9 && Math.random() < 0.35) {
+      // AI OFFENSE / DEFENSE PASS INTERCEPT & SLIDE TACKLE DASH
+      const isPlayerHasBall = useFootballStore.getState().ballPossession === 'player1'
+      
+      if (isPlayerHasBall && distToBall < 4.0 && diveCooldown.current <= 0) {
+        // AI SLIDE TACKLE DASH!
         isDiving.current = true
-        diveTime.current = 0.3
-        const dashDirX = Math.sign(bPos[0] - pos[0])
-        const dashDirZ = Math.sign(bPos[2] - pos[2])
-        api.velocity.set(dashDirX * 20, vel[1], dashDirZ * 20)
-        return
+        diveTime.current = 0.5
+        diveCooldown.current = 3.5
+
+        const dashX = (bPos[0] - pos[0]) * 4.0
+        const dashZ = (bPos[2] - pos[2]) * 4.0
+        api.velocity.set(dashX, 3.0, dashZ)
+        
+        if (distToBall < 2.0) {
+          ball.api.velocity.set((Math.random() - 0.5) * 20, 5, -28)
+          setPossession(null)
+        }
+      } else {
+        // Intercept Ball trajectory
+        targetX = bPos[0] + bVel[0] * 0.3
+        targetZ = bPos[2] + bVel[2] * 0.3
       }
+    }
+
+    if (diveCooldown.current > 0) diveCooldown.current -= dt
+    if (diveTime.current > 0) {
+      diveTime.current -= dt
+      if (diveTime.current <= 0) isDiving.current = false
     }
 
     const dx = targetX - pos[0]
     const dz = targetZ - pos[2]
-    const distToTarget = Math.hypot(dx, dz)
+    const dist = Math.hypot(dx, dz)
 
-    if (distToTarget > 0.4) {
-      const dirX = dx / distToTarget
-      const dirZ = dz / distToTarget
-      api.velocity.set(dirX * speed, vel[1], dirZ * speed)
-      currentDir.current.set(dirX, 0, dirZ)
-    } else {
-      api.velocity.set(0, vel[1], 0)
+    if (dist > 0.4 && !isDiving.current) {
+      currentDir.current.set(dx, 0, dz).normalize()
+      const speed = isPlayerHasBall ? 16.5 : 13.0
+      api.velocity.set(currentDir.current.x * speed, vel[1], currentDir.current.z * speed)
     }
 
-    // Possession pickup
-    if (distToBall < 1.6 && !hasPossession && ballPossession !== 'player1') {
+    // AI Ball Dribbling touch
+    if (distToBall < 1.45 && Math.abs(bPos[1] - pos[1]) < 1.8) {
       setPossession(id)
-    }
-
-    // Carry ball when holding possession
-    if (hasPossession) {
-      const tX = pos[0] + currentDir.current.x * 1.0
-      const tZ = pos[2] + currentDir.current.z * 1.0
-      
-      const bdx = tX - bPos[0]
-      const bdz = tZ - bPos[2]
+      const forwardX = pos[0] + currentDir.current.x * 0.55
+      const forwardZ = pos[2] + currentDir.current.z * 0.55
 
       ball.api.velocity.set(
-        vel[0] + bdx * 9,
+        vel[0] + (forwardX - bPos[0]) * 10,
         safeVel(ball)[1],
-        vel[2] + bdz * 9
+        vel[2] + (forwardZ - bPos[2]) * 10
       )
-
-      if (distToBall > 1.8) {
-        setPossession(null)
-      }
     }
   })
-
-  const strikeBall = (powerPercent) => {
-    const ball = window.footballBall
-    if (!ball) return
-
-    const pos = safePos(window.footballBot)
-    const bPos = safePos(ball)
-    const dist = Math.hypot(bPos[0] - pos[0], bPos[2] - pos[2])
-
-    if (dist < 1.95) {
-      const targetGoalX = (Math.random() - 0.5) * 6.0
-      const targetGoalZ = 60.0
-      
-      const dirX = targetGoalX - bPos[0]
-      const dirZ = targetGoalZ - bPos[2]
-      const len = Math.hypot(dirX, dirZ)
-
-      const speedVal = 22 + (powerPercent / 100) * 20
-      ball.api.velocity.set((dirX / len) * speedVal, 4.0, (dirZ / len) * speedVal)
-      setPossession(null)
-    }
-  }
 
   const isGK = blueGK === id
   const vel = safeVel(window.footballBot)
   const botVelocityVec = new THREE.Vector3(vel[0], vel[1], vel[2])
-  // FIX: Added + Math.PI so the AI faces forward towards its movement vector instead of backwards at player
   const modelRotationY = Math.atan2(-currentDir.current.x, -currentDir.current.z) + Math.PI
-
   const showNameTag = gameState === 'PLAYING' || gameState === 'KICKOFF'
+
+  const isCelebrating = gameState === 'GOAL_CELEBRATION' && lastScorer === 'blue' ? (celebrationType || 'jump') : false
 
   return (
     <group ref={ref}>
@@ -236,6 +201,7 @@ export function Bot({ id = 'bot1' }) {
           isGoalkeeper={isGK}
           velocity={botVelocityVec}
           isTackling={isDiving.current && !isGK}
+          isCelebrating={isCelebrating}
         />
       </group>
 

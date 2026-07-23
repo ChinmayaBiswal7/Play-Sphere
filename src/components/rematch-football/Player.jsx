@@ -94,6 +94,8 @@ export function Player({ id = 'player1' }) {
   const stamina = useFootballStore((state) => state.stamina)
   const setStamina = useFootballStore((state) => state.setStamina)
   const gameState = useFootballStore((state) => state.gameState)
+  const lastScorer = useFootballStore((state) => state.lastScorer)
+  const celebrationType = useFootballStore((state) => state.celebrationType)
   const kickoffTeam = useFootballStore((state) => state.kickoffTeam)
   const setPossession = useFootballStore((state) => state.setPossession)
   const redGK = useFootballStore((state) => state.redGK)
@@ -322,7 +324,7 @@ export function Player({ id = 'player1' }) {
       }
     }
 
-    // ── POWER SHOOTING CHARGE (Space or Left Mouse Hold) ──
+    // ── POWER SHOOTING CHARGE ──
     const isPressingShot = keys.Space || mouseDownRef.current
     if (isPressingShot) {
       isCharging.current = true
@@ -351,6 +353,8 @@ export function Player({ id = 'player1' }) {
   const modelRotationY = gameState === 'MENU' ? Math.PI : Math.atan2(-currentDir.current.x, -currentDir.current.z) + Math.PI
   const showNameTag = gameState === 'PLAYING' || gameState === 'KICKOFF'
 
+  const isCelebrating = gameState === 'GOAL_CELEBRATION' && lastScorer === 'red' ? (celebrationType || 'slide') : false
+
   return (
     <group ref={ref}>
       <group rotation={[0, modelRotationY, 0]}>
@@ -362,6 +366,7 @@ export function Player({ id = 'player1' }) {
           isGoalkeeper={isGK}
           velocity={playerVelocityVec}
           isTackling={isTackling.current}
+          isCelebrating={isCelebrating}
         />
       </group>
 

@@ -44,7 +44,8 @@ export function HumanModel({
   number = 7,
   isGoalkeeper = false,
   velocity = new THREE.Vector3(),
-  isTackling = false
+  isTackling = false,
+  isCelebrating = false // false | 'slide' | 'jump' | 'run'
 }) {
   const torsoRef = useRef()
   
@@ -64,7 +65,7 @@ export function HumanModel({
   // Jersey Texture
   const jerseyTex = useMemo(() => createJerseyCanvas(teamColor, secColor, number), [teamColor, secColor, number])
 
-  // PBR Materials (Clean, smooth, realistic)
+  // PBR Materials
   const skinMat = useMemo(() => new THREE.MeshStandardMaterial({ color: 0xf5d0a9, roughness: 0.45, metalness: 0.05 }), [])
   const hairMat = useMemo(() => new THREE.MeshStandardMaterial({ color: 0x1c1917, roughness: 0.8 }), [])
   const jerseyMat = useMemo(() => new THREE.MeshStandardMaterial({ map: jerseyTex, roughness: 0.35 }), [jerseyTex])
@@ -76,22 +77,83 @@ export function HumanModel({
   const eyeMat = useMemo(() => new THREE.MeshBasicMaterial({ color: '#0f172a' }), [])
   const visorMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#00f2fe', roughness: 0.1, metalness: 0.9, transparent: true, opacity: 0.85 }), [])
 
-  // Articulated joint movement animation frame loop
   useFrame((state, dt) => {
     const horizontalSpeed = Math.hypot(velocity.x, velocity.z)
 
-    // Strict speed threshold to prevent micro-jitter animation while stationary
+    // ── GOAL CELEBRATION POSES ──
+    if (isCelebrating) {
+      if (isCelebrating === 'slide') {
+        // KNEE SLIDE CELEBRATION (Arms wide open, leaning back!)
+        if (torsoRef.current) {
+          torsoRef.current.rotation.x = -0.45
+          torsoRef.current.position.y = 0.55
+        }
+        if (leftHipRef.current) leftHipRef.current.rotation.x = 0.75
+        if (rightHipRef.current) rightHipRef.current.rotation.x = 0.75
+        if (leftKneeRef.current) leftKneeRef.current.rotation.x = 1.3
+        if (rightKneeRef.current) rightKneeRef.current.rotation.x = 1.3
+
+        if (leftShoulderRef.current) {
+          leftShoulderRef.current.rotation.x = 0
+          leftShoulderRef.current.rotation.z = 1.2
+        }
+        if (rightShoulderRef.current) {
+          rightShoulderRef.current.rotation.x = 0
+          rightShoulderRef.current.rotation.z = -1.2
+        }
+        return
+      } else if (isCelebrating === 'jump') {
+        // VICTORY JUMP (Arms raised high in air!)
+        animTime.current += dt * 6.0
+        const jumpY = Math.abs(Math.sin(animTime.current)) * 0.4
+        if (torsoRef.current) {
+          torsoRef.current.rotation.x = 0
+          torsoRef.current.position.y = 0.95 + jumpY
+        }
+        if (leftHipRef.current) leftHipRef.current.rotation.x = 0.2
+        if (rightHipRef.current) rightHipRef.current.rotation.x = -0.2
+        if (leftKneeRef.current) leftKneeRef.current.rotation.x = 0.3
+        if (rightKneeRef.current) rightKneeRef.current.rotation.x = 0.3
+
+        if (leftShoulderRef.current) {
+          leftShoulderRef.current.rotation.x = 0
+          leftShoulderRef.current.rotation.z = 2.4
+        }
+        if (rightShoulderRef.current) {
+          rightShoulderRef.current.rotation.x = 0
+          rightShoulderRef.current.rotation.z = -2.4
+        }
+        return
+      } else {
+        // CORNER FLAG RUN CELEBRATION (Sprinting with right fist in air)
+        animTime.current += dt * 10.0
+        const stride = Math.sin(animTime.current)
+        if (leftHipRef.current) leftHipRef.current.rotation.x = stride * 0.8
+        if (rightHipRef.current) rightHipRef.current.rotation.x = -stride * 0.8
+        if (leftKneeRef.current) leftKneeRef.current.rotation.x = Math.abs(stride) * 0.8
+        if (rightKneeRef.current) rightKneeRef.current.rotation.x = Math.abs(stride) * 0.8
+
+        if (leftShoulderRef.current) {
+          leftShoulderRef.current.rotation.x = 0.2
+          leftShoulderRef.current.rotation.z = 0.3
+        }
+        if (rightShoulderRef.current) {
+          rightShoulderRef.current.rotation.x = 0
+          rightShoulderRef.current.rotation.z = -2.2
+        }
+        return
+      }
+    }
+
     if (horizontalSpeed > 0.8) {
       animTime.current += horizontalSpeed * dt * 1.35
 
       const stride = Math.sin(animTime.current)
       const oppositeStride = -stride
 
-      // 1. HIP ROTATION (Thighs)
       if (leftHipRef.current) leftHipRef.current.rotation.x = stride * 0.75
       if (rightHipRef.current) rightHipRef.current.rotation.x = oppositeStride * 0.75
 
-      // 2. KNEE FLEXION (Calves bend backwards on backstride!)
       if (leftKneeRef.current) {
         leftKneeRef.current.rotation.x = stride < 0 ? Math.abs(stride) * 0.85 : 0.05
       }
@@ -99,7 +161,6 @@ export function HumanModel({
         rightKneeRef.current.rotation.x = oppositeStride < 0 ? Math.abs(oppositeStride) * 0.85 : 0.05
       }
 
-      // 3. SHOULDER ROTATION (Upper Arms)
       if (leftShoulderRef.current) {
         leftShoulderRef.current.rotation.x = oppositeStride * 0.6
         leftShoulderRef.current.rotation.z = 0.12
@@ -109,7 +170,6 @@ export function HumanModel({
         rightShoulderRef.current.rotation.z = -0.12
       }
 
-      // 4. ELBOW FLEXION (Forearms flex at elbow joint)
       if (leftElbowRef.current) {
         leftElbowRef.current.rotation.x = -0.3 - Math.abs(oppositeStride) * 0.4
       }
@@ -117,14 +177,12 @@ export function HumanModel({
         rightElbowRef.current.rotation.x = -0.3 - Math.abs(stride) * 0.4
       }
 
-      // 5. TORSO BOUNCE & FORWARD LEAN
       if (torsoRef.current) {
         torsoRef.current.rotation.x = 0.18
         torsoRef.current.position.y = 0.95 + Math.abs(Math.sin(animTime.current * 2)) * 0.04
       }
     } else {
       animTime.current = 0
-      // Rest / Idle Pose (Completely Still)
       if (leftHipRef.current) leftHipRef.current.rotation.x = 0
       if (rightHipRef.current) rightHipRef.current.rotation.x = 0
       if (leftKneeRef.current) leftKneeRef.current.rotation.x = 0
@@ -147,7 +205,6 @@ export function HumanModel({
       }
     }
 
-    // Tackle dash pose
     if (isTackling) {
       if (torsoRef.current) torsoRef.current.rotation.x = 0.6
       if (leftHipRef.current) leftHipRef.current.rotation.x = -1.1
@@ -160,21 +217,18 @@ export function HumanModel({
   return (
     <group scale={[0.95, 0.95, 0.95]}>
       
-      {/* ── 1. ATHLETIC TORSO & HOODED JERSEY (CONNECTED SEAMLESSLY AT Y = 0.95) ── */}
+      {/* ── 1. ATHLETIC TORSO & HOODED JERSEY ── */}
       <group ref={torsoRef} position={[0, 0.95, 0]}>
-        {/* Tapered Chest & Waist */}
         <mesh castShadow receiveShadow position={[0, 0.28, 0]}>
           <cylinderGeometry args={[0.34, 0.28, 0.76, 20]} />
           <primitive object={jerseyMat} attach="material" />
         </mesh>
 
-        {/* Hood Collar Ring */}
         <mesh castShadow position={[0, 0.66, -0.06]} rotation={[0.3, 0, 0]}>
           <torusGeometry args={[0.23, 0.075, 12, 24]} />
           <primitive object={jerseyMat} attach="material" />
         </mesh>
 
-        {/* Shoulder Caps */}
         <mesh position={[-0.37, 0.56, 0]}>
           <sphereGeometry args={[0.125, 14, 14]} />
           <primitive object={trimMat} attach="material" />
@@ -184,194 +238,113 @@ export function HumanModel({
           <primitive object={trimMat} attach="material" />
         </mesh>
 
-        {/* ── 2. HEAD, NECK, FACE & PONYTAIL ── */}
-        <group position={[0, 0.92, 0]}>
-          {/* Neck */}
-          <mesh position={[0, -0.18, 0]}>
-            <cylinderGeometry args={[0.1, 0.11, 0.16, 12]} />
+        {/* ── 2. HEAD & ATHLETIC FACIAL MODEL ── */}
+        <group position={[0, 0.82, 0]}>
+          <mesh castShadow>
+            <sphereGeometry args={[0.22, 20, 20]} />
             <primitive object={skinMat} attach="material" />
           </mesh>
 
-          {/* Head Sphere */}
-          <mesh castShadow position={[0, 0, 0]}>
-            <sphereGeometry args={[0.22, 24, 24]} />
-            <primitive object={skinMat} attach="material" />
-          </mesh>
-
-          {/* Eyes */}
-          <mesh position={[-0.07, 0.03, 0.19]}>
-            <sphereGeometry args={[0.035, 8, 8]} />
+          <mesh position={[-0.075, 0.04, -0.19]}>
+            <sphereGeometry args={[0.038, 12, 12]} />
             <primitive object={eyeMat} attach="material" />
           </mesh>
-          <mesh position={[0.07, 0.03, 0.19]}>
-            <sphereGeometry args={[0.035, 8, 8]} />
+          <mesh position={[0.075, 0.04, -0.19]}>
+            <sphereGeometry args={[0.038, 12, 12]} />
             <primitive object={eyeMat} attach="material" />
           </mesh>
 
-          {/* Athletic Visor / Sunglasses */}
-          <mesh position={[0, 0.04, 0.15]}>
-            <boxGeometry args={[0.26, 0.06, 0.12]} />
+          <mesh position={[0, 0.12, -0.22]} rotation={[-0.2, 0, 0]}>
+            <boxGeometry args={[0.32, 0.08, 0.06]} />
             <primitive object={visorMat} attach="material" />
           </mesh>
 
-          {/* Ponytail Hairstyle */}
-          <mesh castShadow position={[0, 0.12, -0.08]}>
-            <sphereGeometry args={[0.23, 16, 16, 0, Math.PI * 2, 0, Math.PI * 0.6]} />
-            <primitive object={hairMat} attach="material" />
-          </mesh>
-          <mesh castShadow position={[0, 0.18, -0.26]} rotation={[-0.45, 0, 0]}>
-            <cylinderGeometry args={[0.07, 0.02, 0.36, 12]} />
-            <primitive object={hairMat} attach="material" />
-          </mesh>
-          <mesh position={[0, 0.22, -0.19]}>
-            <torusGeometry args={[0.075, 0.025, 8, 16]} />
-            <meshBasicMaterial color="#ec4899" />
-          </mesh>
+          {preset === 'female_striker' && (
+            <mesh position={[0, 0.08, 0.22]} rotation={[0.4, 0, 0]}>
+              <sphereGeometry args={[0.12, 14, 14]} />
+              <primitive object={hairMat} attach="material" />
+            </mesh>
+          )}
+
+          {preset === 'captain_pro' && (
+            <mesh position={[0, 0.22, 0]}>
+              <boxGeometry args={[0.38, 0.12, 0.38]} />
+              <meshStandardMaterial color="#facc15" roughness={0.3} />
+            </mesh>
+          )}
         </group>
 
-        {/* ── 3. ARTICULATED ARMS (Shoulder -> UpperArm -> Elbow -> Forearm -> Wrist -> Glove) ── */}
-        {/* Left Arm */}
-        <group ref={leftShoulderRef} position={[-0.42, 0.52, 0]}>
-          {/* Upper Arm */}
-          <mesh castShadow position={[0, -0.16, 0]}>
-            <cylinderGeometry args={[0.075, 0.065, 0.32, 14]} />
-            <primitive object={skinMat} attach="material" />
+        {/* ── 3. ARTICULATED ARMS ── */}
+        <group ref={leftShoulderRef} position={[-0.4, 0.52, 0]}>
+          <mesh castShadow position={[0, -0.22, 0]}>
+            <cylinderGeometry args={[0.10, 0.085, 0.44, 14]} />
+            <primitive object={jerseyMat} attach="material" />
           </mesh>
-
-          {/* Elbow Joint Pivot */}
-          <group ref={leftElbowRef} position={[0, -0.32, 0]}>
-            <mesh position={[0, 0, 0]}>
-              <sphereGeometry args={[0.065, 10, 10]} />
-              <primitive object={skinMat} attach="material" />
-            </mesh>
-            {/* Forearm */}
-            <mesh castShadow position={[0, -0.16, 0]}>
-              <cylinderGeometry args={[0.065, 0.055, 0.30, 14]} />
-              <primitive object={skinMat} attach="material" />
-            </mesh>
-            {/* Hand / Pink Glove */}
-            <mesh castShadow position={[0, -0.34, 0]}>
-              <sphereGeometry args={[0.08, 12, 12]} />
-              <primitive object={gloveMat} attach="material" />
+          <group ref={leftElbowRef} position={[0, -0.44, 0]}>
+            <mesh castShadow position={[0, -0.22, 0]}>
+              <cylinderGeometry args={[0.085, 0.07, 0.44, 14]} />
+              <primitive object={isGoalkeeper ? gloveMat : skinMat} attach="material" />
             </mesh>
           </group>
         </group>
 
-        {/* Right Arm */}
-        <group ref={rightShoulderRef} position={[0.42, 0.52, 0]}>
-          {/* Upper Arm */}
-          <mesh castShadow position={[0, -0.16, 0]}>
-            <cylinderGeometry args={[0.075, 0.065, 0.32, 14]} />
-            <primitive object={skinMat} attach="material" />
+        <group ref={rightShoulderRef} position={[0.4, 0.52, 0]}>
+          <mesh castShadow position={[0, -0.22, 0]}>
+            <cylinderGeometry args={[0.10, 0.085, 0.44, 14]} />
+            <primitive object={jerseyMat} attach="material" />
           </mesh>
-
-          {/* Elbow Joint Pivot */}
-          <group ref={rightElbowRef} position={[0, -0.32, 0]}>
-            <mesh position={[0, 0, 0]}>
-              <sphereGeometry args={[0.065, 10, 10]} />
-              <primitive object={skinMat} attach="material" />
-            </mesh>
-            {/* Forearm */}
-            <mesh castShadow position={[0, -0.16, 0]}>
-              <cylinderGeometry args={[0.065, 0.055, 0.30, 14]} />
-              <primitive object={skinMat} attach="material" />
-            </mesh>
-            {/* Hand / Pink Glove */}
-            <mesh castShadow position={[0, -0.34, 0]}>
-              <sphereGeometry args={[0.08, 12, 12]} />
-              <primitive object={gloveMat} attach="material" />
+          <group ref={rightElbowRef} position={[0, -0.44, 0]}>
+            <mesh castShadow position={[0, -0.22, 0]}>
+              <cylinderGeometry args={[0.085, 0.07, 0.44, 14]} />
+              <primitive object={isGoalkeeper ? gloveMat : skinMat} attach="material" />
             </mesh>
           </group>
         </group>
       </group>
 
-      {/* ── 4. ATHLETIC SHORTS ── */}
-      <mesh castShadow position={[0, 0.9, 0]}>
-        <cylinderGeometry args={[0.31, 0.33, 0.34, 18]} />
+      {/* ── 4. SHORTS ── */}
+      <mesh castShadow position={[0, 0.72, 0]}>
+        <cylinderGeometry args={[0.31, 0.34, 0.36, 20]} />
         <primitive object={shortsMat} attach="material" />
       </mesh>
-      <mesh position={[0, 0.9, 0]}>
-        <cylinderGeometry args={[0.315, 0.335, 0.12, 18]} />
-        <primitive object={trimMat} attach="material" />
-      </mesh>
 
-      {/* ── 5. ARTICULATED LEGS (Hip -> Thigh -> Knee -> Calf -> Ankle -> Soccer Cleats) ── */}
-      {/* Left Leg */}
-      <group ref={leftHipRef} position={[-0.17, 0.82, 0]}>
-        {/* Thigh */}
-        <mesh castShadow position={[0, -0.2, 0]}>
-          <cylinderGeometry args={[0.115, 0.095, 0.4, 16]} />
+      {/* ── 5. ARTICULATED LEGS ── */}
+      <group ref={leftHipRef} position={[-0.17, 0.62, 0]}>
+        <mesh castShadow position={[0, -0.25, 0]}>
+          <cylinderGeometry args={[0.13, 0.10, 0.50, 16]} />
           <primitive object={skinMat} attach="material" />
         </mesh>
 
-        {/* Knee Joint Pivot */}
-        <group ref={leftKneeRef} position={[0, -0.4, 0]}>
-          <mesh position={[0, 0, 0]}>
-            <sphereGeometry args={[0.092, 12, 12]} />
-            <primitive object={skinMat} attach="material" />
-          </mesh>
-          {/* Calf & High Sock */}
-          <mesh castShadow position={[0, -0.2, 0]}>
-            <cylinderGeometry args={[0.092, 0.08, 0.38, 16]} />
+        <group ref={leftKneeRef} position={[0, -0.50, 0]}>
+          <mesh castShadow position={[0, -0.25, 0]}>
+            <cylinderGeometry args={[0.10, 0.085, 0.50, 16]} />
             <primitive object={sockMat} attach="material" />
           </mesh>
-
-          {/* Ankle & Soccer Cleat Boot */}
-          <group position={[0, -0.42, 0.06]}>
-            <mesh castShadow>
-              <boxGeometry args={[0.13, 0.11, 0.28]} />
-              <primitive object={bootMat} attach="material" />
-            </mesh>
-            {/* Studs Sole */}
-            <mesh position={[0, -0.06, 0]}>
-              <boxGeometry args={[0.13, 0.02, 0.28]} />
-              <meshBasicMaterial color="#0f172a" />
-            </mesh>
-          </group>
+          <mesh castShadow position={[0, -0.52, -0.06]}>
+            <boxGeometry args={[0.17, 0.12, 0.32]} />
+            <primitive object={bootMat} attach="material" />
+          </mesh>
         </group>
       </group>
 
-      {/* Right Leg */}
-      <group ref={rightHipRef} position={[0.17, 0.82, 0]}>
-        {/* Thigh */}
-        <mesh castShadow position={[0, -0.2, 0]}>
-          <cylinderGeometry args={[0.115, 0.095, 0.4, 16]} />
+      <group ref={rightHipRef} position={[0.17, 0.62, 0]}>
+        <mesh castShadow position={[0, -0.25, 0]}>
+          <cylinderGeometry args={[0.13, 0.10, 0.50, 16]} />
           <primitive object={skinMat} attach="material" />
         </mesh>
 
-        {/* Knee Joint Pivot */}
-        <group ref={rightKneeRef} position={[0, -0.4, 0]}>
-          <mesh position={[0, 0, 0]}>
-            <sphereGeometry args={[0.092, 12, 12]} />
-            <primitive object={skinMat} attach="material" />
-          </mesh>
-          {/* Calf & High Sock */}
-          <mesh castShadow position={[0, -0.2, 0]}>
-            <cylinderGeometry args={[0.092, 0.08, 0.38, 16]} />
+        <group ref={rightKneeRef} position={[0, -0.50, 0]}>
+          <mesh castShadow position={[0, -0.25, 0]}>
+            <cylinderGeometry args={[0.10, 0.085, 0.50, 16]} />
             <primitive object={sockMat} attach="material" />
           </mesh>
-
-          {/* Ankle & Soccer Cleat Boot */}
-          <group position={[0, -0.42, 0.06]}>
-            <mesh castShadow>
-              <boxGeometry args={[0.13, 0.11, 0.28]} />
-              <primitive object={bootMat} attach="material" />
-            </mesh>
-            <mesh position={[0, -0.06, 0]}>
-              <boxGeometry args={[0.13, 0.02, 0.28]} />
-              <meshBasicMaterial color="#0f172a" />
-            </mesh>
-          </group>
+          <mesh castShadow position={[0, -0.52, -0.06]}>
+            <boxGeometry args={[0.17, 0.12, 0.32]} />
+            <primitive object={bootMat} attach="material" />
+          </mesh>
         </group>
       </group>
 
-      {/* Goalkeeper Cyan Visor */}
-      {isGoalkeeper && (
-        <mesh position={[0, 2.36, 0.18]}>
-          <boxGeometry args={[0.3, 0.06, 0.12]} />
-          <meshBasicMaterial color="#00ffff" />
-        </mesh>
-      )}
     </group>
   )
 }
