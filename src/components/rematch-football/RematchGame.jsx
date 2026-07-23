@@ -250,6 +250,7 @@ export function RematchGame({ onExit }) {
   const [inputRoomCode, setInputRoomCode] = useState('')
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [settingsTab, setSettingsTab] = useState('CONTROLS')
+  const [showMultiplayerModal, setShowMultiplayerModal] = useState(false)
   const [tipIndex, setTipIndex] = useState(0)
 
   // Rocket League style Kickoff Countdown state (3, 2, 1, GO!)
@@ -422,6 +423,7 @@ export function RematchGame({ onExit }) {
   }
 
   const startMatchWithLoading = () => {
+    setShowMultiplayerModal(false)
     setGameState('LOADING_MATCH')
     setTimeout(() => {
       resetMatch()
@@ -544,19 +546,18 @@ export function RematchGame({ onExit }) {
         </Suspense>
       </Canvas>
 
-      {/* ── 3. SLEEK HORIZONTAL TOP NAVBAR HOME SCREEN ── */}
+      {/* ── 3. AUTHENTIC REMATCH HOME SCREEN (TOP NAVBAR + LEFT SIDE LIST MENU) ── */}
       {gameState === 'MENU' && (
-        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'auto', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '30px 40px', fontFamily: "'Orbitron', sans-serif" }}>
+        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'auto', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '24px 40px', fontFamily: "'Orbitron', sans-serif" }}>
           
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(15, 23, 42, 0.85)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '14px 28px', backdropFilter: 'blur(12px)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ fontSize: '1.5rem' }}>⚽</span>
-              <span style={{ color: '#fff', fontSize: '1.3rem', fontWeight: '900', letterSpacing: '3px' }}>REMATCH</span>
-              <span style={{ background: '#22c55e', color: '#000', fontSize: '0.65rem', fontWeight: '900', padding: '2px 8px', borderRadius: '4px' }}>SEASON 2026</span>
-            </div>
+          {/* Top Horizontal Navbar */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(15, 23, 42, 0.65)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '10px 24px', backdropFilter: 'blur(10px)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+              <button style={{ background: 'rgba(34, 197, 94, 0.2)', border: '1px solid #22c55e', color: '#22c55e', padding: '4px 12px', borderRadius: '4px', fontWeight: '900', fontSize: '0.75rem' }}>
+                [A] PLAY
+              </button>
 
-            <div style={{ display: 'flex', gap: '16px' }}>
-              {['PLAY', 'CUSTOMIZATION', 'PROFILE'].map((tab) => (
+              {['SEASON 0', 'CUSTOMIZATION', 'PROFILE', 'STORE'].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveMenuTab(tab)}
@@ -565,9 +566,9 @@ export function RematchGame({ onExit }) {
                     color: activeMenuTab === tab ? '#000' : '#94a3b8',
                     border: 'none',
                     borderRadius: '6px',
-                    padding: '10px 24px',
+                    padding: '6px 16px',
                     fontWeight: '900',
-                    fontSize: '0.85rem',
+                    fontSize: '0.8rem',
                     letterSpacing: '1px',
                     cursor: 'pointer'
                   }}
@@ -577,108 +578,200 @@ export function RematchGame({ onExit }) {
               ))}
             </div>
 
-            <button 
-              onClick={onExit} 
-              style={{ background: 'rgba(239, 68, 68, 0.2)', border: '1px solid #ef4444', color: '#ef4444', padding: '8px 20px', borderRadius: '6px', cursor: 'pointer', fontWeight: '900' }}
-            >
-              EXIT TO CONSOLE
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <span style={{ color: '#94a3b8', fontSize: '0.8rem', fontWeight: '800' }}>Social [TAB]</span>
+              <button 
+                onClick={onExit} 
+                style={{ background: 'rgba(239, 68, 68, 0.2)', border: '1px solid #ef4444', color: '#ef4444', padding: '6px 16px', borderRadius: '6px', cursor: 'pointer', fontWeight: '900', fontSize: '0.8rem' }}
+              >
+                EXIT
+              </button>
+            </div>
           </div>
 
+          {/* Left Vertical Menu List & Bottom Right Badge (Exact Rematch Layout) */}
           {activeMenuTab === 'PLAY' && (
-            <div style={{ display: 'flex', gap: '24px', marginBottom: '20px' }}>
-              <div 
-                onClick={startMatchWithLoading}
-                style={{
-                  flex: 1,
-                  background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(15, 23, 42, 0.9) 100%)',
-                  border: '1px solid #22c55e',
-                  borderRadius: '16px',
-                  padding: '30px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  height: '320px',
-                  backdropFilter: 'blur(10px)',
-                  boxShadow: '0 8px 30px rgba(34, 197, 94, 0.2)'
-                }}
-              >
-                <div>
-                  <span style={{ fontSize: '2.5rem', display: 'block', marginBottom: '10px' }}>🤖</span>
-                  <h2 style={{ color: '#22c55e', fontSize: '1.5rem', margin: '0 0 8px', letterSpacing: '2px' }}>SINGLE PLAYER VS BOTS</h2>
-                  <p style={{ color: '#cbd5e1', fontSize: '0.85rem', lineHeight: '1.6', fontFamily: 'sans-serif', margin: 0 }}>
-                    Jump directly into quick 1v1 matches against smart AI bot opponents.
-                  </p>
-                </div>
-                <button style={{ background: '#22c55e', color: '#000', border: 'none', borderRadius: '8px', padding: '14px', fontWeight: '900', letterSpacing: '2px', cursor: 'pointer' }}>
-                  ▶ QUICK MATCH 1V1
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', height: '100%', paddingBottom: '30px' }}>
+              
+              {/* Left Menu Items (Clean list layout matching reference image!) */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', width: '280px' }}>
+                <button
+                  onClick={startMatchWithLoading}
+                  style={{
+                    background: 'transparent',
+                    color: '#ffffff',
+                    border: 'none',
+                    fontSize: '1.2rem',
+                    fontWeight: '900',
+                    letterSpacing: '2px',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    textShadow: '0 0 16px rgba(255,255,255,0.4)',
+                    padding: '6px 0'
+                  }}
+                >
+                  QUICK MATCH
                 </button>
+
+                <button
+                  onClick={() => setShowMultiplayerModal(true)}
+                  style={{
+                    background: 'transparent',
+                    color: '#00d2ff',
+                    border: 'none',
+                    fontSize: '1.2rem',
+                    fontWeight: '900',
+                    letterSpacing: '2px',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    textShadow: '0 0 16px rgba(0, 210, 255, 0.5)',
+                    padding: '6px 0'
+                  }}
+                >
+                  MULTIPLAYER LOBBY
+                </button>
+
+                {[
+                  { name: 'RANKED MATCH 5VS5', action: () => { setMultiplayerFormat('5v5'); handleFindOnlineMatch(); } },
+                  { name: 'CUSTOM MATCH', action: handleCreateFriendRoom },
+                  { name: 'PRACTICE', action: startMatchWithLoading },
+                  { name: 'PROLOGUE', action: startMatchWithLoading },
+                  { name: 'SYSTEM', action: () => setIsSettingsOpen(true) }
+                ].map((item) => (
+                  <button
+                    key={item.name}
+                    onClick={item.action}
+                    style={{
+                      background: 'transparent',
+                      color: '#64748b',
+                      border: 'none',
+                      fontSize: '1rem',
+                      fontWeight: '800',
+                      letterSpacing: '2px',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      padding: '4px 0',
+                      transition: 'color 0.2s'
+                    }}
+                    onMouseEnter={(e) => (e.target.style.color = '#ffffff')}
+                    onMouseLeave={(e) => (e.target.style.color = '#64748b')}
+                  >
+                    {item.name}
+                  </button>
+                ))}
               </div>
 
-              <div 
-                onClick={handleCreateFriendRoom}
-                style={{
-                  flex: 1,
-                  background: 'linear-gradient(135deg, rgba(250, 204, 21, 0.15) 0%, rgba(15, 23, 42, 0.9) 100%)',
-                  border: '1px solid #facc15',
-                  borderRadius: '16px',
-                  padding: '30px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  height: '320px',
-                  backdropFilter: 'blur(10px)',
-                  boxShadow: '0 8px 30px rgba(250, 204, 21, 0.2)'
-                }}
-              >
-                <div>
-                  <span style={{ fontSize: '2.5rem', display: 'block', marginBottom: '10px' }}>🤝</span>
-                  <h2 style={{ color: '#facc15', fontSize: '1.5rem', margin: '0 0 8px', letterSpacing: '2px' }}>PLAY WITH FRIEND</h2>
-                  <p style={{ color: '#cbd5e1', fontSize: '0.85rem', lineHeight: '1.6', fontFamily: 'sans-serif', margin: 0 }}>
-                    Create or join private room codes to challenge your friends online.
+              {/* Bottom Right Level Badge & Season Feedback */}
+              <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                <div style={{ background: 'rgba(15, 23, 42, 0.85)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '12px 20px', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <div style={{ background: '#0284c7', color: '#fff', padding: '8px 12px', borderRadius: '6px', fontWeight: '900' }}>
+                    <small style={{ display: 'block', fontSize: '0.55rem' }}>LEVEL</small>
+                    29
+                  </div>
+                  <div>
+                    <h4 style={{ margin: 0, color: '#facc15', fontSize: '0.95rem', fontWeight: '900' }}>BRONZE DIV 3</h4>
+                    <small style={{ color: '#64748b' }}>Matchmaking Ready</small>
+                  </div>
+                </div>
+
+                <div style={{ background: 'rgba(15, 23, 42, 0.85)', border: '1px solid rgba(34, 197, 94, 0.3)', borderRadius: '10px', padding: '12px 20px', width: '260px', backdropFilter: 'blur(10px)' }}>
+                  <h4 style={{ margin: '0 0 4px', color: '#22c55e', fontSize: '0.85rem' }}>Season 0 Feedback</h4>
+                  <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.7rem', lineHeight: '1.4', fontFamily: 'sans-serif' }}>
+                    Welcome to Rematch Arcade! Share your feedback to shape future updates.
                   </p>
                 </div>
-                <button style={{ background: '#facc15', color: '#000', border: 'none', borderRadius: '8px', padding: '14px', fontWeight: '900', letterSpacing: '2px', cursor: 'pointer' }}>
-                  👥 HOST / JOIN ROOM
-                </button>
               </div>
 
-              <div 
-                onClick={handleFindOnlineMatch}
-                style={{
-                  flex: 1,
-                  background: 'linear-gradient(135deg, rgba(0, 210, 255, 0.15) 0%, rgba(15, 23, 42, 0.9) 100%)',
-                  border: '1px solid #00d2ff',
-                  borderRadius: '16px',
-                  padding: '30px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  height: '320px',
-                  backdropFilter: 'blur(10px)',
-                  boxShadow: '0 8px 30px rgba(0, 210, 255, 0.2)'
-                }}
-              >
-                <div>
-                  <span style={{ fontSize: '2.5rem', display: 'block', marginBottom: '10px' }}>🌐</span>
-                  <h2 style={{ color: '#00d2ff', fontSize: '1.5rem', margin: '0 0 8px', letterSpacing: '2px' }}>ONLINE MATCHMAKING</h2>
-                  <p style={{ color: '#cbd5e1', fontSize: '0.85rem', lineHeight: '1.6', fontFamily: 'sans-serif', margin: 0 }}>
-                    Queue up for real-time 1v1, 2v2, 3v3, or 5v5 global matchmaking.
-                  </p>
+            </div>
+          )}
+
+          {activeMenuTab === 'CUSTOMIZATION' && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', marginBottom: '20px' }}>
+              <div style={{ width: '320px', background: 'rgba(15, 23, 42, 0.85)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '20px', backdropFilter: 'blur(10px)' }}>
+                <h3 style={{ color: '#fff', fontSize: '1rem', margin: '0 0 15px', letterSpacing: '2px' }}>CHARACTER PRESETS</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {[
+                    { id: 'female_striker', name: 'Female Striker (Red Hoodie)', desc: 'Sloclap Signature' },
+                    { id: 'male_hoodie', name: 'Male Striker (Blue Hoodie)', desc: 'Athletic Cut' },
+                    { id: 'captain_pro', name: 'Captain Pro (Gold Kit)', desc: 'Veteran Leader' }
+                  ].map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => setCharacterPreset(p.id)}
+                      style={{
+                        background: characterPreset === p.id ? 'rgba(34, 197, 94, 0.2)' : 'rgba(255,255,255,0.03)',
+                        border: characterPreset === p.id ? '2px solid #22c55e' : '1px solid rgba(255,255,255,0.08)',
+                        borderRadius: '10px',
+                        padding: '14px',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        color: '#fff'
+                      }}
+                    >
+                      <b style={{ display: 'block', fontSize: '0.85rem', color: characterPreset === p.id ? '#22c55e' : '#fff' }}>{p.name}</b>
+                      <small style={{ color: '#64748b' }}>{p.desc}</small>
+                    </button>
+                  ))}
                 </div>
-                <button style={{ background: '#00d2ff', color: '#000', border: 'none', borderRadius: '8px', padding: '14px', fontWeight: '900', letterSpacing: '2px', cursor: 'pointer' }}>
-                  🌐 FIND ONLINE MATCH
-                </button>
               </div>
             </div>
           )}
         </div>
       )}
 
-      {/* ── 4. IN-GAME HUD OVERLAYS ── */}
+      {/* ── 4. MULTIPLAYER LOBBY MODAL (WHEN TRIGGERED FROM MENU) ── */}
+      {showMultiplayerModal && gameState === 'MENU' && (
+        <div style={{ position: 'absolute', inset: 0, background: 'rgba(9, 13, 22, 0.9)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 150, fontFamily: "'Orbitron', sans-serif" }}>
+          <div style={{ width: '540px', background: 'rgba(15, 23, 42, 0.95)', border: '1px solid #00d2ff', borderRadius: '16px', padding: '30px', color: '#fff' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2 style={{ color: '#00d2ff', fontSize: '1.3rem', margin: 0, letterSpacing: '2px' }}>🌐 MULTIPLAYER LOBBY</h2>
+              <button onClick={() => setShowMultiplayerModal(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '1.2rem', cursor: 'pointer' }}>✖</button>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', color: '#cbd5e1', fontSize: '0.8rem', marginBottom: '8px' }}>SELECT FORMAT:</label>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                {['1v1', '2v2', '3v3', '5v5'].map((fmt) => (
+                  <button
+                    key={fmt}
+                    onClick={() => setMultiplayerFormat(fmt)}
+                    style={{
+                      flex: 1,
+                      background: multiplayerFormat === fmt ? '#00d2ff' : 'rgba(255,255,255,0.05)',
+                      color: multiplayerFormat === fmt ? '#000' : '#fff',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '12px',
+                      fontWeight: '900',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {fmt}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
+              <button onClick={handleFindOnlineMatch} style={{ flex: 1, background: 'linear-gradient(135deg, #00d2ff, #0284c7)', color: '#000', border: 'none', borderRadius: '8px', padding: '14px', fontWeight: '900', cursor: 'pointer' }}>
+                🌐 FIND MATCH ({multiplayerFormat})
+              </button>
+              <button onClick={handleCreateFriendRoom} style={{ flex: 1, background: '#facc15', color: '#000', border: 'none', borderRadius: '8px', padding: '14px', fontWeight: '900', cursor: 'pointer' }}>
+                ➕ CREATE ROOM
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <input type="text" placeholder="ENTER FRIEND CODE" value={inputRoomCode} onChange={(e) => setInputRoomCode(e.target.value.toUpperCase())} style={{ flex: 1, background: '#090d16', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', padding: '12px', borderRadius: '8px', fontWeight: '900', outline: 'none' }} />
+              <button onClick={handleJoinFriendRoom} style={{ background: '#22c55e', color: '#000', border: 'none', borderRadius: '8px', padding: '12px 24px', fontWeight: '900', cursor: 'pointer' }}>
+                JOIN
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 5. IN-GAME HUD OVERLAYS ── */}
       {gameState !== 'MENU' && gameState !== 'BOOT' && gameState !== 'LOADING_MATCH' && (
         <>
           {/* Top-Left EA FC Scorebar with 90-Min Clock */}
@@ -714,27 +807,6 @@ export function RematchGame({ onExit }) {
             </div>
           </div>
 
-          {/* Top-Right Camera Mode Indicator */}
-          <div style={{ position: 'absolute', top: '25px', right: '30px', zIndex: 10 }}>
-            <button
-              onClick={toggleCameraMode}
-              style={{
-                background: 'rgba(15, 23, 42, 0.88)',
-                border: '1px solid rgba(0, 210, 255, 0.6)',
-                color: '#00d2ff',
-                borderRadius: '8px',
-                padding: '8px 16px',
-                fontWeight: '900',
-                cursor: 'pointer',
-                fontFamily: "'Orbitron', sans-serif",
-                fontSize: '0.8rem',
-                letterSpacing: '1px'
-              }}
-            >
-              📹 CAMERA [C]: {cameraMode === 'FOLLOW' ? 'PLAYER FOLLOW' : 'BROADCAST AUTO-BALL'}
-            </button>
-          </div>
-
           {/* ── ROCKET LEAGUE KICKOFF COUNTDOWN OVERLAY (3, 2, 1, GO!) ── */}
           {gameState === 'KICKOFF' && (
             <div style={{
@@ -753,15 +825,14 @@ export function RematchGame({ onExit }) {
                 color: countdownText === 'GO!' ? '#22c55e' : '#facc15',
                 textShadow: countdownText === 'GO!' ? '0 0 60px rgba(34, 197, 94, 0.9)' : '0 0 60px rgba(250, 204, 21, 0.9)',
                 margin: 0,
-                letterSpacing: '4px',
-                animation: 'pulse 0.4s ease-in-out'
+                letterSpacing: '4px'
               }}>
                 {countdownText}
               </h1>
             </div>
           )}
 
-          {/* ── BOTTOM HUD ACTION BAR (STAMINA, SHOT, DIVE, ABILITY) ── */}
+          {/* ── CLEAN HUD BOTTOM BAR (STAMINA + ABILITY GAUGE ONLY - NO KEYBIND TEXT) ── */}
           <div style={{
             position: 'absolute',
             bottom: '30px',
@@ -769,22 +840,21 @@ export function RematchGame({ onExit }) {
             transform: 'translateX(-50%)',
             display: 'flex',
             alignItems: 'center',
-            gap: '16px',
-            background: 'rgba(15, 23, 42, 0.9)',
+            gap: '24px',
+            background: 'rgba(15, 23, 42, 0.88)',
             border: '1px solid rgba(255,255,255,0.15)',
             borderRadius: '16px',
-            padding: '12px 24px',
+            padding: '12px 28px',
             backdropFilter: 'blur(12px)',
             fontFamily: "'Orbitron', sans-serif",
             zIndex: 30,
             pointerEvents: 'none',
             boxShadow: '0 8px 32px rgba(0,0,0,0.6)'
           }}>
-            {/* Stamina Meter */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '120px' }}>
+            {/* Segmented Stamina Bar */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '140px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', color: '#94a3b8', fontWeight: '900' }}>
                 <span>STAMINA</span>
-                <span>[SHIFT]</span>
               </div>
               <div style={{ height: '8px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', overflow: 'hidden' }}>
                 <div style={{ height: '100%', width: `${stamina}%`, background: 'linear-gradient(90deg, #00d2ff, #0284c7)', borderRadius: '4px' }} />
@@ -793,112 +863,43 @@ export function RematchGame({ onExit }) {
 
             <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.15)' }} />
 
-            {/* Action Badges */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.75rem', fontWeight: '900' }}>
-              <span style={{ background: 'rgba(34, 197, 94, 0.2)', border: '1px solid #22c55e', color: '#22c55e', padding: '4px 10px', borderRadius: '6px' }}>
-                ⚡ [SPACE/L-CLICK] POWER SHOT
-              </span>
-              <span style={{ background: 'rgba(250, 204, 21, 0.2)', border: '1px solid #facc15', color: '#facc15', padding: '4px 10px', borderRadius: '6px' }}>
-                🏃 [E] PASS
-              </span>
-              <span style={{ background: 'rgba(239, 68, 68, 0.2)', border: '1px solid #ef4444', color: '#ef4444', padding: '4px 10px', borderRadius: '6px' }}>
-                🛡️ [Q/R-CLICK] SLIDE DIVE
-              </span>
-              <span style={{ background: 'rgba(168, 85, 247, 0.2)', border: '1px solid #a855f7', color: '#a855f7', padding: '4px 10px', borderRadius: '6px' }}>
-                🔥 [R] SPEED SURGE
-              </span>
+            {/* Special Ability Charge Icon */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'linear-gradient(135deg, #a855f7, #7e22ce)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 12px #a855f7' }}>
+                🔥
+              </div>
+              <span style={{ color: '#a855f7', fontSize: '0.75rem', fontWeight: '900' }}>SPEED SURGE</span>
             </div>
           </div>
 
-          <MiniMapRadar />
-
-          {/* ── 5. GOAL CELEBRATION CUTSCENE ── */}
-          {gameState === 'GOAL_CELEBRATION' && (
-            <div style={{
-              position: 'absolute',
-              inset: 0,
-              background: 'radial-gradient(circle at center, transparent 30%, rgba(2, 6, 23, 0.85) 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexDirection: 'column',
-              zIndex: 120,
-              fontFamily: "'Orbitron', sans-serif",
-              pointerEvents: 'auto'
-            }}>
-              <h1 style={{
-                fontSize: '5rem',
-                fontWeight: '900',
-                letterSpacing: '10px',
-                color: lastScorer === 'red' ? '#ef4444' : '#0284c7',
-                textShadow: lastScorer === 'red' ? '0 0 50px rgba(239, 68, 68, 0.9)' : '0 0 50px rgba(2, 132, 199, 0.9)',
-                margin: 0
-              }}>
-                GOAL!
-              </h1>
-              <p style={{ color: '#ffffff', fontSize: '1.4rem', letterSpacing: '4px', marginTop: '10px', fontWeight: '800' }}>
-                {celebrationType.toUpperCase()} CELEBRATION
-              </p>
-
+          {/* Clean Skip Replay Button */}
+          {gameState === 'GOAL_REPLAY' && (
+            <div style={{ position: 'absolute', bottom: '90px', left: '50%', transform: 'translateX(-50%)', zIndex: 140, pointerEvents: 'auto' }}>
               <button
-                onClick={skipCelebration}
+                onClick={skipReplay}
                 style={{
-                  marginTop: '30px',
-                  background: '#facc15',
+                  background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
                   color: '#000',
                   border: 'none',
                   borderRadius: '30px',
                   padding: '14px 36px',
                   fontWeight: '900',
                   fontSize: '0.9rem',
-                  letterSpacing: '2px',
+                  letterSpacing: '3px',
                   cursor: 'pointer',
-                  boxShadow: '0 8px 30px rgba(250, 204, 21, 0.5)'
+                  boxShadow: '0 8px 30px rgba(34, 197, 94, 0.5)'
                 }}
               >
-                ⏭ SKIP CELEBRATION
+                ⏭ SKIP REPLAY
               </button>
             </div>
           )}
 
-          {/* ── 6. GOAL REPLAY VIEW WITH SKIP BUTTON ── */}
-          {gameState === 'GOAL_REPLAY' && (
-            <div style={{
-              position: 'absolute',
-              inset: 0,
-              zIndex: 130,
-              fontFamily: "'Orbitron', sans-serif",
-              pointerEvents: 'auto'
-            }}>
-              <div style={{ position: 'absolute', top: '35px', left: '40px', background: 'rgba(239, 68, 68, 0.9)', color: '#fff', padding: '8px 20px', borderRadius: '6px', fontWeight: '900', fontSize: '1rem', letterSpacing: '3px' }}>
-                ⏺ GOAL REPLAY (CINEMATIC)
-              </div>
-
-              <div style={{ position: 'absolute', bottom: '50px', left: '50%', transform: 'translateX(-50%)', zIndex: 140 }}>
-                <button
-                  onClick={skipReplay}
-                  style={{
-                    background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
-                    color: '#000',
-                    border: 'none',
-                    borderRadius: '30px',
-                    padding: '16px 40px',
-                    fontWeight: '900',
-                    fontSize: '1rem',
-                    letterSpacing: '3px',
-                    cursor: 'pointer',
-                    boxShadow: '0 8px 30px rgba(34, 197, 94, 0.5)'
-                  }}
-                >
-                  ⏭ SKIP REPLAY
-                </button>
-              </div>
-            </div>
-          )}
+          <MiniMapRadar />
         </>
       )}
 
-      {/* ── 7. MULTI-TAB PAUSE SETTINGS MODAL ── */}
+      {/* ── 6. MULTI-TAB PAUSE SETTINGS MODAL ── */}
       {isSettingsOpen && (
         <div style={{
           position: 'absolute',
