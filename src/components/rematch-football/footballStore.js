@@ -3,24 +3,42 @@ import { create } from 'zustand'
 export const useFootballStore = create((set) => ({
   score: { red: 0, blue: 0 },
   half: 1, // 1 for 1st Half, 2 for 2nd Half
-  gameState: 'BOOT', // 'BOOT' | 'MENU' | 'LOADING_MATCH' | 'KICKOFF' | 'PLAYING' | 'GOAL_SCORED' | 'HALF_TIME' | 'FULL_TIME'
-  timer: 150, // 2.5 minutes per half (150s)
+  gameState: 'BOOT', // 'BOOT' | 'MENU' | 'LOADING_MATCH' | 'KICKOFF' | 'PLAYING' | 'GOAL_SCORED' | 'GOAL_CELEBRATION' | 'GOAL_REPLAY' | 'HALF_TIME' | 'FULL_TIME'
+  timer: 150, // 2.5 minutes per half
   stamina: 100,
-  ballPossession: null, // ID of player holding ball
+  ballPossession: null,
   goalAlert: '',
+  lastScorer: null, // 'red' | 'blue'
+  kickoffTeam: 'red', // Team that takes kickoff
   redGK: null,
   blueGK: null,
   
+  // Replay frame buffer
+  replayBuffer: [],
+  
   // Customization & Style settings
-  characterPreset: 'female_striker', // 'female_striker' | 'male_hoodie' | 'captain_pro'
-  arenaStyle: 'neon', // 'neon' (Neon Palms Stadium) | 'desert' (Desert Oasis Arena)
-  activeMenuTab: 'PLAY', // 'PLAY' | 'SEASON 0' | 'CUSTOMIZATION' | 'PROFILE' | 'STORE'
+  characterPreset: 'female_striker',
+  arenaStyle: 'neon',
+  activeMenuTab: 'PLAY',
+
+  pushReplayFrame: (frameData) => set((state) => {
+    const newBuf = [...state.replayBuffer, frameData]
+    if (newBuf.length > 90) newBuf.shift() // Keep last 90 frames (~4.5s)
+    return { replayBuffer: newBuf }
+  }),
+
+  clearReplayBuffer: () => set({ replayBuffer: [] }),
 
   incrementScore: (team) => set((state) => {
     const newScore = { ...state.score, [team]: state.score[team] + 1 }
+    // The team that DID NOT score takes the next kickoff
+    const nextKickoff = team === 'red' ? 'blue' : 'red'
+
     return {
       score: newScore,
-      gameState: 'GOAL_SCORED',
+      lastScorer: team,
+      kickoffTeam: nextKickoff,
+      gameState: 'GOAL_CELEBRATION',
       goalAlert: `GOAL ${team.toUpperCase()}!`,
     }
   }),
@@ -53,7 +71,10 @@ export const useFootballStore = create((set) => ({
     stamina: 100,
     ballPossession: null,
     goalAlert: '',
+    lastScorer: null,
+    kickoffTeam: 'red',
     redGK: null,
     blueGK: null,
+    replayBuffer: []
   })
 }))

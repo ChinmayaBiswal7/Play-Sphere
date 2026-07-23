@@ -30,6 +30,7 @@ export function Bot({ id = 'bot1' }) {
   }))
 
   const gameState = useFootballStore((state) => state.gameState)
+  const kickoffTeam = useFootballStore((state) => state.kickoffTeam)
   const setPossession = useFootballStore((state) => state.setPossession)
   const ballPossession = useFootballStore((state) => state.ballPossession)
   const blueGK = useFootballStore((state) => state.blueGK)
@@ -64,13 +65,14 @@ export function Bot({ id = 'bot1' }) {
       api.position.set(0, 1.2, -50)
       api.velocity.set(0, 0, 0)
     } else if (gameState === 'KICKOFF') {
-      api.position.set(0, 1.2, -12)
+      const spawnZ = kickoffTeam === 'blue' ? -1.2 : -8.0
+      api.position.set(0, 1.2, spawnZ)
       api.velocity.set(0, 0, 0)
     }
-  }, [gameState, api])
+  }, [gameState, kickoffTeam, api])
 
   useFrame((state, dt) => {
-    if (gameState === 'GOAL_SCORED' || gameState === 'FULL_TIME' || gameState === 'MENU' || gameState === 'BOOT' || gameState === 'LOADING_MATCH') return
+    if (gameState === 'GOAL_CELEBRATION' || gameState === 'GOAL_REPLAY' || gameState === 'FULL_TIME' || gameState === 'MENU' || gameState === 'BOOT' || gameState === 'LOADING_MATCH') return
 
     const pos = safePos(window.footballBot)
     const vel = safeVel(window.footballBot)
@@ -232,7 +234,7 @@ export function Bot({ id = 'bot1' }) {
       </group>
 
       {/* OVERHEAD BOT NAME TAG */}
-      {gameState !== 'MENU' && (
+      {gameState !== 'MENU' && gameState !== 'GOAL_CELEBRATION' && gameState !== 'GOAL_REPLAY' && (
         <Html position={[0, 2.7, 0]} center distanceFactor={14}>
           <div style={{
             display: 'flex',

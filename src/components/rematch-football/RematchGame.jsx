@@ -17,7 +17,6 @@ function GoalkeeperManager() {
   const incrementScore = useFootballStore((state) => state.incrementScore)
 
   useFrame(() => {
-    // CRITICAL: Only evaluate goal lines during active PLAYING match state!
     if (gameState !== 'PLAYING') return
 
     const ball = window.footballBall
@@ -47,6 +46,85 @@ function GoalkeeperManager() {
 }
 
 /**
+ * Continuous Replay Buffer Recorder
+ */
+function ReplayRecorder() {
+  const gameState = useFootballStore((state) => state.gameState)
+  const pushReplayFrame = useFootballStore((state) => state.pushReplayFrame)
+  const lastRecordTime = useRef(0)
+
+  useFrame((state) => {
+    if (gameState !== 'PLAYING') return
+
+    const now = state.clock.getElapsedTime()
+    if (now - lastRecordTime.current > 0.06) { // Record every 60ms
+      lastRecordTime.current = now
+
+      const ball = window.footballBall
+      const p = window.footballPlayer
+      const b = window.footballBot
+
+      const bPos = ball && Array.isArray(ball.position.current) ? [...ball.position.current] : [0, 0, 0]
+      const pPos = p && Array.isArray(p.position.current) ? [...p.position.current] : [0, 0, 0]
+      const botPos = b && Array.isArray(b.position.current) ? [...b.position.current] : [0, 0, 0]
+
+      pushReplayFrame({ bPos, pPos, botPos })
+    }
+  })
+
+  return null
+}
+
+/**
+ * Cinematic Celebration & Replay Camera Controller
+ */
+function CinematicReplayCamera() {
+  const gameState = useFootballStore((state) => state.gameState)
+  const lastScorer = useFootballStore((state) => state.lastScorer)
+  const replayBuffer = useFootballStore((state) => state.replayBuffer)
+  const animAngle = useRef(0)
+  const replayFrameIdx = useRef(0)
+
+  useFrame((state, dt) => {
+    if (gameState === 'GOAL_CELEBRATION') {
+      animAngle.current += dt * 1.5
+
+      // Orbit camera around scoring player
+      const scorerPos = lastScorer === 'red' 
+        ? (window.footballPlayer ? window.footballPlayer.position.current : [0, 1.2, 0])
+        : (window.footballBot ? window.footballBot.position.current : [0, 1.2, 0])
+
+      const camX = scorerPos[0] + Math.sin(animAngle.current) * 4.5
+      const camY = scorerPos[1] + 2.0
+      const camZ = scorerPos[2] + Math.cos(animAngle.current) * 4.5
+
+      state.camera.position.set(camX, camY, camZ)
+      state.camera.lookAt(scorerPos[0], scorerPos[1] + 1.2, scorerPos[2])
+
+    } else if (gameState === 'GOAL_REPLAY') {
+      // Play back recorded frames
+      if (replayBuffer.length > 0) {
+        replayFrameIdx.current = (replayFrameIdx.current + 1) % replayBuffer.length
+        const frame = replayBuffer[replayFrameIdx.current]
+
+        if (frame && frame.bPos) {
+          const ballX = frame.bPos[0]
+          const ballZ = frame.bPos[2]
+
+          state.camera.position.set(16, 6, ballZ + 4)
+          state.camera.lookAt(ballX, 1.0, ballZ)
+        }
+      }
+    } else if (gameState === 'MENU') {
+      state.camera.position.set(0, 1.8, 3.8)
+      state.camera.lookAt(0, 1.35, 0)
+    }
+  })
+
+  return null
+}
+
+/**
  * Ability Power Meter & Cooldown HUD Widget
  */
 function AbilityHudWidget() {
@@ -69,7 +147,6 @@ function AbilityHudWidget() {
       zIndex: 20,
       pointerEvents: 'none'
     }}>
-      {/* Power Meter Gauge */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', color: '#94a3b8', fontWeight: '900' }}>
           <span>POWER METER</span>
@@ -85,7 +162,6 @@ function AbilityHudWidget() {
         </div>
       </div>
 
-      {/* Ability Cooldown Icons */}
       <div style={{ display: 'flex', gap: '10px' }}>
         {[
           { id: 'power_shot', label: 'POWER [SPACE]', cost: '35%' },
@@ -213,17 +289,6 @@ function MiniMapRadar() {
   )
 }
 
-function ShowcaseCamera() {
-  const gameState = useFootballStore((state) => state.gameState)
-  useFrame((state) => {
-    if (gameState === 'MENU') {
-      state.camera.position.set(0, 1.8, 3.8)
-      state.camera.lookAt(0, 1.35, 0)
-    }
-  })
-  return null
-}
-
 const PRO_TIPS = [
   "Staying high up on the pitch allows to receive passes and counter-attack quickly but will leave your teammates in inferior numbers and vulnerable.",
   "Wall rebounds are valid pass routes! Bounce the ball off side barriers to bypass aggressive defenders.",
@@ -238,6 +303,7 @@ export function RematchGame({ onExit }) {
   const timer = useFootballStore((state) => state.timer)
   const stamina = useFootballStore((state) => state.stamina)
   const goalAlert = useFootballStore((state) => state.goalAlert)
+  const lastScorer = useFootballStore((state) => state.lastScorer)
   const setGameState = useFootballStore((state) => state.setGameState)
   const setGoalAlert = useFootballStore((state) => state.setGoalAlert)
   const resetMatch = useFootballStore((state) => state.resetMatch)
@@ -271,17 +337,23 @@ export function RematchGame({ onExit }) {
     return () => clearInterval(interval)
   }, [gameState])
 
+  // State Transitions: GOAL_CELEBRATION -> GOAL_REPLAY -> KICKOFF
   useEffect(() => {
     if (gameState === 'KICKOFF') {
       const timeout = setTimeout(() => {
         setGameState('PLAYING')
-      }, 2500)
+      }, 2200)
       return () => clearTimeout(timeout)
-    } else if (gameState === 'GOAL_SCORED') {
+    } else if (gameState === 'GOAL_CELEBRATION') {
+      const timeout = setTimeout(() => {
+        setGameState('GOAL_REPLAY')
+      }, 3500)
+      return () => clearTimeout(timeout)
+    } else if (gameState === 'GOAL_REPLAY') {
       const timeout = setTimeout(() => {
         setGoalAlert('')
         setGameState('KICKOFF')
-      }, 2500)
+      }, 6000)
       return () => clearTimeout(timeout)
     } else if (gameState === 'HALF_TIME') {
       const timeout = setTimeout(() => {
@@ -290,6 +362,11 @@ export function RematchGame({ onExit }) {
       return () => clearTimeout(timeout)
     }
   }, [gameState])
+
+  const skipReplay = () => {
+    setGoalAlert('')
+    setGameState('KICKOFF')
+  }
 
   const startMatchWithLoading = () => {
     setGameState('LOADING_MATCH')
@@ -381,7 +458,8 @@ export function RematchGame({ onExit }) {
         <Suspense fallback={null}>
           <Physics gravity={[0, -15, 0]}>
             <Arena />
-            <ShowcaseCamera />
+            <CinematicReplayCamera />
+            <ReplayRecorder />
 
             <Ball />
             <Player id="player1" />
@@ -605,7 +683,7 @@ export function RematchGame({ onExit }) {
             </span>
 
             <span style={{ color: '#ffffff', fontSize: '1.2rem', fontWeight: '900', letterSpacing: '1px' }}>
-              {gameState === 'KICKOFF' ? (half === 1 ? '02:30' : '02:30') : formatTime(timer)}
+              {gameState === 'KICKOFF' ? '02:30' : formatTime(timer)}
             </span>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#090d16', padding: '6px 16px', borderRadius: '6px' }}>
@@ -683,35 +761,70 @@ export function RematchGame({ onExit }) {
             </div>
           )}
 
-          {/* Goal Scored Alert Banner */}
-          {gameState === 'GOAL_SCORED' && goalAlert !== '' && (
+          {/* ── 5. GOAL CELEBRATION CUTSCENE OVERLAY ── */}
+          {gameState === 'GOAL_CELEBRATION' && (
             <div style={{
               position: 'absolute',
-              top: '30%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              background: 'rgba(15, 23, 42, 0.92)',
-              border: '2px solid #00f2fe',
-              borderRadius: '16px',
-              padding: '24px 60px',
+              inset: 0,
+              background: 'radial-gradient(circle at center, transparent 30%, rgba(2, 6, 23, 0.85) 100%)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 0 50px rgba(0, 242, 254, 0.5)',
-              zIndex: 110,
-              pointerEvents: 'none'
+              flexDirection: 'column',
+              zIndex: 120,
+              pointerEvents: 'none',
+              fontFamily: "'Orbitron', sans-serif"
             }}>
               <h1 style={{
-                fontSize: '4rem',
+                fontSize: '5rem',
                 fontWeight: '900',
-                letterSpacing: '6px',
-                color: '#ffffff',
-                textShadow: '0 0 30px rgba(0, 242, 254, 0.8)',
-                fontFamily: "'Orbitron', sans-serif",
+                letterSpacing: '10px',
+                color: lastScorer === 'red' ? '#ef4444' : '#0284c7',
+                textShadow: lastScorer === 'red' ? '0 0 50px rgba(239, 68, 68, 0.9)' : '0 0 50px rgba(2, 132, 199, 0.9)',
                 margin: 0
               }}>
-                {goalAlert}
+                GOAL!
               </h1>
+              <p style={{ color: '#ffffff', fontSize: '1.4rem', letterSpacing: '4px', marginTop: '10px', fontWeight: '800' }}>
+                SCORED BY {lastScorer === 'red' ? 'RED TEAM' : 'BLUE TEAM'}
+              </p>
+            </div>
+          )}
+
+          {/* ── 6. GOAL REPLAY VIEW WITH SKIP BUTTON ── */}
+          {gameState === 'GOAL_REPLAY' && (
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              zIndex: 130,
+              fontFamily: "'Orbitron', sans-serif",
+              pointerEvents: 'auto'
+            }}>
+              {/* Top Left Replay Watermark */}
+              <div style={{ position: 'absolute', top: '35px', left: '40px', background: 'rgba(239, 68, 68, 0.9)', color: '#fff', padding: '8px 20px', borderRadius: '6px', fontWeight: '900', fontSize: '1rem', letterSpacing: '3px', boxShadow: '0 4px 20px rgba(239,68,68,0.5)' }}>
+                ⏺ REPLAY (0.75X)
+              </div>
+
+              {/* Bottom Center SKIP REPLAY Button */}
+              <div style={{ position: 'absolute', bottom: '50px', left: '50%', transform: 'translateX(-50%)', zIndex: 140 }}>
+                <button
+                  onClick={skipReplay}
+                  style={{
+                    background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                    color: '#000',
+                    border: 'none',
+                    borderRadius: '30px',
+                    padding: '16px 40px',
+                    fontWeight: '900',
+                    fontSize: '1rem',
+                    letterSpacing: '3px',
+                    cursor: 'pointer',
+                    boxShadow: '0 8px 30px rgba(34, 197, 94, 0.5)'
+                  }}
+                >
+                  ⏭ SKIP REPLAY
+                </button>
+              </div>
             </div>
           )}
 
@@ -734,7 +847,7 @@ export function RematchGame({ onExit }) {
             </div>
           )}
 
-          {/* Full Time Match Over Overlay */}
+          {/* Full Time Overlay */}
           {gameState === 'FULL_TIME' && (
             <div style={{
               position: 'absolute',

@@ -90,6 +90,7 @@ export function Player({ id = 'player1' }) {
   const stamina = useFootballStore((state) => state.stamina)
   const setStamina = useFootballStore((state) => state.setStamina)
   const gameState = useFootballStore((state) => state.gameState)
+  const kickoffTeam = useFootballStore((state) => state.kickoffTeam)
   const setPossession = useFootballStore((state) => state.setPossession)
   const redGK = useFootballStore((state) => state.redGK)
   const characterPreset = useFootballStore((state) => state.characterPreset)
@@ -133,20 +134,22 @@ export function Player({ id = 'player1' }) {
     }
   }, [api])
 
+  // Reposition player based on Kickoff Team (Red or Blue)
   useEffect(() => {
     if (gameState === 'MENU') {
       api.position.set(0, 1.2, 0)
       api.velocity.set(0, 0, 0)
     } else if (gameState === 'KICKOFF') {
-      api.position.set(0, 1.2, 12)
+      const spawnZ = kickoffTeam === 'red' ? 1.2 : 8.0
+      api.position.set(0, 1.2, spawnZ)
       api.velocity.set(0, 0, 0)
       cameraYaw.current = Math.PI
       cameraPitch.current = 0.28
     }
-  }, [gameState, api])
+  }, [gameState, kickoffTeam, api])
 
   useFrame((state, dt) => {
-    if (gameState === 'GOAL_SCORED' || gameState === 'FULL_TIME' || gameState === 'MENU' || gameState === 'BOOT' || gameState === 'LOADING_MATCH') return
+    if (gameState === 'GOAL_CELEBRATION' || gameState === 'GOAL_REPLAY' || gameState === 'FULL_TIME' || gameState === 'MENU' || gameState === 'BOOT' || gameState === 'LOADING_MATCH') return
 
     const pos = safePos(window.footballPlayer)
     const vel = safeVel(window.footballPlayer)
@@ -260,7 +263,6 @@ export function Player({ id = 'player1' }) {
   const vel = safeVel(window.footballPlayer)
   const playerVelocityVec = new THREE.Vector3(vel[0], vel[1], vel[2])
   
-  // Model Y rotation: In MENU mode face camera (PI), in MATCH mode face forward (0)
   const modelRotationY = gameState === 'MENU' ? Math.PI : Math.atan2(-currentDir.current.x, -currentDir.current.z)
 
   return (
@@ -278,7 +280,7 @@ export function Player({ id = 'player1' }) {
       </group>
 
       {/* OVERHEAD PLAYER NAME TAG & NUMBER BADGE */}
-      {gameState !== 'MENU' && (
+      {gameState !== 'MENU' && gameState !== 'GOAL_CELEBRATION' && gameState !== 'GOAL_REPLAY' && (
         <Html position={[0, 2.7, 0]} center distanceFactor={14}>
           <div style={{
             display: 'flex',
