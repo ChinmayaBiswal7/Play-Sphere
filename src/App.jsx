@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react'
 import { Gauge, RadioTower, Settings, Trophy, Users, Wrench } from 'lucide-react'
 import { GameCanvas } from './components/GameCanvas.jsx'
 import { RematchGame } from './components/rematch-football/RematchGame.jsx'
+import { LagoriGame } from './components/lagori-game/LagoriGame.jsx'
 import './App.css'
 
 const defaultSetup = {
@@ -177,9 +178,13 @@ function MainMenu({ setup, setSetup, onStart }) {
 }
 
 export default function App() {
-  const [activeGame, setActiveGame] = useState('football') // default to new football game for playtesting
+  const [activeGame, setActiveGame] = useState('menu') // Main console launcher hub
   const [setup, setSetup] = useState(defaultSetup)
   const [session, setSession] = useState(null)
+
+  if (activeGame === 'lagori') {
+    return <LagoriGame onExit={() => setActiveGame('menu')} />
+  }
 
   if (activeGame === 'football') {
     return <RematchGame onExit={() => setActiveGame('menu')} />
@@ -192,7 +197,7 @@ export default function App() {
     return <MainMenu setup={setup} setSetup={setSetup} onStart={setSession} />
   }
 
-  // PlaySphere multi-game hub launcher
+  // PlaySphere multi-game console launcher
   return (
     <div style={{
       width: '100vw',
@@ -205,50 +210,76 @@ export default function App() {
       fontFamily: "'Orbitron', sans-serif",
       color: '#fff'
     }}>
-      <h1 style={{ fontSize: '3rem', fontWeight: '900', letterSpacing: '8px', marginBottom: '10px', background: 'linear-gradient(90deg, #00d2ff, #ff007f)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>PLAY-SPHERE CONSOLE</h1>
-      <p style={{ color: '#64748b', letterSpacing: '4px', marginBottom: '50px', fontSize: '0.9rem' }}>CHOOSE A CHAMPIONSHIP EVENT</p>
+      <h1 style={{ fontSize: '3rem', fontWeight: '900', letterSpacing: '8px', marginBottom: '10px', background: 'linear-gradient(90deg, #00d2ff, #facc15)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>PLAY-SPHERE CONSOLE</h1>
+      <p style={{ color: '#64748b', letterSpacing: '4px', marginBottom: '50px', fontSize: '0.9rem' }}>SELECT A 3D CHAMPIONSHIP EVENT</p>
       
       <div style={{ display: 'flex', gap: '30px' }}>
+        
+        {/* GAME 1: LAGORI 7 STONES */}
+        <button 
+          onClick={() => setActiveGame('lagori')}
+          style={{
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(250, 204, 21, 0.4)',
+            borderRadius: '16px',
+            padding: '35px 25px',
+            width: '260px',
+            cursor: 'pointer',
+            textAlign: 'center',
+            color: '#fff',
+            transition: 'all 0.3s',
+            boxShadow: '0 8px 30px rgba(250, 204, 21, 0.15)'
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#facc15'; e.currentTarget.style.transform = 'translateY(-6px)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(250, 204, 21, 0.4)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+        >
+          <span style={{ fontSize: '3.5rem', display: 'block', marginBottom: '15px' }}>🪨</span>
+          <h2 style={{ fontSize: '1.2rem', fontWeight: '800', margin: '0 0 8px', letterSpacing: '2px', color: '#facc15' }}>LAGORI 7 STONES</h2>
+          <small style={{ color: '#94a3b8', fontFamily: 'sans-serif', display: 'block', lineHeight: '1.4' }}>Knock 7-stone stack, pick & rebuild, dodge defender throws.</small>
+        </button>
+
+        {/* GAME 2: REMATCH FOOTBALL */}
         <button 
           onClick={() => setActiveGame('football')}
           style={{
             background: 'rgba(255,255,255,0.03)',
             border: '1px solid rgba(0, 210, 255, 0.2)',
             borderRadius: '16px',
-            padding: '40px 30px',
-            width: '280px',
+            padding: '35px 25px',
+            width: '260px',
             cursor: 'pointer',
             textAlign: 'center',
             color: '#fff',
             transition: 'all 0.3s'
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#00d2ff'; e.currentTarget.style.transform = 'translateY(-5px)'; }}
+          onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#00d2ff'; e.currentTarget.style.transform = 'translateY(-6px)'; }}
           onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(0, 210, 255, 0.2)'; e.currentTarget.style.transform = 'translateY(0)'; }}
         >
           <span style={{ fontSize: '3.5rem', display: 'block', marginBottom: '15px' }}>⚽</span>
           <h2 style={{ fontSize: '1.2rem', fontWeight: '800', margin: '0 0 8px', letterSpacing: '2px' }}>ARCADE FOOTBALL</h2>
-          <small style={{ color: '#64748b', fontFamily: 'sans-serif', display: 'block', lineHeight: '1.4' }}>Rematch-style physics, dynamic goalkeepers, 1v1 AI duel.</small>
+          <small style={{ color: '#94a3b8', fontFamily: 'sans-serif', display: 'block', lineHeight: '1.4' }}>Rematch-style physics, dynamic goalkeepers, 1v1 AI duel.</small>
         </button>
 
+        {/* GAME 3: APEX F1 */}
         <button 
           onClick={() => setActiveGame('f1')}
           style={{
             background: 'rgba(255,255,255,0.03)',
             border: '1px solid rgba(255, 0, 127, 0.2)',
             borderRadius: '16px',
-            padding: '40px 30px',
-            width: '280px',
+            padding: '35px 25px',
+            width: '260px',
             cursor: 'pointer',
             textAlign: 'center',
             color: '#fff',
             transition: 'all 0.3s'
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#ff007f'; e.currentTarget.style.transform = 'translateY(-5px)'; }}
+          onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#ff007f'; e.currentTarget.style.transform = 'translateY(-6px)'; }}
           onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255, 0, 127, 0.2)'; e.currentTarget.style.transform = 'translateY(0)'; }}
         >
           <span style={{ fontSize: '3.5rem', display: 'block', marginBottom: '15px' }}>🏎️</span>
           <h2 style={{ fontSize: '1.2rem', fontWeight: '800', margin: '0 0 8px', letterSpacing: '2px' }}>APEX STARS F1</h2>
-          <small style={{ color: '#64748b', fontFamily: 'sans-serif', display: 'block', lineHeight: '1.4' }}>Championship racing, rain physics, telemetry HUD.</small>
+          <small style={{ color: '#94a3b8', fontFamily: 'sans-serif', display: 'block', lineHeight: '1.4' }}>Championship racing, rain physics, telemetry HUD.</small>
         </button>
       </div>
     </div>
