@@ -3,6 +3,8 @@ import { Canvas, useFrame } from '@react-three/fiber'
 import { Physics } from '@react-three/cannon'
 import { Environment, Stars, Sky } from '@react-three/drei'
 import { useFootballStore } from './footballStore'
+import { useAbilityStore } from './abilityStore'
+import { ABILITY_REGISTRY } from './abilityConfig'
 import { Arena } from './Arena'
 import { Ball } from './Ball'
 import { Player } from './Player'
@@ -45,6 +47,82 @@ function GoalkeeperManager() {
 }
 
 /**
+ * Ability Power Meter & Cooldown HUD Widget
+ */
+function AbilityHudWidget() {
+  const pData = useAbilityStore((state) => state.abilities.player1) || { meter: 100, cooldowns: {}, states: {} }
+  
+  return (
+    <div style={{
+      position: 'absolute',
+      bottom: '35px',
+      left: '30px',
+      background: 'rgba(15, 23, 42, 0.85)',
+      border: '1px solid rgba(255, 255, 255, 0.1)',
+      borderRadius: '12px',
+      padding: '12px 18px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '16px',
+      backdropFilter: 'blur(10px)',
+      fontFamily: "'Orbitron', sans-serif",
+      zIndex: 20,
+      pointerEvents: 'none'
+    }}>
+      {/* Power Meter Gauge */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', color: '#94a3b8', fontWeight: '900' }}>
+          <span>POWER METER</span>
+          <span style={{ color: pData.meter >= 35 ? '#22c55e' : '#eab308' }}>{Math.round(pData.meter)}%</span>
+        </div>
+        <div style={{ width: '130px', height: '8px', background: 'rgba(255,255,255,0.08)', borderRadius: '4px', overflow: 'hidden' }}>
+          <div style={{
+            width: `${pData.meter}%`,
+            height: '100%',
+            background: pData.meter >= 35 ? 'linear-gradient(90deg, #22c55e, #10b981)' : '#eab308',
+            transition: 'width 0.15s ease'
+          }} />
+        </div>
+      </div>
+
+      {/* Ability Cooldown Icons */}
+      <div style={{ display: 'flex', gap: '10px' }}>
+        {[
+          { id: 'power_shot', label: 'POWER [SPACE]', cost: '35%' },
+          { id: 'sprint_burst', label: 'SPRINT [SHIFT]', cost: 'CD' },
+          { id: 'slide_tackle', label: 'TACKLE [Q]', cost: 'CD' }
+        ].map((ab) => {
+          const cd = pData.cooldowns[ab.id] || 0
+          const isReady = cd <= 0 && (ab.id !== 'power_shot' || pData.meter >= 35)
+
+          return (
+            <div
+              key={ab.id}
+              style={{
+                position: 'relative',
+                background: isReady ? 'rgba(34, 197, 94, 0.15)' : 'rgba(255,255,255,0.04)',
+                border: isReady ? '1px solid #22c55e' : '1px solid rgba(255,255,255,0.08)',
+                borderRadius: '8px',
+                padding: '6px 10px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                minWidth: '68px'
+              }}
+            >
+              <span style={{ fontSize: '0.6rem', color: isReady ? '#22c55e' : '#64748b', fontWeight: '900' }}>{ab.label}</span>
+              <span style={{ fontSize: '0.75rem', color: isReady ? '#ffffff' : '#94a3b8', fontWeight: '900', marginTop: '2px' }}>
+                {cd > 0 ? `${cd.toFixed(1)}s` : 'READY'}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+/**
  * Circular Radar Mini-Map
  */
 function MiniMapRadar() {
@@ -59,7 +137,6 @@ function MiniMapRadar() {
     const draw = () => {
       ctx.clearRect(0, 0, 140, 140)
 
-      // Radar Background
       ctx.fillStyle = 'rgba(15, 23, 42, 0.88)'
       ctx.beginPath()
       ctx.arc(70, 70, 64, 0, Math.PI * 2)
@@ -68,7 +145,6 @@ function MiniMapRadar() {
       ctx.lineWidth = 2
       ctx.stroke()
 
-      // Pitch Boundary
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)'
       ctx.strokeRect(35, 20, 70, 100)
 
@@ -77,14 +153,12 @@ function MiniMapRadar() {
       ctx.lineTo(105, 70)
       ctx.stroke()
 
-      // Goal Boxes
       ctx.strokeRect(55, 20, 30, 12)
       ctx.strokeRect(55, 108, 30, 12)
 
       const mapX = (x) => 70 + (x / 18) * 35
       const mapZ = (z) => 70 + (z / 30) * 50
 
-      // Player 1 (Red)
       const p = window.footballPlayer
       if (p && p.position && Array.isArray(p.position.current)) {
         const px = mapX(p.position.current[0])
@@ -95,7 +169,6 @@ function MiniMapRadar() {
         ctx.fill()
       }
 
-      // Bot (Blue)
       const b = window.footballBot
       if (b && b.position && Array.isArray(b.position.current)) {
         const bx = mapX(b.position.current[0])
@@ -106,7 +179,6 @@ function MiniMapRadar() {
         ctx.fill()
       }
 
-      // Ball
       const ball = window.footballBall
       if (ball && ball.position && Array.isArray(ball.position.current)) {
         const ballX = mapX(ball.position.current[0])
@@ -155,7 +227,7 @@ function ShowcaseCamera() {
 const PRO_TIPS = [
   "Staying high up on the pitch allows to receive passes and counter-attack quickly but will leave your teammates in inferior numbers and vulnerable.",
   "Wall rebounds are valid pass routes! Bounce the ball off side barriers to bypass aggressive defenders.",
-  "Hold SPACE to charge your shot power before releasing towards goal.",
+  "Hold SPACE to charge your Power Shot before releasing towards goal.",
   "Use L-SHIFT to sprint down the wings when you spot open grass."
 ]
 
@@ -179,7 +251,6 @@ export function RematchGame({ onExit }) {
 
   const [tipIndex, setTipIndex] = useState(0)
 
-  // Boot Loading Screen Timer
   useEffect(() => {
     if (gameState === 'BOOT') {
       const bootTimer = setTimeout(() => {
@@ -189,7 +260,6 @@ export function RematchGame({ onExit }) {
     }
   }, [gameState])
 
-  // Match Play Timer
   useEffect(() => {
     let interval
     if (gameState === 'PLAYING') {
@@ -200,7 +270,6 @@ export function RematchGame({ onExit }) {
     return () => clearInterval(interval)
   }, [gameState])
 
-  // Kickoff delay
   useEffect(() => {
     if (gameState === 'KICKOFF' || gameState === 'GOAL_SCORED') {
       const timeout = setTimeout(() => {
@@ -244,11 +313,9 @@ export function RematchGame({ onExit }) {
           padding: '60px 80px',
           fontFamily: "'Orbitron', sans-serif"
         }}>
-          {/* Dynamic Full-Bleed Slashes */}
           <div style={{ position: 'absolute', top: 0, right: '15%', width: '600px', height: '100%', background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, transparent 80%)', transform: 'skewX(-25deg)', pointerEvents: 'none' }} />
           <div style={{ position: 'absolute', top: 0, left: '10%', width: '300px', height: '100%', background: 'linear-gradient(135deg, rgba(0, 210, 255, 0.05) 0%, transparent 80%)', transform: 'skewX(-25deg)', pointerEvents: 'none' }} />
 
-          {/* Full-Bleed Glowing REMATCH Title */}
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '6rem', fontWeight: '900', letterSpacing: '14px' }}>
               <span style={{ color: '#ffffff' }}>RE</span>
@@ -258,7 +325,6 @@ export function RematchGame({ onExit }) {
             <p style={{ color: '#94a3b8', letterSpacing: '6px', fontSize: '1rem', marginTop: '10px', fontWeight: '800' }}>ARCADE FOOTBALL 2026</p>
           </div>
 
-          {/* Bottom Info Bar */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', zIndex: 10 }}>
             <div style={{ maxWidth: '620px', color: '#94a3b8', fontSize: '0.9rem', lineHeight: '1.6', fontFamily: 'sans-serif', background: 'rgba(15, 23, 42, 0.75)', padding: '18px 24px', borderRadius: '10px', borderLeft: '4px solid #22c55e', backdropFilter: 'blur(10px)' }}>
               {PRO_TIPS[tipIndex]}
@@ -547,7 +613,10 @@ export function RematchGame({ onExit }) {
             <div>FPS: 60</div>
           </div>
 
-          {/* Segmented Cyan Stamina Bar */}
+          {/* Ability Power Meter & Cooldown Widget */}
+          <AbilityHudWidget />
+
+          {/* Segmented Stamina Bar */}
           <div style={{
             position: 'absolute',
             bottom: '35px',

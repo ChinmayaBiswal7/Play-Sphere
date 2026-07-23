@@ -3,6 +3,7 @@ import { useSphere } from '@react-three/cannon'
 import { useFrame } from '@react-three/fiber'
 import { Html } from '@react-three/drei'
 import { useFootballStore } from './footballStore'
+import { useAbility } from './useAbility'
 import { HumanModel } from './HumanModel'
 import * as THREE from 'three'
 
@@ -84,6 +85,7 @@ export function Player({ id = 'player1' }) {
   }))
 
   const keys = useKeyboard()
+  const { triggerAbility } = useAbility(id)
   
   const stamina = useFootballStore((state) => state.stamina)
   const setStamina = useFootballStore((state) => state.setStamina)
@@ -94,21 +96,15 @@ export function Player({ id = 'player1' }) {
 
   const [shotCharge, setShotCharge] = useState(0)
   const isCharging = useRef(false)
-  
   const isTackling = useRef(false)
-  const tackleTime = useRef(0)
-  const tackleCooldown = useRef(0)
   
-  // Dynamic Flexible Camera Angles (Yaw & Pitch)
-  const cameraYaw = useRef(Math.PI) // Facing -Z
+  const cameraYaw = useRef(Math.PI)
   const cameraPitch = useRef(0.28)
-  const isPointerLocked = useRef(false)
 
   const currentDir = useRef(new THREE.Vector3(0, 0, -1))
   const playerPos = useRef([0, 1.2, 12])
   const playerVel = useRef([0, 0, 0])
 
-  // Mouse Move Listener for Flexible 360-degree Orbit Camera
   useEffect(() => {
     const handleMouseMove = (e) => {
       if (document.pointerLockElement || e.buttons === 1 || e.buttons === 2) {
@@ -116,7 +112,6 @@ export function Player({ id = 'player1' }) {
         cameraPitch.current = THREE.MathUtils.clamp(cameraPitch.current + e.movementY * 0.002, 0.05, 0.65)
       }
     }
-
     window.addEventListener('mousemove', handleMouseMove)
     return () => window.removeEventListener('mousemove', handleMouseMove)
   }, [])
@@ -142,15 +137,11 @@ export function Player({ id = 'player1' }) {
     if (gameState === 'MENU') {
       api.position.set(0, 1.2, 0)
       api.velocity.set(0, 0, 0)
-      isCharging.current = false
-      setShotCharge(0)
     } else if (gameState === 'KICKOFF') {
       api.position.set(0, 1.2, 12)
       api.velocity.set(0, 0, 0)
       cameraYaw.current = Math.PI
       cameraPitch.current = 0.28
-      isCharging.current = false
-      setShotCharge(0)
     }
   }, [gameState, api])
 
@@ -160,11 +151,10 @@ export function Player({ id = 'player1' }) {
     const pos = safePos(window.footballPlayer)
     const vel = safeVel(window.footballPlayer)
 
-    // Keyboard Arrow camera rotation
     if (keys.ArrowLeft) cameraYaw.current += 1.8 * dt
     if (keys.ArrowRight) cameraYaw.current -= 1.8 * dt
 
-    // ── 1. FLEXIBLE DYNAMIC ORBIT CAMERA ──
+    // ── 1. DYNAMIC ORBIT CAMERA ──
     const isSprinting = keys.Shift && stamina > 5
     const targetFov = isSprinting ? 74 : 65
     state.camera.fov = THREE.MathUtils.lerp(state.camera.fov, targetFov, 0.1)
@@ -182,7 +172,7 @@ export function Player({ id = 'player1' }) {
     const lookTargetZ = pos[2] - Math.cos(cameraYaw.current) * 6
     state.camera.lookAt(lookTargetX, lookTargetY, lookTargetZ)
 
-    // ── 2. MOVEMENT RELATIVE TO CAMERA HEADING ──
+    // ── 2. MOVEMENT CONTROLS ──
     let inputForward = 0
     let inputSide = 0
     if (keys.w) inputForward = 1
@@ -190,7 +180,6 @@ export function Player({ id = 'player1' }) {
     if (keys.a) inputSide = -1
     if (keys.d) inputSide = 1
 
-    // Convert input relative to camera yaw
     const forwardX = -Math.sin(cameraYaw.current)
     const forwardZ = -Math.cos(cameraYaw.current)
     const rightX = Math.cos(cameraYaw.current)
@@ -204,30 +193,26 @@ export function Player({ id = 'player1' }) {
       currentDir.current.copy(direction)
     }
 
-    let currentSpeed = 8.5
+    // Ability 2: Sprint Burst
     if (isSprinting && direction.lengthSq() > 0.01) {
-      currentSpeed = 13.8
+      triggerAbility('sprint_burst', { playerApi: api, aimDir: currentDir.current })
       setStamina(Math.max(0, stamina - 35 * dt))
     } else {
       setStamina(Math.min(100, stamina + 25 * dt))
+      if (direction.lengthSq() > 0.01) {
+        api.velocity.set(direction.x * 8.5, vel[1], direction.z * 8.5)
+      }
     }
 
-    // Slide Tackle Dash
-    if (keys.KeyQ && tackleCooldown.current <= 0 && !isTackling.current) {
-      isTackling.current = true
-      tackleTime.current = 0.32
-      tackleCooldown.current = 1.8
-      api.velocity.set(currentDir.current.x * 22, vel[1], currentDir.current.z * 22)
-    }
-
-    if (isTackling.current) {
-      tackleTime.current -= dt
-      if (tackleTime.current <= 0) isTackling.current = false
-    }
-    if (tackleCooldown.current > 0) tackleCooldown.current -= dt
-
-    if (!isTackling.current) {
-      api.velocity.set(direction.x * currentSpeed, vel[1], direction.z * currentSpeed)
+    // Ability 3: Slide Tackle
+    if (keys.KeyQ) {
+      triggerAbility('slide_tackle', {
+        playerApi: api,
+        playerPos: pos,
+        aimDir: currentDir.current,
+        ball: window.footballBall,
+        setPossession
+      })
     }
 
     // ── 3. DRIBBLING LOGIC ──
@@ -255,52 +240,27 @@ export function Player({ id = 'player1' }) {
       }
     }
 
-    // ── 4. SHOOTING CHARGE ──
+    // ── 4. SHOOTING CHARGE (Ability 1: Power Shot) ──
     if (keys.Space) {
       isCharging.current = true
       setShotCharge(prev => Math.min(100, prev + 160 * dt))
     } else {
       if (isCharging.current) {
-        strikeBall(shotCharge)
+        triggerAbility('power_shot', {
+          ball,
+          playerPos: pos,
+          aimDir: currentDir.current,
+          powerPercent: shotCharge
+        })
         isCharging.current = false
         setShotCharge(0)
       }
     }
-
-    if (keys.KeyE) {
-      strikeBall(35, true)
-    }
   })
-
-  const strikeBall = (powerPercent, isPass = false) => {
-    const ball = window.footballBall
-    if (!ball) return
-
-    const pos = safePos(window.footballPlayer)
-    const bPos = safePos(ball)
-    const dist = Math.hypot(bPos[0] - pos[0], bPos[2] - pos[2])
-
-    if (dist < 1.75) {
-      const targetGoalX = 0
-      const targetGoalZ = -30.0
-      
-      const dirX = targetGoalX - bPos[0]
-      const dirZ = targetGoalZ - bPos[2]
-      const len = Math.hypot(dirX, dirZ)
-
-      const speedVal = isPass ? 12.5 : 18 + (powerPercent / 100) * 22
-      const targetVelY = isPass ? 0.8 : 3.8
-
-      ball.api.velocity.set((dirX / len) * speedVal, targetVelY, (dirZ / len) * speedVal)
-      setPossession(null)
-    }
-  }
 
   const isGK = redGK === id
   const vel = safeVel(window.footballPlayer)
   const playerVelocityVec = new THREE.Vector3(vel[0], vel[1], vel[2])
-
-  // Mesh rotation facing movement direction
   const modelRotationY = Math.atan2(-currentDir.current.x, -currentDir.current.z)
 
   return (
@@ -317,7 +277,7 @@ export function Player({ id = 'player1' }) {
         />
       </group>
 
-      {/* ── OVERHEAD PLAYER NAME TAG & NUMBER BADGE (Matching Screenshots 1, 2, 3) ── */}
+      {/* OVERHEAD PLAYER NAME TAG & NUMBER BADGE */}
       {gameState !== 'MENU' && (
         <Html position={[0, 2.7, 0]} center distanceFactor={14}>
           <div style={{
