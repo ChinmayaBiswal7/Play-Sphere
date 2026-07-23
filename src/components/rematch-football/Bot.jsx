@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from 'react'
 import { useSphere } from '@react-three/cannon'
 import { useFrame } from '@react-three/fiber'
+import { Html } from '@react-three/drei'
 import { useFootballStore } from './footballStore'
 import { HumanModel } from './HumanModel'
 import * as THREE from 'three'
@@ -39,6 +40,7 @@ export function Bot({ id = 'bot1' }) {
 
   const botPos = useRef([0, 1.2, -12])
   const botVel = useRef([0, 0, 0])
+  const currentDir = useRef(new THREE.Vector3(0, 0, 1))
 
   useEffect(() => {
     const unsubPos = api.position.subscribe(v => (botPos.current = v || [0, 1.2, -12]))
@@ -68,7 +70,7 @@ export function Bot({ id = 'bot1' }) {
   }, [gameState, api])
 
   useFrame((state, dt) => {
-    if (gameState === 'GOAL_SCRIBED' || gameState === 'GAMEOVER' || gameState === 'MENU' || gameState === 'BOOT' || gameState === 'LOADING_MATCH') return
+    if (gameState === 'GOAL_SCORED' || gameState === 'FULL_TIME' || gameState === 'MENU' || gameState === 'BOOT' || gameState === 'LOADING_MATCH') return
 
     const pos = safePos(window.footballBot)
     const vel = safeVel(window.footballBot)
@@ -99,6 +101,7 @@ export function Bot({ id = 'bot1' }) {
 
       if (distToGKPos > 0.3) {
         api.velocity.set(Math.sign(dx) * 7.5, vel[1], Math.sign(dz) * 7.5)
+        currentDir.current.set(Math.sign(dx), 0, Math.sign(dz)).normalize()
       } else {
         api.velocity.set(0, vel[1], 0)
       }
@@ -155,7 +158,10 @@ export function Bot({ id = 'bot1' }) {
     const distToTarget = Math.hypot(dx, dz)
 
     if (distToTarget > 0.4) {
-      api.velocity.set((dx / distToTarget) * speed, vel[1], (dz / distToTarget) * speed)
+      const dirX = dx / distToTarget
+      const dirZ = dz / distToTarget
+      api.velocity.set(dirX * speed, vel[1], dirZ * speed)
+      currentDir.current.set(dirX, 0, dirZ)
     } else {
       api.velocity.set(0, vel[1], 0)
     }
@@ -209,17 +215,46 @@ export function Bot({ id = 'bot1' }) {
   const vel = safeVel(window.footballBot)
   const botVelocityVec = new THREE.Vector3(vel[0], vel[1], vel[2])
 
+  const modelRotationY = Math.atan2(-currentDir.current.x, -currentDir.current.z)
+
   return (
     <group ref={ref}>
-      <HumanModel 
-        preset="male_hoodie"
-        teamColor="#0284c7" 
-        secColor="#f43f5e" 
-        number={9} 
-        isGoalkeeper={isGK}
-        velocity={botVelocityVec}
-        isTackling={isDiving.current && !isGK}
-      />
+      <group rotation={[0, modelRotationY, 0]}>
+        <HumanModel 
+          preset="male_hoodie"
+          teamColor="#0284c7" 
+          secColor="#f43f5e" 
+          number={9} 
+          isGoalkeeper={isGK}
+          velocity={botVelocityVec}
+          isTackling={isDiving.current && !isGK}
+        />
+      </group>
+
+      {/* OVERHEAD BOT NAME TAG */}
+      {gameState !== 'MENU' && (
+        <Html position={[0, 2.7, 0]} center distanceFactor={14}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            background: 'rgba(15, 23, 42, 0.85)',
+            border: '1px solid rgba(2, 132, 199, 0.6)',
+            borderRadius: '6px',
+            padding: '3px 8px',
+            color: '#fff',
+            fontFamily: "'Orbitron', sans-serif",
+            fontSize: '11px',
+            fontWeight: '900',
+            whiteSpace: 'nowrap',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+            pointerEvents: 'none'
+          }}>
+            <span style={{ background: '#0284c7', color: '#fff', padding: '1px 5px', borderRadius: '3px', fontSize: '10px' }}>9</span>
+            <span>AI BOT 1</span>
+          </div>
+        </Html>
+      )}
     </group>
   )
 }

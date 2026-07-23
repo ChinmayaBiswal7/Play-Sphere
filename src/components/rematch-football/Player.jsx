@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react'
 import { useSphere } from '@react-three/cannon'
 import { useFrame } from '@react-three/fiber'
+import { Html } from '@react-three/drei'
 import { useFootballStore } from './footballStore'
 import { HumanModel } from './HumanModel'
 import * as THREE from 'three'
@@ -8,18 +9,21 @@ import * as THREE from 'three'
 function useKeyboard() {
   const [keys, setKeys] = useState({
     w: false, a: false, s: false, d: false,
+    ArrowLeft: false, ArrowRight: false,
     Shift: false, Space: false, KeyE: false, KeyQ: false
   })
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ShiftLeft', 'Space', 'KeyE', 'KeyQ'].includes(e.code)) {
+      if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'Space', 'KeyE', 'KeyQ'].includes(e.code)) {
         setKeys(prev => ({
           ...prev,
           w: e.code === 'KeyW' || prev.w,
           a: e.code === 'KeyA' || prev.a,
           s: e.code === 'KeyS' || prev.s,
           d: e.code === 'KeyD' || prev.d,
+          ArrowLeft: e.code === 'ArrowLeft' || prev.ArrowLeft,
+          ArrowRight: e.code === 'ArrowRight' || prev.ArrowRight,
           Shift: e.code === 'ShiftLeft' || prev.Shift,
           Space: e.code === 'Space' || prev.Space,
           KeyE: e.code === 'KeyE' || prev.KeyE,
@@ -28,13 +32,15 @@ function useKeyboard() {
       }
     }
     const handleKeyUp = (e) => {
-      if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ShiftLeft', 'Space', 'KeyE', 'KeyQ'].includes(e.code)) {
+      if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'Space', 'KeyE', 'KeyQ'].includes(e.code)) {
         setKeys(prev => ({
           ...prev,
           w: e.code === 'KeyW' ? false : prev.w,
           a: e.code === 'KeyA' ? false : prev.a,
           s: e.code === 'KeyS' ? false : prev.s,
           d: e.code === 'KeyD' ? false : prev.d,
+          ArrowLeft: e.code === 'ArrowLeft' ? false : prev.ArrowLeft,
+          ArrowRight: e.code === 'ArrowRight' ? false : prev.ArrowRight,
           Shift: e.code === 'ShiftLeft' ? false : prev.Shift,
           Space: e.code === 'Space' ? false : prev.Space,
           KeyE: e.code === 'KeyE' ? false : prev.KeyE,
@@ -93,9 +99,27 @@ export function Player({ id = 'player1' }) {
   const tackleTime = useRef(0)
   const tackleCooldown = useRef(0)
   
+  // Dynamic Flexible Camera Angles (Yaw & Pitch)
+  const cameraYaw = useRef(Math.PI) // Facing -Z
+  const cameraPitch = useRef(0.28)
+  const isPointerLocked = useRef(false)
+
   const currentDir = useRef(new THREE.Vector3(0, 0, -1))
   const playerPos = useRef([0, 1.2, 12])
   const playerVel = useRef([0, 0, 0])
+
+  // Mouse Move Listener for Flexible 360-degree Orbit Camera
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (document.pointerLockElement || e.buttons === 1 || e.buttons === 2) {
+        cameraYaw.current -= e.movementX * 0.003
+        cameraPitch.current = THREE.MathUtils.clamp(cameraPitch.current + e.movementY * 0.002, 0.05, 0.65)
+      }
+    }
+
+    window.addEventListener('mousemove', handleMouseMove)
+    return () => window.removeEventListener('mousemove', handleMouseMove)
+  }, [])
 
   useEffect(() => {
     const unsubPos = api.position.subscribe(v => (playerPos.current = v || [0, 1.2, 12]))
@@ -114,7 +138,6 @@ export function Player({ id = 'player1' }) {
     }
   }, [api])
 
-  // Handle position state resets between Menu & Playing
   useEffect(() => {
     if (gameState === 'MENU') {
       api.position.set(0, 1.2, 0)
@@ -124,42 +147,66 @@ export function Player({ id = 'player1' }) {
     } else if (gameState === 'KICKOFF') {
       api.position.set(0, 1.2, 12)
       api.velocity.set(0, 0, 0)
+      cameraYaw.current = Math.PI
+      cameraPitch.current = 0.28
       isCharging.current = false
       setShotCharge(0)
     }
   }, [gameState, api])
 
   useFrame((state, dt) => {
-    if (gameState === 'GOAL_SCRIBED' || gameState === 'GAMEOVER' || gameState === 'MENU' || gameState === 'BOOT' || gameState === 'LOADING_MATCH') return
+    if (gameState === 'GOAL_SCORED' || gameState === 'FULL_TIME' || gameState === 'MENU' || gameState === 'BOOT' || gameState === 'LOADING_MATCH') return
 
     const pos = safePos(window.footballPlayer)
     const vel = safeVel(window.footballPlayer)
 
-    // ── 1. 3RD PERSON OVER-THE-SHOULDER CAMERA FOLLOW ──
-    const targetCamX = pos[0] * 0.8
-    const targetCamY = pos[1] + 2.2
-    const targetCamZ = pos[2] + 4.6
+    // Keyboard Arrow camera rotation
+    if (keys.ArrowLeft) cameraYaw.current += 1.8 * dt
+    if (keys.ArrowRight) cameraYaw.current -= 1.8 * dt
 
-    state.camera.position.lerp(new THREE.Vector3(targetCamX, targetCamY, targetCamZ), 0.14)
-    state.camera.lookAt(pos[0] * 0.3, pos[1] + 1.2, pos[2] - 12)
+    // ── 1. FLEXIBLE DYNAMIC ORBIT CAMERA ──
+    const isSprinting = keys.Shift && stamina > 5
+    const targetFov = isSprinting ? 74 : 65
+    state.camera.fov = THREE.MathUtils.lerp(state.camera.fov, targetFov, 0.1)
+    state.camera.updateProjectionMatrix()
 
-    // ── 2. MOVEMENT CONTROLS ──
-    let moveX = 0
-    let moveZ = 0
-    if (keys.w) moveZ = -1
-    if (keys.s) moveZ = 1
-    if (keys.a) moveX = -1
-    if (keys.d) moveX = 1
+    const camDistance = 4.8
+    const camX = pos[0] + Math.sin(cameraYaw.current) * Math.cos(cameraPitch.current) * camDistance
+    const camY = pos[1] + Math.sin(cameraPitch.current) * camDistance + 1.4
+    const camZ = pos[2] + Math.cos(cameraYaw.current) * Math.cos(cameraPitch.current) * camDistance
+
+    state.camera.position.lerp(new THREE.Vector3(camX, camY, camZ), 0.18)
+
+    const lookTargetX = pos[0] - Math.sin(cameraYaw.current) * 6
+    const lookTargetY = pos[1] + 1.2
+    const lookTargetZ = pos[2] - Math.cos(cameraYaw.current) * 6
+    state.camera.lookAt(lookTargetX, lookTargetY, lookTargetZ)
+
+    // ── 2. MOVEMENT RELATIVE TO CAMERA HEADING ──
+    let inputForward = 0
+    let inputSide = 0
+    if (keys.w) inputForward = 1
+    if (keys.s) inputForward = -1
+    if (keys.a) inputSide = -1
+    if (keys.d) inputSide = 1
+
+    // Convert input relative to camera yaw
+    const forwardX = -Math.sin(cameraYaw.current)
+    const forwardZ = -Math.cos(cameraYaw.current)
+    const rightX = Math.cos(cameraYaw.current)
+    const rightZ = -Math.sin(cameraYaw.current)
+
+    let moveX = forwardX * inputForward + rightX * inputSide
+    let moveZ = forwardZ * inputForward + rightZ * inputSide
 
     let direction = new THREE.Vector3(moveX, 0, moveZ).normalize()
     if (direction.lengthSq() > 0.01) {
       currentDir.current.copy(direction)
     }
 
-    // Sprint checks
     let currentSpeed = 8.5
-    if (keys.Shift && stamina > 5 && direction.lengthSq() > 0.01) {
-      currentSpeed = 13.5
+    if (isSprinting && direction.lengthSq() > 0.01) {
+      currentSpeed = 13.8
       setStamina(Math.max(0, stamina - 35 * dt))
     } else {
       setStamina(Math.min(100, stamina + 25 * dt))
@@ -179,7 +226,6 @@ export function Player({ id = 'player1' }) {
     }
     if (tackleCooldown.current > 0) tackleCooldown.current -= dt
 
-    // Velocity update
     if (!isTackling.current) {
       api.velocity.set(direction.x * currentSpeed, vel[1], direction.z * currentSpeed)
     }
@@ -254,10 +300,12 @@ export function Player({ id = 'player1' }) {
   const vel = safeVel(window.footballPlayer)
   const playerVelocityVec = new THREE.Vector3(vel[0], vel[1], vel[2])
 
+  // Mesh rotation facing movement direction
+  const modelRotationY = Math.atan2(-currentDir.current.x, -currentDir.current.z)
+
   return (
     <group ref={ref}>
-      {/* Facing direction: in MENU mode face camera (PI), in match mode face goal (PI) */}
-      <group rotation={[0, Math.PI, 0]}>
+      <group rotation={[0, modelRotationY, 0]}>
         <HumanModel 
           preset={characterPreset}
           teamColor="#ef4444" 
@@ -269,12 +317,29 @@ export function Player({ id = 'player1' }) {
         />
       </group>
 
-      {/* Visor chevron indicator */}
+      {/* ── OVERHEAD PLAYER NAME TAG & NUMBER BADGE (Matching Screenshots 1, 2, 3) ── */}
       {gameState !== 'MENU' && (
-        <mesh position={[0, 2.7, 0]}>
-          <coneGeometry args={[0.2, 0.4, 4]} />
-          <meshBasicMaterial color="#facc15" />
-        </mesh>
+        <Html position={[0, 2.7, 0]} center distanceFactor={14}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            background: 'rgba(15, 23, 42, 0.85)',
+            border: '1px solid rgba(239, 68, 68, 0.6)',
+            borderRadius: '6px',
+            padding: '3px 8px',
+            color: '#fff',
+            fontFamily: "'Orbitron', sans-serif",
+            fontSize: '11px',
+            fontWeight: '900',
+            whiteSpace: 'nowrap',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+            pointerEvents: 'none'
+          }}>
+            <span style={{ background: '#ef4444', color: '#fff', padding: '1px 5px', borderRadius: '3px', fontSize: '10px' }}>7</span>
+            <span>YOU (STRIKER)</span>
+          </div>
+        </Html>
       )}
 
       {/* Charge Ring Indicator */}
