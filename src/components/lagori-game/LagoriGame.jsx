@@ -34,19 +34,38 @@ export function LagoriGame({ onExit }) {
     }
   }, [gameState])
 
+  // Safe Fullscreen Toggle targeting parent iframe element directly
   const toggleFullscreen = () => {
     try {
-      const doc = (window.parent && window.parent.document) ? window.parent.document : document
-      const target = doc.documentElement
-      if (!doc.fullscreenElement) {
-        if (target.requestFullscreen) target.requestFullscreen().catch(() => {})
-      } else {
-        if (doc.exitFullscreen) doc.exitFullscreen().catch(() => {})
+      let iframeEl = null
+      if (window.parent && window.parent.document) {
+        iframeEl = window.parent.document.getElementById('game-session-iframe')
       }
-    } catch (err) {}
+
+      const doc = (window.parent && window.parent.document) ? window.parent.document : document
+      const fullEl = doc.fullscreenElement || document.fullscreenElement
+
+      if (!fullEl) {
+        if (iframeEl && iframeEl.requestFullscreen) {
+          iframeEl.requestFullscreen().catch(() => {
+            if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen()
+          })
+        } else if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(() => {})
+        }
+      } else {
+        if (doc.exitFullscreen) {
+          doc.exitFullscreen().catch(() => {})
+        } else if (document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {})
+        }
+      }
+    } catch (err) {
+      console.warn('Fullscreen toggle warning:', err)
+    }
   }
 
-  // Fullscreen ('F') & Settings Modal ('ESC') keybinds
+  // Handle Fullscreen & Settings keybindings + force resize event on fullscreen change
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.code === 'KeyF') {
@@ -56,8 +75,26 @@ export function LagoriGame({ onExit }) {
       }
     }
 
+    const handleFullscreenChange = () => {
+      // Force Three.js Canvas resize update
+      setTimeout(() => {
+        window.dispatchEvent(new Event('resize'))
+      }, 100)
+    }
+
     window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    if (window.parent && window.parent.document) {
+      window.parent.document.addEventListener('fullscreenchange', handleFullscreenChange)
+    }
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      document.removeEventListener('fullscreenchange', handleFullscreenChange)
+      if (window.parent && window.parent.document) {
+        window.parent.document.removeEventListener('fullscreenchange', handleFullscreenChange)
+      }
+    }
   }, [])
 
   const startMatch = () => {
@@ -93,7 +130,10 @@ export function LagoriGame({ onExit }) {
       <Canvas
         shadows
         camera={{ fov: 62, position: [0, 2.4, 16] }}
-        gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping }}
+        gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, preserveDrawingBuffer: true }}
+        onCreated={({ gl }) => {
+          gl.setClearColor('#0c0a09')
+        }}
       >
         <color attach="background" args={['#0c0a09']} />
         <fog attach="fog" args={['#0c0a09', 50, 180]} />
