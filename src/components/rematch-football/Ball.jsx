@@ -27,11 +27,11 @@ function createSoccerBallTexture() {
 }
 
 export function Ball() {
-  // Realistic soccer ball radius (0.45 units)
+  // Realistic soccer ball radius (0.22 units = ~22cm, foot level!)
   const [ref, api] = useSphere(() => ({
-    mass: 1.2,
+    mass: 1.1,
     position: [0, -500, 0],
-    args: [0.45],
+    args: [0.22],
     linearDamping: 0.18,
     angularDamping: 0.25,
     restitution: 0.78
@@ -66,7 +66,7 @@ export function Ball() {
       api.velocity.set(0, 0, 0)
       api.angularVelocity.set(0, 0, 0)
     } else if (gameState === 'KICKOFF') {
-      api.position.set(0, 0.9, 0)
+      api.position.set(0, 0.45, 0)
       api.velocity.set(0, 0, 0)
       api.angularVelocity.set(0, 0, 0)
     }
@@ -79,12 +79,12 @@ export function Ball() {
       const vz = ballVel.current[2]
       const speed = Math.hypot(vx, vz)
       if (speed > 0.15) {
-        meshRef.current.rotation.x += vz * 0.06
-        meshRef.current.rotation.z -= vx * 0.06
+        meshRef.current.rotation.x += vz * 0.12
+        meshRef.current.rotation.z -= vx * 0.12
       }
 
       if (ballPos.current[1] < -5) {
-        api.position.set(0, 0.9, 0)
+        api.position.set(0, 0.45, 0)
         api.velocity.set(0, 0, 0)
       }
     }
@@ -96,12 +96,12 @@ export function Ball() {
     <group ref={ref} visible={isVisible}>
       <group ref={meshRef}>
         <mesh castShadow receiveShadow>
-          <sphereGeometry args={[0.45, 20, 20]} />
+          <sphereGeometry args={[0.22, 20, 20]} />
           <meshStandardMaterial map={texture} roughness={0.25} metalness={0.1} />
         </mesh>
 
         <mesh>
-          <torusGeometry args={[0.46, 0.02, 8, 24]} />
+          <torusGeometry args={[0.225, 0.012, 8, 24]} />
           <meshBasicMaterial color="#00f2fe" />
         </mesh>
       </group>

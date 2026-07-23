@@ -100,7 +100,7 @@ export function Player({ id = 'player1' }) {
   const isTackling = useRef(false)
   
   const cameraYaw = useRef(Math.PI)
-  const cameraPitch = useRef(0.24)
+  const cameraPitch = useRef(0.22)
 
   const currentDir = useRef(new THREE.Vector3(0, 0, -1))
   const playerPos = useRef([0, 0.65, 18])
@@ -110,7 +110,7 @@ export function Player({ id = 'player1' }) {
     const handleMouseMove = (e) => {
       if (document.pointerLockElement || e.buttons === 1 || e.buttons === 2) {
         cameraYaw.current -= e.movementX * 0.003
-        cameraPitch.current = THREE.MathUtils.clamp(cameraPitch.current + e.movementY * 0.002, 0.08, 0.48)
+        cameraPitch.current = THREE.MathUtils.clamp(cameraPitch.current + e.movementY * 0.002, 0.08, 0.45)
       }
     }
 
@@ -156,7 +156,7 @@ export function Player({ id = 'player1' }) {
       api.position.set(0, 0.65, spawnZ)
       api.velocity.set(0, 0, 0)
       cameraYaw.current = Math.PI
-      cameraPitch.current = 0.24
+      cameraPitch.current = 0.22
     }
   }, [gameState, kickoffTeam, api])
 
@@ -169,15 +169,15 @@ export function Player({ id = 'player1' }) {
     if (keys.ArrowLeft) cameraYaw.current += 1.8 * dt
     if (keys.ArrowRight) cameraYaw.current -= 1.8 * dt
 
-    // ── REMATCH 3RD PERSON ACTION CAMERA ──
+    // ── REMATCH 3RD PERSON CAMERA RIG ──
     const isSprinting = keys.Shift && stamina > 5
     const targetFov = isSprinting ? 72 : 62
     state.camera.fov = THREE.MathUtils.lerp(state.camera.fov, targetFov, 0.1)
     state.camera.updateProjectionMatrix()
 
-    const camDistance = 6.2
+    const camDistance = 5.4
     const camX = pos[0] + Math.sin(cameraYaw.current) * Math.cos(cameraPitch.current) * camDistance
-    const camY = pos[1] + Math.sin(cameraPitch.current) * camDistance + 2.5
+    const camY = pos[1] + Math.sin(cameraPitch.current) * camDistance + 2.4
     const camZ = pos[2] + Math.cos(cameraYaw.current) * Math.cos(cameraPitch.current) * camDistance
 
     state.camera.position.lerp(new THREE.Vector3(camX, camY, camZ), 0.22)
@@ -210,14 +210,17 @@ export function Player({ id = 'player1' }) {
       currentDir.current.copy(direction)
     }
 
+    // SPEED CALCULATION (Regular vs Sprint)
+    let moveSpeed = 12.0
     if (isSprinting && direction.lengthSq() > 0.01) {
-      triggerAbility('sprint_burst', { playerApi: api, aimDir: currentDir.current })
+      moveSpeed = 18.0
       setStamina(Math.max(0, stamina - 35 * dt))
     } else {
       setStamina(Math.min(100, stamina + 25 * dt))
-      if (direction.lengthSq() > 0.01) {
-        api.velocity.set(direction.x * 12.0, vel[1], direction.z * 12.0)
-      }
+    }
+
+    if (direction.lengthSq() > 0.01) {
+      api.velocity.set(direction.x * moveSpeed, vel[1], direction.z * moveSpeed)
     }
 
     if (keys.KeyQ) {
@@ -230,25 +233,26 @@ export function Player({ id = 'player1' }) {
       })
     }
 
-    // ── DRIBBLING LOGIC ──
+    // ── FOOTBALL DRIBBLING LOGIC ──
     const ball = window.footballBall
     if (ball) {
       const bPos = safePos(ball)
       const dist = Math.hypot(bPos[0] - pos[0], bPos[2] - pos[2])
 
-      if (dist < 1.65 && Math.abs(bPos[1] - pos[1]) < 1.8) {
+      if (dist < 1.45 && Math.abs(bPos[1] - pos[1]) < 1.8) {
         setPossession(id)
 
-        const targetX = pos[0] + currentDir.current.x * 1.0
-        const targetZ = pos[2] + currentDir.current.z * 1.0
+        // Dribble target position right in front of feet (0.55m)
+        const targetX = pos[0] + currentDir.current.x * 0.55
+        const targetZ = pos[2] + currentDir.current.z * 0.55
         
         const dx = targetX - bPos[0]
         const dz = targetZ - bPos[2]
 
         ball.api.velocity.set(
-          vel[0] + dx * 9,
+          vel[0] + dx * 10,
           safeVel(ball)[1],
-          vel[2] + dz * 9
+          vel[2] + dx * 10
         )
       } else {
         useFootballStore.getState().ballPossession === id && setPossession(null)
@@ -279,7 +283,6 @@ export function Player({ id = 'player1' }) {
   
   const modelRotationY = gameState === 'MENU' ? Math.PI : Math.atan2(-currentDir.current.x, -currentDir.current.z) + Math.PI
 
-  // Strict check: Only show overhead tag during active gameplay or kickoff
   const showNameTag = gameState === 'PLAYING' || gameState === 'KICKOFF'
 
   return (
@@ -296,7 +299,7 @@ export function Player({ id = 'player1' }) {
         />
       </group>
 
-      {/* OVERHEAD PLAYER NAME TAG - STRICTLY CONTROLLED */}
+      {/* OVERHEAD PLAYER NAME TAG */}
       {showNameTag && (
         <Html position={[0, 2.7, 0]} center distanceFactor={14}>
           <div style={{
