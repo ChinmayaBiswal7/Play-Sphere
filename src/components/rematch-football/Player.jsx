@@ -100,7 +100,7 @@ export function Player({ id = 'player1' }) {
   const isTackling = useRef(false)
   
   const cameraYaw = useRef(Math.PI)
-  const cameraPitch = useRef(0.38)
+  const cameraPitch = useRef(0.18) // Rematch Stream 3rd Person Shoulder/Back Pitch Angle
 
   const currentDir = useRef(new THREE.Vector3(0, 0, -1))
   const playerPos = useRef([0, 0.65, 45])
@@ -110,7 +110,7 @@ export function Player({ id = 'player1' }) {
     const handleMouseMove = (e) => {
       if (document.pointerLockElement || e.buttons === 1 || e.buttons === 2) {
         cameraYaw.current -= e.movementX * 0.003
-        cameraPitch.current = THREE.MathUtils.clamp(cameraPitch.current + e.movementY * 0.002, 0.1, 0.62)
+        cameraPitch.current = THREE.MathUtils.clamp(cameraPitch.current + e.movementY * 0.002, 0.05, 0.42)
       }
     }
 
@@ -156,7 +156,7 @@ export function Player({ id = 'player1' }) {
       api.position.set(0, 0.65, spawnZ)
       api.velocity.set(0, 0, 0)
       cameraYaw.current = Math.PI
-      cameraPitch.current = 0.38
+      cameraPitch.current = 0.18
     }
   }, [gameState, kickoffTeam, api])
 
@@ -169,22 +169,22 @@ export function Player({ id = 'player1' }) {
     if (keys.ArrowLeft) cameraYaw.current += 1.8 * dt
     if (keys.ArrowRight) cameraYaw.current -= 1.8 * dt
 
-    // ── 1. GIANT ARENA BROADCAST CAMERA RIG ──
+    // ── 1. EXACT REMATCH 3RD-PERSON ACTION CAMERA ──
     const isSprinting = keys.Shift && stamina > 5
-    const targetFov = isSprinting ? 64 : 54
+    const targetFov = isSprinting ? 76 : 68
     state.camera.fov = THREE.MathUtils.lerp(state.camera.fov, targetFov, 0.1)
     state.camera.updateProjectionMatrix()
 
-    const camDistance = 14.5
+    const camDistance = 5.2 // Close 3rd-person follow distance
     const camX = pos[0] + Math.sin(cameraYaw.current) * Math.cos(cameraPitch.current) * camDistance
-    const camY = pos[1] + Math.sin(cameraPitch.current) * camDistance + 7.8
+    const camY = pos[1] + Math.sin(cameraPitch.current) * camDistance + 2.2 // Shoulder height
     const camZ = pos[2] + Math.cos(cameraYaw.current) * Math.cos(cameraPitch.current) * camDistance
 
-    state.camera.position.lerp(new THREE.Vector3(camX, camY, camZ), 0.18)
+    state.camera.position.lerp(new THREE.Vector3(camX, camY, camZ), 0.22)
 
-    const lookTargetX = pos[0] - Math.sin(cameraYaw.current) * 14.0
+    const lookTargetX = pos[0] - Math.sin(cameraYaw.current) * 8.0
     const lookTargetY = pos[1] + 1.2
-    const lookTargetZ = pos[2] - Math.cos(cameraYaw.current) * 14.0
+    const lookTargetZ = pos[2] - Math.cos(cameraYaw.current) * 8.0
     state.camera.lookAt(lookTargetX, lookTargetY, lookTargetZ)
 
     // ── 2. MOVEMENT CONTROLS ──

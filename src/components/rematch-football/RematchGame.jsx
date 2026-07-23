@@ -34,7 +34,6 @@ function GoalkeeperManager() {
       setGKs(redGK, blueGK)
     }
 
-    // Goal triggers at Z = ±160.25
     if (zPos < -160.25 && Math.abs(ballPos[0]) < 13.0) {
       incrementScore('red')
     } else if (zPos > 160.25 && Math.abs(ballPos[0]) < 13.0) {
@@ -108,8 +107,9 @@ function CinematicReplayCamera() {
         }
       }
     } else if (gameState === 'MENU') {
-      state.camera.position.set(0, 1.4, 4.2)
-      state.camera.lookAt(0, 0.9, 0)
+      // Sleek full-body menu showcase camera framing
+      state.camera.position.set(0, 2.4, 7.5)
+      state.camera.lookAt(0, 1.1, 0)
     }
   })
 
@@ -346,7 +346,7 @@ export function RematchGame({ onExit }) {
       {/* ── 2. 3D SCENE CANVAS WITH DEPTH FOG ── */}
       <Canvas
         shadows
-        camera={{ fov: 54, position: [0, 2.2, 16] }}
+        camera={{ fov: 68, position: [0, 2.2, 16] }}
         gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping }}
       >
         <color attach="background" args={arenaStyle === 'desert' ? ['#fdf4ff'] : ['#030712']} />
