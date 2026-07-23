@@ -8,6 +8,7 @@ export default defineConfig({
   build: {
     outDir: 'public/rematch',
     emptyOutDir: true,
+    sourcemap: true, // Enables full JavaScript source maps for DevTools debugging
   },
   optimizeDeps: {
     include: ['three', '@react-three/fiber', '@react-three/drei', '@react-three/cannon']
