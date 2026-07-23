@@ -249,8 +249,11 @@ export function RematchGame({ onExit }) {
 
   const [inputRoomCode, setInputRoomCode] = useState('')
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
-  const [settingsTab, setSettingsTab] = useState('CONTROLS') // 'CONTROLS' | 'AUDIO' | 'CAMERA'
+  const [settingsTab, setSettingsTab] = useState('CONTROLS')
   const [tipIndex, setTipIndex] = useState(0)
+
+  // Rocket League style Kickoff Countdown state (3, 2, 1, GO!)
+  const [countdownText, setCountdownText] = useState('3')
 
   // KEYBINDINGS: Key F = Fullscreen, Key ESC = Settings Pause Menu ONLY
   useEffect(() => {
@@ -296,6 +299,26 @@ export function RematchGame({ onExit }) {
       console.warn('Fullscreen notice:', err)
     }
   }
+
+  // Rocket League Style Kickoff Countdown (3 -> 2 -> 1 -> GO!)
+  useEffect(() => {
+    if (gameState === 'KICKOFF') {
+      setCountdownText('3')
+      const t2 = setTimeout(() => setCountdownText('2'), 700)
+      const t1 = setTimeout(() => setCountdownText('1'), 1400)
+      const tGo = setTimeout(() => setCountdownText('GO!'), 2100)
+      const tPlay = setTimeout(() => {
+        setGameState('PLAYING')
+      }, 2600)
+
+      return () => {
+        clearTimeout(t2)
+        clearTimeout(t1)
+        clearTimeout(tGo)
+        clearTimeout(tPlay)
+      }
+    }
+  }, [gameState])
 
   // Socket.io integration
   useEffect(() => {
@@ -370,12 +393,7 @@ export function RematchGame({ onExit }) {
   }, [gameState])
 
   useEffect(() => {
-    if (gameState === 'KICKOFF') {
-      const timeout = setTimeout(() => {
-        setGameState('PLAYING')
-      }, 2200)
-      return () => clearTimeout(timeout)
-    } else if (gameState === 'GOAL_CELEBRATION') {
+    if (gameState === 'GOAL_CELEBRATION') {
       const timeout = setTimeout(() => {
         setGameState('GOAL_REPLAY')
       }, 4000)
@@ -569,7 +587,6 @@ export function RematchGame({ onExit }) {
 
           {activeMenuTab === 'PLAY' && (
             <div style={{ display: 'flex', gap: '24px', marginBottom: '20px' }}>
-              {/* Card 1: Single Player */}
               <div 
                 onClick={startMatchWithLoading}
                 style={{
@@ -599,7 +616,6 @@ export function RematchGame({ onExit }) {
                 </button>
               </div>
 
-              {/* Card 2: Play With Friend */}
               <div 
                 onClick={handleCreateFriendRoom}
                 style={{
@@ -629,7 +645,6 @@ export function RematchGame({ onExit }) {
                 </button>
               </div>
 
-              {/* Card 3: Online Matchmaking */}
               <div 
                 onClick={handleFindOnlineMatch}
                 style={{
@@ -718,6 +733,81 @@ export function RematchGame({ onExit }) {
             >
               📹 CAMERA [C]: {cameraMode === 'FOLLOW' ? 'PLAYER FOLLOW' : 'BROADCAST AUTO-BALL'}
             </button>
+          </div>
+
+          {/* ── ROCKET LEAGUE KICKOFF COUNTDOWN OVERLAY (3, 2, 1, GO!) ── */}
+          {gameState === 'KICKOFF' && (
+            <div style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              zIndex: 100,
+              fontFamily: "'Orbitron', sans-serif",
+              textAlign: 'center',
+              pointerEvents: 'none'
+            }}>
+              <h1 style={{
+                fontSize: '7rem',
+                fontWeight: '900',
+                color: countdownText === 'GO!' ? '#22c55e' : '#facc15',
+                textShadow: countdownText === 'GO!' ? '0 0 60px rgba(34, 197, 94, 0.9)' : '0 0 60px rgba(250, 204, 21, 0.9)',
+                margin: 0,
+                letterSpacing: '4px',
+                animation: 'pulse 0.4s ease-in-out'
+              }}>
+                {countdownText}
+              </h1>
+            </div>
+          )}
+
+          {/* ── BOTTOM HUD ACTION BAR (STAMINA, SHOT, DIVE, ABILITY) ── */}
+          <div style={{
+            position: 'absolute',
+            bottom: '30px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '16px',
+            background: 'rgba(15, 23, 42, 0.9)',
+            border: '1px solid rgba(255,255,255,0.15)',
+            borderRadius: '16px',
+            padding: '12px 24px',
+            backdropFilter: 'blur(12px)',
+            fontFamily: "'Orbitron', sans-serif",
+            zIndex: 30,
+            pointerEvents: 'none',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.6)'
+          }}>
+            {/* Stamina Meter */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '120px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', color: '#94a3b8', fontWeight: '900' }}>
+                <span>STAMINA</span>
+                <span>[SHIFT]</span>
+              </div>
+              <div style={{ height: '8px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${stamina}%`, background: 'linear-gradient(90deg, #00d2ff, #0284c7)', borderRadius: '4px' }} />
+              </div>
+            </div>
+
+            <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.15)' }} />
+
+            {/* Action Badges */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.75rem', fontWeight: '900' }}>
+              <span style={{ background: 'rgba(34, 197, 94, 0.2)', border: '1px solid #22c55e', color: '#22c55e', padding: '4px 10px', borderRadius: '6px' }}>
+                ⚡ [SPACE/L-CLICK] POWER SHOT
+              </span>
+              <span style={{ background: 'rgba(250, 204, 21, 0.2)', border: '1px solid #facc15', color: '#facc15', padding: '4px 10px', borderRadius: '6px' }}>
+                🏃 [E] PASS
+              </span>
+              <span style={{ background: 'rgba(239, 68, 68, 0.2)', border: '1px solid #ef4444', color: '#ef4444', padding: '4px 10px', borderRadius: '6px' }}>
+                🛡️ [Q/R-CLICK] SLIDE DIVE
+              </span>
+              <span style={{ background: 'rgba(168, 85, 247, 0.2)', border: '1px solid #a855f7', color: '#a855f7', padding: '4px 10px', borderRadius: '6px' }}>
+                🔥 [R] SPEED SURGE
+              </span>
+            </div>
           </div>
 
           <MiniMapRadar />
@@ -824,7 +914,6 @@ export function RematchGame({ onExit }) {
         }}>
           <div style={{ width: '480px', background: 'rgba(15, 23, 42, 0.95)', border: '1px solid rgba(34, 197, 94, 0.5)', borderRadius: '16px', padding: '30px', color: '#fff' }}>
             
-            {/* Modal Header & Tabs */}
             <h2 style={{ color: '#22c55e', fontSize: '1.4rem', margin: '0 0 16px', textAlign: 'center', letterSpacing: '3px' }}>
               ⚙️ GAME SETTINGS
             </h2>
@@ -851,7 +940,6 @@ export function RematchGame({ onExit }) {
               ))}
             </div>
 
-            {/* Tab 1: CONTROLS CHEAT SHEET */}
             {settingsTab === 'CONTROLS' && (
               <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '16px', fontSize: '0.8rem', lineHeight: '1.8', marginBottom: '24px' }}>
                 <div>• <b>WASD</b>: Move Character</div>
@@ -865,7 +953,6 @@ export function RematchGame({ onExit }) {
               </div>
             )}
 
-            {/* Tab 2: CAMERA SETTINGS */}
             {settingsTab === 'CAMERA' && (
               <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '16px', marginBottom: '24px' }}>
                 <label style={{ display: 'block', fontSize: '0.85rem', color: '#cbd5e1', marginBottom: '10px' }}>CAMERA VIEW MODE:</label>
@@ -904,7 +991,6 @@ export function RematchGame({ onExit }) {
               </div>
             )}
 
-            {/* Tab 3: AUDIO SETTINGS */}
             {settingsTab === 'AUDIO' && (
               <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '16px', marginBottom: '24px' }}>
                 <label style={{ display: 'block', fontSize: '0.85rem', color: '#cbd5e1', marginBottom: '8px' }}>MASTER VOLUME (80%)</label>

@@ -99,14 +99,12 @@ export function Player({ id = 'player1' }) {
   const redGK = useFootballStore((state) => state.redGK)
   const characterPreset = useFootballStore((state) => state.characterPreset)
   const cameraMode = useFootballStore((state) => state.cameraMode)
-  const toggleCameraMode = useFootballStore((state) => state.toggleCameraMode)
 
   const [shotCharge, setShotCharge] = useState(0)
   const isCharging = useRef(false)
   const isTackling = useRef(false)
   const mouseDownRef = useRef(false)
   
-  // Initialize cameraYaw = 0 so camera starts directly BEHIND player's back facing opponent's goal North (-Z)!
   const cameraYaw = useRef(0)
   const cameraPitch = useRef(0.22)
 
@@ -174,6 +172,10 @@ export function Player({ id = 'player1' }) {
   }, [api])
 
   useEffect(() => {
+    isCharging.current = false
+    setShotCharge(0)
+    mouseDownRef.current = false
+
     if (gameState === 'MENU') {
       api.position.set(0, 0.65, 0)
       api.velocity.set(0, 0, 0)
@@ -181,7 +183,6 @@ export function Player({ id = 'player1' }) {
       const spawnZ = kickoffTeam === 'red' ? 3.5 : 22.0
       api.position.set(0, 0.65, spawnZ)
       api.velocity.set(0, 0, 0)
-      // Camera faces opponent's goal North (-Z) from behind player's back!
       cameraYaw.current = 0
       cameraPitch.current = 0.22
     }
@@ -196,17 +197,15 @@ export function Player({ id = 'player1' }) {
     if (keys.ArrowLeft) cameraYaw.current += 1.8 * dt
     if (keys.ArrowRight) cameraYaw.current -= 1.8 * dt
 
-    // ── CAMERA RIG (FOLLOW VS AUTO_BALL MODE) ──
+    // ── CAMERA RIG ──
     const isSprinting = keys.Shift && stamina > 5
     const targetFov = isSprinting ? 72 : 62
     state.camera.fov = THREE.MathUtils.lerp(state.camera.fov, targetFov, 0.1)
     state.camera.updateProjectionMatrix()
 
     if (cameraMode === 'AUTO_BALL') {
-      // Broadcast TV View tracking ball & action
       const ball = window.footballBall
       const bPos = ball ? safePos(ball) : [0, 0, 0]
-      
       const midX = (pos[0] + bPos[0]) / 2
       const midZ = (pos[2] + bPos[2]) / 2
 
@@ -214,7 +213,6 @@ export function Player({ id = 'player1' }) {
       state.camera.lookAt(midX, 1.0, midZ)
 
     } else {
-      // 3rd Person View directly behind player's back
       const camDistance = 5.4
       const camX = pos[0] + Math.sin(cameraYaw.current) * Math.cos(cameraPitch.current) * camDistance
       const camY = pos[1] + Math.sin(cameraPitch.current) * camDistance + 2.4
@@ -251,7 +249,6 @@ export function Player({ id = 'player1' }) {
       currentDir.current.copy(direction)
     }
 
-    // SPEED CALCULATION
     let moveSpeed = 12.0
     if (isSprinting && direction.lengthSq() > 0.01) {
       moveSpeed = 18.0
@@ -329,16 +326,17 @@ export function Player({ id = 'player1' }) {
     const isPressingShot = keys.Space || mouseDownRef.current
     if (isPressingShot) {
       isCharging.current = true
-      setShotCharge(prev => Math.min(100, prev + 180 * dt))
+      setShotCharge(prev => Math.min(100, prev + 220 * dt))
     } else {
       if (isCharging.current) {
-        const power = Math.max(30, shotCharge)
-        const shotVelX = currentDir.current.x * (22 + (power / 100) * 30)
-        const shotVelY = 4.0 + (power / 100) * 9.0
-        const shotVelZ = currentDir.current.z * (22 + (power / 100) * 30)
+        const power = Math.max(35, shotCharge)
+        const shotVelX = currentDir.current.x * (24 + (power / 100) * 32)
+        const shotVelY = 4.5 + (power / 100) * 10.0
+        const shotVelZ = currentDir.current.z * (24 + (power / 100) * 32)
 
         if (ball) {
           ball.api.velocity.set(shotVelX, shotVelY, shotVelZ)
+          setPossession(null)
         }
 
         isCharging.current = false
@@ -350,9 +348,7 @@ export function Player({ id = 'player1' }) {
   const isGK = redGK === id
   const vel = safeVel(window.footballPlayer)
   const playerVelocityVec = new THREE.Vector3(vel[0], vel[1], vel[2])
-  
   const modelRotationY = gameState === 'MENU' ? Math.PI : Math.atan2(-currentDir.current.x, -currentDir.current.z) + Math.PI
-
   const showNameTag = gameState === 'PLAYING' || gameState === 'KICKOFF'
 
   return (
