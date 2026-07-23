@@ -159,8 +159,12 @@ export function LagoriPlayer({ id = 'player1' }) {
   }, [])
 
   useEffect(() => {
-    const unsubPos = api.position.subscribe(v => (playerPos.current = v || [0, 0.65, 14]))
-    const unsubVel = api.velocity.subscribe(v => (playerVel.current = v || [0, 0, 0]))
+    const unsubPos = api.position.subscribe(v => {
+      if (Array.isArray(v)) playerPos.current = v
+    })
+    const unsubVel = api.velocity.subscribe(v => {
+      if (Array.isArray(v)) playerVel.current = v
+    })
 
     window.lagoriPlayer = {
       position: playerPos,

@@ -54,13 +54,17 @@ function SingleStone({ config, index }) {
   const knockDownStack = useLagoriStore((state) => state.knockDownStack)
   const stonesRebuilt = useLagoriStore((state) => state.stonesRebuilt)
 
+  // Dynamic rigid body with constant mass (prevents Cannon worker MessagePort crash)
   const [ref, api] = useCylinder(() => ({
-    mass: isStackKnockedDown ? config.mass : 0, // Static before hit, dynamic after hit!
+    mass: config.mass,
     position: [0, config.yOffset, 0],
     args: [config.radius, config.radius, config.height, 16],
     restitution: 0.3,
     friction: 0.8,
-    onCollide: (e) => {
+    allowSleep: true,
+    sleepSpeedLimit: 0.1,
+    sleepTimeLimit: 0.1,
+    onCollide: () => {
       if (!useLagoriStore.getState().isStackKnockedDown && (gameState === 'AIM_THROW' || gameState === 'PLAYING')) {
         knockDownStack()
       }
@@ -73,11 +77,13 @@ function SingleStone({ config, index }) {
   const texture = useMemo(() => createStoneTexture(config.id), [config.id])
 
   useEffect(() => {
-    const unsub = api.position.subscribe(v => (stonePos.current = v || [0, config.yOffset, 0]))
+    const unsub = api.position.subscribe(v => {
+      if (Array.isArray(v)) stonePos.current = v
+    })
     return () => unsub()
   }, [api])
 
-  // Reset stone position on round restart
+  // Reset stone position on round restart or trigger tumble impulse on knockdown
   useEffect(() => {
     if (!isStackKnockedDown) {
       setPickedUp(false)
@@ -86,10 +92,10 @@ function SingleStone({ config, index }) {
       api.velocity.set(0, 0, 0)
       api.angularVelocity.set(0, 0, 0)
     } else {
-      // Scatter impulse when knocked down!
-      const impulseX = (Math.random() - 0.5) * 8.0
-      const impulseZ = (Math.random() - 0.5) * 8.0
-      api.velocity.set(impulseX, 2.5, impulseZ)
+      api.wakeUp()
+      const impulseX = (Math.random() - 0.5) * 6.0
+      const impulseZ = (Math.random() - 0.5) * 6.0
+      api.velocity.set(impulseX, 2.0, impulseZ)
     }
   }, [isStackKnockedDown, config, api])
 
