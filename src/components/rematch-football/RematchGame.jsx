@@ -4,7 +4,6 @@ import { Physics } from '@react-three/cannon'
 import { Environment, Stars, Sky } from '@react-three/drei'
 import { useFootballStore } from './footballStore'
 import { useAbilityStore } from './abilityStore'
-import { ABILITY_REGISTRY } from './abilityConfig'
 import { Arena } from './Arena'
 import { Ball } from './Ball'
 import { Player } from './Player'
@@ -18,6 +17,7 @@ function GoalkeeperManager() {
   const incrementScore = useFootballStore((state) => state.incrementScore)
 
   useFrame(() => {
+    // CRITICAL: Only evaluate goal lines during active PLAYING match state!
     if (gameState !== 'PLAYING') return
 
     const ball = window.footballBall
@@ -239,6 +239,7 @@ export function RematchGame({ onExit }) {
   const stamina = useFootballStore((state) => state.stamina)
   const goalAlert = useFootballStore((state) => state.goalAlert)
   const setGameState = useFootballStore((state) => state.setGameState)
+  const setGoalAlert = useFootballStore((state) => state.setGoalAlert)
   const resetMatch = useFootballStore((state) => state.resetMatch)
   const tickTimer = useFootballStore((state) => state.tickTimer)
   
@@ -271,9 +272,15 @@ export function RematchGame({ onExit }) {
   }, [gameState])
 
   useEffect(() => {
-    if (gameState === 'KICKOFF' || gameState === 'GOAL_SCORED') {
+    if (gameState === 'KICKOFF') {
       const timeout = setTimeout(() => {
         setGameState('PLAYING')
+      }, 2500)
+      return () => clearTimeout(timeout)
+    } else if (gameState === 'GOAL_SCORED') {
+      const timeout = setTimeout(() => {
+        setGoalAlert('')
+        setGameState('KICKOFF')
       }, 2500)
       return () => clearTimeout(timeout)
     } else if (gameState === 'HALF_TIME') {
@@ -613,7 +620,6 @@ export function RematchGame({ onExit }) {
             <div>FPS: 60</div>
           </div>
 
-          {/* Ability Power Meter & Cooldown Widget */}
           <AbilityHudWidget />
 
           {/* Segmented Stamina Bar */}
@@ -651,8 +657,8 @@ export function RematchGame({ onExit }) {
 
           <MiniMapRadar />
 
-          {/* Kickoff & Goal Alert Overlay */}
-          {(gameState === 'KICKOFF' || gameState === 'GOAL_SCORED') && (
+          {/* Kickoff Overlay */}
+          {gameState === 'KICKOFF' && (
             <div style={{
               position: 'absolute',
               inset: 0,
@@ -672,7 +678,39 @@ export function RematchGame({ onExit }) {
                 fontFamily: "'Orbitron', sans-serif",
                 margin: 0
               }}>
-                {gameState === 'KICKOFF' ? 'READY?' : goalAlert}
+                READY?
+              </h1>
+            </div>
+          )}
+
+          {/* Goal Scored Alert Banner */}
+          {gameState === 'GOAL_SCORED' && goalAlert !== '' && (
+            <div style={{
+              position: 'absolute',
+              top: '30%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              background: 'rgba(15, 23, 42, 0.92)',
+              border: '2px solid #00f2fe',
+              borderRadius: '16px',
+              padding: '24px 60px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 0 50px rgba(0, 242, 254, 0.5)',
+              zIndex: 110,
+              pointerEvents: 'none'
+            }}>
+              <h1 style={{
+                fontSize: '4rem',
+                fontWeight: '900',
+                letterSpacing: '6px',
+                color: '#ffffff',
+                textShadow: '0 0 30px rgba(0, 242, 254, 0.8)',
+                fontFamily: "'Orbitron', sans-serif",
+                margin: 0
+              }}>
+                {goalAlert}
               </h1>
             </div>
           )}

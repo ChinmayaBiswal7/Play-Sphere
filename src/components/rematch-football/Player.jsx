@@ -193,7 +193,6 @@ export function Player({ id = 'player1' }) {
       currentDir.current.copy(direction)
     }
 
-    // Ability 2: Sprint Burst
     if (isSprinting && direction.lengthSq() > 0.01) {
       triggerAbility('sprint_burst', { playerApi: api, aimDir: currentDir.current })
       setStamina(Math.max(0, stamina - 35 * dt))
@@ -204,7 +203,6 @@ export function Player({ id = 'player1' }) {
       }
     }
 
-    // Ability 3: Slide Tackle
     if (keys.KeyQ) {
       triggerAbility('slide_tackle', {
         playerApi: api,
@@ -240,7 +238,7 @@ export function Player({ id = 'player1' }) {
       }
     }
 
-    // ── 4. SHOOTING CHARGE (Ability 1: Power Shot) ──
+    // ── 4. SHOOTING CHARGE ──
     if (keys.Space) {
       isCharging.current = true
       setShotCharge(prev => Math.min(100, prev + 160 * dt))
@@ -261,7 +259,9 @@ export function Player({ id = 'player1' }) {
   const isGK = redGK === id
   const vel = safeVel(window.footballPlayer)
   const playerVelocityVec = new THREE.Vector3(vel[0], vel[1], vel[2])
-  const modelRotationY = Math.atan2(-currentDir.current.x, -currentDir.current.z)
+  
+  // Model Y rotation: In MENU mode face camera (PI), in MATCH mode face forward (0)
+  const modelRotationY = gameState === 'MENU' ? Math.PI : Math.atan2(-currentDir.current.x, -currentDir.current.z)
 
   return (
     <group ref={ref}>
