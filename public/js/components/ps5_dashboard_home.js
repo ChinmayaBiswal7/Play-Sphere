@@ -263,6 +263,8 @@
           iframe = document.createElement('iframe');
           iframe.id = 'game-session-iframe';
           iframe.style.cssText = "position: fixed; inset: 0; width: 100vw; height: 100vh; border: none; z-index: 999999; background: #000;";
+          iframe.setAttribute('allow', 'fullscreen');
+          iframe.setAttribute('allowfullscreen', 'true');
           document.body.appendChild(iframe);
         }
         iframe.src = url;

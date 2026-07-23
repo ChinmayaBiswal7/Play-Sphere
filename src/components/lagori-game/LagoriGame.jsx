@@ -34,15 +34,23 @@ export function LagoriGame({ onExit }) {
     }
   }, [gameState])
 
+  const toggleFullscreen = () => {
+    try {
+      const doc = (window.parent && window.parent.document) ? window.parent.document : document
+      const target = doc.documentElement
+      if (!doc.fullscreenElement) {
+        if (target.requestFullscreen) target.requestFullscreen().catch(() => {})
+      } else {
+        if (doc.exitFullscreen) doc.exitFullscreen().catch(() => {})
+      }
+    } catch (err) {}
+  }
+
   // Fullscreen ('F') & Settings Modal ('ESC') keybinds
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.code === 'KeyF') {
-        if (!document.fullscreenElement) {
-          document.documentElement.requestFullscreen?.()
-        } else {
-          document.exitFullscreen?.()
-        }
+        toggleFullscreen()
       } else if (e.code === 'Escape') {
         setIsSettingsOpen((prev) => !prev)
       }
@@ -258,6 +266,23 @@ export function LagoriGame({ onExit }) {
             }}>
               {gameState === 'AIM_THROW' ? '🎯 HOLD RIGHT CLICK TO AIM, LEFT CLICK TO THROW!' : '🏃 REBUILD THE 7-STONE STACK!'}
             </div>
+
+            <button
+              onClick={toggleFullscreen}
+              style={{
+                background: 'rgba(15, 23, 42, 0.88)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                color: '#fff',
+                borderRadius: '8px',
+                padding: '10px 14px',
+                fontWeight: '900',
+                cursor: 'pointer',
+                fontFamily: "'Orbitron', sans-serif",
+                fontSize: '0.8rem'
+              }}
+            >
+              ⛶ [F]
+            </button>
 
             <button
               onClick={() => setIsSettingsOpen(true)}
