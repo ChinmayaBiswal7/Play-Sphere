@@ -21,6 +21,34 @@ export const useFootballStore = create((set) => ({
   arenaStyle: 'neon',
   activeMenuTab: 'PLAY',
 
+  // ── MULTIPLAYER STATE ──
+  matchMode: 'SINGLE_PLAYER', // 'SINGLE_PLAYER' | 'FRIEND_ROOM' | 'ONLINE_MATCH'
+  multiplayerFormat: '1v1', // '1v1' | '2v2' | '3v3' | '5v5'
+  roomCode: '',
+  isHost: false,
+  matchmakingStatus: 'IDLE', // 'IDLE' | 'SEARCHING' | 'FOUND' | 'CONNECTED'
+  connectedPlayers: [],
+  remotePlayersData: {}, // { [socketId]: { position, rotation, velocity, animationState, team } }
+
+  // Actions
+  setMatchMode: (mode) => set({ matchMode: mode }),
+  setMultiplayerFormat: (format) => set({ multiplayerFormat: format }),
+  setRoomCode: (code) => set({ roomCode: code }),
+  setIsHost: (isHost) => set({ isHost }),
+  setMatchmakingStatus: (status) => set({ matchmakingStatus: status }),
+  setConnectedPlayers: (players) => set({ connectedPlayers: players }),
+  updateRemotePlayer: (socketId, data) => set((state) => ({
+    remotePlayersData: {
+      ...state.remotePlayersData,
+      [socketId]: data
+    }
+  })),
+  removeRemotePlayer: (socketId) => set((state) => {
+    const updated = { ...state.remotePlayersData }
+    delete updated[socketId]
+    return { remotePlayersData: updated }
+  }),
+
   pushReplayFrame: (frameData) => set((state) => {
     const newBuf = [...state.replayBuffer, frameData]
     if (newBuf.length > 90) newBuf.shift() // Keep last 90 frames (~4.5s)
@@ -31,7 +59,6 @@ export const useFootballStore = create((set) => ({
 
   incrementScore: (team) => set((state) => {
     const newScore = { ...state.score, [team]: state.score[team] + 1 }
-    // The team that DID NOT score takes the next kickoff
     const nextKickoff = team === 'red' ? 'blue' : 'red'
 
     return {
