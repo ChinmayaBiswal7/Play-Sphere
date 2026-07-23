@@ -181,7 +181,9 @@ export function Bot({ id = 'bot1' }) {
   const isGK = blueGK === id
   const vel = safeVel(window.footballBot)
   const botVelocityVec = new THREE.Vector3(vel[0], vel[1], vel[2])
-  const modelRotationY = Math.atan2(-currentDir.current.x, -currentDir.current.z) + Math.PI
+  
+  // Model faces forward along movement vector (HumanModel front is at -Z)
+  const modelRotationY = Math.atan2(-currentDir.current.x, -currentDir.current.z)
   const showNameTag = gameState === 'PLAYING' || gameState === 'KICKOFF'
 
   const isCelebrating = gameState === 'GOAL_CELEBRATION' && lastScorer === 'blue' ? (celebrationType || 'jump') : false

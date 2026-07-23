@@ -350,7 +350,9 @@ export function Player({ id = 'player1' }) {
   const isGK = redGK === id
   const vel = safeVel(window.footballPlayer)
   const playerVelocityVec = new THREE.Vector3(vel[0], vel[1], vel[2])
-  const modelRotationY = gameState === 'MENU' ? Math.PI : Math.atan2(-currentDir.current.x, -currentDir.current.z) + Math.PI
+  
+  // Model faces forward along movement vector (HumanModel front is at -Z)
+  const modelRotationY = gameState === 'MENU' ? Math.PI : Math.atan2(-currentDir.current.x, -currentDir.current.z)
   const showNameTag = gameState === 'PLAYING' || gameState === 'KICKOFF'
 
   const isCelebrating = gameState === 'GOAL_CELEBRATION' && lastScorer === 'red' ? (celebrationType || 'slide') : false
