@@ -22,6 +22,22 @@ export function LagoriGame({ onExit }) {
   const resetRound = useLagoriStore((state) => state.resetRound)
   const resetMatch = useLagoriStore((state) => state.resetMatch)
 
+  // Multiplayer Hooks
+  const matchMode = useLagoriStore((state) => state.matchMode)
+  const setMatchMode = useLagoriStore((state) => state.setMatchMode)
+  const multiplayerSubSection = useLagoriStore((state) => state.multiplayerSubSection)
+  const setMultiplayerSubSection = useLagoriStore((state) => state.setMultiplayerSubSection)
+  const multiplayerFormat = useLagoriStore((state) => state.multiplayerFormat)
+  const setMultiplayerFormat = useLagoriStore((state) => state.setMultiplayerFormat)
+  const roomCode = useLagoriStore((state) => state.roomCode)
+  const setRoomCode = useLagoriStore((state) => state.setRoomCode)
+  const isHost = useLagoriStore((state) => state.isHost)
+  const setIsHost = useLagoriStore((state) => state.setIsHost)
+  const matchmakingStatus = useLagoriStore((state) => state.matchmakingStatus)
+  const setMatchmakingStatus = useLagoriStore((state) => state.setMatchmakingStatus)
+  const setConnectedPlayers = useLagoriStore((state) => state.setConnectedPlayers)
+
+  const [inputRoomCode, setInputRoomCode] = useState('')
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [audioVolume, setAudioVolume] = useState(80)
 
@@ -65,18 +81,18 @@ export function LagoriGame({ onExit }) {
     }
   }
 
-  // Handle Fullscreen & Settings keybindings + force resize event on fullscreen change
+  // Keybindings: Key F = Fullscreen, Key ESC = Toggle Pause Settings Modal ONLY
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.code === 'KeyF') {
         toggleFullscreen()
       } else if (e.code === 'Escape') {
+        e.preventDefault()
         setIsSettingsOpen((prev) => !prev)
       }
     }
 
     const handleFullscreenChange = () => {
-      // Force Three.js Canvas resize update
       setTimeout(() => {
         window.dispatchEvent(new Event('resize'))
       }, 100)
@@ -99,6 +115,26 @@ export function LagoriGame({ onExit }) {
 
   const startMatch = () => {
     resetMatch()
+  }
+
+  // Multiplayer Actions
+  const handleCreateFriendRoom = () => {
+    const code = 'LAGORI-' + Math.random().toString(36).substring(2, 6).toUpperCase()
+    setRoomCode(code)
+    setIsHost(true)
+  }
+
+  const handleJoinFriendRoom = () => {
+    if (!inputRoomCode.trim()) return
+    startMatch()
+  }
+
+  const handleFindOnlineMatch = () => {
+    setMatchmakingStatus('SEARCHING')
+    setTimeout(() => {
+      setMatchmakingStatus('FOUND')
+      startMatch()
+    }, 1400)
   }
 
   return (
@@ -161,60 +197,37 @@ export function LagoriGame({ onExit }) {
         </Suspense>
       </Canvas>
 
-      {/* ── 3. MAIN MENU / LOBBY ── */}
+      {/* ── 3. MAIN MENU / MULTIPLAYER HUB ── */}
       {gameState === 'MENU' && (
         <div style={{
           position: 'absolute',
           inset: 0,
-          background: 'rgba(9, 13, 22, 0.85)',
+          background: 'rgba(9, 13, 22, 0.88)',
           backdropFilter: 'blur(12px)',
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
+          padding: '30px 40px',
           fontFamily: "'Orbitron', sans-serif",
           zIndex: 100
         }}>
-          <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-            <span style={{ fontSize: '4rem', display: 'block', marginBottom: '10px' }}>🪨</span>
-            <h1 style={{ fontSize: '4rem', fontWeight: '900', color: '#facc15', letterSpacing: '8px', margin: 0 }}>
-              LAGORI 3D
-            </h1>
-            <p style={{ color: '#94a3b8', letterSpacing: '4px', fontSize: '1rem', marginTop: '10px' }}>
-              SEVEN STONES INDIAN OUTDOOR CHAMPIONSHIP
-            </p>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '320px' }}>
-            <button
-              onClick={startMatch}
-              style={{
-                background: 'linear-gradient(135deg, #facc15 0%, #eab308 100%)',
-                color: '#000',
-                border: 'none',
-                borderRadius: '10px',
-                padding: '18px 30px',
-                fontWeight: '900',
-                fontSize: '1.1rem',
-                letterSpacing: '2px',
-                cursor: 'pointer',
-                boxShadow: '0 8px 30px rgba(250, 204, 21, 0.4)'
-              }}
-            >
-              ▶ PLAY 1V1 MATCH
-            </button>
+          {/* Header */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+            <div>
+              <h1 style={{ fontSize: '2.5rem', fontWeight: '900', color: '#facc15', letterSpacing: '6px', margin: 0 }}>
+                🪨 LAGORI 3D
+              </h1>
+              <small style={{ color: '#94a3b8', letterSpacing: '2px' }}>SEVEN STONES MULTIPLAYER CHAMPIONSHIP</small>
+            </div>
 
             <button
               onClick={onExit}
               style={{
-                background: 'rgba(255, 255, 255, 0.05)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                color: '#94a3b8',
-                borderRadius: '10px',
-                padding: '14px 30px',
-                fontWeight: '800',
-                fontSize: '0.9rem',
-                letterSpacing: '1px',
+                background: 'rgba(239, 68, 68, 0.2)',
+                border: '1px solid #ef4444',
+                color: '#ef4444',
+                padding: '8px 20px',
+                borderRadius: '8px',
+                fontWeight: '900',
                 cursor: 'pointer'
               }}
             >
@@ -222,14 +235,201 @@ export function LagoriGame({ onExit }) {
             </button>
           </div>
 
-          <div style={{ marginTop: '50px', background: 'rgba(15, 23, 42, 0.8)', border: '1px solid rgba(250, 204, 21, 0.3)', borderRadius: '12px', padding: '16px 24px', maxWidth: '500px', textAlign: 'center' }}>
-            <h4 style={{ margin: '0 0 6px', color: '#facc15', fontSize: '0.95rem' }}>HOW TO PLAY</h4>
-            <p style={{ margin: 0, color: '#cbd5e1', fontSize: '0.8rem', lineHeight: '1.5', fontFamily: 'sans-serif' }}>
-              1. <b>Hold Right Click</b> to zoom/aim, <b>Left Click</b> to throw ball at 7-stone stack.<br />
-              2. <b>Press E</b> to pick up scattered stones on ground.<br />
-              3. Run to center pedestal and <b>Press E</b> to rebuild all 7 stones before Defender hits you!<br />
-              4. <b>Press F</b> for Fullscreen, <b>ESC</b> for Settings Menu.
-            </p>
+          {/* Mode Panels */}
+          <div style={{ display: 'flex', gap: '24px', flex: 1 }}>
+            
+            {/* Mode Selector */}
+            <div style={{ width: '280px', display: 'flex', flexDirection: 'column', gap: '12px', background: 'rgba(15, 23, 42, 0.8)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '20px' }}>
+              <h3 style={{ color: '#94a3b8', fontSize: '0.75rem', letterSpacing: '2px', margin: '0 0 4px' }}>SELECT MODE</h3>
+
+              <button
+                onClick={() => setMatchMode('SINGLE_PLAYER')}
+                style={{
+                  background: matchMode === 'SINGLE_PLAYER' ? 'linear-gradient(135deg, #facc15 0%, #eab308 100%)' : 'rgba(255,255,255,0.03)',
+                  color: matchMode === 'SINGLE_PLAYER' ? '#000' : '#fff',
+                  border: 'none',
+                  borderRadius: '10px',
+                  padding: '16px',
+                  fontWeight: '900',
+                  textAlign: 'left',
+                  cursor: 'pointer'
+                }}
+              >
+                🤖 SINGLE PLAYER (VS BOT)
+              </button>
+
+              <button
+                onClick={() => setMatchMode('MULTIPLAYER')}
+                style={{
+                  background: matchMode === 'MULTIPLAYER' ? 'linear-gradient(135deg, #00d2ff 0%, #0284c7 100%)' : 'rgba(255,255,255,0.03)',
+                  color: matchMode === 'MULTIPLAYER' ? '#000' : '#fff',
+                  border: 'none',
+                  borderRadius: '10px',
+                  padding: '16px',
+                  fontWeight: '900',
+                  textAlign: 'left',
+                  cursor: 'pointer'
+                }}
+              >
+                🌐 MULTIPLAYER HUB
+              </button>
+            </div>
+
+            {/* Mode Details */}
+            <div style={{ flex: 1, background: 'rgba(15, 23, 42, 0.8)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              
+              {matchMode === 'SINGLE_PLAYER' && (
+                <div>
+                  <h2 style={{ color: '#facc15', fontSize: '1.3rem', margin: '0 0 10px' }}>🤖 SINGLE PLAYER vs AI</h2>
+                  <p style={{ color: '#cbd5e1', fontSize: '0.85rem', lineHeight: '1.6', fontFamily: 'sans-serif' }}>
+                    Practice throwing the tennis ball at the 7-stone stack and rebuilding before AI defender tags you.
+                  </p>
+                  <button
+                    onClick={startMatch}
+                    style={{
+                      marginTop: '20px',
+                      background: '#facc15',
+                      color: '#000',
+                      border: 'none',
+                      borderRadius: '10px',
+                      padding: '16px 32px',
+                      fontWeight: '900',
+                      fontSize: '1rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    ▶ START MATCH
+                  </button>
+                </div>
+              )}
+
+              {matchMode === 'MULTIPLAYER' && (
+                <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                  
+                  <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
+                    <button
+                      onClick={() => setMultiplayerSubSection('ONLINE_MATCH')}
+                      style={{
+                        background: multiplayerSubSection === 'ONLINE_MATCH' ? '#00d2ff' : 'rgba(255,255,255,0.05)',
+                        color: multiplayerSubSection === 'ONLINE_MATCH' ? '#000' : '#94a3b8',
+                        border: 'none',
+                        borderRadius: '8px',
+                        padding: '10px 18px',
+                        fontWeight: '900',
+                        fontSize: '0.85rem',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      🌐 ONLINE MATCHMAKING
+                    </button>
+
+                    <button
+                      onClick={() => setMultiplayerSubSection('PLAY_WITH_FRIEND')}
+                      style={{
+                        background: multiplayerSubSection === 'PLAY_WITH_FRIEND' ? '#facc15' : 'rgba(255,255,255,0.05)',
+                        color: multiplayerSubSection === 'PLAY_WITH_FRIEND' ? '#000' : '#94a3b8',
+                        border: 'none',
+                        borderRadius: '8px',
+                        padding: '10px 18px',
+                        fontWeight: '900',
+                        fontSize: '0.85rem',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      🤝 PLAY WITH FRIEND
+                    </button>
+                  </div>
+
+                  {/* Format Pills */}
+                  <div style={{ marginBottom: '20px' }}>
+                    <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.75rem', marginBottom: '8px' }}>MATCH FORMAT:</label>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      {['1v1', '2v2', '3v3', '5v5'].map((fmt) => (
+                        <button
+                          key={fmt}
+                          onClick={() => setMultiplayerFormat(fmt)}
+                          style={{
+                            background: multiplayerFormat === fmt ? '#facc15' : 'rgba(255,255,255,0.05)',
+                            color: multiplayerFormat === fmt ? '#000' : '#fff',
+                            border: 'none',
+                            borderRadius: '6px',
+                            padding: '10px 20px',
+                            fontWeight: '900',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {fmt}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {multiplayerSubSection === 'ONLINE_MATCH' && (
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                      <div style={{ background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '10px' }}>
+                        <h4 style={{ color: '#00d2ff', margin: '0 0 6px' }}>ONLINE MATCHMAKING ({multiplayerFormat})</h4>
+                        <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: 0, fontFamily: 'sans-serif' }}>
+                          Pair with live online players across the global Lagori network.
+                        </p>
+                      </div>
+
+                      <button
+                        onClick={handleFindOnlineMatch}
+                        style={{
+                          background: 'linear-gradient(135deg, #00d2ff 0%, #0284c7 100%)',
+                          color: '#000',
+                          border: 'none',
+                          borderRadius: '10px',
+                          padding: '16px 32px',
+                          fontWeight: '900',
+                          fontSize: '1rem',
+                          cursor: 'pointer',
+                          width: '280px'
+                        }}
+                      >
+                        🌐 FIND {multiplayerFormat} MATCH
+                      </button>
+                    </div>
+                  )}
+
+                  {multiplayerSubSection === 'PLAY_WITH_FRIEND' && (
+                    <div style={{ flex: 1, display: 'flex', gap: '20px' }}>
+                      <div style={{ flex: 1, background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '10px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                        <div>
+                          <h4 style={{ color: '#facc15', margin: '0 0 6px' }}>HOST ROOM</h4>
+                          {roomCode && (
+                            <div style={{ background: '#000', color: '#facc15', padding: '10px', borderRadius: '6px', fontWeight: '900', textAlign: 'center', marginTop: '10px' }}>
+                              CODE: {roomCode}
+                            </div>
+                          )}
+                        </div>
+                        <button onClick={handleCreateFriendRoom} style={{ background: '#facc15', color: '#000', border: 'none', borderRadius: '6px', padding: '12px', fontWeight: '900', cursor: 'pointer' }}>
+                          CREATE CODE
+                        </button>
+                      </div>
+
+                      <div style={{ flex: 1, background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '10px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                        <div>
+                          <h4 style={{ color: '#22c55e', margin: '0 0 6px' }}>JOIN ROOM</h4>
+                          <input
+                            type="text"
+                            placeholder="Enter Code"
+                            value={inputRoomCode}
+                            onChange={(e) => setInputRoomCode(e.target.value.toUpperCase())}
+                            style={{ width: '100%', padding: '10px', background: '#000', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', borderRadius: '6px', outline: 'none', fontWeight: '900', marginTop: '10px' }}
+                          />
+                        </div>
+                        <button onClick={handleJoinFriendRoom} style={{ background: '#22c55e', color: '#000', border: 'none', borderRadius: '6px', padding: '12px', fontWeight: '900', cursor: 'pointer' }}>
+                          JOIN ROOM
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                </div>
+              )}
+
+            </div>
           </div>
         </div>
       )}

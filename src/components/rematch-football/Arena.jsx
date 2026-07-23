@@ -4,7 +4,7 @@ import { useFootballStore } from './footballStore'
 import * as THREE from 'three'
 
 /**
- * Creates procedural grass turf texture for optimized 75x120 pitch
+ * Creates procedural high-detail soccer turf texture with accurate field line markings
  */
 function createStripedTurfTexture(isDesert = false) {
   const canvas = document.createElement('canvas')
@@ -12,45 +12,124 @@ function createStripedTurfTexture(isDesert = false) {
   canvas.height = 2048
   const ctx = canvas.getContext('2d')
 
-  if (isDesert) {
-    const stripeCount = 36
-    const stripeHeight = 2048 / stripeCount
-    for (let i = 0; i < stripeCount; i++) {
+  // Base Grass / Sand Stripes
+  const stripeCount = 40
+  const stripeHeight = 2048 / stripeCount
+  for (let i = 0; i < stripeCount; i++) {
+    if (isDesert) {
       ctx.fillStyle = i % 2 === 0 ? '#eab308' : '#d97706'
-      ctx.fillRect(0, i * stripeHeight, 1024, stripeHeight)
-    }
-  } else {
-    const stripeCount = 40
-    const stripeHeight = 2048 / stripeCount
-    for (let i = 0; i < stripeCount; i++) {
+    } else {
       ctx.fillStyle = i % 2 === 0 ? '#16a34a' : '#15803d'
-      ctx.fillRect(0, i * stripeHeight, 1024, stripeHeight)
     }
+    ctx.fillRect(0, i * stripeHeight, 1024, stripeHeight)
   }
 
-  // Pitch Field Boundary Lines
+  // White Chalk Line Formatting
   ctx.strokeStyle = '#ffffff'
-  ctx.lineWidth = 16
-  ctx.strokeRect(35, 35, 954, 1978)
+  ctx.lineWidth = 14
+  ctx.fillStyle = '#ffffff'
 
-  // Halfway line
+  // Outer Pitch Boundary Line
+  ctx.strokeRect(40, 40, 944, 1968)
+
+  // Halfway Line
   ctx.beginPath()
-  ctx.moveTo(35, 1024)
-  ctx.lineTo(989, 1024)
+  ctx.moveTo(40, 1024)
+  ctx.lineTo(984, 1024)
   ctx.stroke()
 
-  // Center Circle
+  // Center Circle & Center Spot
   ctx.beginPath()
-  ctx.arc(512, 1024, 220, 0, Math.PI * 2)
+  ctx.arc(512, 1024, 180, 0, Math.PI * 2)
   ctx.stroke()
 
-  // Goal Penalty Boxes
-  ctx.strokeRect(200, 35, 624, 420)
-  ctx.strokeRect(200, 1593, 624, 420)
+  ctx.beginPath()
+  ctx.arc(512, 1024, 14, 0, Math.PI * 2)
+  ctx.fill()
+
+  // NORTH PENALTY AREA (Top)
+  // 18-Yard Box
+  ctx.strokeRect(212, 40, 600, 360)
+  // 6-Yard Box
+  ctx.strokeRect(362, 40, 300, 140)
+  // Penalty Spot
+  ctx.beginPath()
+  ctx.arc(512, 260, 12, 0, Math.PI * 2)
+  ctx.fill()
+  // Penalty Arc
+  ctx.beginPath()
+  ctx.arc(512, 260, 140, 0.6, Math.PI - 0.6)
+  ctx.stroke()
+
+  // SOUTH PENALTY AREA (Bottom)
+  // 18-Yard Box
+  ctx.strokeRect(212, 1648, 600, 360)
+  // 6-Yard Box
+  ctx.strokeRect(362, 1868, 300, 140)
+  // Penalty Spot
+  ctx.beginPath()
+  ctx.arc(512, 1788, 12, 0, Math.PI * 2)
+  ctx.fill()
+  // Penalty Arc
+  ctx.beginPath()
+  ctx.arc(512, 1788, 140, Math.PI + 0.6, Math.PI * 2 - 0.6)
+  ctx.stroke()
+
+  // Corner Arcs (4 Corners)
+  // Top Left
+  ctx.beginPath()
+  ctx.arc(40, 40, 50, 0, Math.PI / 2)
+  ctx.stroke()
+  // Top Right
+  ctx.beginPath()
+  ctx.arc(984, 40, 50, Math.PI / 2, Math.PI)
+  ctx.stroke()
+  // Bottom Left
+  ctx.beginPath()
+  ctx.arc(40, 2008, 50, -Math.PI / 2, 0)
+  ctx.stroke()
+  // Bottom Right
+  ctx.beginPath()
+  ctx.arc(984, 2008, 50, Math.PI, Math.PI * 1.5)
+  ctx.stroke()
 
   const texture = new THREE.CanvasTexture(canvas)
   texture.wrapS = THREE.ClampToEdgeWrapping
   texture.wrapT = THREE.ClampToEdgeWrapping
+  return texture
+}
+
+/**
+ * Creates procedural net mesh grid texture for 3D goal nets
+ */
+function createGoalNetTexture() {
+  const canvas = document.createElement('canvas')
+  canvas.width = 128
+  canvas.height = 128
+  const ctx = canvas.getContext('2d')
+
+  ctx.fillStyle = 'rgba(0, 0, 0, 0)'
+  ctx.fillRect(0, 0, 128, 128)
+
+  ctx.strokeStyle = '#ffffff'
+  ctx.lineWidth = 4
+
+  for (let i = 0; i <= 128; i += 16) {
+    ctx.beginPath()
+    ctx.moveTo(i, 0)
+    ctx.lineTo(i, 128)
+    ctx.stroke()
+
+    ctx.beginPath()
+    ctx.moveTo(0, i)
+    ctx.lineTo(128, i)
+    ctx.stroke()
+  }
+
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.wrapS = THREE.RepeatWrapping
+  texture.wrapT = THREE.RepeatWrapping
+  texture.repeat.set(8, 4)
   return texture
 }
 
@@ -78,29 +157,68 @@ function StaticWall({ position, args, color }) {
   )
 }
 
-function StadiumLightTower({ position }) {
+function GoalNetStructure({ position, isNorth = true }) {
+  const netTex = useMemo(() => createGoalNetTexture(), [])
+  const netMat = useMemo(() => new THREE.MeshStandardMaterial({
+    map: netTex,
+    transparent: true,
+    opacity: 0.85,
+    side: THREE.DoubleSide,
+    color: '#ffffff'
+  }), [netTex])
+
   return (
-    <group position={position}>
-      <mesh position={[0, 22, 0]}>
-        <cylinderGeometry args={[0.6, 1.2, 44, 12]} />
-        <meshStandardMaterial color="#1e293b" metalness={0.8} roughness={0.3} />
+    <group position={position} rotation={[0, isNorth ? 0 : Math.PI, 0]}>
+      {/* White Tubular Goal Posts */}
+      <mesh position={[-8, 2.75, 0]}>
+        <cylinderGeometry args={[0.16, 0.16, 5.5, 14]} />
+        <meshStandardMaterial color="#ffffff" metalness={0.8} roughness={0.2} />
       </mesh>
-      <mesh position={[0, 44.5, 0]} rotation={[0.4, 0, 0]}>
-        <boxGeometry args={[10, 4.5, 1.0]} />
-        <meshStandardMaterial color="#0f172a" metalness={0.9} />
+      <mesh position={[8, 2.75, 0]}>
+        <cylinderGeometry args={[0.16, 0.16, 5.5, 14]} />
+        <meshStandardMaterial color="#ffffff" metalness={0.8} roughness={0.2} />
       </mesh>
-      <mesh position={[0, 44.5, 0.55]} rotation={[0.4, 0, 0]}>
-        <boxGeometry args={[9.5, 4.0, 0.1]} />
-        <meshBasicMaterial color="#ffffff" />
+
+      {/* Crossbar */}
+      <mesh position={[0, 5.5, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.16, 0.16, 16.2, 14]} />
+        <meshStandardMaterial color="#ffffff" metalness={0.8} roughness={0.2} />
       </mesh>
-      <spotLight 
-        position={[0, 45, 1.5]} 
-        target-position={[0, 0, 0]} 
-        intensity={4.5} 
-        angle={0.8} 
-        penumbra={0.4} 
-        color="#f8fafc" 
-      />
+
+      {/* Rear Support Posts */}
+      <mesh position={[-8, 2.75, -4]}>
+        <cylinderGeometry args={[0.12, 0.12, 5.5, 12]} />
+        <meshStandardMaterial color="#64748b" metalness={0.6} />
+      </mesh>
+      <mesh position={[8, 2.75, -4]}>
+        <cylinderGeometry args={[0.12, 0.12, 5.5, 12]} />
+        <meshStandardMaterial color="#64748b" metalness={0.6} />
+      </mesh>
+
+      {/* 3D Realistic Net Meshes */}
+      {/* Back Net */}
+      <mesh position={[0, 2.75, -4]}>
+        <planeGeometry args={[16, 5.5]} />
+        <primitive object={netMat} attach="material" />
+      </mesh>
+
+      {/* Left Net */}
+      <mesh position={[-8, 2.75, -2]} rotation={[0, Math.PI / 2, 0]}>
+        <planeGeometry args={[4, 5.5]} />
+        <primitive object={netMat} attach="material" />
+      </mesh>
+
+      {/* Right Net */}
+      <mesh position={[8, 2.75, -2]} rotation={[0, -Math.PI / 2, 0]}>
+        <planeGeometry args={[4, 5.5]} />
+        <primitive object={netMat} attach="material" />
+      </mesh>
+
+      {/* Top Roof Net */}
+      <mesh position={[0, 5.5, -2]} rotation={[Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[16, 4]} />
+        <primitive object={netMat} attach="material" />
+      </mesh>
     </group>
   )
 }
@@ -108,7 +226,6 @@ function StadiumLightTower({ position }) {
 function GrandstandStructure({ position, rotation = [0, 0, 0], width = 160 }) {
   return (
     <group position={position} rotation={rotation}>
-      {/* Lower Tier Seating */}
       <mesh position={[0, 10, 0]} rotation={[-0.35, 0, 0]}>
         <boxGeometry args={[width, 24, 2]} />
         <meshStandardMaterial color="#0284c7" roughness={0.6} />
@@ -117,14 +234,10 @@ function GrandstandStructure({ position, rotation = [0, 0, 0], width = 160 }) {
         <boxGeometry args={[width - 2, 22, 0.2]} />
         <meshStandardMaterial color="#ef4444" roughness={0.7} />
       </mesh>
-
-      {/* Upper Tier Promenade */}
       <mesh position={[0, 22, -8]}>
         <boxGeometry args={[width, 8, 8]} />
         <meshStandardMaterial color="#0f172a" metalness={0.8} />
       </mesh>
-
-      {/* Arched Roof Canopy */}
       <mesh position={[0, 42, -18]} rotation={[0.15, 0, 0]}>
         <cylinderGeometry args={[width / 2 + 10, width / 2 + 15, 20, 20, 1, true, 0, Math.PI]} />
         <meshStandardMaterial color="#0284c7" metalness={0.75} roughness={0.25} side={THREE.DoubleSide} />
@@ -133,41 +246,10 @@ function GrandstandStructure({ position, rotation = [0, 0, 0], width = 160 }) {
   )
 }
 
-function SponsorBoard({ position, rotation = [0, 0, 0], text = 'REMATCH' }) {
-  const texture = useMemo(() => {
-    const canvas = document.createElement('canvas')
-    canvas.width = 512
-    canvas.height = 128
-    const ctx = canvas.getContext('2d')
-
-    ctx.fillStyle = '#0f172a'
-    ctx.fillRect(0, 0, 512, 128)
-    ctx.strokeStyle = '#00f2fe'
-    ctx.lineWidth = 8
-    ctx.strokeRect(8, 8, 496, 112)
-
-    ctx.fillStyle = '#ffffff'
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    ctx.font = '900 48px "Orbitron", sans-serif'
-    ctx.fillText(text, 256, 64)
-
-    return new THREE.CanvasTexture(canvas)
-  }, [text])
-
-  return (
-    <mesh position={position} rotation={rotation}>
-      <boxGeometry args={[24, 3.0, 0.4]} />
-      <meshStandardMaterial map={texture} roughness={0.2} />
-    </mesh>
-  )
-}
-
 export function Arena() {
   const arenaStyle = useFootballStore((state) => state.arenaStyle)
   const isDesert = arenaStyle === 'desert'
 
-  // THICK GROUND BOX COLLIDER (75 x 120 Pitch Surface)
   const [floorRef] = useBox(() => ({
     type: 'Static',
     position: [0, -2, 0],
@@ -195,86 +277,33 @@ export function Arena() {
         <meshStandardMaterial map={turfTexture} roughness={0.65} />
       </mesh>
 
-      {/* 2. Glass Rink Side Barriers (Width 75, Length 120) */}
+      {/* 2. Glass Rink Side Barriers */}
       <StaticWall position={[-37.5, 3.5, 0]} args={[0.4, 7, 120]} color="#00d2ff" />
       <StaticWall position={[37.5, 3.5, 0]} args={[0.4, 7, 120]} color="#00d2ff" />
 
-      {/* End Glass Barriers */}
       <StaticWall position={[-23, 3.5, -60]} args={[29, 7, 0.4]} color="#0284c7" />
       <StaticWall position={[23, 3.5, -60]} args={[29, 7, 0.4]} color="#0284c7" />
       <StaticWall position={[-23, 3.5, 60]} args={[29, 7, 0.4]} color="#0284c7" />
       <StaticWall position={[23, 3.5, 60]} args={[29, 7, 0.4]} color="#0284c7" />
 
-      {/* 3. Glowing Goal Nets (Z = ±60) */}
-      <group position={[0, 0, -60]}>
-        <mesh ref={redGoalBackRef}>
-          <boxGeometry args={[16, 5.5, 0.1]} />
-          <meshStandardMaterial color="#00f2fe" wireframe />
-        </mesh>
-        <mesh ref={redGoalLeftRef}>
-          <boxGeometry args={[0.1, 5.5, 4]} />
-          <meshStandardMaterial color="#00f2fe" wireframe />
-        </mesh>
-        <mesh ref={redGoalRightRef}>
-          <boxGeometry args={[0.1, 5.5, 4]} />
-          <meshStandardMaterial color="#00f2fe" wireframe />
-        </mesh>
-        <mesh position={[-8, 2.75, 0]}>
-          <cylinderGeometry args={[0.18, 0.18, 5.5, 14]} />
-          <meshStandardMaterial color="#ffffff" metalness={0.85} />
-        </mesh>
-        <mesh position={[8, 2.75, 0]}>
-          <cylinderGeometry args={[0.18, 0.18, 5.5, 14]} />
-          <meshStandardMaterial color="#ffffff" metalness={0.85} />
-        </mesh>
-        <mesh position={[0, 5.5, 0]} rotation={[0, 0, Math.PI / 2]}>
-          <cylinderGeometry args={[0.18, 0.18, 16.2, 14]} />
-          <meshStandardMaterial color="#ffffff" metalness={0.85} />
-        </mesh>
-      </group>
+      {/* Invisible Colliders for Goal Physics */}
+      <mesh ref={redGoalBackRef} visible={false} />
+      <mesh ref={redGoalLeftRef} visible={false} />
+      <mesh ref={redGoalRightRef} visible={false} />
 
-      <group position={[0, 0, 60]}>
-        <mesh ref={blueGoalBackRef}>
-          <boxGeometry args={[16, 5.5, 0.1]} />
-          <meshStandardMaterial color="#00f2fe" wireframe />
-        </mesh>
-        <mesh ref={blueGoalLeftRef}>
-          <boxGeometry args={[0.1, 5.5, 4]} />
-          <meshStandardMaterial color="#00f2fe" wireframe />
-        </mesh>
-        <mesh ref={blueGoalRightRef}>
-          <boxGeometry args={[0.1, 5.5, 4]} />
-          <meshStandardMaterial color="#00f2fe" wireframe />
-        </mesh>
-        <mesh position={[-8, 2.75, 0]}>
-          <cylinderGeometry args={[0.18, 0.18, 5.5, 14]} />
-          <meshStandardMaterial color="#ffffff" metalness={0.85} />
-        </mesh>
-        <mesh position={[8, 2.75, 0]}>
-          <cylinderGeometry args={[0.18, 0.18, 5.5, 14]} />
-          <meshStandardMaterial color="#ffffff" metalness={0.85} />
-        </mesh>
-        <mesh position={[0, 5.5, 0]} rotation={[0, 0, Math.PI / 2]}>
-          <cylinderGeometry args={[0.18, 0.18, 16.2, 14]} />
-          <meshStandardMaterial color="#ffffff" metalness={0.85} />
-        </mesh>
-      </group>
+      <mesh ref={blueGoalBackRef} visible={false} />
+      <mesh ref={blueGoalLeftRef} visible={false} />
+      <mesh ref={blueGoalRightRef} visible={false} />
 
-      {/* 4. Optimized Grandstands & Floodlights */}
+      {/* 3. Realistic 3D Goal Net Structures */}
+      <GoalNetStructure position={[0, 0, -60]} isNorth={true} />
+      <GoalNetStructure position={[0, 0, 60]} isNorth={false} />
+
+      {/* 4. Stadium Grandstands */}
       <GrandstandStructure position={[-48, 0, 0]} rotation={[0, Math.PI / 2, 0]} width={140} />
       <GrandstandStructure position={[48, 0, 0]} rotation={[0, -Math.PI / 2, 0]} width={140} />
       <GrandstandStructure position={[0, 0, -72]} rotation={[0, 0, 0]} width={90} />
       <GrandstandStructure position={[0, 0, 72]} rotation={[0, Math.PI, 0]} width={90} />
-
-      <StadiumLightTower position={[-44, 0, -66]} />
-      <StadiumLightTower position={[44, 0, -66]} />
-      <StadiumLightTower position={[-44, 0, 66]} />
-      <StadiumLightTower position={[44, 0, 66]} />
-
-      <SponsorBoard position={[-25, 1.5, -60]} text="NOVA" />
-      <SponsorBoard position={[25, 1.5, -60]} text="REMATCH" />
-      <SponsorBoard position={[-25, 1.5, 60]} rotation={[0, Math.PI, 0]} text="PLAYSPHERE" />
-      <SponsorBoard position={[25, 1.5, 60]} rotation={[0, Math.PI, 0]} text="SLOCLAP" />
     </group>
   )
 }

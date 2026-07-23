@@ -11,12 +11,12 @@ function useKeyboard() {
   const [keys, setKeys] = useState({
     w: false, a: false, s: false, d: false,
     ArrowLeft: false, ArrowRight: false,
-    Shift: false, Space: false, KeyE: false, KeyQ: false
+    Shift: false, Space: false, KeyE: false, KeyQ: false, KeyR: false
   })
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'Space', 'KeyE', 'KeyQ'].includes(e.code)) {
+      if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'Space', 'KeyE', 'KeyQ', 'KeyR'].includes(e.code)) {
         setKeys(prev => ({
           ...prev,
           w: e.code === 'KeyW' || prev.w,
@@ -28,12 +28,13 @@ function useKeyboard() {
           Shift: e.code === 'ShiftLeft' || prev.Shift,
           Space: e.code === 'Space' || prev.Space,
           KeyE: e.code === 'KeyE' || prev.KeyE,
-          KeyQ: e.code === 'KeyQ' || prev.KeyQ
+          KeyQ: e.code === 'KeyQ' || prev.KeyQ,
+          KeyR: e.code === 'KeyR' || prev.KeyR
         }))
       }
     }
     const handleKeyUp = (e) => {
-      if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'Space', 'KeyE', 'KeyQ'].includes(e.code)) {
+      if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'Space', 'KeyE', 'KeyQ', 'KeyR'].includes(e.code)) {
         setKeys(prev => ({
           ...prev,
           w: e.code === 'KeyW' ? false : prev.w,
@@ -45,7 +46,8 @@ function useKeyboard() {
           Shift: e.code === 'ShiftLeft' ? false : prev.Shift,
           Space: e.code === 'Space' ? false : prev.Space,
           KeyE: e.code === 'KeyE' ? false : prev.KeyE,
-          KeyQ: e.code === 'KeyQ' ? false : prev.KeyQ
+          KeyQ: e.code === 'KeyQ' ? false : prev.KeyQ,
+          KeyR: e.code === 'KeyR' ? false : prev.KeyR
         }))
       }
     }
@@ -98,6 +100,7 @@ export function Player({ id = 'player1' }) {
   const [shotCharge, setShotCharge] = useState(0)
   const isCharging = useRef(false)
   const isTackling = useRef(false)
+  const mouseDownRef = useRef(false)
   
   const cameraYaw = useRef(Math.PI)
   const cameraPitch = useRef(0.22)
@@ -114,6 +117,20 @@ export function Player({ id = 'player1' }) {
       }
     }
 
+    const handleMouseDown = (e) => {
+      if (useFootballStore.getState().gameState === 'PLAYING') {
+        if (e.button === 0) {
+          mouseDownRef.current = true
+        }
+      }
+    }
+
+    const handleMouseUp = (e) => {
+      if (e.button === 0) {
+        mouseDownRef.current = false
+      }
+    }
+
     const handleCanvasClick = () => {
       if (useFootballStore.getState().gameState === 'PLAYING') {
         if (!document.pointerLockElement) {
@@ -123,9 +140,13 @@ export function Player({ id = 'player1' }) {
     }
 
     window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mousedown', handleMouseDown)
+    window.addEventListener('mouseup', handleMouseUp)
     window.addEventListener('click', handleCanvasClick)
     return () => {
       window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mousedown', handleMouseDown)
+      window.removeEventListener('mouseup', handleMouseUp)
       window.removeEventListener('click', handleCanvasClick)
     }
   }, [])
@@ -210,7 +231,7 @@ export function Player({ id = 'player1' }) {
       currentDir.current.copy(direction)
     }
 
-    // SPEED CALCULATION (Regular vs Sprint)
+    // SPEED CALCULATION
     let moveSpeed = 12.0
     if (isSprinting && direction.lengthSq() > 0.01) {
       moveSpeed = 18.0
@@ -223,6 +244,7 @@ export function Player({ id = 'player1' }) {
       api.velocity.set(direction.x * moveSpeed, vel[1], direction.z * moveSpeed)
     }
 
+    // SLIDE TACKLE / DIVE (Key Q)
     if (keys.KeyQ) {
       triggerAbility('slide_tackle', {
         playerApi: api,
@@ -231,6 +253,31 @@ export function Player({ id = 'player1' }) {
         ball: window.footballBall,
         setPossession
       })
+    }
+
+    // SPECIAL ABILITY (Key R)
+    if (keys.KeyR) {
+      triggerAbility('speed_surge', {
+        playerApi: api,
+        playerPos: pos,
+        aimDir: currentDir.current
+      })
+    }
+
+    // SHORT PASS (Key E)
+    if (keys.KeyE) {
+      const ball = window.footballBall
+      if (ball) {
+        const bPos = safePos(ball)
+        const dist = Math.hypot(bPos[0] - pos[0], bPos[2] - pos[2])
+        if (dist < 2.5) {
+          ball.api.velocity.set(
+            currentDir.current.x * 24,
+            2.5,
+            currentDir.current.z * 24
+          )
+        }
+      }
     }
 
     // ── FOOTBALL DRIBBLING LOGIC ──
@@ -242,7 +289,6 @@ export function Player({ id = 'player1' }) {
       if (dist < 1.45 && Math.abs(bPos[1] - pos[1]) < 1.8) {
         setPossession(id)
 
-        // Dribble target position right in front of feet (0.55m)
         const targetX = pos[0] + currentDir.current.x * 0.55
         const targetZ = pos[2] + currentDir.current.z * 0.55
         
@@ -252,25 +298,29 @@ export function Player({ id = 'player1' }) {
         ball.api.velocity.set(
           vel[0] + dx * 10,
           safeVel(ball)[1],
-          vel[2] + dx * 10
+          vel[2] + dz * 10
         )
       } else {
         useFootballStore.getState().ballPossession === id && setPossession(null)
       }
     }
 
-    // ── SHOOTING CHARGE ──
-    if (keys.Space) {
+    // ── POWER SHOOTING CHARGE (Space or Left Mouse Hold) ──
+    const isPressingShot = keys.Space || mouseDownRef.current
+    if (isPressingShot) {
       isCharging.current = true
-      setShotCharge(prev => Math.min(100, prev + 160 * dt))
+      setShotCharge(prev => Math.min(100, prev + 180 * dt))
     } else {
       if (isCharging.current) {
-        triggerAbility('power_shot', {
-          ball,
-          playerPos: pos,
-          aimDir: currentDir.current,
-          powerPercent: shotCharge
-        })
+        const power = Math.max(25, shotCharge)
+        const shotVelX = currentDir.current.x * (20 + (power / 100) * 28)
+        const shotVelY = 3.5 + (power / 100) * 8.0
+        const shotVelZ = currentDir.current.z * (20 + (power / 100) * 28)
+
+        if (ball) {
+          ball.api.velocity.set(shotVelX, shotVelY, shotVelZ)
+        }
+
         isCharging.current = false
         setShotCharge(0)
       }
@@ -327,7 +377,7 @@ export function Player({ id = 'player1' }) {
       {/* Charge Ring Indicator */}
       {shotCharge > 0 && showNameTag && (
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.6, 0]}>
-          <ringGeometry args={[0.5, 0.5 + (shotCharge / 100) * 0.4, 32]} />
+          <ringGeometry args={[0.5, 0.5 + (shotCharge / 100) * 0.5, 32]} />
           <meshBasicMaterial color="#00d2ff" />
         </mesh>
       )}

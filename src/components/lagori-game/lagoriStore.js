@@ -21,13 +21,29 @@ export const useLagoriStore = create((set) => ({
   stamina: 100,
   roundResultAlert: '',
 
+  // ── MULTIPLAYER STATE ──
+  matchMode: 'SINGLE_PLAYER', // 'SINGLE_PLAYER' | 'MULTIPLAYER'
+  multiplayerSubSection: 'ONLINE_MATCH', // 'ONLINE_MATCH' | 'PLAY_WITH_FRIEND'
+  multiplayerFormat: '1v1', // '1v1' | '2v2' | '3v3' | '5v5'
+  roomCode: '',
+  isHost: false,
+  matchmakingStatus: 'IDLE', // 'IDLE' | 'SEARCHING' | 'FOUND' | 'CONNECTED'
+  connectedPlayers: [],
+
   // Actions
+  setMatchMode: (mode) => set({ matchMode: mode }),
+  setMultiplayerSubSection: (sec) => set({ multiplayerSubSection: sec }),
+  setMultiplayerFormat: (format) => set({ multiplayerFormat: format }),
+  setRoomCode: (code) => set({ roomCode: code }),
+  setIsHost: (isHost) => set({ isHost }),
+  setMatchmakingStatus: (status) => set({ matchmakingStatus: status }),
+  setConnectedPlayers: (players) => set({ connectedPlayers: players }),
+
   setGameState: (state) => set({ gameState: state }),
   
   setStonesRebuilt: (count) => set((state) => {
     const newCount = Math.min(7, Math.max(0, count))
     if (newCount >= 7) {
-      // Seekers Win Round!
       return {
         stonesRebuilt: 7,
         gameState: 'ROUND_OVER',
