@@ -34,9 +34,10 @@ function GoalkeeperManager() {
       setGKs(redGK, blueGK)
     }
 
-    if (zPos < -50.25 && Math.abs(ballPos[0]) < 7.0) {
+    // Goal triggers at Z = ±160.25
+    if (zPos < -160.25 && Math.abs(ballPos[0]) < 13.0) {
       incrementScore('red')
-    } else if (zPos > 50.25 && Math.abs(ballPos[0]) < 7.0) {
+    } else if (zPos > 160.25 && Math.abs(ballPos[0]) < 13.0) {
       incrementScore('blue')
     }
   })
@@ -102,7 +103,7 @@ function CinematicReplayCamera() {
           const ballX = frame.bPos[0]
           const ballZ = frame.bPos[2]
 
-          state.camera.position.set(24, 10, ballZ + 8)
+          state.camera.position.set(35, 14, ballZ + 12)
           state.camera.lookAt(ballX, 1.0, ballZ)
         }
       }
@@ -146,8 +147,8 @@ function MiniMapRadar() {
       ctx.strokeRect(55, 15, 30, 14)
       ctx.strokeRect(55, 111, 30, 14)
 
-      const mapX = (x) => 70 + (x / 30) * 35
-      const mapZ = (z) => 70 + (z / 50) * 55
+      const mapX = (x) => 70 + (x / 100) * 35
+      const mapZ = (z) => 70 + (z / 160) * 55
 
       const p = window.footballPlayer
       if (p && p.position && Array.isArray(p.position.current)) {
@@ -349,21 +350,21 @@ export function RematchGame({ onExit }) {
         gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping }}
       >
         <color attach="background" args={arenaStyle === 'desert' ? ['#fdf4ff'] : ['#030712']} />
-        <fog attach="fog" args={arenaStyle === 'desert' ? ['#fae8ff', 60, 160] : ['#030712', 60, 180]} />
+        <fog attach="fog" args={arenaStyle === 'desert' ? ['#fae8ff', 100, 320] : ['#030712', 100, 320]} />
 
         <ambientLight intensity={0.65} />
         <directionalLight 
-          position={[25, 45, 20]} 
-          intensity={2.2} 
+          position={[35, 65, 30]} 
+          intensity={2.4} 
           castShadow 
           shadow-mapSize={[2048, 2048]}
         />
-        <directionalLight position={[-25, 35, -20]} intensity={0.8} />
+        <directionalLight position={[-35, 55, -30]} intensity={0.9} />
 
         {arenaStyle !== 'desert' && (
           <>
             <Sky distance={450000} sunPosition={[10, 12, 10]} inclination={0.6} azimuth={0.25} />
-            <Stars radius={120} depth={60} count={1200} factor={4} saturation={0.5} fade speed={1} />
+            <Stars radius={150} depth={80} count={1500} factor={4} saturation={0.5} fade speed={1} />
             <Environment preset="night" environmentIntensity={0.85} />
           </>
         )}

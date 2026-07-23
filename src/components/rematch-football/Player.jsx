@@ -65,7 +65,7 @@ function safePos(ref) {
   if (ref && ref.position && Array.isArray(ref.position.current)) {
     return ref.position.current
   }
-  return [0, 0.65, 25]
+  return [0, 0.65, 45]
 }
 
 function safeVel(ref) {
@@ -78,7 +78,7 @@ function safeVel(ref) {
 export function Player({ id = 'player1' }) {
   const [ref, api] = useSphere(() => ({
     mass: 72,
-    position: [0, 0.65, 25],
+    position: [0, 0.65, 45],
     args: [0.62],
     fixedRotation: true,
     linearDamping: 0.1
@@ -103,7 +103,7 @@ export function Player({ id = 'player1' }) {
   const cameraPitch = useRef(0.38)
 
   const currentDir = useRef(new THREE.Vector3(0, 0, -1))
-  const playerPos = useRef([0, 0.65, 25])
+  const playerPos = useRef([0, 0.65, 45])
   const playerVel = useRef([0, 0, 0])
 
   useEffect(() => {
@@ -131,7 +131,7 @@ export function Player({ id = 'player1' }) {
   }, [])
 
   useEffect(() => {
-    const unsubPos = api.position.subscribe(v => (playerPos.current = v || [0, 0.65, 25]))
+    const unsubPos = api.position.subscribe(v => (playerPos.current = v || [0, 0.65, 45]))
     const unsubVel = api.velocity.subscribe(v => (playerVel.current = v || [0, 0, 0]))
 
     window.footballPlayer = {
@@ -152,7 +152,7 @@ export function Player({ id = 'player1' }) {
       api.position.set(0, 0.65, 0)
       api.velocity.set(0, 0, 0)
     } else if (gameState === 'KICKOFF') {
-      const spawnZ = kickoffTeam === 'red' ? 4.0 : 25.0
+      const spawnZ = kickoffTeam === 'red' ? 6.0 : 45.0
       api.position.set(0, 0.65, spawnZ)
       api.velocity.set(0, 0, 0)
       cameraYaw.current = Math.PI
@@ -171,20 +171,20 @@ export function Player({ id = 'player1' }) {
 
     // ── 1. GIANT ARENA BROADCAST CAMERA RIG ──
     const isSprinting = keys.Shift && stamina > 5
-    const targetFov = isSprinting ? 62 : 54
+    const targetFov = isSprinting ? 64 : 54
     state.camera.fov = THREE.MathUtils.lerp(state.camera.fov, targetFov, 0.1)
     state.camera.updateProjectionMatrix()
 
-    const camDistance = 13.5
+    const camDistance = 14.5
     const camX = pos[0] + Math.sin(cameraYaw.current) * Math.cos(cameraPitch.current) * camDistance
-    const camY = pos[1] + Math.sin(cameraPitch.current) * camDistance + 7.2
+    const camY = pos[1] + Math.sin(cameraPitch.current) * camDistance + 7.8
     const camZ = pos[2] + Math.cos(cameraYaw.current) * Math.cos(cameraPitch.current) * camDistance
 
     state.camera.position.lerp(new THREE.Vector3(camX, camY, camZ), 0.18)
 
-    const lookTargetX = pos[0] - Math.sin(cameraYaw.current) * 12.0
+    const lookTargetX = pos[0] - Math.sin(cameraYaw.current) * 14.0
     const lookTargetY = pos[1] + 1.2
-    const lookTargetZ = pos[2] - Math.cos(cameraYaw.current) * 12.0
+    const lookTargetZ = pos[2] - Math.cos(cameraYaw.current) * 14.0
     state.camera.lookAt(lookTargetX, lookTargetY, lookTargetZ)
 
     // ── 2. MOVEMENT CONTROLS ──
@@ -214,7 +214,7 @@ export function Player({ id = 'player1' }) {
     } else {
       setStamina(Math.min(100, stamina + 25 * dt))
       if (direction.lengthSq() > 0.01) {
-        api.velocity.set(direction.x * 11.5, vel[1], direction.z * 11.5)
+        api.velocity.set(direction.x * 14.5, vel[1], direction.z * 14.5)
       }
     }
 
@@ -234,11 +234,11 @@ export function Player({ id = 'player1' }) {
       const bPos = safePos(ball)
       const dist = Math.hypot(bPos[0] - pos[0], bPos[2] - pos[2])
 
-      if (dist < 1.75 && Math.abs(bPos[1] - pos[1]) < 1.8) {
+      if (dist < 1.85 && Math.abs(bPos[1] - pos[1]) < 1.8) {
         setPossession(id)
 
-        const targetX = pos[0] + currentDir.current.x * 1.0
-        const targetZ = pos[2] + currentDir.current.z * 1.0
+        const targetX = pos[0] + currentDir.current.x * 1.2
+        const targetZ = pos[2] + currentDir.current.z * 1.2
         
         const dx = targetX - bPos[0]
         const dz = targetZ - bPos[2]

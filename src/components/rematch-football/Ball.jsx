@@ -27,23 +27,24 @@ function createSoccerBallTexture() {
 }
 
 export function Ball() {
+  // PERSISTENTLY MOUNTED RIGID BODY - NEVER UNMOUNT
   const [ref, api] = useSphere(() => ({
     mass: 1.4,
-    position: [0, -50, 0],
-    args: [0.65],
+    position: [0, -500, 0],
+    args: [0.75],
     linearDamping: 0.15,
     angularDamping: 0.22,
     restitution: 0.75
   }))
 
-  const ballPos = useRef([0, -50, 0])
+  const ballPos = useRef([0, -500, 0])
   const ballVel = useRef([0, 0, 0])
   const gameState = useFootballStore((state) => state.gameState)
 
   const texture = useMemo(() => createSoccerBallTexture(), [])
 
   useEffect(() => {
-    const unsubPos = api.position.subscribe(v => (ballPos.current = v || [0, -50, 0]))
+    const unsubPos = api.position.subscribe(v => (ballPos.current = v || [0, -500, 0]))
     const unsubVel = api.velocity.subscribe(v => (ballVel.current = v || [0, 0, 0]))
 
     window.footballBall = {
@@ -59,14 +60,14 @@ export function Ball() {
     }
   }, [api])
 
-  // Move ball underground in MENU mode, and spawn cleanly at [0, 1.2, 0] in KICKOFF
+  // Move ball underground in MENU mode, and spawn cleanly at center circle [0, 1.5, 0] in KICKOFF
   useEffect(() => {
     if (gameState === 'MENU' || gameState === 'BOOT') {
-      api.position.set(0, -50, 0)
+      api.position.set(0, -500, 0)
       api.velocity.set(0, 0, 0)
       api.angularVelocity.set(0, 0, 0)
     } else if (gameState === 'KICKOFF') {
-      api.position.set(0, 1.2, 0)
+      api.position.set(0, 1.5, 0)
       api.velocity.set(0, 0, 0)
       api.angularVelocity.set(0, 0, 0)
     }
@@ -83,26 +84,26 @@ export function Ball() {
         meshRef.current.rotation.z -= vx * 0.05
       }
 
-      // Safety check: Reset ball if it somehow clips below ground
+      // Safety check: Reset ball if it clips below ground
       if (ballPos.current[1] < -5) {
-        api.position.set(0, 1.2, 0)
+        api.position.set(0, 1.5, 0)
         api.velocity.set(0, 0, 0)
       }
     }
   })
 
-  if (gameState === 'MENU' || gameState === 'BOOT') return null
+  const isVisible = gameState !== 'MENU' && gameState !== 'BOOT'
 
   return (
-    <group ref={ref}>
+    <group ref={ref} visible={isVisible}>
       <group ref={meshRef}>
         <mesh castShadow receiveShadow>
-          <sphereGeometry args={[0.65, 24, 24]} />
+          <sphereGeometry args={[0.75, 24, 24]} />
           <meshStandardMaterial map={texture} roughness={0.25} metalness={0.1} />
         </mesh>
 
         <mesh>
-          <torusGeometry args={[0.66, 0.025, 8, 32]} />
+          <torusGeometry args={[0.76, 0.03, 8, 32]} />
           <meshBasicMaterial color="#00f2fe" />
         </mesh>
       </group>
