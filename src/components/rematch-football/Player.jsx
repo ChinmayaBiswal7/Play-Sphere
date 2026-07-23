@@ -65,7 +65,7 @@ function safePos(ref) {
   if (ref && ref.position && Array.isArray(ref.position.current)) {
     return ref.position.current
   }
-  return [0, 1.2, 20]
+  return [0, 0.65, 20]
 }
 
 function safeVel(ref) {
@@ -78,7 +78,7 @@ function safeVel(ref) {
 export function Player({ id = 'player1' }) {
   const [ref, api] = useSphere(() => ({
     mass: 72,
-    position: [0, 1.2, 20],
+    position: [0, 0.65, 20],
     args: [0.62],
     fixedRotation: true,
     linearDamping: 0.1
@@ -100,25 +100,40 @@ export function Player({ id = 'player1' }) {
   const isTackling = useRef(false)
   
   const cameraYaw = useRef(Math.PI)
-  const cameraPitch = useRef(0.38) // Downward pitch angle
+  const cameraPitch = useRef(0.38)
 
   const currentDir = useRef(new THREE.Vector3(0, 0, -1))
-  const playerPos = useRef([0, 1.2, 20])
+  const playerPos = useRef([0, 0.65, 20])
   const playerVel = useRef([0, 0, 0])
 
+  // Mouse camera orbit & pointer lock control
   useEffect(() => {
     const handleMouseMove = (e) => {
+      // Rotate camera whenever mouse is moved (Pointer Lock or Mouse Drag)
       if (document.pointerLockElement || e.buttons === 1 || e.buttons === 2) {
         cameraYaw.current -= e.movementX * 0.003
         cameraPitch.current = THREE.MathUtils.clamp(cameraPitch.current + e.movementY * 0.002, 0.1, 0.62)
       }
     }
+
+    const handleCanvasClick = () => {
+      if (useFootballStore.getState().gameState === 'PLAYING') {
+        if (!document.pointerLockElement) {
+          document.body.requestPointerLock?.()
+        }
+      }
+    }
+
     window.addEventListener('mousemove', handleMouseMove)
-    return () => window.removeEventListener('mousemove', handleMouseMove)
+    window.addEventListener('click', handleCanvasClick)
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('click', handleCanvasClick)
+    }
   }, [])
 
   useEffect(() => {
-    const unsubPos = api.position.subscribe(v => (playerPos.current = v || [0, 1.2, 20]))
+    const unsubPos = api.position.subscribe(v => (playerPos.current = v || [0, 0.65, 20]))
     const unsubVel = api.velocity.subscribe(v => (playerVel.current = v || [0, 0, 0]))
 
     window.footballPlayer = {
@@ -134,13 +149,14 @@ export function Player({ id = 'player1' }) {
     }
   }, [api])
 
+  // Reposition player cleanly on pitch floor (Y = 0.65) for Menu and Kickoff
   useEffect(() => {
     if (gameState === 'MENU') {
-      api.position.set(0, 1.2, 0)
+      api.position.set(0, 0.65, 0)
       api.velocity.set(0, 0, 0)
     } else if (gameState === 'KICKOFF') {
       const spawnZ = kickoffTeam === 'red' ? 2.5 : 18.0
-      api.position.set(0, 1.2, spawnZ)
+      api.position.set(0, 0.65, spawnZ)
       api.velocity.set(0, 0, 0)
       cameraYaw.current = Math.PI
       cameraPitch.current = 0.38
@@ -158,7 +174,7 @@ export function Player({ id = 'player1' }) {
 
     // ── 1. GIANT FIELD BROADCAST CAMERA RIG ──
     const isSprinting = keys.Shift && stamina > 5
-    const targetFov = isSprinting ? 62 : 54 // Lower FOV = Pitch reads as massive!
+    const targetFov = isSprinting ? 62 : 54
     state.camera.fov = THREE.MathUtils.lerp(state.camera.fov, targetFov, 0.1)
     state.camera.updateProjectionMatrix()
 
@@ -169,7 +185,6 @@ export function Player({ id = 'player1' }) {
 
     state.camera.position.lerp(new THREE.Vector3(camX, camY, camZ), 0.18)
 
-    // Look-ahead offset: target is player + (aimDirection * 10)
     const lookTargetX = pos[0] - Math.sin(cameraYaw.current) * 10.0
     const lookTargetY = pos[1] + 1.2
     const lookTargetZ = pos[2] - Math.cos(cameraYaw.current) * 10.0
@@ -263,7 +278,8 @@ export function Player({ id = 'player1' }) {
   const vel = safeVel(window.footballPlayer)
   const playerVelocityVec = new THREE.Vector3(vel[0], vel[1], vel[2])
   
-  const modelRotationY = gameState === 'MENU' ? Math.PI : Math.atan2(-currentDir.current.x, -currentDir.current.z)
+  // MODEL FACING ROTATION: Add Math.PI so character turns back to camera and faces FORWARD (-Z) when running!
+  const modelRotationY = gameState === 'MENU' ? Math.PI : Math.atan2(-currentDir.current.x, -currentDir.current.z) + Math.PI
 
   return (
     <group ref={ref}>

@@ -3,7 +3,6 @@ import { Canvas, useFrame } from '@react-three/fiber'
 import { Physics } from '@react-three/cannon'
 import { Environment, Stars, Sky } from '@react-three/drei'
 import { useFootballStore } from './footballStore'
-import { useAbilityStore } from './abilityStore'
 import { Arena } from './Arena'
 import { Ball } from './Ball'
 import { Player } from './Player'
@@ -35,7 +34,6 @@ function GoalkeeperManager() {
       setGKs(redGK, blueGK)
     }
 
-    // Expanded goal lines at Z = ±50.25
     if (zPos < -50.25 && Math.abs(ballPos[0]) < 7.0) {
       incrementScore('red')
     } else if (zPos > 50.25 && Math.abs(ballPos[0]) < 7.0) {
@@ -109,83 +107,12 @@ function CinematicReplayCamera() {
         }
       }
     } else if (gameState === 'MENU') {
-      state.camera.position.set(0, 1.8, 3.8)
-      state.camera.lookAt(0, 1.35, 0)
+      state.camera.position.set(0, 1.4, 4.2)
+      state.camera.lookAt(0, 0.9, 0)
     }
   })
 
   return null
-}
-
-function AbilityHudWidget() {
-  const pData = useAbilityStore((state) => state.abilities.player1) || { meter: 100, cooldowns: {}, states: {} }
-  
-  return (
-    <div style={{
-      position: 'absolute',
-      bottom: '35px',
-      left: '30px',
-      background: 'rgba(15, 23, 42, 0.85)',
-      border: '1px solid rgba(255, 255, 255, 0.1)',
-      borderRadius: '12px',
-      padding: '12px 18px',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '16px',
-      backdropFilter: 'blur(10px)',
-      fontFamily: "'Orbitron', sans-serif",
-      zIndex: 20,
-      pointerEvents: 'none'
-    }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', color: '#94a3b8', fontWeight: '900' }}>
-          <span>POWER METER</span>
-          <span style={{ color: pData.meter >= 35 ? '#22c55e' : '#eab308' }}>{Math.round(pData.meter)}%</span>
-        </div>
-        <div style={{ width: '130px', height: '8px', background: 'rgba(255,255,255,0.08)', borderRadius: '4px', overflow: 'hidden' }}>
-          <div style={{
-            width: `${pData.meter}%`,
-            height: '100%',
-            background: pData.meter >= 35 ? 'linear-gradient(90deg, #22c55e, #10b981)' : '#eab308',
-            transition: 'width 0.15s ease'
-          }} />
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', gap: '10px' }}>
-        {[
-          { id: 'power_shot', label: 'POWER [SPACE]', cost: '35%' },
-          { id: 'sprint_burst', label: 'SPRINT [SHIFT]', cost: 'CD' },
-          { id: 'slide_tackle', label: 'TACKLE [Q]', cost: 'CD' }
-        ].map((ab) => {
-          const cd = pData.cooldowns[ab.id] || 0
-          const isReady = cd <= 0 && (ab.id !== 'power_shot' || pData.meter >= 35)
-
-          return (
-            <div
-              key={ab.id}
-              style={{
-                position: 'relative',
-                background: isReady ? 'rgba(34, 197, 94, 0.15)' : 'rgba(255,255,255,0.04)',
-                border: isReady ? '1px solid #22c55e' : '1px solid rgba(255,255,255,0.08)',
-                borderRadius: '8px',
-                padding: '6px 10px',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                minWidth: '68px'
-              }}
-            >
-              <span style={{ fontSize: '0.6rem', color: isReady ? '#22c55e' : '#64748b', fontWeight: '900' }}>{ab.label}</span>
-              <span style={{ fontSize: '0.75rem', color: isReady ? '#ffffff' : '#94a3b8', fontWeight: '900', marginTop: '2px' }}>
-                {cd > 0 ? `${cd.toFixed(1)}s` : 'READY'}
-              </span>
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
 }
 
 function MiniMapRadar() {
@@ -683,8 +610,6 @@ export function RematchGame({ onExit }) {
             <div>PING: 24ms</div>
             <div>FPS: 60</div>
           </div>
-
-          <AbilityHudWidget />
 
           {/* Segmented Stamina Bar */}
           <div style={{
