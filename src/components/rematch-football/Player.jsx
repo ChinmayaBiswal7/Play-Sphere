@@ -65,7 +65,7 @@ function safePos(ref) {
   if (ref && ref.position && Array.isArray(ref.position.current)) {
     return ref.position.current
   }
-  return [0, 0.65, 45]
+  return [0, 0.65, 18]
 }
 
 function safeVel(ref) {
@@ -78,7 +78,7 @@ function safeVel(ref) {
 export function Player({ id = 'player1' }) {
   const [ref, api] = useSphere(() => ({
     mass: 72,
-    position: [0, 0.65, 45],
+    position: [0, 0.65, 18],
     args: [0.62],
     fixedRotation: true,
     linearDamping: 0.1
@@ -100,17 +100,17 @@ export function Player({ id = 'player1' }) {
   const isTackling = useRef(false)
   
   const cameraYaw = useRef(Math.PI)
-  const cameraPitch = useRef(0.18) // Rematch Stream 3rd Person Shoulder/Back Pitch Angle
+  const cameraPitch = useRef(0.24)
 
   const currentDir = useRef(new THREE.Vector3(0, 0, -1))
-  const playerPos = useRef([0, 0.65, 45])
+  const playerPos = useRef([0, 0.65, 18])
   const playerVel = useRef([0, 0, 0])
 
   useEffect(() => {
     const handleMouseMove = (e) => {
       if (document.pointerLockElement || e.buttons === 1 || e.buttons === 2) {
         cameraYaw.current -= e.movementX * 0.003
-        cameraPitch.current = THREE.MathUtils.clamp(cameraPitch.current + e.movementY * 0.002, 0.05, 0.42)
+        cameraPitch.current = THREE.MathUtils.clamp(cameraPitch.current + e.movementY * 0.002, 0.08, 0.48)
       }
     }
 
@@ -131,7 +131,7 @@ export function Player({ id = 'player1' }) {
   }, [])
 
   useEffect(() => {
-    const unsubPos = api.position.subscribe(v => (playerPos.current = v || [0, 0.65, 45]))
+    const unsubPos = api.position.subscribe(v => (playerPos.current = v || [0, 0.65, 18]))
     const unsubVel = api.velocity.subscribe(v => (playerVel.current = v || [0, 0, 0]))
 
     window.footballPlayer = {
@@ -152,16 +152,16 @@ export function Player({ id = 'player1' }) {
       api.position.set(0, 0.65, 0)
       api.velocity.set(0, 0, 0)
     } else if (gameState === 'KICKOFF') {
-      const spawnZ = kickoffTeam === 'red' ? 6.0 : 45.0
+      const spawnZ = kickoffTeam === 'red' ? 3.5 : 22.0
       api.position.set(0, 0.65, spawnZ)
       api.velocity.set(0, 0, 0)
       cameraYaw.current = Math.PI
-      cameraPitch.current = 0.18
+      cameraPitch.current = 0.24
     }
   }, [gameState, kickoffTeam, api])
 
   useFrame((state, dt) => {
-    if (gameState === 'GOAL_CELEBRATION' || gameState === 'GOAL_REPLAY' || gameState === 'FULL_TIME' || gameState === 'MENU' || gameState === 'BOOT' || gameState === 'LOADING_MATCH') return
+    if (gameState !== 'PLAYING' && gameState !== 'KICKOFF') return
 
     const pos = safePos(window.footballPlayer)
     const vel = safeVel(window.footballPlayer)
@@ -169,15 +169,15 @@ export function Player({ id = 'player1' }) {
     if (keys.ArrowLeft) cameraYaw.current += 1.8 * dt
     if (keys.ArrowRight) cameraYaw.current -= 1.8 * dt
 
-    // ── 1. EXACT REMATCH 3RD-PERSON ACTION CAMERA ──
+    // ── REMATCH 3RD PERSON ACTION CAMERA ──
     const isSprinting = keys.Shift && stamina > 5
-    const targetFov = isSprinting ? 76 : 68
+    const targetFov = isSprinting ? 72 : 62
     state.camera.fov = THREE.MathUtils.lerp(state.camera.fov, targetFov, 0.1)
     state.camera.updateProjectionMatrix()
 
-    const camDistance = 5.2 // Close 3rd-person follow distance
+    const camDistance = 6.2
     const camX = pos[0] + Math.sin(cameraYaw.current) * Math.cos(cameraPitch.current) * camDistance
-    const camY = pos[1] + Math.sin(cameraPitch.current) * camDistance + 2.2 // Shoulder height
+    const camY = pos[1] + Math.sin(cameraPitch.current) * camDistance + 2.5
     const camZ = pos[2] + Math.cos(cameraYaw.current) * Math.cos(cameraPitch.current) * camDistance
 
     state.camera.position.lerp(new THREE.Vector3(camX, camY, camZ), 0.22)
@@ -187,7 +187,9 @@ export function Player({ id = 'player1' }) {
     const lookTargetZ = pos[2] - Math.cos(cameraYaw.current) * 8.0
     state.camera.lookAt(lookTargetX, lookTargetY, lookTargetZ)
 
-    // ── 2. MOVEMENT CONTROLS ──
+    if (gameState !== 'PLAYING') return
+
+    // ── MOVEMENT CONTROLS ──
     let inputForward = 0
     let inputSide = 0
     if (keys.w) inputForward = 1
@@ -214,7 +216,7 @@ export function Player({ id = 'player1' }) {
     } else {
       setStamina(Math.min(100, stamina + 25 * dt))
       if (direction.lengthSq() > 0.01) {
-        api.velocity.set(direction.x * 14.5, vel[1], direction.z * 14.5)
+        api.velocity.set(direction.x * 12.0, vel[1], direction.z * 12.0)
       }
     }
 
@@ -228,17 +230,17 @@ export function Player({ id = 'player1' }) {
       })
     }
 
-    // ── 3. DRIBBLING LOGIC ──
+    // ── DRIBBLING LOGIC ──
     const ball = window.footballBall
     if (ball) {
       const bPos = safePos(ball)
       const dist = Math.hypot(bPos[0] - pos[0], bPos[2] - pos[2])
 
-      if (dist < 1.85 && Math.abs(bPos[1] - pos[1]) < 1.8) {
+      if (dist < 1.65 && Math.abs(bPos[1] - pos[1]) < 1.8) {
         setPossession(id)
 
-        const targetX = pos[0] + currentDir.current.x * 1.2
-        const targetZ = pos[2] + currentDir.current.z * 1.2
+        const targetX = pos[0] + currentDir.current.x * 1.0
+        const targetZ = pos[2] + currentDir.current.z * 1.0
         
         const dx = targetX - bPos[0]
         const dz = targetZ - bPos[2]
@@ -253,7 +255,7 @@ export function Player({ id = 'player1' }) {
       }
     }
 
-    // ── 4. SHOOTING CHARGE ──
+    // ── SHOOTING CHARGE ──
     if (keys.Space) {
       isCharging.current = true
       setShotCharge(prev => Math.min(100, prev + 160 * dt))
@@ -277,6 +279,9 @@ export function Player({ id = 'player1' }) {
   
   const modelRotationY = gameState === 'MENU' ? Math.PI : Math.atan2(-currentDir.current.x, -currentDir.current.z) + Math.PI
 
+  // Strict check: Only show overhead tag during active gameplay or kickoff
+  const showNameTag = gameState === 'PLAYING' || gameState === 'KICKOFF'
+
   return (
     <group ref={ref}>
       <group rotation={[0, modelRotationY, 0]}>
@@ -291,15 +296,15 @@ export function Player({ id = 'player1' }) {
         />
       </group>
 
-      {/* OVERHEAD PLAYER NAME TAG */}
-      {gameState !== 'MENU' && gameState !== 'GOAL_CELEBRATION' && gameState !== 'GOAL_REPLAY' && (
+      {/* OVERHEAD PLAYER NAME TAG - STRICTLY CONTROLLED */}
+      {showNameTag && (
         <Html position={[0, 2.7, 0]} center distanceFactor={14}>
           <div style={{
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
-            background: 'rgba(15, 23, 42, 0.85)',
-            border: '1px solid rgba(239, 68, 68, 0.6)',
+            background: 'rgba(15, 23, 42, 0.88)',
+            border: '1px solid rgba(239, 68, 68, 0.7)',
             borderRadius: '6px',
             padding: '3px 8px',
             color: '#fff',
@@ -317,7 +322,7 @@ export function Player({ id = 'player1' }) {
       )}
 
       {/* Charge Ring Indicator */}
-      {shotCharge > 0 && gameState !== 'MENU' && (
+      {shotCharge > 0 && showNameTag && (
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.6, 0]}>
           <ringGeometry args={[0.5, 0.5 + (shotCharge / 100) * 0.4, 32]} />
           <meshBasicMaterial color="#00d2ff" />

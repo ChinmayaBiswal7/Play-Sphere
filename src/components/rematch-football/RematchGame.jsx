@@ -34,9 +34,10 @@ function GoalkeeperManager() {
       setGKs(redGK, blueGK)
     }
 
-    if (zPos < -160.25 && Math.abs(ballPos[0]) < 13.0) {
+    // Goal triggers at Z = ±60.25 (Goal width 16)
+    if (zPos < -60.25 && Math.abs(ballPos[0]) < 8.0) {
       incrementScore('red')
-    } else if (zPos > 160.25 && Math.abs(ballPos[0]) < 13.0) {
+    } else if (zPos > 60.25 && Math.abs(ballPos[0]) < 8.0) {
       incrementScore('blue')
     }
   })
@@ -102,14 +103,14 @@ function CinematicReplayCamera() {
           const ballX = frame.bPos[0]
           const ballZ = frame.bPos[2]
 
-          state.camera.position.set(35, 14, ballZ + 12)
+          state.camera.position.set(24, 10, ballZ + 8)
           state.camera.lookAt(ballX, 1.0, ballZ)
         }
       }
     } else if (gameState === 'MENU') {
-      // Sleek full-body menu showcase camera framing
-      state.camera.position.set(0, 2.4, 7.5)
-      state.camera.lookAt(0, 1.1, 0)
+      // Menu showcase framing
+      state.camera.position.set(0, 1.6, 5.2)
+      state.camera.lookAt(0, 1.0, 0)
     }
   })
 
@@ -147,8 +148,8 @@ function MiniMapRadar() {
       ctx.strokeRect(55, 15, 30, 14)
       ctx.strokeRect(55, 111, 30, 14)
 
-      const mapX = (x) => 70 + (x / 100) * 35
-      const mapZ = (z) => 70 + (z / 160) * 55
+      const mapX = (x) => 70 + (x / 75) * 35
+      const mapZ = (z) => 70 + (z / 120) * 55
 
       const p = window.footballPlayer
       if (p && p.position && Array.isArray(p.position.current)) {
@@ -343,28 +344,28 @@ export function RematchGame({ onExit }) {
         </div>
       )}
 
-      {/* ── 2. 3D SCENE CANVAS WITH DEPTH FOG ── */}
+      {/* ── 2. 3D SCENE CANVAS WITH HIGH FPS SHADOWS & FOG ── */}
       <Canvas
         shadows
-        camera={{ fov: 68, position: [0, 2.2, 16] }}
+        camera={{ fov: 62, position: [0, 2.2, 16] }}
         gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping }}
       >
         <color attach="background" args={arenaStyle === 'desert' ? ['#fdf4ff'] : ['#030712']} />
-        <fog attach="fog" args={arenaStyle === 'desert' ? ['#fae8ff', 100, 320] : ['#030712', 100, 320]} />
+        <fog attach="fog" args={arenaStyle === 'desert' ? ['#fae8ff', 60, 200] : ['#030712', 60, 200]} />
 
-        <ambientLight intensity={0.65} />
+        <ambientLight intensity={0.7} />
         <directionalLight 
-          position={[35, 65, 30]} 
-          intensity={2.4} 
+          position={[25, 45, 20]} 
+          intensity={1.8} 
           castShadow 
-          shadow-mapSize={[2048, 2048]}
+          shadow-mapSize={[1024, 1024]}
         />
-        <directionalLight position={[-35, 55, -30]} intensity={0.9} />
+        <directionalLight position={[-25, 35, -20]} intensity={0.6} />
 
         {arenaStyle !== 'desert' && (
           <>
             <Sky distance={450000} sunPosition={[10, 12, 10]} inclination={0.6} azimuth={0.25} />
-            <Stars radius={150} depth={80} count={1500} factor={4} saturation={0.5} fade speed={1} />
+            <Stars radius={120} depth={60} count={1000} factor={4} saturation={0.5} fade speed={1} />
             <Environment preset="night" environmentIntensity={0.85} />
           </>
         )}
