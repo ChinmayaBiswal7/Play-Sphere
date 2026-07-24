@@ -3,6 +3,7 @@ import { Gauge, RadioTower, Settings, Trophy, Users, Wrench } from 'lucide-react
 import { GameCanvas } from './components/GameCanvas.jsx'
 import { RematchGame } from './components/rematch-football/RematchGame.jsx'
 import { LagoriGame } from './components/lagori-game/LagoriGame.jsx'
+import { GullyCricketGame } from './components/gully-cricket/GullyCricketGame.jsx'
 import './App.css'
 
 const defaultSetup = {
@@ -100,33 +101,65 @@ function MainMenu({ setup, setSetup, onStart }) {
 
       {tab === 'race' && (
         <section className="menu-grid">
-          <ModeCard
-            icon={Gauge}
-            title="Grand Prix"
-            text="Five laps, mixed weather, full AI grid"
-            active={mode === 'Grand Prix'}
-            onClick={() => setMode('Grand Prix')}
-          />
-          <ModeCard
-            icon={Settings}
-            title="Time Trial"
-            text="Clear track, rubber builds quickly"
-            active={mode === 'Time Trial'}
-            onClick={() => setMode('Time Trial')}
-          />
-          <ModeCard
-            icon={RadioTower}
-            title="Storm Race"
-            text="Wet surface, spray, low visibility"
-            active={mode === 'Storm Race'}
-            onClick={() => setMode('Storm Race')}
-          />
+          <div className="mode-stack">
+            <ModeCard
+              icon={Trophy}
+              title="Grand Prix"
+              text="Full weekend simulation with practice, qualifying, and dynamic weather strategy."
+              active={mode === 'Grand Prix'}
+              onClick={() => setMode('Grand Prix')}
+            />
+            <ModeCard
+              icon={Gauge}
+              title="Sprint Showdown"
+              text="Short-form high-downforce sprint where battery management dominates."
+              active={mode === 'Sprint Showdown'}
+              onClick={() => setMode('Sprint Showdown')}
+            />
+            <ModeCard
+              icon={RadioTower}
+              title="Time Trial"
+              text="Clean air, warm tyres, ghost telemetry, and raw single-lap pace."
+              active={mode === 'Time Trial'}
+              onClick={() => setMode('Time Trial')}
+            />
+          </div>
+
+          <div className="summary-panel card">
+            <h3>Race Directive</h3>
+            <p>
+              Silverstone International Layout • 14 Turns • Evolving Rubber Line • Variable Cloud
+            </p>
+
+            <div className="stats-row">
+              <div>
+                <span>Downforce</span>
+                <strong>{setupScore.aero}%</strong>
+              </div>
+              <div>
+                <span>Top Speed</span>
+                <strong>{setupScore.straight}%</strong>
+              </div>
+              <div>
+                <span>Tyre Life</span>
+                <strong>{setupScore.tyre}%</strong>
+              </div>
+            </div>
+
+            <button className="primary-btn" onClick={() => onStart({ mode, setup })}>
+              Launch Session
+            </button>
+          </div>
         </section>
       )}
 
       {tab === 'garage' && (
-        <section className="garage-panel">
-          <div className="setup-stack">
+        <section className="garage-grid card">
+          <div className="garage-header">
+            <h3>Aero & Chassis Setup</h3>
+            <p>Tweak aerodynamic balance, damper stiffness, and brake bias before track entry.</p>
+          </div>
+          <div className="setup-list">
             {setupFields.map((field) => (
               <SliderRow
                 key={field[0]}
@@ -135,38 +168,22 @@ function MainMenu({ setup, setSetup, onStart }) {
                 onChange={updateSetup}
               />
             ))}
-            <label className="setup-row ers-row">
-              <span>
-                <strong>ERS mapping</strong>
-                <small>Changes deployment drain and recovery feel</small>
-              </span>
-              <select value={setup.ersMode} onChange={(e) => updateSetup('ersMode', e.target.value)}>
-                <option>Balanced</option>
-                <option>Qualifying</option>
-                <option>Harvest</option>
-              </select>
-            </label>
-          </div>
-          <div className="setup-readout">
-            <div><span>Aero</span><b>{setupScore.aero}</b></div>
-            <div><span>Straight</span><b>{setupScore.straight}</b></div>
-            <div><span>Tyre life</span><b>{setupScore.tyre}</b></div>
           </div>
         </section>
       )}
 
       {tab === 'lobby' && (
-        <section className="lobby-panel">
-          {['A. SennaNet', 'K. Carbon', 'M. Vector', 'L. Slipstream'].map((name, i) => (
-            <div className="driver-row" key={name}>
-              <span>{name}</span>
-              <b>{i === 0 ? 'HOST' : i === 1 ? 'READY' : 'SETUP'}</b>
-            </div>
-          ))}
-          <p>
-            Multiplayer is staged as a playable local lobby screen in this prototype. The race scene
-            uses deterministic AI opponents now, with state hooks ready for server snapshots later.
-          </p>
+        <section className="lobby-card card">
+          <h3>Multiplayer Paddock</h3>
+          <p>Local simulation lobby ready for WebSocket sync hooks.</p>
+          <div className="driver-list">
+            {['You (P1)', 'Bottas_AI', 'Hamilton_AI', 'Verstappen_AI'].map((name, i) => (
+              <div key={name} className="driver-row">
+                <span>{name}</span>
+                <b>{i === 0 ? 'HOST' : i === 1 ? 'READY' : 'SETUP'}</b>
+              </div>
+            ))}
+          </div>
         </section>
       )}
 
@@ -203,6 +220,10 @@ export default function App() {
     return <RematchGame onExit={handleExit} />
   }
 
+  if (activeGame === 'gullycricket') {
+    return <GullyCricketGame onExit={handleExit} />
+  }
+
   if (activeGame === 'f1') {
     if (session) {
       return <GameCanvas mode={session.mode} setup={session.setup} onExit={() => setSession(null)} />
@@ -234,7 +255,7 @@ export default function App() {
             border: '1px solid rgba(250, 204, 21, 0.4)',
             borderRadius: '16px',
             padding: '35px 25px',
-            width: '260px',
+            width: '240px',
             cursor: 'pointer',
             textAlign: 'center',
             color: '#fff',
@@ -254,7 +275,7 @@ export default function App() {
             border: '1px solid rgba(0, 210, 255, 0.2)',
             borderRadius: '16px',
             padding: '35px 25px',
-            width: '260px',
+            width: '240px',
             cursor: 'pointer',
             textAlign: 'center',
             color: '#fff',
@@ -264,6 +285,26 @@ export default function App() {
           <span style={{ fontSize: '3.5rem', display: 'block', marginBottom: '15px' }}>⚽</span>
           <h2 style={{ fontSize: '1.2rem', fontWeight: '800', margin: '0 0 8px', letterSpacing: '2px' }}>ARCADE FOOTBALL</h2>
           <small style={{ color: '#94a3b8', fontFamily: 'sans-serif', display: 'block', lineHeight: '1.4' }}>Rematch-style physics, dynamic goalkeepers, 1v1 AI duel.</small>
+        </button>
+
+        <button 
+          onClick={() => setActiveGame('gullycricket')}
+          style={{
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(250, 204, 21, 0.4)',
+            borderRadius: '16px',
+            padding: '35px 25px',
+            width: '240px',
+            cursor: 'pointer',
+            textAlign: 'center',
+            color: '#fff',
+            transition: 'all 0.3s',
+            boxShadow: '0 8px 30px rgba(250, 204, 21, 0.2)'
+          }}
+        >
+          <span style={{ fontSize: '3.5rem', display: 'block', marginBottom: '15px' }}>🏏</span>
+          <h2 style={{ fontSize: '1.2rem', fontWeight: '800', margin: '0 0 8px', letterSpacing: '2px', color: '#facc15' }}>GULLY CRICKET 3D</h2>
+          <small style={{ color: '#94a3b8', fontFamily: 'sans-serif', display: 'block', lineHeight: '1.4' }}>Indian street cricket! One-Tippi catches out, wall hits 4s & 6s.</small>
         </button>
       </div>
     </div>
