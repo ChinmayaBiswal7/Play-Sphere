@@ -6,8 +6,8 @@ import * as THREE from 'three'
 
 export function GullyBowler({ onDeliverBall }) {
   const groupRef = useRef()
-  const rightArmRef = useRef()
-  
+  const bowlingArmRef = useRef()
+
   const phase = useGullyCricketStore((state) => state.phase)
   const setPhase = useGullyCricketStore((state) => state.setPhase)
   const bowlerName = useGullyCricketStore((state) => state.bowlerName)
@@ -29,94 +29,141 @@ export function GullyBowler({ onDeliverBall }) {
       } else if (e.code === 'ArrowDown' || e.code === 'KeyS') {
         setPitchTarget(prev => [prev[0], Math.max(-8.0, prev[1] - 0.4)])
       }
-
-      if (e.code === 'Space' || e.code === 'Enter') {
-        triggerDelivery()
-      }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [pitchTarget])
+  }, [])
 
-  const triggerDelivery = () => {
-    if (useGullyCricketStore.getState().phase !== 'BOWLING_AIM') return
-    onDeliverBall(pitchTarget)
-    setPhase('BOWLING_RELEASE')
-  }
+  // Bowling action animation
+  const isBowling = useRef(false)
+  const bowlProgress = useRef(0)
 
-  useFrame((state, dt) => {
-    if (phase === 'BOWLING_RELEASE') {
-      if (rightArmRef.current) {
-        rightArmRef.current.rotation.x -= dt * 14.0
+  useEffect(() => {
+    if (phase === 'BOWLING_AIM') {
+      const timer = setTimeout(() => {
+        isBowling.current = true
+        bowlProgress.current = 0
+        setPhase('BALL_IN_AIR')
+      }, 1400)
+      return () => clearTimeout(timer)
+    }
+  }, [phase, setPhase])
+
+  useFrame((state, delta) => {
+    if (!groupRef.current) return
+
+    // Position bowler at crease (Z = -13.0) facing batter at Z = +12
+    groupRef.current.position.set(0, 0, -13.0)
+
+    if (isBowling.current) {
+      bowlProgress.current += delta * 5.0
+
+      if (bowlingArmRef.current) {
+        // High 360-degree bowling arm windmill action
+        bowlingArmRef.current.rotation.x = -bowlProgress.current * Math.PI * 2
       }
-    } else {
-      if (rightArmRef.current) rightArmRef.current.rotation.x = 0
+
+      // Ball release at top of arm swing
+      if (bowlProgress.current >= 0.5 && bowlProgress.current <= 0.6) {
+        if (typeof onDeliverBall === 'function') {
+          onDeliverBall(pitchTarget)
+        }
+
+        const ball = window.gullyBall
+        if (ball && ball.api) {
+          ball.api.position.set(0, 2.2, -12.0)
+          const targetZ = pitchTarget[1]
+          const distZ = Math.abs(targetZ - (-12.0))
+          const vz = (distZ / 0.45) * 1.05
+          const vy = (pitchTarget[1] > 0 ? -6.0 : -10.0)
+
+          ball.api.velocity.set(pitchTarget[0] * 1.5, vy, vz)
+        }
+      }
+
+      if (bowlProgress.current >= 1.0) {
+        isBowling.current = false
+        bowlProgress.current = 0
+      }
     }
   })
 
   return (
-    <group>
-      {/* ── PITCH TARGET MARKER (FOR BOWLING AIM) ── */}
-      {phase === 'BOWLING_AIM' && (
-        <group position={[pitchTarget[0], 0.04, pitchTarget[1]]}>
-          <mesh rotation={[-Math.PI / 2, 0, 0]}>
-            <ringGeometry args={[0.3, 0.42, 24]} />
-            <meshBasicMaterial color="#00d2ff" side={THREE.DoubleSide} />
+    <group ref={groupRef}>
+      {/* ── 1. BOWLER CHARACTER MODEL (ANATOMICAL HUMANOID) ── */}
+      <group position={[0, 0, 0]}>
+        {/* Legs */}
+        <mesh castShadow position={[-0.2, 0.45, 0]}>
+          <cylinderGeometry args={[0.09, 0.08, 0.9, 16]} />
+          <meshStandardMaterial color="#0f172a" />
+        </mesh>
+        <mesh castShadow position={[0.2, 0.45, 0]}>
+          <cylinderGeometry args={[0.09, 0.08, 0.9, 16]} />
+          <meshStandardMaterial color="#0f172a" />
+        </mesh>
+
+        {/* Torso Jersey (Red/Black) */}
+        <mesh castShadow position={[0, 1.25, 0]}>
+          <cylinderGeometry args={[0.24, 0.22, 0.65, 16]} />
+          <meshStandardMaterial color="#dc2626" roughness={0.4} />
+        </mesh>
+
+        {/* Neck & Head */}
+        <mesh position={[0, 1.65, 0]}>
+          <cylinderGeometry args={[0.08, 0.09, 0.12, 16]} />
+          <meshStandardMaterial color="#f5d0a9" />
+        </mesh>
+        <mesh castShadow position={[0, 1.82, 0]}>
+          <sphereGeometry args={[0.16, 20, 20]} />
+          <meshStandardMaterial color="#f5d0a9" roughness={0.6} />
+        </mesh>
+
+        {/* Red Cap */}
+        <group position={[0, 1.92, 0]}>
+          <mesh castShadow>
+            <sphereGeometry args={[0.17, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
+            <meshStandardMaterial color="#991b1b" />
           </mesh>
-          <mesh rotation={[-Math.PI / 2, 0, 0]}>
-            <circleGeometry args={[0.08, 16]} />
-            <meshBasicMaterial color="#ef4444" side={THREE.DoubleSide} />
+          <mesh castShadow position={[0, -0.02, 0.16]} rotation={[0.2, 0, 0]}>
+            <boxGeometry args={[0.24, 0.02, 0.14]} />
+            <meshStandardMaterial color="#991b1b" />
           </mesh>
         </group>
-      )}
 
-      {/* ── 3D BOWLER MODEL AT Z = -13 ── */}
-      <group position={[0, 0, -13.2]} ref={groupRef}>
-        {/* Torso */}
-        <mesh castShadow position={[0, 1.1, 0]}>
-          <cylinderGeometry args={[0.32, 0.28, 0.75, 16]} />
-          <meshStandardMaterial color="#0284c7" roughness={0.4} />
+        {/* Non-Bowling Left Arm */}
+        <mesh castShadow position={[-0.3, 1.25, 0]}>
+          <cylinderGeometry args={[0.06, 0.05, 0.45, 16]} />
+          <meshStandardMaterial color="#f5d0a9" />
         </mesh>
 
-        {/* Head */}
-        <mesh castShadow position={[0, 1.7, 0]}>
-          <sphereGeometry args={[0.2, 16, 16]} />
-          <meshStandardMaterial color="#f5d0a9" roughness={0.4} />
-        </mesh>
-
-        {/* Legs */}
-        <mesh castShadow position={[-0.14, 0.4, 0]}>
-          <cylinderGeometry args={[0.11, 0.09, 0.8, 14]} />
-          <meshStandardMaterial color="#334155" roughness={0.6} />
-        </mesh>
-        <mesh castShadow position={[0.14, 0.4, 0]}>
-          <cylinderGeometry args={[0.11, 0.09, 0.8, 14]} />
-          <meshStandardMaterial color="#334155" roughness={0.6} />
-        </mesh>
-
-        {/* Bowling Arm */}
-        <group ref={rightArmRef} position={[0.4, 1.4, 0]}>
-          <mesh castShadow position={[0, -0.3, 0]}>
-            <cylinderGeometry args={[0.08, 0.07, 0.6, 12]} />
+        {/* Windmill Bowling Right Arm */}
+        <group ref={bowlingArmRef} position={[0.3, 1.35, 0]}>
+          <mesh castShadow position={[0, -0.22, 0]}>
+            <cylinderGeometry args={[0.06, 0.05, 0.45, 16]} />
             <meshStandardMaterial color="#f5d0a9" />
           </mesh>
+          {/* Taped Tennis Ball in hand */}
+          <mesh position={[0, -0.45, 0]}>
+            <sphereGeometry args={[0.08, 16, 16]} />
+            <meshStandardMaterial color="#ef4444" roughness={0.3} />
+          </mesh>
         </group>
 
-        {/* Overhead Bowler Tag */}
+        {/* Overhead Bowler Tag (Only rendered during active innings) */}
         {(gameState === 'INNINGS_1' || gameState === 'INNINGS_2') && (
           <Html position={[0, 2.3, 0]} center distanceFactor={14}>
             <div style={{
-              background: 'rgba(15, 23, 42, 0.9)',
-              border: '1px solid #0284c7',
+              background: 'rgba(15, 23, 42, 0.95)',
+              border: '1.5px solid #0284c7',
               borderRadius: '6px',
-              padding: '3px 8px',
+              padding: '4px 10px',
               color: '#fff',
               fontFamily: "'Orbitron', sans-serif",
               fontSize: '11px',
               fontWeight: '900',
               whiteSpace: 'nowrap',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+              boxShadow: '0 4px 14px rgba(0,0,0,0.6)',
               pointerEvents: 'none'
             }}>
               ⚾ {bowlerName}
@@ -124,6 +171,14 @@ export function GullyBowler({ onDeliverBall }) {
           </Html>
         )}
       </group>
+
+      {/* ── 2. BOWLING PITCH TARGET MARKER ON ROAD ── */}
+      {phase === 'BOWLING_AIM' && (
+        <mesh position={[pitchTarget[0], 0.03, pitchTarget[1]]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[0.25, 0.35, 32]} />
+          <meshBasicMaterial color="#ef4444" side={THREE.DoubleSide} />
+        </mesh>
+      )}
     </group>
   )
 }
