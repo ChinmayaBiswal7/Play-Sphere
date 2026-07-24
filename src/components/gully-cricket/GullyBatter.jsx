@@ -20,6 +20,7 @@ export function GullyBatter() {
   const phase = useGullyCricketStore((state) => state.phase)
   const setPhase = useGullyCricketStore((state) => state.setPhase)
   const strikerName = useGullyCricketStore((state) => state.strikerName)
+  const gameState = useGullyCricketStore((state) => state.gameState)
 
   const [shotAim, setShotAim] = useState({ x: 0, z: -1 }) // Direction vector
   const [isSwinging, setIsSwinging] = useState(false)
@@ -181,23 +182,25 @@ export function GullyBatter() {
       </group>
 
       {/* Overhead Batter Tag */}
-      <Html position={[0, 2.3, 0]} center distanceFactor={14}>
-        <div style={{
-          background: 'rgba(15, 23, 42, 0.9)',
-          border: '1px solid #ef4444',
-          borderRadius: '6px',
-          padding: '3px 8px',
-          color: '#fff',
-          fontFamily: "'Orbitron', sans-serif",
-          fontSize: '11px',
-          fontWeight: '900',
-          whiteSpace: 'nowrap',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-          pointerEvents: 'none'
-        }}>
-          🏏 {strikerName}
-        </div>
-      </Html>
+      {gameState !== 'MENU' && gameState !== 'BOOT' && (
+        <Html position={[0, 2.3, 0]} center distanceFactor={14}>
+          <div style={{
+            background: 'rgba(15, 23, 42, 0.9)',
+            border: '1px solid #ef4444',
+            borderRadius: '6px',
+            padding: '3px 8px',
+            color: '#fff',
+            fontFamily: "'Orbitron', sans-serif",
+            fontSize: '11px',
+            fontWeight: '900',
+            whiteSpace: 'nowrap',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+            pointerEvents: 'none'
+          }}>
+            🏏 {strikerName}
+          </div>
+        </Html>
+      )}
     </group>
   )
 }

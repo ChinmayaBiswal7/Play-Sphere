@@ -11,6 +11,7 @@ export function GullyBowler({ onDeliverBall }) {
   const phase = useGullyCricketStore((state) => state.phase)
   const setPhase = useGullyCricketStore((state) => state.setPhase)
   const bowlerName = useGullyCricketStore((state) => state.bowlerName)
+  const gameState = useGullyCricketStore((state) => state.gameState)
 
   // Pitch target marker coordinates [x, z]
   const [pitchTarget, setPitchTarget] = useState([0, -2.0])
@@ -103,23 +104,25 @@ export function GullyBowler({ onDeliverBall }) {
         </group>
 
         {/* Overhead Bowler Tag */}
-        <Html position={[0, 2.3, 0]} center distanceFactor={14}>
-          <div style={{
-            background: 'rgba(15, 23, 42, 0.9)',
-            border: '1px solid #0284c7',
-            borderRadius: '6px',
-            padding: '3px 8px',
-            color: '#fff',
-            fontFamily: "'Orbitron', sans-serif",
-            fontSize: '11px',
-            fontWeight: '900',
-            whiteSpace: 'nowrap',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-            pointerEvents: 'none'
-          }}>
-            ⚾ {bowlerName}
-          </div>
-        </Html>
+        {gameState !== 'MENU' && gameState !== 'BOOT' && (
+          <Html position={[0, 2.3, 0]} center distanceFactor={14}>
+            <div style={{
+              background: 'rgba(15, 23, 42, 0.9)',
+              border: '1px solid #0284c7',
+              borderRadius: '6px',
+              padding: '3px 8px',
+              color: '#fff',
+              fontFamily: "'Orbitron', sans-serif",
+              fontSize: '11px',
+              fontWeight: '900',
+              whiteSpace: 'nowrap',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+              pointerEvents: 'none'
+            }}>
+              ⚾ {bowlerName}
+            </div>
+          </Html>
+        )}
       </group>
     </group>
   )
