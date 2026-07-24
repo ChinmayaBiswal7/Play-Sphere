@@ -1,55 +1,79 @@
 /* ═══════════════════════════════════════════════
-   PlaySphere 5 — Dashboard Home CSS (v3 Layout Fix)
+   PlaySphere 5 — Dashboard CSS (v4 — Hero Layout)
 ═══════════════════════════════════════════════ */
 
-/* Root wrapper — full viewport takeover */
+/* Root */
 .ps5-console-wrapper {
   position: fixed;
   inset: 0;
-  background: radial-gradient(ellipse at 30% 65%, #0d1f3c 0%, #020917 100%);
+  background: #020917;
   overflow: hidden;
   font-family: 'Outfit', 'Segoe UI', sans-serif;
   color: #f8fafc;
   user-select: none;
   z-index: 99999;
+  display: flex;
+  flex-direction: column;
 }
 
-/* Particle canvas */
+/* Particles */
 #ps5-bg-canvas {
   position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  opacity: 0.45;
+  opacity: 0.3;
 }
 
-/* ── TOP NAV BAR ── */
-.psd-topbar {
+/* ── HERO BLURRED BACKGROUND ──
+   Fills the whole screen behind everything,
+   showing the selected game's art blurred & darkened.
+*/
+.psd-hero-bg {
   position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 68px;
+  inset: 0;
+  background-size: cover;
+  background-position: center 20%;
+  filter: blur(55px) brightness(0.22) saturate(1.4);
+  transform: scale(1.12);
+  z-index: 1;
+  transition: background-image 0.6s ease;
+}
+
+.psd-hero-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: linear-gradient(
+    180deg,
+    rgba(2,9,23,0.45) 0%,
+    rgba(2,9,23,0.2)  40%,
+    rgba(2,9,23,0.65) 70%,
+    rgba(2,9,23,0.98) 100%
+  );
+}
+
+/* ── TOP NAV ── */
+.psd-topbar {
+  position: relative;
+  z-index: 20;
+  height: 64px;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 44px;
-  z-index: 30;
-  background: linear-gradient(180deg, rgba(2,9,23,0.92) 0%, transparent 100%);
-  box-sizing: border-box;
+  background: linear-gradient(180deg, rgba(2,9,23,0.85) 0%, transparent 100%);
 }
 
-/* Tabs */
-.psd-tabs {
-  display: flex;
-  gap: 4px;
-  align-items: center;
-}
+.psd-tabs { display: flex; gap: 4px; align-items: center; }
 
 .psd-tab {
   background: none;
   border: none;
-  color: rgba(255,255,255,0.4);
+  color: rgba(255,255,255,0.38);
   font-family: inherit;
-  font-size: 0.92rem;
+  font-size: 0.9rem;
   font-weight: 700;
   letter-spacing: 2px;
   text-transform: uppercase;
@@ -60,11 +84,7 @@
   position: relative;
   line-height: 1;
 }
-
-.psd-tab.active {
-  color: #fff;
-}
-
+.psd-tab.active { color: #fff; }
 .psd-tab.active::after {
   content: '';
   position: absolute;
@@ -74,238 +94,133 @@
   box-shadow: 0 0 8px #3b82f6;
   border-radius: 2px;
 }
-
 .psd-tab:hover:not(.active) {
-  color: rgba(255,255,255,0.75);
+  color: rgba(255,255,255,0.7);
   background: rgba(255,255,255,0.04);
 }
 
-/* Right actions */
-.psd-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
+.psd-actions { display: flex; align-items: center; gap: 10px; }
 
 .psd-icon-btn {
-  width: 36px;
-  height: 36px;
+  width: 36px; height: 36px;
   border-radius: 50%;
   background: rgba(255,255,255,0.07);
   border: 1px solid rgba(255,255,255,0.12);
-  color: rgba(255,255,255,0.85);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  color: rgba(255,255,255,0.82);
+  display: flex; align-items: center; justify-content: center;
   cursor: pointer;
-  transition: background 0.18s, transform 0.15s, color 0.15s;
+  transition: background 0.18s, transform 0.15s;
   flex-shrink: 0;
 }
+.psd-icon-btn:hover { background: rgba(255,255,255,0.14); color:#fff; transform: scale(1.1); }
 
-.psd-icon-btn:hover {
-  background: rgba(255,255,255,0.13);
-  color: #fff;
-  transform: scale(1.1);
-}
-
-/* Avatar */
 .psd-avatar-btn {
-  width: 38px;
-  height: 38px;
+  width: 38px; height: 38px;
   border-radius: 50%;
   border: 2px solid #00d2ff;
-  background: linear-gradient(135deg, #1e3a5f 0%, #0f2040 100%);
-  padding: 0;
-  overflow: hidden;
+  background: linear-gradient(135deg, #1e3a5f, #0f2040);
+  padding: 0; overflow: hidden;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
   box-shadow: 0 0 14px rgba(0,210,255,0.45);
   transition: box-shadow 0.2s, transform 0.15s;
   flex-shrink: 0;
 }
+.psd-avatar-btn:hover { box-shadow: 0 0 24px rgba(0,210,255,0.75); transform: scale(1.08); }
+#ps5-user-avatar { width:100%; height:100%; border-radius:50%; display:block; object-fit:cover; }
 
-.psd-avatar-btn:hover {
-  box-shadow: 0 0 24px rgba(0,210,255,0.75);
-  transform: scale(1.08);
-}
-
-/* If user has a photo, override with img */
-#ps5-user-avatar {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  display: block;
-  object-fit: cover;
-}
-
-/* Clock */
 .psd-clock {
-  font-size: 0.87rem;
-  font-weight: 700;
-  letter-spacing: 1px;
-  color: rgba(255,255,255,0.9);
-  white-space: nowrap;
-  min-width: 75px;
+  font-size: 0.87rem; font-weight: 700;
+  letter-spacing: 1px; color: rgba(255,255,255,0.9);
+  white-space: nowrap; min-width: 72px;
 }
 
-/* Controller button */
 .psd-controller-btn {
-  display: flex;
-  align-items: center;
-  gap: 7px;
+  display: flex; align-items: center; gap: 7px;
   background: linear-gradient(135deg, rgba(0,210,255,0.1), rgba(99,102,241,0.15));
   border: 1px solid rgba(0,210,255,0.35);
   border-radius: 30px;
-  padding: 8px 16px;
+  padding: 8px 15px;
   color: rgba(255,255,255,0.92);
-  font-family: inherit;
-  font-size: 0.67rem;
-  font-weight: 800;
-  letter-spacing: 1.2px;
-  text-transform: uppercase;
-  cursor: pointer;
+  font-family: inherit; font-size: 0.65rem;
+  font-weight: 800; letter-spacing: 1.2px;
+  text-transform: uppercase; cursor: pointer;
   transition: all 0.2s;
-  box-shadow: 0 0 12px rgba(0,210,255,0.15);
-  white-space: nowrap;
-  flex-shrink: 0;
+  box-shadow: 0 0 12px rgba(0,210,255,0.12);
+  white-space: nowrap; flex-shrink: 0;
 }
-
 .psd-controller-btn:hover {
   background: linear-gradient(135deg, rgba(0,210,255,0.2), rgba(99,102,241,0.28));
   box-shadow: 0 0 22px rgba(0,210,255,0.35);
   color: #fff;
 }
 
-/* ── GAME SHELF AREA ──
-   The shelf sits roughly 55% down the screen.
-   The container has extra padding-top so lifted cards
-   are NOT clipped. parent overflow must be visible.
+/* ── HERO SECTION ──
+   Fills all the space between nav and shelf.
+   Shows selected game info on the left side.
 */
-.psd-main {
-  position: absolute;
-  top: 68px; /* below nav */
-  left: 0;
-  right: 0;
-  bottom: 0;
+.psd-hero {
+  position: relative;
   z-index: 10;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  /* CRITICAL: overflow must be visible so cards lifting up aren't clipped */
-  overflow: visible;
-}
-
-/* Shelf wrapper — has top padding so hovered cards don't clip */
-.psd-shelf {
+  flex: 1;
   display: flex;
   align-items: flex-end;
-  gap: 16px;
-  padding: 100px 48px 24px; /* 100px top = room for card lift */
-  overflow-x: auto;
-  overflow-y: visible;        /* allow vertical card lift */
-  scroll-behavior: smooth;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  flex-shrink: 0;
+  padding: 0 52px 24px;
+  min-height: 0;
 }
 
-.psd-shelf::-webkit-scrollbar { display: none; }
-
-/* Individual game card */
-.psd-card {
-  flex-shrink: 0;
-  width: 155px;
-  height: 210px;
-  border-radius: 14px;
-  overflow: hidden;
-  cursor: pointer;
-  border: 2px solid rgba(255,255,255,0.08);
-  transition: transform 0.28s cubic-bezier(0.34,1.56,0.64,1),
-              border-color 0.2s ease,
-              box-shadow 0.28s ease;
+.psd-hero-content {
   position: relative;
-  background: #0a1628;
-  flex-shrink: 0;
-}
-
-.psd-card:hover,
-.psd-card.selected {
-  transform: translateY(-24px) scale(1.08);
-  border-color: #00d2ff;
-  box-shadow:
-    0 24px 55px rgba(0,0,0,0.75),
-    0 0 28px rgba(0,210,255,0.45),
-    0 0 60px rgba(0,210,255,0.15);
-  z-index: 5;
-}
-
-.psd-card-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-  pointer-events: none;
-  border-radius: 12px;
-}
-
-/* ── GAME DETAILS PANEL ── */
-.psd-details {
-  padding: 16px 48px 28px;
-  background: linear-gradient(0deg,
-    rgba(2,9,23,0.98) 0%,
-    rgba(2,9,23,0.82) 65%,
-    transparent 100%);
+  z-index: 10;
+  max-width: 540px;
   opacity: 0;
-  transform: translateY(12px);
-  transition: opacity 0.3s ease, transform 0.3s ease;
-  pointer-events: none;
-  flex-shrink: 0;
+  transform: translateY(14px);
+  transition: opacity 0.35s ease, transform 0.35s ease;
 }
 
-.psd-details.visible {
+.psd-hero-content.visible {
   opacity: 1;
   transform: translateY(0);
-  pointer-events: auto;
+}
+
+.psd-hero-eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: #60a5fa;
+  margin: 0 0 8px;
 }
 
 .psd-game-title {
-  font-size: 2rem;
+  font-size: 2.6rem;
   font-weight: 900;
-  margin: 0 0 8px;
-  letter-spacing: -0.3px;
-  line-height: 1.05;
-  text-shadow: 0 2px 20px rgba(0,0,0,0.6);
+  margin: 0 0 10px;
+  letter-spacing: -0.5px;
+  line-height: 1;
+  text-shadow: 0 4px 30px rgba(0,0,0,0.7);
 }
 
 .psd-game-meta {
-  display: flex;
-  align-items: center;
-  gap: 14px;
+  display: flex; align-items: center; gap: 14px;
   font-size: 0.84rem;
-  color: rgba(255,255,255,0.6);
-  margin-bottom: 10px;
-  flex-wrap: wrap;
+  color: rgba(255,255,255,0.62);
+  margin-bottom: 12px; flex-wrap: wrap;
 }
 
 .psd-rating-pill {
   background: rgba(59,130,246,0.22);
-  border: 1px solid rgba(59,130,246,0.48);
-  border-radius: 6px;
-  padding: 2px 10px;
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 1px;
-  color: #93c5fd;
+  border: 1px solid rgba(59,130,246,0.45);
+  border-radius: 6px; padding: 2px 10px;
+  font-size: 0.7rem; font-weight: 700;
+  letter-spacing: 1px; color: #93c5fd;
 }
 
 .psd-game-desc {
-  max-width: 620px;
   font-size: 0.88rem;
-  color: rgba(255,255,255,0.52);
-  line-height: 1.6;
-  margin: 0 0 16px;
+  color: rgba(255,255,255,0.48);
+  line-height: 1.62;
+  margin: 0 0 20px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -313,78 +228,101 @@
 }
 
 .psd-play-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
+  display: inline-flex; align-items: center; gap: 9px;
   background: linear-gradient(135deg, #2563eb, #6366f1);
-  border: none;
-  border-radius: 12px;
-  padding: 12px 32px;
-  color: #fff;
-  font-family: inherit;
-  font-size: 0.92rem;
-  font-weight: 800;
-  letter-spacing: 0.5px;
-  cursor: pointer;
+  border: none; border-radius: 12px;
+  padding: 13px 34px;
+  color: #fff; font-family: inherit;
+  font-size: 0.95rem; font-weight: 800;
+  letter-spacing: 0.5px; cursor: pointer;
   transition: transform 0.15s, box-shadow 0.2s;
-  box-shadow: 0 8px 24px rgba(37,99,235,0.5);
+  box-shadow: 0 8px 26px rgba(37,99,235,0.5);
+}
+.psd-play-btn:hover { transform: translateY(-2px) scale(1.04); box-shadow: 0 14px 36px rgba(37,99,235,0.65); }
+.psd-play-btn:active { transform: scale(0.97); }
+
+/* ── GAME SHELF SECTION ── */
+.psd-shelf-section {
+  position: relative;
+  z-index: 10;
+  flex-shrink: 0;
+  background: linear-gradient(0deg,
+    rgba(2,9,23,0.96) 0%,
+    rgba(2,9,23,0.6) 100%);
+  padding-bottom: 6px;
 }
 
-.psd-play-btn:hover {
-  transform: translateY(-2px) scale(1.04);
-  box-shadow: 0 14px 34px rgba(37,99,235,0.65);
+/* The horizontal scrolling shelf */
+.psd-shelf {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  padding: 48px 48px 22px; /* top padding = card lift room */
+  overflow-x: auto;
+  overflow-y: visible;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.psd-shelf::-webkit-scrollbar { display: none; }
+
+/* Game card */
+.psd-card {
+  flex-shrink: 0;
+  width: 148px;
+  height: 200px;
+  border-radius: 14px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px solid rgba(255,255,255,0.07);
+  transition:
+    transform 0.28s cubic-bezier(0.34,1.56,0.64,1),
+    border-color 0.22s ease,
+    box-shadow 0.28s ease;
+  background: #0a1628;
+  position: relative;
 }
 
-.psd-play-btn:active {
-  transform: scale(0.97);
+.psd-card:hover,
+.psd-card.selected {
+  transform: translateY(-22px) scale(1.07);
+  border-color: #00d2ff;
+  box-shadow:
+    0 22px 50px rgba(0,0,0,0.75),
+    0 0 28px rgba(0,210,255,0.45),
+    0 0 55px rgba(0,210,255,0.12);
+  z-index: 5;
+}
+
+.psd-card-img {
+  width: 100%; height: 100%;
+  object-fit: cover; display: block;
+  pointer-events: none; border-radius: 12px;
 }
 
 /* ── LAUNCH OVERLAY ── */
 .psd-launch-overlay {
-  position: fixed;
-  inset: 0;
+  position: fixed; inset: 0;
   background: #020917;
   z-index: 9999999;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
   gap: 30px;
-  opacity: 0;
-  pointer-events: none;
+  opacity: 0; pointer-events: none;
   transition: opacity 0.3s;
 }
-
-.psd-launch-overlay.active {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.psd-launch-logo {
-  animation: psdSpin 1.8s linear infinite;
-}
-
-@keyframes psdSpin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
-}
-
+.psd-launch-overlay.active { opacity: 1; pointer-events: auto; }
+.psd-launch-logo { animation: psdSpin 1.8s linear infinite; }
+@keyframes psdSpin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
 .psd-launch-bar {
-  width: 200px;
-  height: 3px;
+  width: 200px; height: 3px;
   background: rgba(255,255,255,0.08);
-  border-radius: 3px;
-  overflow: hidden;
+  border-radius: 3px; overflow: hidden;
 }
-
 .psd-launch-bar-fill {
-  height: 100%;
-  width: 0%;
+  height: 100%; width: 0%;
   background: linear-gradient(90deg, #2563eb, #00d2ff);
   border-radius: 3px;
   transition: width 1.3s ease;
 }
-
-.psd-launch-overlay.active .psd-launch-bar-fill {
-  width: 100%;
-}
+.psd-launch-overlay.active .psd-launch-bar-fill { width: 100%; }
