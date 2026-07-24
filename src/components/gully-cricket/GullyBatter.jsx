@@ -182,7 +182,7 @@ export function GullyBatter() {
       </group>
 
       {/* Overhead Batter Tag */}
-      {gameState !== 'MENU' && gameState !== 'BOOT' && (
+      {(gameState === 'INNINGS_1' || gameState === 'INNINGS_2') && (
         <Html position={[0, 2.3, 0]} center distanceFactor={14}>
           <div style={{
             background: 'rgba(15, 23, 42, 0.9)',

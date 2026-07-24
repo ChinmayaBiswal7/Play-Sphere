@@ -226,157 +226,77 @@ export function GullyCricketGame({ onExit }) {
         </Suspense>
       </Canvas>
 
-      {/* ── 3. HOME MENU SCREEN ── */}
+      {/* ── 3. HOME MENU SCREEN (Replicated exactly from Image 2 mockup) ── */}
       {gameState === 'MENU' && (() => {
-        const MENU_OPTIONS = [
+        const CARDS = [
           {
             id: 'quick',
             title: 'QUICK MATCH',
-            subtitle: 'NEIGHBORHOOD SHOWDOWN',
+            sub: 'JUMP IN & PLAY A QUICK GAME',
+            color: '#0ea5e9',
             icon: '🏏',
-            desc: 'Jump straight into a 1-over, 5v5 gully cricket match. Ideal for a fast-paced street showdown with no lobby waits.',
-            bullets: [
-              '⏱️ Format: 1 Over (6 balls)',
-              '👥 Teams: 5v5 Street Teams',
-              '🧱 Rules: Standard Gully Rules',
-              '📍 Pitch: Narrow Asphalt Alley'
-            ],
-            color: '#facc15',
             action: () => {
               useGullyCricketStore.setState({ totalOvers: 1, teamSize: 5, gameMode: 'STREET_SERIES' });
               resetMatch();
-            },
-            banner: (
-              <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
-                <div style={{ position: 'absolute', width: '200px', height: '200px', borderRadius: '50%', background: 'rgba(250,204,21,0.08)', filter: 'blur(30px)' }} />
-                <span style={{ fontSize: '7rem', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.5))' }}>🏏</span>
-                <div style={{ position: 'absolute', bottom: '15px', color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', fontWeight: 'bold', letterSpacing: '4px' }}>ALLEYWAY ARENA</div>
-              </div>
-            )
+            }
           },
           {
             id: 'tournament',
             title: 'TOURNAMENT',
-            subtitle: 'STREET CHAMPIONSHIP',
+            sub: 'COMPETE & WIN THE TROPHY',
+            color: '#22c55e',
             icon: '🏆',
-            desc: 'Play a full 2-over street series match to climb the local ranks and win the Gully Cricket Championship Cup.',
-            bullets: [
-              '⏱️ Format: 2 Overs (12 balls)',
-              '🏆 Cup: Street Series Trophy',
-              '🔥 Challenge: Advanced AI Bowlers',
-              '🎯 Rules: One-Tippi catches active'
-            ],
-            color: '#10b981',
             action: () => {
               useGullyCricketStore.setState({ totalOvers: 2, teamSize: 5, gameMode: 'STREET_SERIES' });
               resetMatch();
-            },
-            banner: (
-              <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #064e3b 0%, #065f46 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
-                <div style={{ position: 'absolute', width: '200px', height: '200px', borderRadius: '50%', background: 'rgba(16,185,129,0.08)', filter: 'blur(30px)' }} />
-                <span style={{ fontSize: '7rem', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.5))' }}>🏆</span>
-                <div style={{ position: 'absolute', bottom: '15px', color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', fontWeight: 'bold', letterSpacing: '4px' }}>CHAMPIONSHIP STAGE</div>
-              </div>
-            )
+            }
           },
           {
-            id: 'duel',
-            title: '1V1 GULLY DUEL',
-            subtitle: 'STREET FACE-OFF',
-            icon: '⚔️',
-            desc: '1v1 single over battle between Batter and Bowler on a narrow asphalt street pitch. No fielders, just direct dueling.',
-            bullets: [
-              '⏱️ Format: 1 Over (6 balls)',
-              '👥 Teams: 1v1 Batter vs Bowler',
-              '🎯 Focus: Pure hitting & pitching',
-              '🛡️ Status: High-stakes local rivalry'
-            ],
-            color: '#06b6d4',
+            id: 'career',
+            title: 'CAREER MODE',
+            sub: 'RISE FROM THE STREETS TO BECOME A LEGEND',
+            color: '#a855f7',
+            icon: '👕',
             action: () => {
-              useGullyCricketStore.setState({ totalOvers: 1, teamSize: 1, gameMode: '1V1_CHALLENGE' });
+              useGullyCricketStore.setState({ totalOvers: 2, teamSize: 5, gameMode: 'STREET_SERIES' });
               resetMatch();
-            },
-            banner: (
-              <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #083344 0%, #155e75 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
-                <div style={{ position: 'absolute', width: '200px', height: '200px', borderRadius: '50%', background: 'rgba(6,182,212,0.08)', filter: 'blur(30px)' }} />
-                <span style={{ fontSize: '7rem', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.5))' }}>⚔️</span>
-                <div style={{ position: 'absolute', bottom: '15px', color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', fontWeight: 'bold', letterSpacing: '4px' }}>ASPHALT CREASE</div>
-              </div>
-            )
+            }
+          },
+          {
+            id: '2v2',
+            title: '2v2 MODE',
+            sub: 'TEAM UP WITH YOUR FRIEND & DOMINATE',
+            color: '#f97316',
+            icon: '🤝',
+            action: () => {
+              useGullyCricketStore.setState({ totalOvers: 1, teamSize: 2, gameMode: '1V1_CHALLENGE' });
+              resetMatch();
+            }
           },
           {
             id: 'practice',
-            title: 'PRACTICE NETS',
-            subtitle: 'TRAINING & WARMUP',
-            icon: '⚾',
-            desc: 'Perfect your timing feedback and batting stroke placement in the nets against an automatic bowling machine.',
-            bullets: [
-              '⏱️ Format: Endless Balls',
-              '🎯 Feedback: Live timing guide',
-              '🛡️ Status: Infinite balls, no wickets',
-              '💪 Skill: Master Cover Drive & Pull'
-            ],
-            color: '#a855f7',
+            title: 'PRACTICE',
+            sub: 'SHARPEN YOUR SKILLS IN THE NETS',
+            color: '#14b8a6',
+            icon: '🥅',
             action: () => {
               useGullyCricketStore.setState({ totalOvers: 5, teamSize: 5, gameMode: 'FREE_HIT' });
               resetMatch();
-            },
-            banner: (
-              <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #3b0764 0%, #581c87 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
-                <div style={{ position: 'absolute', width: '200px', height: '200px', borderRadius: '50%', background: 'rgba(168,85,247,0.08)', filter: 'blur(30px)' }} />
-                <span style={{ fontSize: '7rem', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.5))' }}>⚾</span>
-                <div style={{ position: 'absolute', bottom: '15px', color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', fontWeight: 'bold', letterSpacing: '4px' }}>TRAINING NETS</div>
-              </div>
-            )
+            }
           },
           {
-            id: 'rules',
-            title: 'GULLY RULES',
-            subtitle: 'LOCAL CODES & LAWS',
-            icon: '📜',
-            desc: 'Learn the unique rules of Indian street cricket: One-Tippi catches count as OUT, direct wall hits score 4s/6s, and neighbor window breaks lead to OUT.',
-            bullets: [
-              '🥎 One-Tippi: Catches after 1 bounce are OUT!',
-              '🧱 Wall Hits: Side wall hits = 4 Runs!',
-              '🏠 Roof Hits: Direct roof hits = 6 Runs!',
-              '🪟 Windows: Over the roof = OUT (Lost Ball!)'
-            ],
-            color: '#ef4444',
+            id: 'custom',
+            title: 'CUSTOM MATCH',
+            sub: 'CREATE YOUR OWN MATCH YOUR RULES',
+            color: '#e11d48',
+            icon: '🏏',
             action: () => {
               setIsSettingsOpen(true);
-            },
-            banner: (
-              <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #450a0a 0%, #7f1d1d 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
-                <div style={{ position: 'absolute', width: '200px', height: '200px', borderRadius: '50%', background: 'rgba(239,68,68,0.08)', filter: 'blur(30px)' }} />
-                <span style={{ fontSize: '7rem', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.5))' }}>📜</span>
-                <div style={{ position: 'absolute', bottom: '15px', color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', fontWeight: 'bold', letterSpacing: '4px' }}>LOCAL STREET LAW</div>
-              </div>
-            )
-          },
-          {
-            id: 'exit',
-            title: 'EXIT GAME',
-            subtitle: 'RETURN TO CONSOLE',
-            icon: '🚪',
-            desc: 'Exit Gully Cricket 3D and return to the PlaySphere Console dashboard home to access other games.',
-            bullets: [
-              '💾 Status: Session ended cleanly',
-              '🎮 Console: Back to PS5 Hub',
-              '👥 Profile: Statistics preserved'
-            ],
-            color: '#64748b',
-            action: onExit,
-            banner: (
-              <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
-                <div style={{ position: 'absolute', width: '200px', height: '200px', borderRadius: '50%', background: 'rgba(100,116,139,0.08)', filter: 'blur(30px)' }} />
-                <span style={{ fontSize: '7rem', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.5))' }}>🚪</span>
-                <div style={{ position: 'absolute', bottom: '15px', color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', fontWeight: 'bold', letterSpacing: '4px' }}>POWER OFF</div>
-              </div>
-            )
+            }
           }
         ];
 
-        const selected = MENU_OPTIONS[selectedMenuIndex];
+        const activeCard = CARDS[selectedMenuIndex] || CARDS[0];
 
         return (
           <div style={{
@@ -385,276 +305,353 @@ export function GullyCricketGame({ onExit }) {
             pointerEvents: 'auto',
             display: 'flex',
             flexDirection: 'column',
-            padding: '24px 36px',
+            justifyContent: 'space-between',
+            padding: '20px 32px',
             fontFamily: "'Orbitron', sans-serif",
-            background: 'radial-gradient(circle at center, rgba(15, 23, 42, 0.45) 0%, rgba(9, 13, 22, 0.85) 100%)',
-            boxSizing: 'border-box'
+            background: 'radial-gradient(circle at center, rgba(15, 23, 42, 0.55) 0%, rgba(9, 13, 22, 0.88) 100%)',
+            boxSizing: 'border-box',
+            userSelect: 'none'
           }}>
-            {/* ── HEADER PANEL (Mocked from user reference screen) ── */}
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              width: '100%',
-              marginBottom: '20px',
-              flexShrink: 0
-            }}>
-              {/* Profile card block */}
+            {/* ── TOP HEADER ROW ── */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }}>
+              
+              {/* Profile Card (Top-Left) */}
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '14px',
-                background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%)',
-                border: '1.5px solid rgba(250, 204, 21, 0.3)',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.4), 0 0 15px rgba(250,204,21,0.1)',
-                borderRadius: '12px',
-                padding: '8px 16px',
-                minWidth: '280px',
-                backdropFilter: 'blur(10px)'
+                gap: '12px',
+                background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.9))',
+                border: '1.5px solid rgba(59, 130, 246, 0.4)',
+                borderRadius: '14px',
+                padding: '10px 16px',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+                minWidth: '260px'
               }}>
-                {/* Avatar SVG silhouette */}
+                {/* Character Illustration Avatar */}
                 <div style={{
-                  width: '42px',
-                  height: '42px',
-                  borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #3b82f6, #1e3a8a)',
+                  width: '46px',
+                  height: '46px',
+                  borderRadius: '10px',
+                  background: 'linear-gradient(135deg, #1e3a8a, #0284c7)',
+                  border: '2px solid #facc15',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  border: '2px solid #facc15',
-                  boxShadow: '0 0 8px rgba(250,204,21,0.5)',
+                  overflow: 'hidden',
                   flexShrink: 0
                 }}>
-                  <svg viewBox="0 0 38 38" width="30" height="30" fill="none">
-                    <circle cx="19" cy="14" r="6.5" fill="rgba(255,255,255,0.9)"/>
-                    <ellipse cx="19" cy="32" rx="11" ry="8" fill="rgba(255,255,255,0.9)"/>
+                  <svg viewBox="0 0 38 38" width="34" height="34" fill="none">
+                    <circle cx="19" cy="14" r="7" fill="#fff"/>
+                    <ellipse cx="19" cy="32" rx="11" ry="8" fill="#fff"/>
+                    <rect x="11" y="22" width="16" height="5" fill="#ef4444" rx="2"/>
                   </svg>
                 </div>
-                {/* Profile details */}
                 <div style={{ flex: 1, textAlign: 'left' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ color: '#fff', fontSize: '0.9rem', fontWeight: '900', letterSpacing: '1px' }}>CHINMAYA</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ color: '#fff', fontSize: '0.92rem', fontWeight: '900', letterSpacing: '1px' }}>CHINMAYA</span>
+                    <span style={{ cursor: 'pointer', fontSize: '0.75rem', opacity: 0.7 }}>✏️</span>
                     <span style={{
-                      background: 'linear-gradient(135deg, #facc15, #eab308)',
-                      color: '#000',
-                      fontSize: '0.62rem',
+                      background: '#000',
+                      border: '1px solid #facc15',
+                      color: '#facc15',
+                      fontSize: '0.6rem',
                       fontWeight: '900',
-                      padding: '1px 5px',
-                      borderRadius: '3px',
-                      fontFamily: 'monospace'
-                    }}>LVL 12</span>
+                      padding: '1px 6px',
+                      borderRadius: '4px',
+                      marginLeft: 'auto'
+                    }}>12</span>
                   </div>
-                  <div style={{ color: '#94a3b8', fontSize: '0.65rem', fontWeight: '800', marginBottom: '4px', letterSpacing: '0.5px' }}>Gully Legend</div>
-                  {/* XP Bar */}
-                  <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
-                    <div style={{ width: '70%', height: '100%', background: '#3b82f6', boxShadow: '0 0 6px #3b82f6' }} />
+                  <div style={{ color: '#facc15', fontSize: '0.68rem', fontWeight: '700', fontStyle: 'italic', margin: '2px 0 4px' }}>Gully Legend</div>
+                  <div style={{ width: '100%', height: '5px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden' }}>
+                    <div style={{ width: '70%', height: '100%', background: 'linear-gradient(90deg, #3b82f6, #60a5fa)', boxShadow: '0 0 8px #3b82f6' }} />
                   </div>
+                  <div style={{ color: '#94a3b8', fontSize: '0.58rem', fontWeight: '800', marginTop: '2px', textAlign: 'center' }}>2450 / 3500</div>
                 </div>
               </div>
 
-              {/* Title Logo block */}
-              <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              {/* Main Title Center Logo */}
+              <div style={{ textAlign: 'center', flex: 1, margin: '0 20px' }}>
+                <div style={{ fontSize: '1.2rem', marginBottom: '-6px' }}>👑</div>
                 <h1 style={{
-                  fontSize: '2rem',
+                  fontSize: '3rem',
                   fontWeight: '900',
-                  letterSpacing: '6px',
+                  letterSpacing: '4px',
                   margin: 0,
-                  background: 'linear-gradient(90deg, #ffffff 0%, #facc15 50%, #ffffff 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  textShadow: '0 4px 15px rgba(0,0,0,0.5)'
-                }}>GULLY CRICKET</h1>
-                <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.58rem', fontWeight: '800', letterSpacing: '4px', marginTop: '2px' }}>APNA GAME. APNA STYLE.</span>
+                  fontStyle: 'italic',
+                  lineHeight: 1,
+                  textShadow: '0 4px 20px rgba(0,0,0,0.8)'
+                }}>
+                  <span style={{ color: '#ffffff' }}>GULLY </span>
+                  <span style={{ color: '#facc15' }}>CRICKET </span>
+                  <span style={{ fontSize: '2rem' }}>🔴</span>
+                </h1>
+                <div style={{
+                  color: '#ffffff',
+                  fontSize: '0.7rem',
+                  fontWeight: '900',
+                  letterSpacing: '5px',
+                  marginTop: '4px',
+                  textShadow: '0 2px 10px rgba(0,0,0,0.8)'
+                }}>
+                  APNA GAME. APNA STYLE.
+                </div>
               </div>
 
-              {/* Currency & System buttons */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                {/* Coins */}
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  background: 'rgba(15, 23, 42, 0.8)',
-                  border: '1.5px solid rgba(250, 204, 21, 0.4)',
-                  borderRadius: '10px',
-                  padding: '6px 12px',
-                  fontSize: '0.82rem',
-                  fontWeight: '900',
-                  color: '#facc15'
-                }}>
-                  <span>🪙</span>
-                  <span>1,250</span>
+              {/* Top Right Currencies & Buttons */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' }}>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  {/* Coins */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    background: 'rgba(15, 23, 42, 0.9)',
+                    border: '1.5px solid #facc15',
+                    borderRadius: '8px',
+                    padding: '4px 10px',
+                    color: '#fff',
+                    fontWeight: '900',
+                    fontSize: '0.85rem'
+                  }}>
+                    <span style={{ background: '#facc15', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontSize: '0.7rem' }}>🪙</span>
+                    <span>1250</span>
+                    <span style={{ background: '#facc15', color: '#000', borderRadius: '4px', padding: '0 5px', fontSize: '0.8rem', cursor: 'pointer' }}>+</span>
+                  </div>
+                  {/* Gems */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    background: 'rgba(15, 23, 42, 0.9)',
+                    border: '1.5px solid #a855f7',
+                    borderRadius: '8px',
+                    padding: '4px 10px',
+                    color: '#fff',
+                    fontWeight: '900',
+                    fontSize: '0.85rem'
+                  }}>
+                    <span style={{ color: '#a855f7', fontSize: '1rem' }}>💎</span>
+                    <span>35</span>
+                    <span style={{ background: '#facc15', color: '#000', borderRadius: '4px', padding: '0 5px', fontSize: '0.8rem', cursor: 'pointer' }}>+</span>
+                  </div>
                 </div>
-                {/* Diamonds */}
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  background: 'rgba(15, 23, 42, 0.8)',
-                  border: '1.5px solid rgba(139, 92, 246, 0.4)',
-                  borderRadius: '10px',
-                  padding: '6px 12px',
-                  fontSize: '0.82rem',
-                  fontWeight: '900',
-                  color: '#a78bfa'
-                }}>
-                  <span>💎</span>
-                  <span>35</span>
+
+                {/* System Icons Row */}
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  {[
+                    { icon: '🏆', label: 'LEADERBOARD', badge: true },
+                    { icon: '⚙️', label: 'SETTINGS', action: () => setIsSettingsOpen(true) },
+                    { icon: '🎁', label: 'REWARDS' },
+                    { icon: '🚪', label: 'EXIT', action: onExit }
+                  ].map((btn, i) => (
+                    <button
+                      key={i}
+                      onClick={btn.action}
+                      style={{
+                        background: 'rgba(15, 23, 42, 0.85)',
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        borderRadius: '8px',
+                        width: '42px',
+                        height: '42px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#fff',
+                        cursor: 'pointer',
+                        position: 'relative',
+                        fontSize: '1rem'
+                      }}
+                    >
+                      {btn.badge && (
+                        <span style={{ position: 'absolute', top: '-2px', right: '-2px', width: '10px', height: '10px', background: '#ef4444', borderRadius: '50%', border: '2px solid #000' }} />
+                      )}
+                      <span>{btn.icon}</span>
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
 
-            {/* ── MAIN WORKSPACE (FC26 style split layout) ── */}
+            {/* ── CENTER 6 CARDS ROW (Side-by-Side like Image 2) ── */}
             <div style={{
               display: 'flex',
+              gap: '14px',
+              justifyContent: 'center',
+              alignItems: 'stretch',
+              margin: '20px 0',
               flex: 1,
-              width: '100%',
-              gap: '30px',
-              minHeight: 0,
-              boxSizing: 'border-box'
+              maxHeight: '380px'
             }}>
-              {/* LEFT COLUMN: Vertical Navigation Menu List */}
-              <div style={{
-                width: '320px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '10px',
-                overflowY: 'auto',
-                paddingRight: '6px',
-                boxSizing: 'border-box'
-              }}>
-                {MENU_OPTIONS.map((opt, idx) => {
-                  const isActive = idx === selectedMenuIndex;
-                  return (
-                    <div
-                      key={opt.id}
-                      onClick={() => {
-                        setSelectedMenuIndex(idx);
-                        if (window.sounds && typeof window.sounds.playNav === 'function') window.sounds.playNav();
-                      }}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '14px',
-                        background: isActive 
-                          ? `linear-gradient(90deg, rgba(250, 204, 21, 0.22) 0%, rgba(15, 23, 42, 0.85) 100%)` 
-                          : 'rgba(15, 23, 42, 0.55)',
-                        border: '1.5px solid',
-                        borderColor: isActive ? '#facc15' : 'rgba(255, 255, 255, 0.08)',
-                        boxShadow: isActive ? '0 0 14px rgba(250,204,21,0.15)' : 'none',
-                        borderRadius: '10px',
-                        padding: '16px 20px',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        transform: isActive ? 'translateX(6px)' : 'none',
-                        textAlign: 'left'
-                      }}
-                    >
-                      <span style={{ fontSize: '1.6rem', filter: isActive ? 'drop-shadow(0 0 4px rgba(250,204,21,0.5))' : 'none' }}>
-                        {opt.icon}
-                      </span>
-                      <div>
-                        <div style={{ color: isActive ? '#facc15' : '#fff', fontWeight: '900', fontSize: '0.85rem', letterSpacing: '1px' }}>
-                          {opt.title}
-                        </div>
-                        <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.58rem', fontWeight: '700', marginTop: '2px', letterSpacing: '0.5px' }}>
-                          {opt.subtitle}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* RIGHT COLUMN: Dynamic Preview Details Panel */}
-              <div style={{
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                background: 'rgba(15, 23, 42, 0.72)',
-                border: '1.5px solid rgba(255,255,255,0.08)',
-                boxShadow: '0 12px 40px rgba(0,0,0,0.5)',
-                borderRadius: '16px',
-                overflow: 'hidden',
-                backdropFilter: 'blur(16px)',
-                boxSizing: 'border-box'
-              }}>
-                {/* Banner illustration */}
-                <div style={{ height: '170px', width: '100%', flexShrink: 0 }}>
-                  {selected.banner}
-                </div>
-
-                {/* Details body */}
-                <div style={{
-                  padding: '24px 28px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  flex: 1,
-                  textAlign: 'left',
-                  boxSizing: 'border-box'
-                }}>
-                  <div>
-                    <span style={{ color: selected.color, fontSize: '0.72rem', fontWeight: '800', letterSpacing: '2px', textTransform: 'uppercase' }}>
-                      {selected.subtitle}
-                    </span>
-                    <h2 style={{ color: '#fff', fontSize: '1.6rem', margin: '4px 0 10px', fontWeight: '900', letterSpacing: '1px' }}>
-                      {selected.title}
-                    </h2>
-                    <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.82rem', lineHeight: '1.55', margin: '0 0 18px', fontFamily: 'sans-serif' }}>
-                      {selected.desc}
-                    </p>
-
-                    {/* Bullet Highlights Grid */}
-                    <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: '1fr 1fr',
-                      gap: '8px 16px',
-                      background: 'rgba(255,255,255,0.03)',
-                      border: '1.5px solid rgba(255,255,255,0.04)',
-                      borderRadius: '8px',
-                      padding: '12px 16px',
-                      fontFamily: 'sans-serif'
-                    }}>
-                      {selected.bullets.map((b, idx) => (
-                        <div key={idx} style={{ color: 'rgba(255,255,255,0.68)', fontSize: '0.75rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          {b}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Action CTA Button */}
-                  <button
-                    onClick={selected.action}
+              {CARDS.map((card, idx) => {
+                const isSelected = idx === selectedMenuIndex;
+                return (
+                  <div
+                    key={card.id}
+                    onClick={() => setSelectedMenuIndex(idx)}
+                    onDoubleClick={card.action}
                     style={{
-                      background: `linear-gradient(135deg, ${selected.color}, ${selected.color}dd)`,
-                      color: '#000',
-                      border: 'none',
-                      borderRadius: '10px',
-                      padding: '16px 20px',
-                      fontFamily: 'inherit',
-                      fontSize: '0.92rem',
-                      fontWeight: '900',
-                      letterSpacing: '2px',
+                      flex: 1,
+                      background: isSelected 
+                        ? `linear-gradient(180deg, ${card.color}25 0%, rgba(15, 23, 42, 0.95) 100%)`
+                        : 'rgba(15, 23, 42, 0.75)',
+                      border: '2px solid',
+                      borderColor: isSelected ? '#facc15' : card.color,
+                      borderRadius: '14px',
+                      padding: '16px 12px',
                       cursor: 'pointer',
-                      boxShadow: `0 8px 24px rgba(0,0,0,0.3), 0 0 15px ${selected.color}33`,
-                      transition: 'transform 0.15s, box-shadow 0.2s',
-                      width: '100%',
-                      marginTop: '16px'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-2px) scale(1.01)';
-                      e.currentTarget.style.boxShadow = `0 12px 30px rgba(0,0,0,0.4), 0 0 25px ${selected.color}55`;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'none';
-                      e.currentTarget.style.boxShadow = `0 8px 24px rgba(0,0,0,0.3), 0 0 15px ${selected.color}33`;
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      textAlign: 'center',
+                      transition: 'all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                      transform: isSelected ? 'translateY(-12px) scale(1.04)' : 'scale(0.98)',
+                      boxShadow: isSelected 
+                        ? `0 16px 36px rgba(0,0,0,0.6), 0 0 25px ${card.color}66`
+                        : '0 4px 15px rgba(0,0,0,0.4)',
+                      backdropFilter: 'blur(10px)',
+                      position: 'relative',
+                      overflow: 'hidden'
                     }}
                   >
-                    ▶ LAUNCH SESSION
-                  </button>
+                    {/* Card Top Artwork Icon */}
+                    <div style={{
+                      width: '100%',
+                      height: '140px',
+                      borderRadius: '10px',
+                      background: `radial-gradient(circle at center, ${card.color}33 0%, transparent 70%)`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '3.5rem',
+                      filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.5))'
+                    }}>
+                      {card.icon}
+                    </div>
+
+                    {/* Card Content */}
+                    <div style={{ width: '100%' }}>
+                      <h3 style={{
+                        color: isSelected ? '#facc15' : '#ffffff',
+                        fontSize: '1.05rem',
+                        fontWeight: '900',
+                        margin: '8px 0 6px',
+                        letterSpacing: '1px',
+                        fontStyle: 'italic',
+                        lineHeight: 1.1
+                      }}>
+                        {card.title}
+                      </h3>
+                      <p style={{
+                        color: 'rgba(255,255,255,0.65)',
+                        fontSize: '0.65rem',
+                        fontWeight: '700',
+                        lineHeight: '1.3',
+                        margin: 0,
+                        fontFamily: 'sans-serif'
+                      }}>
+                        {card.sub}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* ── BOTTOM ACTION ROW ── */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+              
+              {/* Daily Challenge Widget (Bottom-Left) */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                background: 'rgba(15, 23, 42, 0.85)',
+                border: '1px solid rgba(255,255,255,0.15)',
+                borderRadius: '10px',
+                padding: '8px 14px',
+                minWidth: '240px',
+                textAlign: 'left'
+              }}>
+                <span style={{ fontSize: '1.8rem' }}>🎬</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ color: '#fff', fontSize: '0.72rem', fontWeight: '900', letterSpacing: '1px' }}>DAILY CHALLENGE</div>
+                  <div style={{ color: '#94a3b8', fontSize: '0.6rem', fontFamily: 'sans-serif' }}>Win matches to claim rewards!</div>
                 </div>
+                <button style={{ background: '#facc15', color: '#000', border: 'none', borderRadius: '4px', padding: '4px 10px', fontWeight: '900', fontSize: '0.7rem', cursor: 'pointer' }}>
+                  VIEW
+                </button>
+              </div>
+
+              {/* Big Yellow PLAY NOW Button (Center) */}
+              <button
+                onClick={activeCard.action}
+                style={{
+                  background: 'linear-gradient(135deg, #facc15 0%, #eab308 100%)',
+                  color: '#000000',
+                  border: 'none',
+                  borderRadius: '35px',
+                  padding: '16px 64px',
+                  fontFamily: "'Orbitron', sans-serif",
+                  fontSize: '1.4rem',
+                  fontWeight: '900',
+                  fontStyle: 'italic',
+                  letterSpacing: '3px',
+                  cursor: 'pointer',
+                  boxShadow: '0 8px 30px rgba(250, 204, 21, 0.5), inset 0 2px 0 rgba(255,255,255,0.5)',
+                  transition: 'transform 0.15s, box-shadow 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'scale(1.06)';
+                  e.currentTarget.style.boxShadow = '0 12px 40px rgba(250, 204, 21, 0.7)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                  e.currentTarget.style.boxShadow = '0 8px 30px rgba(250, 204, 21, 0.5)';
+                }}
+              >
+                <span>PLAY NOW</span>
+                <span style={{ fontSize: '1.2rem' }}>🏏</span>
+              </button>
+
+              {/* Online Players & Shop (Bottom-Right) */}
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <div style={{
+                  background: 'rgba(15, 23, 42, 0.85)',
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  borderRadius: '8px',
+                  padding: '8px 14px',
+                  color: '#fff',
+                  fontSize: '0.72rem',
+                  fontWeight: '800',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}>
+                  <span>👥</span>
+                  <span>PLAYERS ONLINE: 256</span>
+                </div>
+
+                <button style={{
+                  background: 'linear-gradient(135deg, #be185d 0%, #881337 100%)',
+                  border: '1.5px solid #facc15',
+                  borderRadius: '8px',
+                  padding: '8px 16px',
+                  color: '#fff',
+                  fontWeight: '900',
+                  fontSize: '0.75rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}>
+                  <span>🛒</span>
+                  <span>SHOP</span>
+                </button>
               </div>
             </div>
           </div>
