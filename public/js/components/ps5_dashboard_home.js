@@ -98,6 +98,12 @@
       heroBg.style.backgroundImage = `url('${GAMES[index].img}')`;
     }
 
+    // Update Steam-like clear key art banner image
+    const heroBanner = document.getElementById('psd-hero-banner');
+    if (heroBanner) {
+      heroBanner.style.backgroundImage = `url('${GAMES[index].img}')`;
+    }
+
     // Animate hero content
     const content = document.getElementById('ps5-details');
     if (content) content.classList.remove('visible');

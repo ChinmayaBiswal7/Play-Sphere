@@ -3,7 +3,8 @@
 ═══════════════════════════════════════════════ */
 
 /* Root */
-.ps5-console-wrapper {
+.ps5-console-wrapper,
+#ps5-dash {
   position: fixed;
   inset: 0;
   background: #020917;
@@ -167,6 +168,28 @@
   align-items: flex-end;
   padding: 0 52px 24px;
   min-height: 0;
+  overflow: hidden;
+}
+
+.psd-hero-banner {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 65%;
+  background-size: cover;
+  background-position: center 25%;
+  z-index: 1;
+  transition: background-image 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  opacity: 0.85;
+}
+
+.psd-hero-banner-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: linear-gradient(to right, #020917 28%, rgba(2,9,23,0.85) 45%, rgba(2,9,23,0.4) 65%, transparent 100%),
+              linear-gradient(to top, rgba(2,9,23,0.98) 0%, rgba(2,9,23,0.35) 40%, transparent 100%);
 }
 
 .psd-hero-content {

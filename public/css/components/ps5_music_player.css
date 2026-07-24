@@ -2,8 +2,8 @@
 
 #ps5-music-player {
   position: absolute;
-  bottom: 30px;
-  right: 40px;
+  bottom: 270px; /* Floats perfectly above the scrolling cards shelf on the right */
+  right: 48px;
   z-index: 100;
   display: none; /* Hidden by default at root to prevent flash during boot */
   align-items: center;
