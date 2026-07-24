@@ -1,130 +1,352 @@
-/* ── DASHBOARD HOME ── */
-.ps5-dashboard {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  box-sizing: border-box;
-  padding: 40px 60px;
-  background: radial-gradient(circle at 50% 50%, #0f172a 0%, #020617 100%);
-  transition: filter 0.8s ease;
+/* ═══════════════════════════════════════════════
+   PlaySphere 5 — Dashboard Home CSS (Complete Rebuild)
+═══════════════════════════════════════════════ */
+
+/* Root wrapper */
+.ps5-console-wrapper {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at 30% 60%, #0d1f3c 0%, #020917 100%);
+  overflow: hidden;
+  font-family: 'Outfit', 'Segoe UI', sans-serif;
+  color: #f8fafc;
+  user-select: none;
 }
 
-/* Floating background particle canvas */
+/* Particle canvas */
 #ps5-bg-canvas {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  inset: 0;
   pointer-events: none;
   z-index: 0;
-  opacity: 0.65;
+  opacity: 0.5;
 }
 
-/* TOP STATUS BAR */
-.ps5-top-nav, .ps5-header {
+/* ── TOP NAV BAR ── */
+.psd-topbar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 72px;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  z-index: 10;
+  justify-content: space-between;
+  padding: 0 48px;
+  z-index: 20;
+  background: linear-gradient(180deg, rgba(2,9,23,0.85) 0%, transparent 100%);
 }
 
-.ps5-nav-menu, .ps5-nav-tabs {
+.psd-tabs {
   display: flex;
-  gap: 30px;
+  gap: 6px;
+}
+
+.psd-tab {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.45);
+  font-family: inherit;
   font-size: 0.95rem;
-  letter-spacing: 0.15em;
+  font-weight: 700;
+  letter-spacing: 2px;
   text-transform: uppercase;
-  font-weight: 600;
-  color: rgba(248, 250, 252, 0.55);
-}
-
-.ps5-nav-item, .ps5-nav-btn {
+  padding: 6px 14px;
   cursor: pointer;
+  border-radius: 6px;
+  transition: color 0.2s, background 0.2s;
   position: relative;
-  transition: color 0.3s;
 }
 
-.ps5-nav-item.active, .ps5-nav-btn.active, .ps5-nav-item:hover, .ps5-nav-btn:hover {
-  color: #ffffff;
+.psd-tab.active {
+  color: #fff;
 }
 
-.ps5-nav-item.active::after, .ps5-nav-btn.active::after {
+.psd-tab.active::after {
   content: '';
   position: absolute;
-  bottom: -8px;
-  left: 0;
-  width: 100%;
+  bottom: -4px; left: 14px; right: 14px;
   height: 2px;
   background: #3b82f6;
-  box-shadow: 0 0 10px #3b82f6;
+  box-shadow: 0 0 8px #3b82f6;
+  border-radius: 2px;
 }
 
-.ps5-system-status {
+.psd-tab:hover {
+  color: rgba(255,255,255,0.8);
+  background: rgba(255,255,255,0.05);
+}
+
+/* Right actions row */
+.psd-actions {
   display: flex;
   align-items: center;
-  gap: 20px;
-  color: rgba(248, 250, 252, 0.7);
-  font-size: 1.05rem;
-  font-weight: 300;
+  gap: 12px;
 }
 
-.ps5-status-icon, .ps5-icon-btn {
-  width: 38px;
-  height: 38px;
+.psd-icon-btn {
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
 }
 
-.ps5-avatar-btn {
-  background: transparent;
-  border: 2px solid #00d2ff;
+.psd-icon-btn:hover {
+  background: rgba(255,255,255,0.14);
+  transform: scale(1.08);
+}
+
+/* Avatar circle */
+.psd-avatar-btn {
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
-  width: 38px !important;
-  height: 38px !important;
+  border: 2px solid #00d2ff;
+  background: linear-gradient(135deg, #1e3a5f, #0f2040);
   padding: 0;
   overflow: hidden;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 12px rgba(0, 210, 255, 0.4);
+  box-shadow: 0 0 14px rgba(0,210,255,0.45);
+  transition: box-shadow 0.2s, transform 0.15s;
   flex-shrink: 0;
 }
 
-.ps5-avatar-img {
-  width: 38px !important;
-  height: 38px !important;
-  max-width: 38px !important;
-  max-height: 38px !important;
-  border-radius: 50% !important;
-  object-fit: cover !important;
-  display: block !important;
+.psd-avatar-btn:hover {
+  box-shadow: 0 0 22px rgba(0,210,255,0.7);
+  transform: scale(1.08);
 }
 
-#ps5-controller-trigger, .ps5-controller-btn {
-  display: flex; 
-  align-items: center; 
-  gap: 8px;
-  background: linear-gradient(135deg, rgba(59,130,246,0.18) 0%, rgba(99,102,241,0.18) 100%);
-  border: 1px solid rgba(99,102,241,0.55);
-  border-radius: 30px;
-  padding: 7px 14px 7px 10px;
-  cursor: pointer;
-  margin-left: 12px;
-  color: #c7d2fe;
-  font-family: inherit;
-  font-size: 0.7rem;
+#ps5-user-avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Clock */
+.psd-clock {
+  font-size: 0.88rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 1px;
+  color: #fff;
+  white-space: nowrap;
+}
+
+/* Controller button */
+.psd-controller-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: linear-gradient(135deg, rgba(0,210,255,0.12), rgba(99,102,241,0.18));
+  border: 1px solid rgba(0,210,255,0.38);
+  border-radius: 30px;
+  padding: 8px 16px;
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 1.2px;
   text-transform: uppercase;
-  transition: all 0.25s ease;
-  box-shadow: 0 0 16px rgba(99,102,241,0.25), inset 0 1px 0 rgba(255,255,255,0.08);
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 0 14px rgba(0,210,255,0.18);
+  white-space: nowrap;
+}
+
+.psd-controller-btn:hover {
+  background: linear-gradient(135deg, rgba(0,210,255,0.22), rgba(99,102,241,0.28));
+  box-shadow: 0 0 24px rgba(0,210,255,0.35);
+}
+
+/* ── MAIN CONTENT ── */
+.psd-main {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  z-index: 10;
+  padding-bottom: 0;
+}
+
+/* Game Shelf */
+.psd-shelf {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  padding: 20px 48px 28px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.psd-shelf::-webkit-scrollbar { display: none; }
+
+/* Game Card */
+.psd-card {
+  flex-shrink: 0;
+  width: 140px;
+  height: 185px;
+  border-radius: 14px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1), border-color 0.2s, box-shadow 0.25s;
+  position: relative;
+  background: #0d1b2a;
+}
+
+.psd-card:hover,
+.psd-card.selected {
+  transform: translateY(-18px) scale(1.07);
+  border-color: #00d2ff;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.7), 0 0 30px rgba(0,210,255,0.4);
+  z-index: 5;
+}
+
+.psd-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  pointer-events: none;
+}
+
+/* Game Details Panel */
+.psd-details {
+  padding: 22px 48px 36px;
+  background: linear-gradient(0deg, rgba(2,9,23,0.96) 0%, rgba(2,9,23,0.7) 70%, transparent 100%);
+  transform: translateY(14px);
+  opacity: 0;
+  transition: opacity 0.3s, transform 0.3s;
+  pointer-events: none;
+}
+
+.psd-details.visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.psd-game-title {
+  font-size: 2.1rem;
+  font-weight: 900;
+  margin: 0 0 10px;
+  letter-spacing: -0.5px;
+  line-height: 1;
+}
+
+.psd-game-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 0.85rem;
+  color: rgba(255,255,255,0.65);
+  margin-bottom: 12px;
+}
+
+.psd-rating-pill {
+  background: rgba(59,130,246,0.25);
+  border: 1px solid rgba(59,130,246,0.5);
+  border-radius: 6px;
+  padding: 2px 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #93c5fd;
+}
+
+.psd-game-desc {
+  max-width: 620px;
+  font-size: 0.9rem;
+  color: rgba(255,255,255,0.55);
+  line-height: 1.65;
+  margin: 0 0 18px;
+}
+
+.psd-play-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  border: none;
+  border-radius: 12px;
+  padding: 12px 30px;
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.2s;
+  box-shadow: 0 8px 24px rgba(59,130,246,0.45);
+}
+
+.psd-play-btn:hover {
+  transform: translateY(-2px) scale(1.04);
+  box-shadow: 0 14px 34px rgba(59,130,246,0.6);
+}
+
+.psd-play-btn:active {
+  transform: scale(0.97);
+}
+
+/* ── LAUNCH OVERLAY ── */
+.psd-launch-overlay {
+  position: fixed;
+  inset: 0;
+  background: #020917;
+  z-index: 999999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+
+.psd-launch-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.psd-launch-logo {
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.psd-launch-bar {
+  width: 220px;
+  height: 3px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.psd-launch-bar-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #3b82f6, #00d2ff);
+  border-radius: 3px;
+  transition: width 1.4s ease;
+}
+
+.psd-launch-overlay.active .psd-launch-bar-fill {
+  width: 100%;
 }
