@@ -754,7 +754,7 @@
   const GAME_INFO = {
     cricket: {
       title: 'Cricket Pro 2026',
-      banner: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?q=80&w=600&auto=format&fit=crop',
+      banner: '/cricket_card.png',
       playtime: null, // populated from real data
       lastplayed: null,
       developer: 'DeepMind Sports',
@@ -763,7 +763,7 @@
     },
     f1: {
       title: 'Formula 1 Racer',
-      banner: 'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?q=80&w=600&auto=format&fit=crop',
+      banner: '/f1_card.svg',
       playtime: null,
       lastplayed: null,
       developer: 'PlaySphere Racing',
@@ -772,7 +772,7 @@
     },
     mortal: {
       title: 'WWE Chibi Rumble',
-      banner: 'https://images.unsplash.com/photo-1552820728-8b83bb6b773f?q=80&w=600&auto=format&fit=crop',
+      banner: '/wwe_card.svg',
       playtime: null,
       lastplayed: null,
       developer: 'PlaySphere Arcade',

@@ -24,8 +24,13 @@
       </button>
 
       <!-- Profile Avatar Button -->
-      <button class="ps5-avatar-btn" id="btn-profile" title="View Profile" style="background: transparent; border: 2px solid #00d2ff; border-radius: 50%; width: 38px; height: 38px; padding: 0; overflow: hidden; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 12px rgba(0, 210, 255, 0.4); flex-shrink: 0;">
-        <img class="ps5-avatar-img" id="ps5-user-avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop" alt="User Profile" style="width: 38px !important; height: 38px !important; max-width: 38px !important; max-height: 38px !important; border-radius: 50% !important; object-fit: cover !important; display: block !important;">
+      <button class="ps5-avatar-btn" id="btn-profile" title="View Profile" style="background: linear-gradient(135deg, #1e3a5f, #0f2040); border: 2px solid #00d2ff; border-radius: 50%; width: 38px; height: 38px; padding: 0; overflow: hidden; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 12px rgba(0, 210, 255, 0.4); flex-shrink: 0;">
+        <svg id="ps5-user-avatar" viewBox="0 0 38 38" width="38" height="38" fill="none" xmlns="http://www.w3.org/2000/svg" style="border-radius: 50%; display: block; flex-shrink: 0;">
+          <circle cx="19" cy="19" r="19" fill="url(#avatarGrad)"/>
+          <circle cx="19" cy="15" r="7" fill="rgba(255,255,255,0.85)"/>
+          <ellipse cx="19" cy="32" rx="11" ry="8" fill="rgba(255,255,255,0.85)"/>
+          <defs><linearGradient id="avatarGrad" x1="0" y1="0" x2="38" y2="38" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#1e3a5f"/><stop offset="100%" stop-color="#0f2040"/></linearGradient></defs>
+        </svg>
       </button>
 
       <!-- Digital Clock -->
@@ -50,7 +55,7 @@
       </div>
       <!-- Game Card 2: Gully Cricket 3D -->
       <div class="ps5-game-card" data-game="gullycricket" id="game-gullycricket">
-        <img class="ps5-game-card-img" src="https://images.unsplash.com/photo-1531415074968-036ba1b575da?q=80&w=350&auto=format&fit=crop" alt="Gully Cricket 3D">
+        <img class="ps5-game-card-img" src="/gully_cricket_card.png" alt="Gully Cricket 3D">
       </div>
       <!-- Game Card 3: Rematch Football -->
       <div class="ps5-game-card" data-game="rematch" id="game-rematch">
@@ -62,7 +67,7 @@
       </div>
       <!-- Game Card 5: Cricket Pro 2026 -->
       <div class="ps5-game-card" data-game="cricket" id="game-cricket">
-        <img class="ps5-game-card-img" src="https://images.unsplash.com/photo-1531415074968-036ba1b575da?q=80&w=350&auto=format&fit=crop" alt="Cricket Pro 2026">
+        <img class="ps5-game-card-img" src="/cricket_card.png" alt="Cricket Pro 2026">
       </div>
       <!-- Game Card 6: Apex Stars F1 -->
       <div class="ps5-game-card" data-game="f1" id="game-f1">
