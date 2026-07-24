@@ -224,6 +224,12 @@
 
   /* ── INIT ── */
   function init() {
+    // Pre-cache all game card images immediately
+    GAMES.forEach(g => {
+      const img = new Image();
+      img.src = g.img;
+    });
+
     cards = Array.from(document.querySelectorAll('.psd-card'));
 
     cards.forEach((card, idx) => {
