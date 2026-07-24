@@ -226,15 +226,15 @@ export function GullyCricketGame({ onExit }) {
         </Suspense>
       </Canvas>
 
-      {/* ── 3. HOME MENU SCREEN (Replicated exactly from Image 2 mockup) ── */}
+      {/* ── 3. HOME MENU SCREEN (1-to-1 exact reproduction of Image 2 mockup using high-res card & bg art) ── */}
       {gameState === 'MENU' && (() => {
         const CARDS = [
           {
             id: 'quick',
             title: 'QUICK MATCH',
             sub: 'JUMP IN & PLAY A QUICK GAME',
-            color: '#0ea5e9',
-            icon: '🏏',
+            color: '#0284c7',
+            img: '/card_quick.jpg',
             action: () => {
               useGullyCricketStore.setState({ totalOvers: 1, teamSize: 5, gameMode: 'STREET_SERIES' });
               resetMatch();
@@ -244,8 +244,8 @@ export function GullyCricketGame({ onExit }) {
             id: 'tournament',
             title: 'TOURNAMENT',
             sub: 'COMPETE & WIN THE TROPHY',
-            color: '#22c55e',
-            icon: '🏆',
+            color: '#16a34a',
+            img: '/card_tournament.jpg',
             action: () => {
               useGullyCricketStore.setState({ totalOvers: 2, teamSize: 5, gameMode: 'STREET_SERIES' });
               resetMatch();
@@ -255,8 +255,8 @@ export function GullyCricketGame({ onExit }) {
             id: 'career',
             title: 'CAREER MODE',
             sub: 'RISE FROM THE STREETS TO BECOME A LEGEND',
-            color: '#a855f7',
-            icon: '👕',
+            color: '#9333ea',
+            img: '/card_career.jpg',
             action: () => {
               useGullyCricketStore.setState({ totalOvers: 2, teamSize: 5, gameMode: 'STREET_SERIES' });
               resetMatch();
@@ -266,8 +266,8 @@ export function GullyCricketGame({ onExit }) {
             id: '2v2',
             title: '2v2 MODE',
             sub: 'TEAM UP WITH YOUR FRIEND & DOMINATE',
-            color: '#f97316',
-            icon: '🤝',
+            color: '#ea580c',
+            img: '/card_2v2.jpg',
             action: () => {
               useGullyCricketStore.setState({ totalOvers: 1, teamSize: 2, gameMode: '1V1_CHALLENGE' });
               resetMatch();
@@ -277,8 +277,8 @@ export function GullyCricketGame({ onExit }) {
             id: 'practice',
             title: 'PRACTICE',
             sub: 'SHARPEN YOUR SKILLS IN THE NETS',
-            color: '#14b8a6',
-            icon: '🥅',
+            color: '#0d9488',
+            img: '/card_practice.jpg',
             action: () => {
               useGullyCricketStore.setState({ totalOvers: 5, teamSize: 5, gameMode: 'FREE_HIT' });
               resetMatch();
@@ -288,8 +288,8 @@ export function GullyCricketGame({ onExit }) {
             id: 'custom',
             title: 'CUSTOM MATCH',
             sub: 'CREATE YOUR OWN MATCH YOUR RULES',
-            color: '#e11d48',
-            icon: '🏏',
+            color: '#be185d',
+            img: '/card_custom.jpg',
             action: () => {
               setIsSettingsOpen(true);
             }
@@ -306,11 +306,14 @@ export function GullyCricketGame({ onExit }) {
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
-            padding: '20px 32px',
+            padding: '24px 36px',
             fontFamily: "'Orbitron', sans-serif",
-            background: 'radial-gradient(circle at center, rgba(15, 23, 42, 0.55) 0%, rgba(9, 13, 22, 0.88) 100%)',
+            backgroundImage: "linear-gradient(180deg, rgba(9, 13, 22, 0.4) 0%, rgba(9, 13, 22, 0.75) 100%), url('/gully_bg.jpg')",
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
             boxSizing: 'border-box',
-            userSelect: 'none'
+            userSelect: 'none',
+            zIndex: 100
           }}>
             {/* ── TOP HEADER ROW ── */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }}>
@@ -320,41 +323,36 @@ export function GullyCricketGame({ onExit }) {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '12px',
-                background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.9))',
-                border: '1.5px solid rgba(59, 130, 246, 0.4)',
+                background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.92))',
+                border: '1.5px solid rgba(59, 130, 246, 0.5)',
                 borderRadius: '14px',
-                padding: '10px 16px',
-                boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
-                minWidth: '260px'
+                padding: '8px 14px',
+                boxShadow: '0 8px 30px rgba(0,0,0,0.6)',
+                minWidth: '280px'
               }}>
-                {/* Character Illustration Avatar */}
-                <div style={{
-                  width: '46px',
-                  height: '46px',
-                  borderRadius: '10px',
-                  background: 'linear-gradient(135deg, #1e3a8a, #0284c7)',
-                  border: '2px solid #facc15',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  overflow: 'hidden',
-                  flexShrink: 0
-                }}>
-                  <svg viewBox="0 0 38 38" width="34" height="34" fill="none">
-                    <circle cx="19" cy="14" r="7" fill="#fff"/>
-                    <ellipse cx="19" cy="32" rx="11" ry="8" fill="#fff"/>
-                    <rect x="11" y="22" width="16" height="5" fill="#ef4444" rx="2"/>
-                  </svg>
-                </div>
+                {/* Character Illustration Avatar Image */}
+                <img
+                  src="/gully_avatar.jpg"
+                  alt="Player Avatar"
+                  style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '10px',
+                    objectFit: 'cover',
+                    border: '2px solid #facc15',
+                    boxShadow: '0 0 10px rgba(250,204,21,0.5)',
+                    flexShrink: 0
+                  }}
+                />
                 <div style={{ flex: 1, textAlign: 'left' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ color: '#fff', fontSize: '0.92rem', fontWeight: '900', letterSpacing: '1px' }}>CHINMAYA</span>
-                    <span style={{ cursor: 'pointer', fontSize: '0.75rem', opacity: 0.7 }}>✏️</span>
+                    <span style={{ color: '#fff', fontSize: '0.95rem', fontWeight: '900', letterSpacing: '1px' }}>CHINMAYA</span>
+                    <span style={{ cursor: 'pointer', fontSize: '0.8rem', opacity: 0.8 }}>✏️</span>
                     <span style={{
                       background: '#000',
-                      border: '1px solid #facc15',
+                      border: '1.5px solid #facc15',
                       color: '#facc15',
-                      fontSize: '0.6rem',
+                      fontSize: '0.62rem',
                       fontWeight: '900',
                       padding: '1px 6px',
                       borderRadius: '4px',
@@ -362,36 +360,37 @@ export function GullyCricketGame({ onExit }) {
                     }}>12</span>
                   </div>
                   <div style={{ color: '#facc15', fontSize: '0.68rem', fontWeight: '700', fontStyle: 'italic', margin: '2px 0 4px' }}>Gully Legend</div>
-                  <div style={{ width: '100%', height: '5px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden' }}>
+                  {/* XP Bar */}
+                  <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.15)', borderRadius: '3px', overflow: 'hidden' }}>
                     <div style={{ width: '70%', height: '100%', background: 'linear-gradient(90deg, #3b82f6, #60a5fa)', boxShadow: '0 0 8px #3b82f6' }} />
                   </div>
-                  <div style={{ color: '#94a3b8', fontSize: '0.58rem', fontWeight: '800', marginTop: '2px', textAlign: 'center' }}>2450 / 3500</div>
+                  <div style={{ color: '#94a3b8', fontSize: '0.6rem', fontWeight: '800', marginTop: '2px', textAlign: 'center' }}>2450 / 3500</div>
                 </div>
               </div>
 
-              {/* Main Title Center Logo */}
+              {/* Main Title Center Logo (Exact match with Image 2 stencil typography) */}
               <div style={{ textAlign: 'center', flex: 1, margin: '0 20px' }}>
-                <div style={{ fontSize: '1.2rem', marginBottom: '-6px' }}>👑</div>
+                <div style={{ fontSize: '1.4rem', marginBottom: '-8px' }}>👑</div>
                 <h1 style={{
-                  fontSize: '3rem',
+                  fontSize: '3.4rem',
                   fontWeight: '900',
-                  letterSpacing: '4px',
+                  letterSpacing: '3px',
                   margin: 0,
                   fontStyle: 'italic',
                   lineHeight: 1,
-                  textShadow: '0 4px 20px rgba(0,0,0,0.8)'
+                  textShadow: '0 4px 25px rgba(0,0,0,0.9), 0 0 10px rgba(0,0,0,0.9)'
                 }}>
-                  <span style={{ color: '#ffffff' }}>GULLY </span>
-                  <span style={{ color: '#facc15' }}>CRICKET </span>
-                  <span style={{ fontSize: '2rem' }}>🔴</span>
+                  <span style={{ color: '#ffffff', textShadow: '-2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000' }}>GULLY </span>
+                  <span style={{ color: '#facc15', textShadow: '-2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000' }}>CRICKET </span>
+                  <span style={{ fontSize: '2.2rem' }}>🔴</span>
                 </h1>
                 <div style={{
                   color: '#ffffff',
-                  fontSize: '0.7rem',
+                  fontSize: '0.72rem',
                   fontWeight: '900',
                   letterSpacing: '5px',
                   marginTop: '4px',
-                  textShadow: '0 2px 10px rgba(0,0,0,0.8)'
+                  textShadow: '0 2px 10px rgba(0,0,0,0.9), -1px -1px 0 #000, 1px 1px 0 #000'
                 }}>
                   APNA GAME. APNA STYLE.
                 </div>
@@ -405,34 +404,34 @@ export function GullyCricketGame({ onExit }) {
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
-                    background: 'rgba(15, 23, 42, 0.9)',
+                    background: 'rgba(15, 23, 42, 0.92)',
                     border: '1.5px solid #facc15',
                     borderRadius: '8px',
                     padding: '4px 10px',
                     color: '#fff',
                     fontWeight: '900',
-                    fontSize: '0.85rem'
+                    fontSize: '0.88rem'
                   }}>
                     <span style={{ background: '#facc15', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontSize: '0.7rem' }}>🪙</span>
                     <span>1250</span>
-                    <span style={{ background: '#facc15', color: '#000', borderRadius: '4px', padding: '0 5px', fontSize: '0.8rem', cursor: 'pointer' }}>+</span>
+                    <span style={{ background: '#facc15', color: '#000', borderRadius: '4px', padding: '0 6px', fontSize: '0.85rem', cursor: 'pointer', fontWeight: '900' }}>+</span>
                   </div>
                   {/* Gems */}
                   <div style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
-                    background: 'rgba(15, 23, 42, 0.9)',
+                    background: 'rgba(15, 23, 42, 0.92)',
                     border: '1.5px solid #a855f7',
                     borderRadius: '8px',
                     padding: '4px 10px',
                     color: '#fff',
                     fontWeight: '900',
-                    fontSize: '0.85rem'
+                    fontSize: '0.88rem'
                   }}>
-                    <span style={{ color: '#a855f7', fontSize: '1rem' }}>💎</span>
+                    <span style={{ color: '#a855f7', fontSize: '1.1rem' }}>💎</span>
                     <span>35</span>
-                    <span style={{ background: '#facc15', color: '#000', borderRadius: '4px', padding: '0 5px', fontSize: '0.8rem', cursor: 'pointer' }}>+</span>
+                    <span style={{ background: '#facc15', color: '#000', borderRadius: '4px', padding: '0 6px', fontSize: '0.85rem', cursor: 'pointer', fontWeight: '900' }}>+</span>
                   </div>
                 </div>
 
@@ -448,11 +447,11 @@ export function GullyCricketGame({ onExit }) {
                       key={i}
                       onClick={btn.action}
                       style={{
-                        background: 'rgba(15, 23, 42, 0.85)',
-                        border: '1px solid rgba(255,255,255,0.2)',
+                        background: 'rgba(15, 23, 42, 0.9)',
+                        border: '1.5px solid rgba(255,255,255,0.25)',
                         borderRadius: '8px',
-                        width: '42px',
-                        height: '42px',
+                        width: '44px',
+                        height: '44px',
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
@@ -460,7 +459,8 @@ export function GullyCricketGame({ onExit }) {
                         color: '#fff',
                         cursor: 'pointer',
                         position: 'relative',
-                        fontSize: '1rem'
+                        fontSize: '1.1rem',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.4)'
                       }}
                     >
                       {btn.badge && (
@@ -473,13 +473,13 @@ export function GullyCricketGame({ onExit }) {
               </div>
             </div>
 
-            {/* ── CENTER 6 CARDS ROW (Side-by-Side like Image 2) ── */}
+            {/* ── CENTER 6 CARDS ROW (Side-by-Side exact image reproduction) ── */}
             <div style={{
               display: 'flex',
-              gap: '14px',
+              gap: '12px',
               justifyContent: 'center',
               alignItems: 'stretch',
-              margin: '20px 0',
+              margin: '18px 0',
               flex: 1,
               maxHeight: '380px'
             }}>
@@ -492,13 +492,13 @@ export function GullyCricketGame({ onExit }) {
                     onDoubleClick={card.action}
                     style={{
                       flex: 1,
-                      background: isSelected 
-                        ? `linear-gradient(180deg, ${card.color}25 0%, rgba(15, 23, 42, 0.95) 100%)`
-                        : 'rgba(15, 23, 42, 0.75)',
-                      border: '2px solid',
+                      backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.85) 100%), url('${card.img}')`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      border: '2.5px solid',
                       borderColor: isSelected ? '#facc15' : card.color,
-                      borderRadius: '14px',
-                      padding: '16px 12px',
+                      borderRadius: '12px',
+                      padding: '16px 10px',
                       cursor: 'pointer',
                       display: 'flex',
                       flexDirection: 'column',
@@ -506,50 +506,39 @@ export function GullyCricketGame({ onExit }) {
                       alignItems: 'center',
                       textAlign: 'center',
                       transition: 'all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                      transform: isSelected ? 'translateY(-12px) scale(1.04)' : 'scale(0.98)',
+                      transform: isSelected ? 'translateY(-14px) scale(1.05)' : 'scale(0.98)',
                       boxShadow: isSelected 
-                        ? `0 16px 36px rgba(0,0,0,0.6), 0 0 25px ${card.color}66`
-                        : '0 4px 15px rgba(0,0,0,0.4)',
-                      backdropFilter: 'blur(10px)',
+                        ? `0 18px 40px rgba(0,0,0,0.8), 0 0 28px ${card.color}aa`
+                        : '0 6px 20px rgba(0,0,0,0.5)',
                       position: 'relative',
                       overflow: 'hidden'
                     }}
                   >
-                    {/* Card Top Artwork Icon */}
-                    <div style={{
-                      width: '100%',
-                      height: '140px',
-                      borderRadius: '10px',
-                      background: `radial-gradient(circle at center, ${card.color}33 0%, transparent 70%)`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '3.5rem',
-                      filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.5))'
-                    }}>
-                      {card.icon}
-                    </div>
-
-                    {/* Card Content */}
-                    <div style={{ width: '100%' }}>
+                    {/* Card Title Header */}
+                    <div style={{ width: '100%', textShadow: '0 2px 10px rgba(0,0,0,0.9), -1px -1px 0 #000, 1px 1px 0 #000' }}>
                       <h3 style={{
-                        color: isSelected ? '#facc15' : '#ffffff',
-                        fontSize: '1.05rem',
+                        color: '#ffffff',
+                        fontSize: '1.2rem',
                         fontWeight: '900',
-                        margin: '8px 0 6px',
+                        margin: 0,
                         letterSpacing: '1px',
                         fontStyle: 'italic',
                         lineHeight: 1.1
                       }}>
                         {card.title}
                       </h3>
+                    </div>
+
+                    {/* Card Subtext Footer */}
+                    <div style={{ width: '100%', background: 'rgba(0,0,0,0.7)', padding: '6px 4px', borderRadius: '6px', backdropFilter: 'blur(4px)' }}>
                       <p style={{
-                        color: 'rgba(255,255,255,0.65)',
-                        fontSize: '0.65rem',
-                        fontWeight: '700',
-                        lineHeight: '1.3',
+                        color: 'rgba(255,255,255,0.9)',
+                        fontSize: '0.62rem',
+                        fontWeight: '800',
+                        lineHeight: '1.25',
                         margin: 0,
-                        fontFamily: 'sans-serif'
+                        fontFamily: 'sans-serif',
+                        letterSpacing: '0.5px'
                       }}>
                         {card.sub}
                       </p>
@@ -567,70 +556,73 @@ export function GullyCricketGame({ onExit }) {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '12px',
-                background: 'rgba(15, 23, 42, 0.85)',
-                border: '1px solid rgba(255,255,255,0.15)',
-                borderRadius: '10px',
+                background: 'rgba(15, 23, 42, 0.92)',
+                border: '1.5px solid rgba(255,255,255,0.2)',
+                borderRadius: '12px',
                 padding: '8px 14px',
                 minWidth: '240px',
-                textAlign: 'left'
+                textAlign: 'left',
+                boxShadow: '0 6px 20px rgba(0,0,0,0.5)'
               }}>
                 <span style={{ fontSize: '1.8rem' }}>🎬</span>
                 <div style={{ flex: 1 }}>
                   <div style={{ color: '#fff', fontSize: '0.72rem', fontWeight: '900', letterSpacing: '1px' }}>DAILY CHALLENGE</div>
                   <div style={{ color: '#94a3b8', fontSize: '0.6rem', fontFamily: 'sans-serif' }}>Win matches to claim rewards!</div>
                 </div>
-                <button style={{ background: '#facc15', color: '#000', border: 'none', borderRadius: '4px', padding: '4px 10px', fontWeight: '900', fontSize: '0.7rem', cursor: 'pointer' }}>
+                <button style={{ background: '#facc15', color: '#000', border: 'none', borderRadius: '6px', padding: '5px 12px', fontWeight: '900', fontSize: '0.72rem', cursor: 'pointer' }}>
                   VIEW
                 </button>
               </div>
 
-              {/* Big Yellow PLAY NOW Button (Center) */}
+              {/* Big Yellow PLAY NOW Brush-Stroke Button (Center) */}
               <button
                 onClick={activeCard.action}
                 style={{
                   background: 'linear-gradient(135deg, #facc15 0%, #eab308 100%)',
                   color: '#000000',
-                  border: 'none',
+                  border: '3px solid #ffffff',
                   borderRadius: '35px',
                   padding: '16px 64px',
                   fontFamily: "'Orbitron', sans-serif",
-                  fontSize: '1.4rem',
+                  fontSize: '1.6rem',
                   fontWeight: '900',
                   fontStyle: 'italic',
                   letterSpacing: '3px',
                   cursor: 'pointer',
-                  boxShadow: '0 8px 30px rgba(250, 204, 21, 0.5), inset 0 2px 0 rgba(255,255,255,0.5)',
+                  boxShadow: '0 10px 35px rgba(250, 204, 21, 0.6), 0 0 20px rgba(250,204,21,0.4)',
                   transition: 'transform 0.15s, box-shadow 0.2s',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '12px'
+                  gap: '14px',
+                  textShadow: '0 1px 0 rgba(255,255,255,0.8)'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'scale(1.06)';
-                  e.currentTarget.style.boxShadow = '0 12px 40px rgba(250, 204, 21, 0.7)';
+                  e.currentTarget.style.transform = 'scale(1.08)';
+                  e.currentTarget.style.boxShadow = '0 14px 45px rgba(250, 204, 21, 0.85)';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.transform = 'scale(1)';
-                  e.currentTarget.style.boxShadow = '0 8px 30px rgba(250, 204, 21, 0.5)';
+                  e.currentTarget.style.boxShadow = '0 10px 35px rgba(250, 204, 21, 0.6)';
                 }}
               >
                 <span>PLAY NOW</span>
-                <span style={{ fontSize: '1.2rem' }}>🏏</span>
+                <span style={{ fontSize: '1.4rem' }}>🏏</span>
               </button>
 
               {/* Online Players & Shop (Bottom-Right) */}
               <div style={{ display: 'flex', gap: '10px' }}>
                 <div style={{
-                  background: 'rgba(15, 23, 42, 0.85)',
-                  border: '1px solid rgba(255,255,255,0.15)',
-                  borderRadius: '8px',
+                  background: 'rgba(15, 23, 42, 0.92)',
+                  border: '1.5px solid rgba(255,255,255,0.2)',
+                  borderRadius: '10px',
                   padding: '8px 14px',
                   color: '#fff',
-                  fontSize: '0.72rem',
+                  fontSize: '0.75rem',
                   fontWeight: '800',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '6px'
+                  gap: '6px',
+                  boxShadow: '0 6px 20px rgba(0,0,0,0.5)'
                 }}>
                   <span>👥</span>
                   <span>PLAYERS ONLINE: 256</span>
@@ -639,15 +631,16 @@ export function GullyCricketGame({ onExit }) {
                 <button style={{
                   background: 'linear-gradient(135deg, #be185d 0%, #881337 100%)',
                   border: '1.5px solid #facc15',
-                  borderRadius: '8px',
-                  padding: '8px 16px',
+                  borderRadius: '10px',
+                  padding: '8px 18px',
                   color: '#fff',
                   fontWeight: '900',
-                  fontSize: '0.75rem',
+                  fontSize: '0.78rem',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '6px'
+                  gap: '6px',
+                  boxShadow: '0 6px 20px rgba(0,0,0,0.5)'
                 }}>
                   <span>🛒</span>
                   <span>SHOP</span>
