@@ -1,17 +1,35 @@
 import { create } from 'zustand'
 
 export const DRAFT_PLAYERS_POOL = [
-  { id: 'p1', name: 'CHIKU (CAPTAIN)', bat: 94, bowl: 65, field: 88, trait: 'Wall Sixer King', color: '#facc15' },
-  { id: 'p2', name: 'ROCKY (PACER)', bat: 70, bowl: 95, field: 82, trait: 'Express Yorker', color: '#ef4444' },
-  { id: 'p3', name: 'MONU (SPINNER)', bat: 62, bowl: 92, field: 78, trait: 'Street Leg-Spin', color: '#3b82f6' },
-  { id: 'p4', name: 'GUDDU (ALL-ROUNDER)', bat: 85, bowl: 84, field: 86, trait: 'One-Tippi Master', color: '#10b981' },
-  { id: 'p5', name: 'BUNTY (SLOGGER)', bat: 98, bowl: 45, field: 70, trait: 'Roof Breaker', color: '#a855f7' },
-  { id: 'p6', name: 'SONU (KEEPER)', bat: 78, bowl: 50, field: 96, trait: 'Lightning Hands', color: '#f97316' },
-  { id: 'p7', name: 'KAKU (FAST)', bat: 65, bowl: 89, field: 80, trait: 'Inswing Bouncer', color: '#06b6d4' },
-  { id: 'p8', name: 'TINKU (DEFENSIVE)', bat: 84, bowl: 72, field: 85, trait: 'Solid Wall Defense', color: '#e11d48' },
-  { id: 'p9', name: 'RAJU (STREET CHAMP)', bat: 90, bowl: 80, field: 91, trait: 'Cover Drive King', color: '#8b5cf6' },
-  { id: 'p10', name: 'CHOTU (AGILE)', bat: 74, bowl: 60, field: 98, trait: 'Direct Hit Throw', color: '#14b8a6' }
+  { id: 'p1', name: 'CHIKU (CAPTAIN)', bat: 94, bowl: 65, field: 88, trait: 'Wall Sixer King', color: '#facc15', pos: [-4.0, 0, 4.0] },
+  { id: 'p2', name: 'ROCKY (PACER)', bat: 70, bowl: 95, field: 82, trait: 'Express Yorker', color: '#ef4444', pos: [-2.0, 0, 4.0] },
+  { id: 'p3', name: 'MONU (SPINNER)', bat: 62, bowl: 92, field: 78, trait: 'Street Leg-Spin', color: '#3b82f6', pos: [0, 0, 4.0] },
+  { id: 'p4', name: 'GUDDU (ALL-ROUNDER)', bat: 85, bowl: 84, field: 86, trait: 'One-Tippi Master', color: '#10b981', pos: [2.0, 0, 4.0] },
+  { id: 'p5', name: 'BUNTY (SLOGGER)', bat: 98, bowl: 45, field: 70, trait: 'Roof Breaker', color: '#a855f7', pos: [4.0, 0, 4.0] },
+  { id: 'p6', name: 'SONU (KEEPER)', bat: 78, bowl: 50, field: 96, trait: 'Lightning Hands', color: '#f97316', pos: [-4.0, 0, 0] },
+  { id: 'p7', name: 'KAKU (FAST)', bat: 65, bowl: 89, field: 80, trait: 'Inswing Bouncer', color: '#06b6d4', pos: [-2.0, 0, 0] },
+  { id: 'p8', name: 'TINKU (DEFENSIVE)', bat: 84, bowl: 72, field: 85, trait: 'Solid Wall Defense', color: '#e11d48', pos: [0, 0, 0] },
+  { id: 'p9', name: 'RAJU (STREET CHAMP)', bat: 90, bowl: 80, field: 91, trait: 'Cover Drive King', color: '#8b5cf6', pos: [2.0, 0, 0] },
+  { id: 'p10', name: 'CHOTU (AGILE)', bat: 74, bowl: 60, field: 98, trait: 'Direct Hit Throw', color: '#14b8a6', pos: [4.0, 0, 0] }
 ]
+
+// Preload static images into browser memory immediately
+export function preloadGameImages() {
+  const imagesToPreload = [
+    '/gully_bg.jpg',
+    '/gully_avatar.jpg',
+    '/card_quick.jpg',
+    '/card_tournament.jpg',
+    '/card_career.jpg',
+    '/card_2v2.jpg',
+    '/card_practice.jpg',
+    '/card_custom.jpg'
+  ]
+  imagesToPreload.forEach(src => {
+    const img = new Image()
+    img.src = src
+  })
+}
 
 export const FIELD_PRESETS = {
   DEFAULT: [
@@ -56,10 +74,11 @@ export const useGullyCricketStore = create((set, get) => ({
   aiSquad: [],
   draftTurn: 'USER', // 'USER' | 'AI'
   draftTossWinner: null, // 'USER' | 'AI'
+  hoveredPlayerId: 'p1',
 
   // Match Toss State
-  matchTossWinner: null, // 'USER' | 'AI'
-  userElected: null, // 'BAT' | 'BOWL'
+  matchTossWinner: null,
+  userElected: null,
 
   // Fielder Placement Presets
   currentFieldPreset: 'DEFAULT',
@@ -98,59 +117,88 @@ export const useGullyCricketStore = create((set, get) => ({
   setCameraView: (view) => set({ cameraView: view }),
   setShotFeedback: (fb) => set({ shotFeedback: fb }),
   setCommentaryText: (text) => set({ commentaryText: text }),
+  setHoveredPlayerId: (id) => set({ hoveredPlayerId: id }),
 
   setFieldPreset: (presetKey) => {
     const preset = FIELD_PRESETS[presetKey] || FIELD_PRESETS.DEFAULT
     set({ currentFieldPreset: presetKey, fielderPositions: preset })
   },
 
-  startMegaDraftFlow: () => set({
-    gameState: 'DRAFT_TOSS',
-    draftPool: [...DRAFT_PLAYERS_POOL],
-    userSquad: [],
-    aiSquad: [],
-    draftTurn: 'USER',
-    draftTossWinner: null,
-    matchTossWinner: null,
-    userElected: null
-  }),
+  startMegaDraftFlow: () => {
+    preloadGameImages()
+    set({
+      gameState: 'DRAFT_TOSS',
+      draftPool: [...DRAFT_PLAYERS_POOL],
+      userSquad: [],
+      aiSquad: [],
+      draftTurn: 'USER',
+      draftTossWinner: null,
+      matchTossWinner: null,
+      userElected: null,
+      hoveredPlayerId: DRAFT_PLAYERS_POOL[0].id
+    })
+  },
 
+  // USER picks a player
   pickDraftPlayer: (playerId) => set((state) => {
     const player = state.draftPool.find(p => p.id === playerId)
-    if (!player) return state
+    if (!player || state.draftTurn !== 'USER') return state
 
+    const newUserSquad = [...state.userSquad, player]
     const newPool = state.draftPool.filter(p => p.id !== playerId)
+    const nextHovered = newPool.length > 0 ? newPool[0].id : null
 
-    if (state.draftTurn === 'USER') {
-      const newUserSquad = [...state.userSquad, player]
-      // Check if AI should pick next
-      let nextTurn = 'AI'
-      let aiPickedSquad = [...state.aiSquad]
-
-      // Auto AI pick if pool has remaining players and AI squad needs players
-      if (newPool.length > 0 && aiPickedSquad.length < state.teamSize) {
-        const aiPickIndex = Math.floor(Math.random() * newPool.length)
-        const aiPick = newPool[aiPickIndex]
-        newPool.splice(aiPickIndex, 1)
-        aiPickedSquad.push(aiPick)
-        nextTurn = 'USER'
-      }
-
-      // Check draft completion
-      let nextGameState = state.gameState
-      if (newUserSquad.length >= state.teamSize && aiPickedSquad.length >= state.teamSize) {
-        nextGameState = 'MATCH_TOSS'
-      }
-
+    // Check draft completion
+    if (newUserSquad.length >= state.teamSize && state.aiSquad.length >= state.teamSize) {
       return {
         draftPool: newPool,
         userSquad: newUserSquad,
-        aiSquad: aiPickedSquad,
-        draftTurn: nextTurn,
-        gameState: nextGameState
+        draftTurn: 'COMPLETED',
+        gameState: 'MATCH_TOSS',
+        hoveredPlayerId: nextHovered
       }
     }
-    return state
+
+    return {
+      draftPool: newPool,
+      userSquad: newUserSquad,
+      draftTurn: 'AI',
+      hoveredPlayerId: nextHovered
+    }
+  }),
+
+  // AI Smart Draft Pick
+  makeAiDraftPick: () => set((state) => {
+    if (state.draftPool.length === 0 || state.draftTurn !== 'AI') return state
+
+    // Smart AI Rating formula: (bat * 0.5 + bowl * 0.5)
+    const sorted = [...state.draftPool].sort((a, b) => {
+      const scoreA = a.bat * 0.5 + a.bowl * 0.5
+      const scoreB = b.bat * 0.5 + b.bowl * 0.5
+      return scoreB - scoreA
+    })
+
+    const aiPick = sorted[0]
+    const newAiSquad = [...state.aiSquad, aiPick]
+    const newPool = state.draftPool.filter(p => p.id !== aiPick.id)
+    const nextHovered = newPool.length > 0 ? newPool[0].id : null
+
+    if (state.userSquad.length >= state.teamSize && newAiSquad.length >= state.teamSize) {
+      return {
+        draftPool: newPool,
+        aiSquad: newAiSquad,
+        draftTurn: 'COMPLETED',
+        gameState: 'MATCH_TOSS',
+        hoveredPlayerId: nextHovered
+      }
+    }
+
+    return {
+      draftPool: newPool,
+      aiSquad: newAiSquad,
+      draftTurn: 'USER',
+      hoveredPlayerId: nextHovered
+    }
   }),
 
   resetMatch: () => set((state) => {

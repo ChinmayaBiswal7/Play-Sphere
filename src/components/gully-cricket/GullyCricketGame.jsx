@@ -148,7 +148,19 @@ function MegaDraftScreen() {
   const aiSquad = useGullyCricketStore((state) => state.aiSquad)
   const draftTurn = useGullyCricketStore((state) => state.draftTurn)
   const pickDraftPlayer = useGullyCricketStore((state) => state.pickDraftPlayer)
+  const makeAiDraftPick = useGullyCricketStore((state) => state.makeAiDraftPick)
+  const setHoveredPlayerId = useGullyCricketStore((state) => state.setHoveredPlayerId)
   const teamSize = useGullyCricketStore((state) => state.teamSize)
+
+  // Auto trigger AI draft pick when it's AI's turn
+  useEffect(() => {
+    if (draftTurn === 'AI') {
+      const timer = setTimeout(() => {
+        makeAiDraftPick()
+      }, 1200)
+      return () => clearTimeout(timer)
+    }
+  }, [draftTurn, makeAiDraftPick])
 
   return (
     <div style={{
@@ -209,6 +221,7 @@ function MegaDraftScreen() {
               onClick={() => {
                 if (draftTurn === 'USER') pickDraftPlayer(p.id)
               }}
+              onMouseEnter={() => setHoveredPlayerId(p.id)}
               style={{
                 background: `linear-gradient(180deg, rgba(15,23,42,0.9) 0%, rgba(30,41,59,0.95) 100%)`,
                 border: '2.5px solid', borderColor: p.color, borderRadius: '12px',
@@ -217,8 +230,6 @@ function MegaDraftScreen() {
                 textAlign: 'center', boxShadow: `0 6px 20px rgba(0,0,0,0.6), 0 0 15px ${p.color}44`,
                 transition: 'transform 0.15s', height: '220px'
               }}
-              onMouseEnter={(e) => { if (draftTurn === 'USER') e.currentTarget.style.transform = 'scale(1.05)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
             >
               <div style={{ color: p.color, fontSize: '0.75rem', fontWeight: '900', fontStyle: 'italic' }}>{p.trait}</div>
               <div style={{ fontSize: '2.5rem', margin: '4px 0' }}>👤</div>
@@ -363,6 +374,11 @@ export function GullyCricketGame({ onExit }) {
   const [deliveryTarget, setDeliveryTarget] = useState([0, -2.0])
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [selectedMenuIndex, setSelectedMenuIndex] = useState(0)
+
+  // Preload images on mount
+  useEffect(() => {
+    preloadGameImages()
+  }, [])
 
   useEffect(() => {
     if (phase === 'RESULT_PAUSE') {
