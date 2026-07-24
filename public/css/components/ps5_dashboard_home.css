@@ -1,16 +1,17 @@
 /* ═══════════════════════════════════════════════
-   PlaySphere 5 — Dashboard Home CSS (Complete Rebuild)
+   PlaySphere 5 — Dashboard Home CSS (v3 Layout Fix)
 ═══════════════════════════════════════════════ */
 
-/* Root wrapper */
+/* Root wrapper — full viewport takeover */
 .ps5-console-wrapper {
   position: fixed;
   inset: 0;
-  background: radial-gradient(ellipse at 30% 60%, #0d1f3c 0%, #020917 100%);
+  background: radial-gradient(ellipse at 30% 65%, #0d1f3c 0%, #020917 100%);
   overflow: hidden;
   font-family: 'Outfit', 'Segoe UI', sans-serif;
   color: #f8fafc;
   user-select: none;
+  z-index: 99999;
 }
 
 /* Particle canvas */
@@ -19,41 +20,45 @@
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  opacity: 0.5;
+  opacity: 0.45;
 }
 
 /* ── TOP NAV BAR ── */
 .psd-topbar {
   position: absolute;
   top: 0; left: 0; right: 0;
-  height: 72px;
+  height: 68px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 48px;
-  z-index: 20;
-  background: linear-gradient(180deg, rgba(2,9,23,0.85) 0%, transparent 100%);
+  padding: 0 44px;
+  z-index: 30;
+  background: linear-gradient(180deg, rgba(2,9,23,0.92) 0%, transparent 100%);
+  box-sizing: border-box;
 }
 
+/* Tabs */
 .psd-tabs {
   display: flex;
-  gap: 6px;
+  gap: 4px;
+  align-items: center;
 }
 
 .psd-tab {
   background: none;
   border: none;
-  color: rgba(255,255,255,0.45);
+  color: rgba(255,255,255,0.4);
   font-family: inherit;
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   font-weight: 700;
   letter-spacing: 2px;
   text-transform: uppercase;
-  padding: 6px 14px;
+  padding: 8px 14px;
   cursor: pointer;
   border-radius: 6px;
   transition: color 0.2s, background 0.2s;
   position: relative;
+  line-height: 1;
 }
 
 .psd-tab.active {
@@ -63,23 +68,23 @@
 .psd-tab.active::after {
   content: '';
   position: absolute;
-  bottom: -4px; left: 14px; right: 14px;
+  bottom: 0; left: 14px; right: 14px;
   height: 2px;
   background: #3b82f6;
   box-shadow: 0 0 8px #3b82f6;
   border-radius: 2px;
 }
 
-.psd-tab:hover {
-  color: rgba(255,255,255,0.8);
-  background: rgba(255,255,255,0.05);
+.psd-tab:hover:not(.active) {
+  color: rgba(255,255,255,0.75);
+  background: rgba(255,255,255,0.04);
 }
 
-/* Right actions row */
+/* Right actions */
 .psd-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .psd-icon-btn {
@@ -88,26 +93,28 @@
   border-radius: 50%;
   background: rgba(255,255,255,0.07);
   border: 1px solid rgba(255,255,255,0.12);
-  color: #fff;
+  color: rgba(255,255,255,0.85);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background 0.2s, transform 0.15s;
+  transition: background 0.18s, transform 0.15s, color 0.15s;
+  flex-shrink: 0;
 }
 
 .psd-icon-btn:hover {
-  background: rgba(255,255,255,0.14);
-  transform: scale(1.08);
+  background: rgba(255,255,255,0.13);
+  color: #fff;
+  transform: scale(1.1);
 }
 
-/* Avatar circle */
+/* Avatar */
 .psd-avatar-btn {
   width: 38px;
   height: 38px;
   border-radius: 50%;
   border: 2px solid #00d2ff;
-  background: linear-gradient(135deg, #1e3a5f, #0f2040);
+  background: linear-gradient(135deg, #1e3a5f 0%, #0f2040 100%);
   padding: 0;
   overflow: hidden;
   cursor: pointer;
@@ -120,25 +127,27 @@
 }
 
 .psd-avatar-btn:hover {
-  box-shadow: 0 0 22px rgba(0,210,255,0.7);
+  box-shadow: 0 0 24px rgba(0,210,255,0.75);
   transform: scale(1.08);
 }
 
+/* If user has a photo, override with img */
 #ps5-user-avatar {
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  object-fit: cover;
   display: block;
+  object-fit: cover;
 }
 
 /* Clock */
 .psd-clock {
-  font-size: 0.88rem;
+  font-size: 0.87rem;
   font-weight: 700;
   letter-spacing: 1px;
-  color: #fff;
+  color: rgba(255,255,255,0.9);
   white-space: nowrap;
+  min-width: 75px;
 }
 
 /* Controller button */
@@ -146,71 +155,89 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  background: linear-gradient(135deg, rgba(0,210,255,0.12), rgba(99,102,241,0.18));
-  border: 1px solid rgba(0,210,255,0.38);
+  background: linear-gradient(135deg, rgba(0,210,255,0.1), rgba(99,102,241,0.15));
+  border: 1px solid rgba(0,210,255,0.35);
   border-radius: 30px;
   padding: 8px 16px;
-  color: #fff;
+  color: rgba(255,255,255,0.92);
   font-family: inherit;
-  font-size: 0.68rem;
+  font-size: 0.67rem;
   font-weight: 800;
   letter-spacing: 1.2px;
   text-transform: uppercase;
   cursor: pointer;
   transition: all 0.2s;
-  box-shadow: 0 0 14px rgba(0,210,255,0.18);
+  box-shadow: 0 0 12px rgba(0,210,255,0.15);
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .psd-controller-btn:hover {
-  background: linear-gradient(135deg, rgba(0,210,255,0.22), rgba(99,102,241,0.28));
-  box-shadow: 0 0 24px rgba(0,210,255,0.35);
+  background: linear-gradient(135deg, rgba(0,210,255,0.2), rgba(99,102,241,0.28));
+  box-shadow: 0 0 22px rgba(0,210,255,0.35);
+  color: #fff;
 }
 
-/* ── MAIN CONTENT ── */
+/* ── GAME SHELF AREA ──
+   The shelf sits roughly 55% down the screen.
+   The container has extra padding-top so lifted cards
+   are NOT clipped. parent overflow must be visible.
+*/
 .psd-main {
   position: absolute;
-  inset: 0;
+  top: 68px; /* below nav */
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  z-index: 10;
-  padding-bottom: 0;
+  /* CRITICAL: overflow must be visible so cards lifting up aren't clipped */
+  overflow: visible;
 }
 
-/* Game Shelf */
+/* Shelf wrapper — has top padding so hovered cards don't clip */
 .psd-shelf {
   display: flex;
   align-items: flex-end;
-  gap: 14px;
-  padding: 20px 48px 28px;
+  gap: 16px;
+  padding: 100px 48px 24px; /* 100px top = room for card lift */
   overflow-x: auto;
+  overflow-y: visible;        /* allow vertical card lift */
   scroll-behavior: smooth;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  flex-shrink: 0;
 }
 
 .psd-shelf::-webkit-scrollbar { display: none; }
 
-/* Game Card */
+/* Individual game card */
 .psd-card {
   flex-shrink: 0;
-  width: 140px;
-  height: 185px;
+  width: 155px;
+  height: 210px;
   border-radius: 14px;
   overflow: hidden;
   cursor: pointer;
-  border: 2px solid transparent;
-  transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1), border-color 0.2s, box-shadow 0.25s;
+  border: 2px solid rgba(255,255,255,0.08);
+  transition: transform 0.28s cubic-bezier(0.34,1.56,0.64,1),
+              border-color 0.2s ease,
+              box-shadow 0.28s ease;
   position: relative;
-  background: #0d1b2a;
+  background: #0a1628;
+  flex-shrink: 0;
 }
 
 .psd-card:hover,
 .psd-card.selected {
-  transform: translateY(-18px) scale(1.07);
+  transform: translateY(-24px) scale(1.08);
   border-color: #00d2ff;
-  box-shadow: 0 20px 50px rgba(0,0,0,0.7), 0 0 30px rgba(0,210,255,0.4);
+  box-shadow:
+    0 24px 55px rgba(0,0,0,0.75),
+    0 0 28px rgba(0,210,255,0.45),
+    0 0 60px rgba(0,210,255,0.15);
   z-index: 5;
 }
 
@@ -220,16 +247,21 @@
   object-fit: cover;
   display: block;
   pointer-events: none;
+  border-radius: 12px;
 }
 
-/* Game Details Panel */
+/* ── GAME DETAILS PANEL ── */
 .psd-details {
-  padding: 22px 48px 36px;
-  background: linear-gradient(0deg, rgba(2,9,23,0.96) 0%, rgba(2,9,23,0.7) 70%, transparent 100%);
-  transform: translateY(14px);
+  padding: 16px 48px 28px;
+  background: linear-gradient(0deg,
+    rgba(2,9,23,0.98) 0%,
+    rgba(2,9,23,0.82) 65%,
+    transparent 100%);
   opacity: 0;
-  transition: opacity 0.3s, transform 0.3s;
+  transform: translateY(12px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
   pointer-events: none;
+  flex-shrink: 0;
 }
 
 .psd-details.visible {
@@ -239,28 +271,30 @@
 }
 
 .psd-game-title {
-  font-size: 2.1rem;
+  font-size: 2rem;
   font-weight: 900;
-  margin: 0 0 10px;
-  letter-spacing: -0.5px;
-  line-height: 1;
+  margin: 0 0 8px;
+  letter-spacing: -0.3px;
+  line-height: 1.05;
+  text-shadow: 0 2px 20px rgba(0,0,0,0.6);
 }
 
 .psd-game-meta {
   display: flex;
   align-items: center;
-  gap: 16px;
-  font-size: 0.85rem;
-  color: rgba(255,255,255,0.65);
-  margin-bottom: 12px;
+  gap: 14px;
+  font-size: 0.84rem;
+  color: rgba(255,255,255,0.6);
+  margin-bottom: 10px;
+  flex-wrap: wrap;
 }
 
 .psd-rating-pill {
-  background: rgba(59,130,246,0.25);
-  border: 1px solid rgba(59,130,246,0.5);
+  background: rgba(59,130,246,0.22);
+  border: 1px solid rgba(59,130,246,0.48);
   border-radius: 6px;
   padding: 2px 10px;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 1px;
   color: #93c5fd;
@@ -268,33 +302,37 @@
 
 .psd-game-desc {
   max-width: 620px;
-  font-size: 0.9rem;
-  color: rgba(255,255,255,0.55);
-  line-height: 1.65;
-  margin: 0 0 18px;
+  font-size: 0.88rem;
+  color: rgba(255,255,255,0.52);
+  line-height: 1.6;
+  margin: 0 0 16px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .psd-play-btn {
   display: inline-flex;
   align-items: center;
   gap: 9px;
-  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  background: linear-gradient(135deg, #2563eb, #6366f1);
   border: none;
   border-radius: 12px;
-  padding: 12px 30px;
+  padding: 12px 32px;
   color: #fff;
   font-family: inherit;
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   font-weight: 800;
   letter-spacing: 0.5px;
   cursor: pointer;
   transition: transform 0.15s, box-shadow 0.2s;
-  box-shadow: 0 8px 24px rgba(59,130,246,0.45);
+  box-shadow: 0 8px 24px rgba(37,99,235,0.5);
 }
 
 .psd-play-btn:hover {
   transform: translateY(-2px) scale(1.04);
-  box-shadow: 0 14px 34px rgba(59,130,246,0.6);
+  box-shadow: 0 14px 34px rgba(37,99,235,0.65);
 }
 
 .psd-play-btn:active {
@@ -306,12 +344,12 @@
   position: fixed;
   inset: 0;
   background: #020917;
-  z-index: 999999;
+  z-index: 9999999;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 32px;
+  gap: 30px;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.3s;
@@ -323,18 +361,18 @@
 }
 
 .psd-launch-logo {
-  animation: spin 2s linear infinite;
+  animation: psdSpin 1.8s linear infinite;
 }
 
-@keyframes spin {
+@keyframes psdSpin {
   from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  to   { transform: rotate(360deg); }
 }
 
 .psd-launch-bar {
-  width: 220px;
+  width: 200px;
   height: 3px;
-  background: rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.08);
   border-radius: 3px;
   overflow: hidden;
 }
@@ -342,9 +380,9 @@
 .psd-launch-bar-fill {
   height: 100%;
   width: 0%;
-  background: linear-gradient(90deg, #3b82f6, #00d2ff);
+  background: linear-gradient(90deg, #2563eb, #00d2ff);
   border-radius: 3px;
-  transition: width 1.4s ease;
+  transition: width 1.3s ease;
 }
 
 .psd-launch-overlay.active .psd-launch-bar-fill {
