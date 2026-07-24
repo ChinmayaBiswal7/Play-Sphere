@@ -228,27 +228,28 @@ export function GullyCricketGame({ onExit }) {
 
       {/* ── 3. HOME MENU SCREEN (1-to-1 exact reproduction of Image 2 mockup using high-res card & bg art) ── */}
       {gameState === 'MENU' && (() => {
+        const startDraft = useGullyCricketStore.getState().startMegaDraftFlow;
         const CARDS = [
           {
             id: 'quick',
             title: 'QUICK MATCH',
-            sub: 'JUMP IN & PLAY A QUICK GAME',
+            sub: 'JUMP IN & DRAFT SQUAD FOR QUICK MATCH',
             color: '#0284c7',
             img: '/card_quick.jpg',
             action: () => {
               useGullyCricketStore.setState({ totalOvers: 1, teamSize: 5, gameMode: 'STREET_SERIES' });
-              resetMatch();
+              startDraft();
             }
           },
           {
             id: 'tournament',
             title: 'TOURNAMENT',
-            sub: 'COMPETE & WIN THE TROPHY',
+            sub: 'DRAFT STREET KINGS & WIN TROPHY',
             color: '#16a34a',
             img: '/card_tournament.jpg',
             action: () => {
               useGullyCricketStore.setState({ totalOvers: 2, teamSize: 5, gameMode: 'STREET_SERIES' });
-              resetMatch();
+              startDraft();
             }
           },
           {
@@ -259,7 +260,7 @@ export function GullyCricketGame({ onExit }) {
             img: '/card_career.jpg',
             action: () => {
               useGullyCricketStore.setState({ totalOvers: 2, teamSize: 5, gameMode: 'STREET_SERIES' });
-              resetMatch();
+              startDraft();
             }
           },
           {
@@ -270,7 +271,7 @@ export function GullyCricketGame({ onExit }) {
             img: '/card_2v2.jpg',
             action: () => {
               useGullyCricketStore.setState({ totalOvers: 1, teamSize: 2, gameMode: '1V1_CHALLENGE' });
-              resetMatch();
+              startDraft();
             }
           },
           {
@@ -330,7 +331,6 @@ export function GullyCricketGame({ onExit }) {
                 boxShadow: '0 8px 30px rgba(0,0,0,0.6)',
                 minWidth: '280px'
               }}>
-                {/* Character Illustration Avatar Image */}
                 <img
                   src="/gully_avatar.jpg"
                   alt="Player Avatar"
@@ -360,7 +360,6 @@ export function GullyCricketGame({ onExit }) {
                     }}>12</span>
                   </div>
                   <div style={{ color: '#facc15', fontSize: '0.68rem', fontWeight: '700', fontStyle: 'italic', margin: '2px 0 4px' }}>Gully Legend</div>
-                  {/* XP Bar */}
                   <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.15)', borderRadius: '3px', overflow: 'hidden' }}>
                     <div style={{ width: '70%', height: '100%', background: 'linear-gradient(90deg, #3b82f6, #60a5fa)', boxShadow: '0 0 8px #3b82f6' }} />
                   </div>
@@ -368,7 +367,7 @@ export function GullyCricketGame({ onExit }) {
                 </div>
               </div>
 
-              {/* Main Title Center Logo (Exact match with Image 2 stencil typography) */}
+              {/* Main Title Center Logo */}
               <div style={{ textAlign: 'center', flex: 1, margin: '0 20px' }}>
                 <div style={{ fontSize: '1.4rem', marginBottom: '-8px' }}>👑</div>
                 <h1 style={{
@@ -399,7 +398,6 @@ export function GullyCricketGame({ onExit }) {
               {/* Top Right Currencies & Buttons */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' }}>
                 <div style={{ display: 'flex', gap: '10px' }}>
-                  {/* Coins */}
                   <div style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -416,7 +414,6 @@ export function GullyCricketGame({ onExit }) {
                     <span>1250</span>
                     <span style={{ background: '#facc15', color: '#000', borderRadius: '4px', padding: '0 6px', fontSize: '0.85rem', cursor: 'pointer', fontWeight: '900' }}>+</span>
                   </div>
-                  {/* Gems */}
                   <div style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -435,7 +432,6 @@ export function GullyCricketGame({ onExit }) {
                   </div>
                 </div>
 
-                {/* System Icons Row */}
                 <div style={{ display: 'flex', gap: '10px' }}>
                   {[
                     { icon: '🏆', label: 'LEADERBOARD', badge: true },
@@ -473,7 +469,7 @@ export function GullyCricketGame({ onExit }) {
               </div>
             </div>
 
-            {/* ── CENTER 6 CARDS ROW (Side-by-Side exact image reproduction) ── */}
+            {/* ── CENTER 6 CARDS ROW ── */}
             <div style={{
               display: 'flex',
               gap: '12px',
@@ -514,7 +510,6 @@ export function GullyCricketGame({ onExit }) {
                       overflow: 'hidden'
                     }}
                   >
-                    {/* Card Title Header */}
                     <div style={{ width: '100%', textShadow: '0 2px 10px rgba(0,0,0,0.9), -1px -1px 0 #000, 1px 1px 0 #000' }}>
                       <h3 style={{
                         color: '#ffffff',
@@ -529,7 +524,6 @@ export function GullyCricketGame({ onExit }) {
                       </h3>
                     </div>
 
-                    {/* Card Subtext Footer */}
                     <div style={{ width: '100%', background: 'rgba(0,0,0,0.7)', padding: '6px 4px', borderRadius: '6px', backdropFilter: 'blur(4px)' }}>
                       <p style={{
                         color: 'rgba(255,255,255,0.9)',
@@ -550,8 +544,6 @@ export function GullyCricketGame({ onExit }) {
 
             {/* ── BOTTOM ACTION ROW ── */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-              
-              {/* Daily Challenge Widget (Bottom-Left) */}
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -574,7 +566,6 @@ export function GullyCricketGame({ onExit }) {
                 </button>
               </div>
 
-              {/* Big Yellow PLAY NOW Brush-Stroke Button (Center) */}
               <button
                 onClick={activeCard.action}
                 style={{
@@ -596,20 +587,11 @@ export function GullyCricketGame({ onExit }) {
                   gap: '14px',
                   textShadow: '0 1px 0 rgba(255,255,255,0.8)'
                 }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'scale(1.08)';
-                  e.currentTarget.style.boxShadow = '0 14px 45px rgba(250, 204, 21, 0.85)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'scale(1)';
-                  e.currentTarget.style.boxShadow = '0 10px 35px rgba(250, 204, 21, 0.6)';
-                }}
               >
                 <span>PLAY NOW</span>
                 <span style={{ fontSize: '1.4rem' }}>🏏</span>
               </button>
 
-              {/* Online Players & Shop (Bottom-Right) */}
               <div style={{ display: 'flex', gap: '10px' }}>
                 <div style={{
                   background: 'rgba(15, 23, 42, 0.92)',
@@ -651,22 +633,306 @@ export function GullyCricketGame({ onExit }) {
         );
       })()}
 
-      {/* ── 4. IN-GAME HUD OVERLAYS ── */}
+      {/* ── 4. DRAFT COIN TOSS SCREEN ── */}
+      {gameState === 'DRAFT_TOSS' && (() => {
+        const [coinFlipping, setCoinFlipping] = useState(false);
+        const [tossResult, setTossResult] = useState(null);
+
+        const handleFlipCoin = (choice) => {
+          setCoinFlipping(true);
+          setTimeout(() => {
+            const result = Math.random() > 0.5 ? 'HEADS' : 'TAILS';
+            const userWon = choice === result;
+            setTossResult({ result, userWon });
+            setCoinFlipping(false);
+            useGullyCricketStore.setState({
+              draftTossWinner: userWon ? 'USER' : 'AI',
+              draftTurn: userWon ? 'USER' : 'AI'
+            });
+          }, 1800);
+        };
+
+        return (
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: 'radial-gradient(circle at center, rgba(15,23,42,0.95), rgba(9,13,22,0.98))',
+            zIndex: 120, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            fontFamily: "'Orbitron', sans-serif", padding: '40px'
+          }}>
+            <h1 style={{ color: '#facc15', fontSize: '2.8rem', fontStyle: 'italic', letterSpacing: '4px', margin: '0 0 10px' }}>
+              🪙 DRAFT COIN TOSS
+            </h1>
+            <p style={{ color: '#94a3b8', fontSize: '1rem', marginBottom: '30px' }}>
+              CHOOSE HEADS OR TAILS TO DETERMINE FIRST PICK IN MEGA DRAFT!
+            </p>
+
+            {/* Spinning 3D Coin Graphic */}
+            <div style={{
+              width: '120px', height: '120px', borderRadius: '50%', background: 'linear-gradient(135deg, #facc15, #ca8a04)',
+              border: '4px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '2.5rem', fontWeight: '900', color: '#000',
+              boxShadow: '0 0 40px rgba(250, 204, 21, 0.7)',
+              transform: coinFlipping ? 'rotateY(1440deg) scale(1.15)' : 'scale(1)',
+              transition: 'transform 1.8s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+            }}>
+              🪙
+            </div>
+
+            {!tossResult && !coinFlipping && (
+              <div style={{ display: 'flex', gap: '24px', marginTop: '40px' }}>
+                <button
+                  onClick={() => handleFlipCoin('HEADS')}
+                  style={{
+                    background: 'linear-gradient(135deg, #0284c7, #0369a1)', color: '#fff', border: '2px solid #38bdf8',
+                    borderRadius: '30px', padding: '14px 44px', fontWeight: '900', fontSize: '1.2rem', cursor: 'pointer',
+                    boxShadow: '0 8px 25px rgba(2,132,199,0.5)'
+                  }}
+                >
+                  HEADS
+                </button>
+                <button
+                  onClick={() => handleFlipCoin('TAILS')}
+                  style={{
+                    background: 'linear-gradient(135deg, #9333ea, #6b21a8)', color: '#fff', border: '2px solid #c084fc',
+                    borderRadius: '30px', padding: '14px 44px', fontWeight: '900', fontSize: '1.2rem', cursor: 'pointer',
+                    boxShadow: '0 8px 25px rgba(147,51,234,0.5)'
+                  }}
+                >
+                  TAILS
+                </button>
+              </div>
+            )}
+
+            {tossResult && (
+              <div style={{ marginTop: '35px', textAlign: 'center' }}>
+                <h2 style={{ color: tossResult.userWon ? '#22c55e' : '#ef4444', fontSize: '1.8rem', margin: '0 0 15px' }}>
+                  {tossResult.result}! {tossResult.userWon ? 'YOU WON THE TOSS!' : 'STREET REBELS WON THE TOSS!'}
+                </h2>
+                <p style={{ color: '#cbd5e1', fontSize: '1rem', marginBottom: '25px' }}>
+                  {tossResult.userWon ? 'You get 1st pick in the Mega Draft!' : 'AI gets 1st pick in the Mega Draft!'}
+                </p>
+                <button
+                  onClick={() => setGameState('MEGA_DRAFT')}
+                  style={{
+                    background: '#facc15', color: '#000', border: 'none', borderRadius: '30px', padding: '16px 50px',
+                    fontWeight: '900', fontSize: '1.2rem', cursor: 'pointer', letterSpacing: '2px'
+                  }}
+                >
+                  PROCEED TO MEGA DRAFT ➔
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* ── 5. CLASH ROYALE STYLE MEGA DRAFT SCREEN ── */}
+      {gameState === 'MEGA_DRAFT' && (() => {
+        const draftPool = useGullyCricketStore((state) => state.draftPool);
+        const userSquad = useGullyCricketStore((state) => state.userSquad);
+        const aiSquad = useGullyCricketStore((state) => state.aiSquad);
+        const draftTurn = useGullyCricketStore((state) => state.draftTurn);
+        const pickDraftPlayer = useGullyCricketStore((state) => state.pickDraftPlayer);
+        const teamSize = useGullyCricketStore((state) => state.teamSize);
+
+        return (
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: 'radial-gradient(circle at center, rgba(15,23,42,0.96), rgba(9,13,22,0.99))',
+            zIndex: 130, display: 'flex', flexDirection: 'column', padding: '24px 36px',
+            fontFamily: "'Orbitron', sans-serif", userSelect: 'none'
+          }}>
+            {/* Header */}
+            <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+              <h1 style={{ color: '#facc15', fontSize: '2.2rem', fontStyle: 'italic', margin: 0, letterSpacing: '3px' }}>
+                ⚔️ GULLY MEGA DRAFT ⚔️
+              </h1>
+              <p style={{ color: draftTurn === 'USER' ? '#38bdf8' : '#ef4444', fontSize: '1rem', fontWeight: '900', marginTop: '6px' }}>
+                {draftTurn === 'USER' ? '👉 YOUR TURN TO PICK A PLAYER!' : '⏳ AI IS CHOOSING A PLAYER...'}
+              </p>
+            </div>
+
+            {/* Main Draft Area */}
+            <div style={{ display: 'flex', gap: '20px', flex: 1, overflow: 'hidden' }}>
+              {/* Left Column: User Squad */}
+              <div style={{
+                width: '260px', background: 'rgba(15, 23, 42, 0.9)', border: '2px solid #0284c7',
+                borderRadius: '14px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px'
+              }}>
+                <h3 style={{ color: '#38bdf8', fontSize: '1rem', margin: 0, textAlign: 'center' }}>
+                  CHINMAYA XI ({userSquad.length}/{teamSize})
+                </h3>
+                {Array.from({ length: teamSize }).map((_, i) => {
+                  const p = userSquad[i];
+                  return (
+                    <div key={i} style={{
+                      height: '50px', background: p ? 'rgba(2, 132, 199, 0.2)' : 'rgba(255,255,255,0.05)',
+                      border: '1.5px dashed', borderColor: p ? '#0284c7' : 'rgba(255,255,255,0.2)',
+                      borderRadius: '8px', display: 'flex', alignItems: 'center', padding: '0 12px', gap: '10px'
+                    }}>
+                      {p ? (
+                        <>
+                          <span style={{ fontSize: '1.2rem' }}>🏏</span>
+                          <div>
+                            <div style={{ color: '#fff', fontSize: '0.75rem', fontWeight: '900' }}>{p.name}</div>
+                            <div style={{ color: '#38bdf8', fontSize: '0.62rem' }}>BAT: {p.bat} | BOWL: {p.bowl}</div>
+                          </div>
+                        </>
+                      ) : (
+                        <span style={{ color: '#64748b', fontSize: '0.75rem' }}>Empty Slot {i + 1}</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Center Grid: Clash Royale 10 Player Cards Pool */}
+              <div style={{
+                flex: 1, display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px',
+                alignContent: 'center'
+              }}>
+                {draftPool.map((p) => (
+                  <div
+                    key={p.id}
+                    onClick={() => {
+                      if (draftTurn === 'USER') pickDraftPlayer(p.id);
+                    }}
+                    style={{
+                      background: `linear-gradient(180deg, rgba(15,23,42,0.9) 0%, rgba(30,41,59,0.95) 100%)`,
+                      border: '2.5px solid', borderColor: p.color, borderRadius: '12px',
+                      padding: '12px 10px', cursor: draftTurn === 'USER' ? 'pointer' : 'not-allowed',
+                      display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+                      textAlign: 'center', boxShadow: `0 6px 20px rgba(0,0,0,0.6), 0 0 15px ${p.color}44`,
+                      transition: 'transform 0.15s', height: '220px'
+                    }}
+                    onMouseEnter={(e) => { if (draftTurn === 'USER') e.currentTarget.style.transform = 'scale(1.05)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+                  >
+                    <div style={{ color: p.color, fontSize: '0.75rem', fontWeight: '900', fontStyle: 'italic' }}>{p.trait}</div>
+                    <div style={{ fontSize: '2.5rem', margin: '4px 0' }}>👤</div>
+                    <div style={{ color: '#fff', fontSize: '0.85rem', fontWeight: '900', lineHeight: 1.1 }}>{p.name}</div>
+                    
+                    {/* Stats Bars */}
+                    <div style={{ width: '100%', fontSize: '0.62rem', color: '#cbd5e1', marginTop: '6px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>BAT</span><span>{p.bat}</span></div>
+                      <div style={{ width: '100%', height: '4px', background: '#334155', borderRadius: '2px', overflow: 'hidden' }}>
+                        <div style={{ width: `${p.bat}%`, height: '100%', background: '#facc15' }} />
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '3px' }}><span>BOWL</span><span>{p.bowl}</span></div>
+                      <div style={{ width: '100%', height: '4px', background: '#334155', borderRadius: '2px', overflow: 'hidden' }}>
+                        <div style={{ width: `${p.bowl}%`, height: '100%', background: '#ef4444' }} />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Right Column: AI Squad */}
+              <div style={{
+                width: '260px', background: 'rgba(15, 23, 42, 0.9)', border: '2px solid #ef4444',
+                borderRadius: '14px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px'
+              }}>
+                <h3 style={{ color: '#ef4444', fontSize: '1rem', margin: 0, textAlign: 'center' }}>
+                  STREET REBELS ({aiSquad.length}/{teamSize})
+                </h3>
+                {Array.from({ length: teamSize }).map((_, i) => {
+                  const p = aiSquad[i];
+                  return (
+                    <div key={i} style={{
+                      height: '50px', background: p ? 'rgba(239, 68, 68, 0.2)' : 'rgba(255,255,255,0.05)',
+                      border: '1.5px dashed', borderColor: p ? '#ef4444' : 'rgba(255,255,255,0.2)',
+                      borderRadius: '8px', display: 'flex', alignItems: 'center', padding: '0 12px', gap: '10px'
+                    }}>
+                      {p ? (
+                        <>
+                          <span style={{ fontSize: '1.2rem' }}>⚾</span>
+                          <div>
+                            <div style={{ color: '#fff', fontSize: '0.75rem', fontWeight: '900' }}>{p.name}</div>
+                            <div style={{ color: '#ef4444', fontSize: '0.62rem' }}>BAT: {p.bat} | BOWL: {p.bowl}</div>
+                          </div>
+                        </>
+                      ) : (
+                        <span style={{ color: '#64748b', fontSize: '0.75rem' }}>Empty Slot {i + 1}</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── 6. MATCH TOSS SCREEN (BAT OR BOWL SELECTION) ── */}
+      {gameState === 'MATCH_TOSS' && (() => {
+        const [userChoice, setUserChoice] = useState(null);
+
+        return (
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: 'radial-gradient(circle at center, rgba(15,23,42,0.96), rgba(9,13,22,0.99))',
+            zIndex: 140, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            fontFamily: "'Orbitron', sans-serif", padding: '40px'
+          }}>
+            <h1 style={{ color: '#facc15', fontSize: '3rem', fontStyle: 'italic', letterSpacing: '4px', margin: '0 0 10px' }}>
+              🪙 MATCH TOSS
+            </h1>
+            <p style={{ color: '#22c55e', fontSize: '1.2rem', fontWeight: '900', marginBottom: '30px' }}>
+              CHINMAYA XI WON THE MATCH TOSS! CHOOSE TO BAT OR BOWL FIRST!
+            </p>
+
+            <div style={{ display: 'flex', gap: '30px', marginBottom: '40px' }}>
+              <button
+                onClick={() => setUserChoice('BAT')}
+                style={{
+                  background: userChoice === 'BAT' ? 'linear-gradient(135deg, #facc15, #eab308)' : 'rgba(15,23,42,0.9)',
+                  color: userChoice === 'BAT' ? '#000' : '#fff', border: '3px solid #facc15',
+                  borderRadius: '20px', padding: '24px 48px', fontSize: '1.5rem', fontWeight: '900', cursor: 'pointer',
+                  boxShadow: '0 10px 30px rgba(250,204,21,0.5)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px'
+                }}
+              >
+                <span style={{ fontSize: '3rem' }}>🏏</span>
+                <span>ELECT TO BAT</span>
+              </button>
+
+              <button
+                onClick={() => setUserChoice('BOWL')}
+                style={{
+                  background: userChoice === 'BOWL' ? 'linear-gradient(135deg, #0284c7, #0369a1)' : 'rgba(15,23,42,0.9)',
+                  color: '#fff', border: '3px solid #0284c7',
+                  borderRadius: '20px', padding: '24px 48px', fontSize: '1.5rem', fontWeight: '900', cursor: 'pointer',
+                  boxShadow: '0 10px 30px rgba(2,132,199,0.5)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px'
+                }}
+              >
+                <span style={{ fontSize: '3rem' }}>⚾</span>
+                <span>ELECT TO BOWL</span>
+              </button>
+            </div>
+
+            {userChoice && (
+              <button
+                onClick={resetMatch}
+                style={{
+                  background: '#22c55e', color: '#fff', border: 'none', borderRadius: '35px',
+                  padding: '18px 60px', fontWeight: '900', fontSize: '1.3rem', letterSpacing: '3px', cursor: 'pointer'
+                }}
+              >
+                START MATCH ⚡
+              </button>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* ── 7. IN-GAME HUD OVERLAYS & FIELDER PRESETS ── */}
       {(gameState === 'INNINGS_1' || gameState === 'INNINGS_2') && (
         <>
           {/* Top-Left Scoreboard */}
           <div style={{
-            position: 'absolute',
-            top: '25px',
-            left: '30px',
-            background: 'rgba(15, 23, 42, 0.88)',
-            border: '1px solid rgba(250, 204, 21, 0.4)',
-            borderRadius: '12px',
-            padding: '12px 24px',
-            fontFamily: "'Orbitron', sans-serif",
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
-            backdropFilter: 'blur(10px)',
-            zIndex: 10
+            position: 'absolute', top: '25px', left: '30px', background: 'rgba(15, 23, 42, 0.88)',
+            border: '1px solid rgba(250, 204, 21, 0.4)', borderRadius: '12px', padding: '12px 24px',
+            fontFamily: "'Orbitron', sans-serif", boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+            backdropFilter: 'blur(10px)', zIndex: 10
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '6px' }}>
               <span style={{ background: '#facc15', color: '#000', fontSize: '0.7rem', fontWeight: '900', padding: '2px 8px', borderRadius: '4px' }}>
@@ -692,20 +958,36 @@ export function GullyCricketGame({ onExit }) {
             </div>
           </div>
 
-          {/* Top-Right Camera Switcher & Controls Badge */}
-          <div style={{ position: 'absolute', top: '25px', right: '30px', zIndex: 10, display: 'flex', gap: '12px' }}>
+          {/* Top-Right Camera Switcher & Fielder Preset Switcher */}
+          <div style={{ position: 'absolute', top: '25px', right: '30px', zIndex: 10, display: 'flex', gap: '10px' }}>
+            {/* Field Preset Selector */}
+            <div style={{ display: 'flex', background: 'rgba(15, 23, 42, 0.88)', border: '1px solid #facc15', borderRadius: '8px', padding: '2px' }}>
+              {['DEFAULT', 'SLIP_ATTACK', 'WALL_GUARD'].map((key) => {
+                const setField = useGullyCricketStore.getState().setFieldPreset;
+                const current = useGullyCricketStore((s) => s.currentFieldPreset);
+                const active = current === key;
+                return (
+                  <button
+                    key={key}
+                    onClick={() => setField(key)}
+                    style={{
+                      background: active ? '#facc15' : 'transparent', color: active ? '#000' : '#fff',
+                      border: 'none', borderRadius: '6px', padding: '6px 12px', fontWeight: '900', fontSize: '0.72rem',
+                      cursor: 'pointer', fontFamily: "'Orbitron', sans-serif"
+                    }}
+                  >
+                    🛡️ {key.replace('_', ' ')}
+                  </button>
+                );
+              })}
+            </div>
+
             <button
               onClick={() => setCameraView(cameraView === 'BATTER_VIEW' ? 'BOWLER_VIEW' : 'BATTER_VIEW')}
               style={{
-                background: 'rgba(15, 23, 42, 0.88)',
-                border: '1px solid #00d2ff',
-                color: '#00d2ff',
-                borderRadius: '8px',
-                padding: '8px 16px',
-                fontWeight: '900',
-                cursor: 'pointer',
-                fontFamily: "'Orbitron', sans-serif",
-                fontSize: '0.8rem'
+                background: 'rgba(15, 23, 42, 0.88)', border: '1px solid #00d2ff', color: '#00d2ff',
+                borderRadius: '8px', padding: '8px 16px', fontWeight: '900', cursor: 'pointer',
+                fontFamily: "'Orbitron', sans-serif", fontSize: '0.8rem'
               }}
             >
               📹 CAMERA [C]: {cameraView === 'BATTER_VIEW' ? 'BATTER VIEW' : 'BOWLER VIEW'}
@@ -715,21 +997,11 @@ export function GullyCricketGame({ onExit }) {
           {/* Center Commentary & Feedback Banner */}
           {shotFeedback && (
             <div style={{
-              position: 'absolute',
-              top: '120px',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              background: 'rgba(15, 23, 42, 0.92)',
-              border: '2px solid #facc15',
-              borderRadius: '30px',
-              padding: '10px 30px',
-              color: '#facc15',
-              fontFamily: "'Orbitron', sans-serif",
-              fontSize: '1.3rem',
-              fontWeight: '900',
-              letterSpacing: '3px',
-              boxShadow: '0 0 30px rgba(250, 204, 21, 0.5)',
-              zIndex: 30
+              position: 'absolute', top: '120px', left: '50%', transform: 'translateX(-50%)',
+              background: 'rgba(15, 23, 42, 0.92)', border: '2px solid #facc15', borderRadius: '30px',
+              padding: '10px 30px', color: '#facc15', fontFamily: "'Orbitron', sans-serif",
+              fontSize: '1.3rem', fontWeight: '900', letterSpacing: '3px',
+              boxShadow: '0 0 30px rgba(250, 204, 21, 0.5)', zIndex: 30
             }}>
               {shotFeedback} — {lastShotOutcome}
             </div>
@@ -737,34 +1009,18 @@ export function GullyCricketGame({ onExit }) {
 
           {/* Bottom Over History Bar */}
           <div style={{
-            position: 'absolute',
-            bottom: '30px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            background: 'rgba(15, 23, 42, 0.9)',
-            border: '1px solid rgba(255,255,255,0.15)',
-            borderRadius: '16px',
-            padding: '10px 24px',
-            backdropFilter: 'blur(12px)',
-            fontFamily: "'Orbitron', sans-serif",
-            zIndex: 30
+            position: 'absolute', bottom: '30px', left: '50%', transform: 'translateX(-50%)',
+            display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(15, 23, 42, 0.9)',
+            border: '1px solid rgba(255,255,255,0.15)', borderRadius: '16px', padding: '10px 24px',
+            backdropFilter: 'blur(12px)', fontFamily: "'Orbitron', sans-serif", zIndex: 30
           }}>
             <span style={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: '900', marginRight: '8px' }}>THIS OVER:</span>
             {overHistory.slice(-6).map((ball, i) => (
               <span
                 key={i}
                 style={{
-                  width: '28px',
-                  height: '28px',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: '900',
-                  fontSize: '0.8rem',
+                  width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', fontWeight: '900', fontSize: '0.8rem',
                   background: ball === '4' ? '#22c55e' : ball === '6' ? '#a855f7' : ball === 'W' || ball === '1T' ? '#ef4444' : 'rgba(255,255,255,0.1)',
                   color: '#fff'
                 }}
@@ -776,7 +1032,7 @@ export function GullyCricketGame({ onExit }) {
         </>
       )}
 
-      {/* ── 5. INNINGS BREAK OVERLAY ── */}
+      {/* ── 8. INNINGS BREAK OVERLAY ── */}
       {gameState === 'INNINGS_BREAK' && (
         <div style={{ position: 'absolute', inset: 0, background: 'rgba(9, 13, 22, 0.9)', backdropFilter: 'blur(10px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 150, fontFamily: "'Orbitron', sans-serif" }}>
           <h1 style={{ color: '#facc15', fontSize: '3rem', margin: 0, letterSpacing: '6px' }}>INNINGS BREAK!</h1>
@@ -795,7 +1051,7 @@ export function GullyCricketGame({ onExit }) {
         </div>
       )}
 
-      {/* ── 6. MATCH RESULT OVERLAY ── */}
+      {/* ── 9. MATCH RESULT OVERLAY ── */}
       {gameState === 'RESULT' && (
         <div style={{ position: 'absolute', inset: 0, background: 'rgba(9, 13, 22, 0.95)', backdropFilter: 'blur(12px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 150, fontFamily: "'Orbitron', sans-serif" }}>
           <h1 style={{ color: '#facc15', fontSize: '3.5rem', margin: 0, letterSpacing: '8px' }}>
@@ -821,7 +1077,7 @@ export function GullyCricketGame({ onExit }) {
         </div>
       )}
 
-      {/* ── 7. PAUSE / GULLY RULES SETTINGS MODAL ── */}
+      {/* ── 10. PAUSE / GULLY RULES SETTINGS MODAL ── */}
       {isSettingsOpen && (
         <div style={{ position: 'absolute', inset: 0, background: 'rgba(9, 13, 22, 0.92)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, fontFamily: "'Orbitron', sans-serif" }}>
           <div style={{ width: '500px', background: 'rgba(15, 23, 42, 0.95)', border: '1px solid #facc15', borderRadius: '16px', padding: '30px', color: '#fff' }}>
@@ -850,5 +1106,5 @@ export function GullyCricketGame({ onExit }) {
         </div>
       )}
     </div>
-  )
+  );
 }
