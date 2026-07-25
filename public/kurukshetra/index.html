@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kurukshetra — Gods Battle</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Philosopher:ital,wght@0,400;0,700;1,400&family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="game-container">
+    <div id="menu">
+      <h1>Kurukshetra</h1>
+      <button id="start-btn" style="padding: 10px 20px; font-size: 20px; background: var(--saffron); color: white; border: none; cursor: pointer;">Start Battle</button>
+    </div>
+    <canvas id="gameCanvas" width="800" height="800"></canvas>
+  </div>
+  <script type="module">
+    import { KurukshetraGame } from './game.js';
+    const game = new KurukshetraGame();
+    
+    document.getElementById('start-btn').addEventListener('click', () => {
+      document.getElementById('menu').style.display = 'none';
+      game.init(document.getElementById('gameCanvas'), {});
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+:root {
+  --gold: #FFD700;
+  --saffron: #FF9933;
+  --purple: #4B0082;
+  --red: #8B0000;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: radial-gradient(circle, #1a0033 0%, #000 100%);
+  color: white;
+  font-family: 'Philosopher', sans-serif;
+  overflow: hidden;
+}
+
+#game-container {
+  position: relative;
+  width: 800px;
+  height: 800px;
+  margin: 0 auto;
+}
+
+canvas {
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 20px var(--purple);
+}
+
+#menu {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 2rem;
+  border: 2px solid var(--saffron);
+  border-radius: 10px;
+}
