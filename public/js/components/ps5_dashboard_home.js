@@ -14,6 +14,13 @@
       desc: 'Traditional Indian 3D street game! Throw the tennis ball to knock down the 7-stone stack, run to pick up scattered stones, and rebuild the tower at the center pedestal while dodging defender throws!'
     },
     {
+      id: 'kurukshetra',
+      img: '/kurukshetra_card.jpg',
+      title: 'Kurukshetra: Gods Battle',
+      pill: 'ESRB: E10+', rating: '⭐ 5.0 Rating', dev: 'DeepMind Mythology Studios',
+      desc: 'Indian, Greek & Egyptian gods clash on the legendary Mahabharata battlefield! Real-time card battles, Karma Orb system, Dharma Surge comebacks, 35+ divine cards, online PvP & AI modes!'
+    },
+    {
       id: 'gullycricket',
       img: '/gully_cricket_card.png',
       title: 'Gully Cricket 3D',
@@ -153,7 +160,8 @@
         f1:           `/f1/index.html?room=${code}`,
         tennis:       `/tennis/index.html?room=${code}`,
         wwe:          `/wwe/index.html?room=${code}`,
-        fps:          `/fps/index.html?room=${code}`
+        fps:          `/fps/index.html?room=${code}`,
+        kurukshetra:  `/kurukshetra/index.html?room=${code}`
       };
       const url = urls[gameId];
       if (!url) { if (overlay) overlay.classList.remove('active'); return; }
