@@ -7,6 +7,13 @@
   /* ── GAME METADATA ── */
   const GAMES = [
     {
+      id: 'blockzone',
+      img: '/battleroyale_card.jpg',
+      title: 'Block Zone: Battle Royale',
+      pill: 'ESRB: T', rating: '⭐ 5.0 Rating', dev: 'DeepMind Survival Studios',
+      desc: '20-player mini Battle Royale on a compact blocky island! Drop from the sky, loot houses and forests, fight 19 AI bots, and stay inside the shrinking blue zone. Last one alive wins!'
+    },
+    {
       id: 'lagori',
       img: '/lagori_card.png',
       title: 'Lagori 7 Stones 3D',
@@ -154,6 +161,7 @@
       }
       const code = roomCode || '';
       const urls = {
+        blockzone:    `/blockzone/index.html`,
         football:     `/football/index.html?room=${code}`,
         rematch:      `/rematch/index.html?game=rematch&room=${code}`,
         lagori:       `/rematch/index.html?game=lagori&room=${code}`,

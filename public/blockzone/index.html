@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Block Zone — Battle Royale</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <!-- Three.js from CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+  <canvas id="game-canvas"></canvas>
+  
+  <div id="hud">
+    <div class="hud-top-left">
+      <div id="health-bar">❤️ <span id="hp">100</span><div class="bar-bg"><div class="bar-fill" id="hp-fill"></div></div></div>
+      <div id="shield-bar">🛡 <span id="sp">50</span><div class="bar-bg"><div class="bar-fill" id="sp-fill"></div></div></div>
+    </div>
+    <div class="hud-top-center">
+      <div id="zone-warning" class="hidden">⚠ ZONE CLOSING — <span id="zone-timer">0:00</span></div>
+      <div id="zone-distance">Zone: <span id="dist-to-zone">--- m away</span></div>
+    </div>
+    <div class="hud-top-right">
+      <div id="alive-count">🎯 <span id="alive">20</span> ALIVE</div>
+      <div id="kill-feed"></div>
+    </div>
+    <div class="hud-bottom-right">
+      <div id="weapon-info">
+        <span id="weapon-name">UNARMED</span>
+        <span id="ammo">- / -</span>
+      </div>
+    </div>
+    <div id="crosshair">+</div>
+    <div id="interact-prompt" class="hidden">[E] Pick Up <span id="interact-name">ITEM</span></div>
+  </div>
+
+  <div id="minimap-container">
+    <canvas id="minimap-canvas" width="160" height="160"></canvas>
+  </div>
+  
+  <div id="main-menu">
+    <div class="menu-content">
+      <h1>BLOCK ZONE</h1>
+      <h2>BATTLE ROYALE</h2>
+      <button id="btn-play">▶ PLAY</button>
+      <button id="btn-settings">⚙ SETTINGS</button>
+      <div id="settings-panel" class="hidden">
+        <label>Sensitivity: <input type="range" id="sens-slider" min="0.1" max="5.0" step="0.1" value="1.0"></label>
+      </div>
+    </div>
+  </div>
+  
+  <div id="drop-hud" class="hidden">
+    <div id="drop-prompt">PREPARE TO JUMP — SPACE to deploy</div>
+    <div id="altitude-meter">ALT: <span id="altitude-val">200</span>m</div>
+  </div>
+
+  <div id="death-screen" class="hidden screen-overlay">
+    <h1>YOU DIED</h1>
+    <p>Eliminated by <span id="killer">Unknown</span></p>
+    <p>Placement: <span id="placement">#20</span></p>
+    <p>Eliminations: <span id="kills">0</span></p>
+    <button onclick="location.reload()">RETURN TO LOBBY</button>
+  </div>
+  
+  <div id="victory-screen" class="hidden screen-overlay">
+    <h1>🏆 VICTORY ROYALE</h1>
+    <h2>#1 WINNER</h2>
+    <p>Eliminations: <span id="v-kills">0</span></p>
+    <button onclick="location.reload()">PLAY AGAIN</button>
+  </div>
+
+  <!-- Load game modules in order -->
+  <script src="js/GameState.js"></script>
+  <script src="js/AudioManager.js"></script>
+  <script src="js/World.js"></script>
+  <script src="js/Camera.js"></script>
+  <script src="js/WeaponSystem.js"></script>
+  <script src="js/LootSystem.js"></script>
+  <script src="js/SafeZone.js"></script>
+  <script src="js/BotAI.js"></script>
+  <script src="js/Player.js"></script>
+  <script src="js/HUD.js"></script>
+  <script src="js/Minimap.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
