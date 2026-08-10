@@ -80,6 +80,7 @@
 
   let selectedIndex = 0;
   let cards = [];
+  let navLocked = false; // debounce for keyboard nav
 
   /* ── OPEN MODAL ── */
   function openModal(id) {
@@ -245,18 +246,26 @@
       card.addEventListener('click', () => { selectGame(idx); window.ps5LaunchGame(card.dataset.game); });
     });
 
-    // Keyboard nav
+    // Keyboard nav — debounced to prevent double-skip
     window.addEventListener('keydown', e => {
       if (e.key === 'f' || e.key === 'F') { toggleFullscreen(); return; }
       if (document.querySelector('.ps5-profile-modal.show') || document.activeElement.tagName === 'INPUT') return;
-      if (e.key === 'ArrowRight' || e.key === 'd') {
-        if (selectedIndex < GAMES.length - 1) selectGame(selectedIndex + 1);
-      } else if (e.key === 'ArrowLeft' || e.key === 'a') {
-        if (selectedIndex > 0) selectGame(selectedIndex - 1);
-      } else if (e.key === 'Enter' || e.key === ' ') {
+
+      if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'ArrowLeft' || e.key === 'a') {
+        if (navLocked) return; // block rapid repeats
+        navLocked = true;
+        setTimeout(() => { navLocked = false; }, 220);
+
+        if ((e.key === 'ArrowRight' || e.key === 'd') && selectedIndex < cards.length - 1) {
+          selectGame(selectedIndex + 1);
+        } else if ((e.key === 'ArrowLeft' || e.key === 'a') && selectedIndex > 0) {
+          selectGame(selectedIndex - 1);
+        }
+      } else if (e.key === 'Enter') {
         e.preventDefault();
+        // Always read game ID directly from the selected card element — never from GAMES array index
         const card = cards[selectedIndex];
-        if (card) window.ps5LaunchGame(card.dataset.game);
+        if (card && card.dataset.game) window.ps5LaunchGame(card.dataset.game);
       }
     });
 
@@ -297,14 +306,12 @@
     initClock();
     initParticles();
 
-    // Music starts on first user interaction
+    // Music starts on first user click only (removed keydown to avoid nav interference)
     const startMusic = () => {
       if (typeof window.ps5LoadYouTubeAPI === 'function') window.ps5LoadYouTubeAPI();
       window.removeEventListener('click', startMusic);
-      window.removeEventListener('keydown', startMusic);
     };
     window.addEventListener('click', startMusic);
-    window.addEventListener('keydown', startMusic);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
