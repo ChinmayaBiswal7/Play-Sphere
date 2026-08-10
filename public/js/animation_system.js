@@ -651,7 +651,10 @@ function updateBatsmanAnimation(dt) {
   // FBX Batsman Animation
   if (window.batsmanMesh && window.batsmanMesh.isFBX) {
     const isReadyStance = (window.gameState === window.STATES.BOWL_READY || window.gameState === window.STATES.BALL_IN_FLIGHT);
-    const moveDir = (window.MATCH.userIsBatting && window.gameState === window.STATES.BOWL_READY) ? (window.controllerInput.joystickX || (window.keys.a ? -1 : window.keys.d ? 1 : 0)) : 0;
+    // Arrow keys ONLY move the batsman. Joystick controls shot direction separately.
+    const moveDir = (window.MATCH.userIsBatting && window.gameState === window.STATES.BOWL_READY)
+      ? (window.keys.arrowLeft || window.keys.a ? -1 : window.keys.arrowRight || window.keys.d ? 1 : 0)
+      : 0;
     const isMoving = isPlaying && Math.abs(moveDir) > 0.05 && window.runningState === 'idle';
 
     const bones = getFBXBones(window.batsmanMesh);
@@ -959,7 +962,10 @@ function updateBatsmanAnimation(dt) {
   }
 
   // Shuffle/Walk animations
-  const moveDir = (window.MATCH.userIsBatting && window.gameState === window.STATES.BOWL_READY) ? (window.controllerInput.joystickX || (window.keys.a ? -1 : window.keys.d ? 1 : 0)) : 0;
+  // Arrow keys ONLY move the batsman. Joystick controls shot direction separately.
+  const moveDir = (window.MATCH.userIsBatting && window.gameState === window.STATES.BOWL_READY)
+    ? (window.keys.arrowLeft || window.keys.a ? -1 : window.keys.arrowRight || window.keys.d ? 1 : 0)
+    : 0;
   const isMoving = isPlaying && Math.abs(moveDir) > 0.05 && window.runningState === 'idle';
   if (isMoving) {
     const walkCycle = window.clock.getElapsedTime() * 14;
