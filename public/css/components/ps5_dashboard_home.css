@@ -349,3 +349,205 @@
   transition: width 1.3s ease;
 }
 .psd-launch-overlay.active .psd-launch-bar-fill { width: 100%; }
+
+/* ── SEARCH MODAL STYLES ── */
+.ps5-search-card {
+  position: relative;
+  width: 920px;
+  max-width: 92vw;
+  height: 600px;
+  max-height: 85vh;
+  background: rgba(8, 15, 34, 0.98);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  border-radius: 20px;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.85), 0 0 70px rgba(59,130,246,0.15);
+  display: flex;
+  flex-direction: column;
+  padding: 30px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.ps5-search-header-row {
+  margin-bottom: 20px;
+}
+
+.ps5-search-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1.5px solid rgba(96, 165, 250, 0.3);
+  border-radius: 14px;
+  padding: 12px 18px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.ps5-search-bar-wrap:focus-within {
+  border-color: #3b82f6;
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.35);
+}
+
+.ps5-search-bar-wrap input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  font-family: inherit;
+  font-size: 1.05rem;
+  color: #fff;
+  letter-spacing: 0.5px;
+}
+
+.ps5-search-bar-wrap input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+#ps5-game-search-clear {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+#ps5-game-search-clear:hover { color: #fff; }
+
+.ps5-search-filter-pills {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.ps5-filter-pill {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.65);
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.ps5-filter-pill:hover {
+  background: rgba(59, 130, 246, 0.15);
+  color: #fff;
+  border-color: rgba(59, 130, 246, 0.4);
+}
+
+.ps5-filter-pill.active {
+  background: #2563eb;
+  color: #fff;
+  border-color: #3b82f6;
+  box-shadow: 0 0 14px rgba(37, 99, 235, 0.5);
+}
+
+.ps5-search-results-grid {
+  flex: 1;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 16px;
+  padding-right: 6px;
+}
+
+.ps5-search-results-grid::-webkit-scrollbar {
+  width: 6px;
+}
+.ps5-search-results-grid::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.3);
+  border-radius: 4px;
+}
+
+.ps5-search-result-item {
+  display: flex;
+  flex-direction: column;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+.ps5-search-result-item:hover {
+  transform: translateY(-4px);
+  border-color: #00d2ff;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.6), 0 0 16px rgba(0,210,255,0.25);
+}
+
+.ps5-sri-thumb {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  background: #020917;
+}
+
+.ps5-sri-body {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.ps5-sri-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+.ps5-sri-dev {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 8px;
+}
+
+.ps5-sri-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.ps5-sri-pill {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(59, 130, 246, 0.2);
+  color: #93c5fd;
+  font-weight: 700;
+}
+
+.ps5-sri-launch-btn {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.ps5-sri-launch-btn:hover { background: #3b82f6; }
+
+.ps5-search-no-results {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 60px 20px;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.95rem;
+}
+

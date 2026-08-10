@@ -302,6 +302,159 @@
       }
     });
 
+    // Search button & modal logic
+    const searchBtn = document.getElementById('btn-search');
+    const searchModal = document.getElementById('ps5-search-modal');
+    const searchCloseBtn = document.getElementById('ps5-search-close-btn');
+    const searchInput = document.getElementById('ps5-game-search-input');
+    const searchClear = document.getElementById('ps5-game-search-clear');
+    const searchResultsGrid = document.getElementById('ps5-search-results-grid');
+    const filterPills = document.querySelectorAll('.ps5-filter-pill');
+
+    let currentSearchGenre = 'all';
+
+    const GENRE_MAP = {
+      blockzone: ['battle-royale', 'action', 'arcade'],
+      lagori: ['arcade', 'sports', 'action'],
+      kurukshetra: ['action', 'pvp', 'arcade'],
+      gullycricket: ['sports', 'arcade'],
+      rematch: ['sports', 'arcade', 'pvp'],
+      football: ['sports', 'pvp'],
+      cricket: ['sports', 'pvp'],
+      f1: ['arcade', 'sports'],
+      tennis: ['sports', 'arcade', 'pvp'],
+      wwe: ['action', 'arcade', 'pvp'],
+      fps: ['action', 'pvp']
+    };
+
+    function renderSearchResults(filterText = '', genre = 'all') {
+      if (!searchResultsGrid) return;
+      searchResultsGrid.innerHTML = '';
+      const q = filterText.trim().toLowerCase();
+
+      const matched = GAMES.filter(g => {
+        const matchesQuery = !q || g.title.toLowerCase().includes(q) || g.desc.toLowerCase().includes(q) || g.dev.toLowerCase().includes(q);
+        const matchesGenre = genre === 'all' || (GENRE_MAP[g.id] && GENRE_MAP[g.id].includes(genre));
+        return matchesQuery && matchesGenre;
+      });
+
+      if (matched.length === 0) {
+        searchResultsGrid.innerHTML = `<div class="ps5-search-no-results">No games found matching "${filterText}". Try another search!</div>`;
+        return;
+      }
+
+      matched.forEach(g => {
+        const item = document.createElement('div');
+        item.className = 'ps5-search-result-item';
+        item.innerHTML = `
+          <img class="ps5-sri-thumb" src="${g.img}" alt="${g.title}">
+          <div class="ps5-sri-body">
+            <div class="ps5-sri-title">${g.title}</div>
+            <div class="ps5-sri-dev">${g.dev}</div>
+            <div class="ps5-sri-footer">
+              <span class="ps5-sri-pill">${g.pill}</span>
+              <button class="ps5-sri-launch-btn">PLAY</button>
+            </div>
+          </div>
+        `;
+        item.onclick = () => {
+          if (searchModal) { searchModal.classList.remove('show'); searchModal.style.display = 'none'; }
+          window.ps5LaunchGame(g.id);
+        };
+        searchResultsGrid.appendChild(item);
+      });
+    }
+
+    if (searchBtn) {
+      searchBtn.addEventListener('click', () => {
+        openModal('ps5-search-modal');
+        if (searchInput) {
+          searchInput.value = '';
+          setTimeout(() => searchInput.focus(), 100);
+        }
+        currentSearchGenre = 'all';
+        filterPills.forEach(p => p.classList.toggle('active', p.dataset.genre === 'all'));
+        renderSearchResults('', 'all');
+      });
+    }
+
+    if (searchCloseBtn) {
+      searchCloseBtn.addEventListener('click', () => {
+        if (searchModal) { searchModal.classList.remove('show'); searchModal.style.display = 'none'; }
+      });
+    }
+
+    if (searchModal) {
+      searchModal.addEventListener('click', (e) => {
+        if (e.target === searchModal) {
+          searchModal.classList.remove('show');
+          searchModal.style.display = 'none';
+        }
+      });
+    }
+
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        const val = e.target.value;
+        if (searchClear) searchClear.style.display = val ? 'block' : 'none';
+        renderSearchResults(val, currentSearchGenre);
+      });
+    }
+
+    if (searchClear) {
+      searchClear.addEventListener('click', () => {
+        if (searchInput) searchInput.value = '';
+        searchClear.style.display = 'none';
+        renderSearchResults('', currentSearchGenre);
+        searchInput.focus();
+      });
+    }
+
+    filterPills.forEach(pill => {
+      pill.addEventListener('click', () => {
+        filterPills.forEach(p => p.classList.remove('active'));
+        pill.classList.add('active');
+        currentSearchGenre = pill.dataset.genre || 'all';
+        renderSearchResults(searchInput ? searchInput.value : '', currentSearchGenre);
+      });
+    });
+
+    // Settings button & overlay logic
+    const settingsBtn = document.getElementById('btn-settings');
+    const settingsScreen = document.getElementById('settings-screen');
+    const settingsBackBtn = document.getElementById('settings-back-btn');
+    const settingsSaveBtn = document.getElementById('menu-btn-save-settings');
+
+    if (settingsBtn) {
+      settingsBtn.addEventListener('click', () => {
+        if (settingsScreen) {
+          settingsScreen.classList.remove('hidden');
+          // Load settings values from localStorage if available
+          const savedVol = localStorage.getItem('playsphere_master_vol');
+          if (savedVol !== null) {
+            const volSlider = document.getElementById('menu-setting-vol-master');
+            const volVal = document.getElementById('menu-setting-vol-master-val');
+            if (volSlider) volSlider.value = savedVol;
+            if (volVal) volVal.textContent = Math.round(parseFloat(savedVol) * 100) + '%';
+          }
+        }
+      });
+    }
+
+    if (settingsBackBtn) {
+      settingsBackBtn.addEventListener('click', () => {
+        if (settingsScreen) settingsScreen.classList.add('hidden');
+      });
+    }
+
+    if (settingsSaveBtn) {
+      settingsSaveBtn.addEventListener('click', () => {
+        const volSlider = document.getElementById('menu-setting-vol-master');
+        if (volSlider) localStorage.setItem('playsphere_master_vol', volSlider.value);
+        if (settingsScreen) settingsScreen.classList.add('hidden');
+      });
+    }
+
     // Tabs
     document.querySelectorAll('.psd-tab').forEach(btn => {
       btn.addEventListener('click', () => {

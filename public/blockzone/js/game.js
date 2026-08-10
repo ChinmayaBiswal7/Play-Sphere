@@ -1,123 +1,214 @@
-const WORLD_SIZE = 400;
-const NUM_BOTS = 19; // +1 player = 20 total
+/**
+ * BLOCK ZONE: Main Game Orchestrator & Loop
+ */
+class BlockZoneGame {
+  constructor() {
+    this.worldSize = 500;
+    this.numBots = 19; // +1 player = 20 total
+    this.isPlaying = false;
+    this.isGameOver = false;
 
-let scene, renderer, world, player, camera, minimap, weaponSystem, lootSystem, safeZone;
-let entities = [];
-let lastTime = 0;
-let gameState = 'playing';
+    this.scene = null;
+    this.renderer = null;
+    this.cameraRig = null;
+    this.world = null;
+    this.player = null;
+    this.weaponSystem = null;
+    this.lootSystem = null;
+    this.safeZone = null;
+    this.minimap = null;
 
-function init() {
-    // UI overlay
-    const hud = document.createElement('div');
-    hud.id = 'hud';
-    hud.style.position = 'absolute';
-    hud.style.top = '20px';
-    hud.style.left = '20px';
-    hud.style.color = 'white';
-    hud.style.fontFamily = 'monospace';
-    hud.style.fontSize = '24px';
-    hud.style.textShadow = '2px 2px 0 #000';
-    document.body.appendChild(hud);
+    this.entities = [];
+    this.bots = [];
+    this.lastTime = 0;
+    this.menuAngle = 0;
 
-    // Three.js setup
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x87CEEB); // Sky blue
-    scene.fog = new THREE.Fog(0x87CEEB, 50, WORLD_SIZE * 0.8);
+    this.init();
+  }
 
-    renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.shadowMap.enabled = true;
-    document.body.appendChild(renderer.domElement);
+  init() {
+    const canvas = document.getElementById('game-canvas');
+    if (!canvas) return;
 
-    // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
-    scene.add(ambientLight);
+    // 1. Scene & Atmosphere
+    this.scene = new THREE.Scene();
+    this.scene.background = new THREE.Color(0x7dd3fc); // Bright Sky Blue
+    this.scene.fog = new THREE.Fog(0x7dd3fc, 80, this.worldSize * 0.95);
 
-    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    dirLight.position.set(100, 200, 50);
-    dirLight.castShadow = true;
-    dirLight.shadow.camera.top = WORLD_SIZE / 2;
-    dirLight.shadow.camera.bottom = -WORLD_SIZE / 2;
-    dirLight.shadow.camera.left = -WORLD_SIZE / 2;
-    dirLight.shadow.camera.right = WORLD_SIZE / 2;
-    dirLight.shadow.mapSize.width = 2048;
-    dirLight.shadow.mapSize.height = 2048;
-    scene.add(dirLight);
+    // 2. Renderer
+    this.renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, powerPreference: 'high-performance' });
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-    // Systems
-    world = new World(scene, WORLD_SIZE);
-    player = new Player(scene);
-    camera = new Camera(player, renderer.domElement);
-    weaponSystem = new WeaponSystem(scene);
-    lootSystem = new LootSystem(scene, WORLD_SIZE);
-    safeZone = new SafeZone(scene, WORLD_SIZE);
-    minimap = new Minimap(WORLD_SIZE, 'minimap');
+    // 3. Lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
+    this.scene.add(ambientLight);
 
-    entities.push(player);
+    const sunLight = new THREE.DirectionalLight(0xfffaed, 0.95);
+    sunLight.position.set(150, 250, 100);
+    sunLight.castShadow = true;
+    sunLight.shadow.mapSize.width = 2048;
+    sunLight.shadow.mapSize.height = 2048;
+    sunLight.shadow.camera.near = 10;
+    sunLight.shadow.camera.far = 600;
+    sunLight.shadow.camera.top = 220;
+    sunLight.shadow.camera.bottom = -220;
+    sunLight.shadow.camera.left = -220;
+    sunLight.shadow.camera.right = 220;
+    this.scene.add(sunLight);
 
-    // Bots
-    for (let i = 0; i < NUM_BOTS; i++) {
-        const x = (Math.random() - 0.5) * WORLD_SIZE * 0.9;
-        const z = (Math.random() - 0.5) * WORLD_SIZE * 0.9;
-        const bot = new BotAI(scene, new THREE.Vector3(x, 50, z), `Bot_${i}`);
-        entities.push(bot);
+    // 4. Game Systems
+    this.world = new World(this.scene, this.worldSize);
+    this.weaponSystem = new WeaponSystem(this.scene);
+    this.lootSystem = new LootSystem(this.scene, this.worldSize);
+    this.safeZone = new SafeZone(this.scene, this.worldSize);
+    this.minimap = new Minimap(this.worldSize, 'minimap-canvas');
+
+    // 5. Player & Camera
+    this.player = new Player(this.scene);
+    this.player.mesh.position.set(0, 0, 0); // Spawns at central village
+    this.entities.push(this.player);
+
+    this.cameraRig = new CameraRig(canvas);
+    this.scene.add(this.cameraRig.yawObject);
+
+    // 6. Spawn 19 AI Bots across map
+    for (let i = 0; i < this.numBots; i++) {
+      const rx = (Math.random() - 0.5) * this.worldSize * 0.75;
+      const rz = (Math.random() - 0.5) * this.worldSize * 0.75;
+      const bot = new BotAI(this.scene, new THREE.Vector3(rx, 0, rz), i);
+      this.bots.push(bot);
+      this.entities.push(bot);
     }
 
-    window.addEventListener('resize', onWindowResize, false);
-    
-    // Start loop
-    requestAnimationFrame(animate);
-}
+    // 7. Menu UI Listeners
+    this.initMenuListeners();
 
-function onWindowResize() {
-    camera.camera.aspect = window.innerWidth / window.innerHeight;
-    camera.camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-}
+    // 8. Start Loop
+    this.lastTime = performance.now();
+    requestAnimationFrame((t) => this.animate(t));
+  }
 
-function animate(time) {
-    requestAnimationFrame(animate);
+  initMenuListeners() {
+    const playBtn = document.getElementById('btn-play');
+    const settingsBtn = document.getElementById('btn-settings');
+    const settingsPanel = document.getElementById('settings-panel');
+    const sensSlider = document.getElementById('sens-slider');
+    const sensVal = document.getElementById('sens-val');
+    const playAgainBtn = document.getElementById('btn-play-again');
+    const vicPlayAgainBtn = document.getElementById('btn-vic-play-again');
 
-    const dt = (time - lastTime) / 1000;
-    lastTime = time;
-    
-    if (dt > 0.1) return; // Prevent huge jumps on tab switch
-
-    if (gameState === 'playing') {
-        player.update(dt, camera, world, weaponSystem);
-        camera.update();
-        
-        entities.forEach(ent => {
-            if (ent instanceof BotAI) {
-                ent.update(dt, entities, weaponSystem);
-            }
-        });
-
-        weaponSystem.update(dt, entities, world);
-        lootSystem.update(dt);
-        lootSystem.checkPickup(player);
-        safeZone.update(dt, entities);
-        minimap.update(player, entities.filter(e => e instanceof BotAI), safeZone);
-        
-        checkWinCondition();
+    if (playBtn) {
+      playBtn.addEventListener('click', () => {
+        if (window.audioManager) window.audioManager.init();
+        this.startMatch();
+      });
     }
 
-    renderer.render(scene, camera.camera);
+    if (settingsBtn) {
+      settingsBtn.addEventListener('click', () => {
+        if (settingsPanel) settingsPanel.classList.toggle('hidden');
+      });
+    }
+
+    if (sensSlider) {
+      sensSlider.addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value);
+        if (sensVal) sensVal.innerText = val.toFixed(1);
+        if (this.cameraRig) this.cameraRig.setSensitivity(val);
+      });
+    }
+
+    if (playAgainBtn) playAgainBtn.addEventListener('click', () => window.location.reload());
+    if (vicPlayAgainBtn) vicPlayAgainBtn.addEventListener('click', () => window.location.reload());
+  }
+
+  startMatch() {
+    const mainMenu = document.getElementById('main-menu');
+    if (mainMenu) mainMenu.classList.add('hidden');
+
+    if (window.hud) window.hud.showHUD();
+    this.isPlaying = true;
+    this.isGameOver = false;
+
+    this.player.updateHUD();
+    this.checkPlayerCount();
+
+    // Request pointer lock
+    const canvas = document.getElementById('game-canvas');
+    if (canvas) canvas.requestPointerLock();
+  }
+
+  checkPlayerCount() {
+    let aliveCount = 0;
+    this.entities.forEach(ent => {
+      if (ent.health > 0) aliveCount++;
+    });
+
+    if (window.hud) window.hud.updateAlive(aliveCount);
+
+    // Win condition: Only 1 survivor and it is the human player
+    if (aliveCount === 1 && this.player.health > 0 && !this.isGameOver) {
+      this.isGameOver = true;
+      this.isPlaying = false;
+      setTimeout(() => {
+        if (window.hud) window.hud.showVictoryScreen(this.player.kills || 0);
+      }, 500);
+    }
+  }
+
+  onPlayerDied(killerName) {
+    if (this.isGameOver) return;
+    this.isGameOver = true;
+    this.isPlaying = false;
+
+    let aliveCount = 0;
+    this.entities.forEach(ent => {
+      if (ent.health > 0) aliveCount++;
+    });
+    const placement = aliveCount + 1;
+
+    setTimeout(() => {
+      if (window.hud) window.hud.showDeathScreen(killerName, placement, this.player.kills || 0);
+    }, 700);
+  }
+
+  animate(time) {
+    requestAnimationFrame((t) => this.animate(t));
+
+    const dt = Math.min((time - this.lastTime) / 1000, 0.1);
+    this.lastTime = time;
+
+    if (this.isPlaying && !this.isGameOver) {
+      // Update Player & Controls
+      this.player.update(dt, this.cameraRig, this.world, this.weaponSystem);
+      this.cameraRig.update(this.player);
+
+      // Update AI Bots
+      this.bots.forEach(bot => {
+        bot.update(dt, this.entities, this.world, this.weaponSystem, this.safeZone);
+      });
+
+      // Update Systems
+      this.weaponSystem.update(dt);
+      this.lootSystem.update(dt, this.player);
+      this.safeZone.update(dt, this.entities, this.player);
+      this.minimap.update(this.player, this.bots, this.safeZone, this.lootSystem);
+    } else if (!this.isPlaying) {
+      // Menu Camera Flyover Orbit around Village
+      this.menuAngle += dt * 0.15;
+      const camX = Math.cos(this.menuAngle) * 55;
+      const camZ = Math.sin(this.menuAngle) * 55;
+      this.cameraRig.camera.position.set(camX, 24, camZ);
+      this.cameraRig.camera.lookAt(0, 4, 0);
+    }
+
+    this.renderer.render(this.scene, this.cameraRig.camera);
+  }
 }
 
-function checkWinCondition() {
-    let alive = 0;
-    for (let ent of entities) {
-        if (ent.health > 0) alive++;
-    }
-    
-    if (alive === 1 && player.health > 0) {
-        document.getElementById('hud').innerHTML = "<h1 style='color:gold; text-align:center;'>VICTORY ROYALE!</h1>";
-        gameState = 'ended';
-    } else if (player.health <= 0) {
-        gameState = 'ended';
-    }
-}
-
-// Ensure scripts are loaded in index.html before calling init
-window.onload = init;
+window.onload = () => {
+  window.gameInstance = new BlockZoneGame();
+};
