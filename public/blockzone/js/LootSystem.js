@@ -167,6 +167,35 @@ class LootSystem {
     }
 
     if (window.audioManager) window.audioManager.playPickup();
-    player.updateHUD();
+    // Use new player API (hp instead of health)
+    if (item.type === 'WEAPON') {
+      if (player.equipWeapon) player.equipWeapon(item.val);
+    } else if (item.type === 'MEDKIT') {
+      player.hp = Math.min(player.maxHp || 100, (player.hp || 100) + item.val);
+    } else if (item.type === 'SHIELD') {
+      player.shield = Math.min(player.maxShield || 50, (player.shield || 0) + item.val);
+    } else if (item.type === 'AMMO') {
+      // handled by weapon system
+    }
+    if (window.gameInstance && window.gameInstance.hud) {
+      window.gameInstance.hud.showLootPickup(item.type === 'WEAPON' ? item.val : item.type);
+    }
+  }
+
+  /** Alias: re-scatter loot on new match */
+  scatter(world) { /* loot was already placed in init() — nothing extra needed */ }
+
+  /** Alias: check if player is near any loot */
+  checkPickup(player) {
+    if (!player || !player.mesh) return;
+    this.collectLoot(player);
+  }
+
+  /** Alias: remove all loot from scene */
+  clear() {
+    this.lootItems.forEach(item => {
+      if (item.mesh) this.scene.remove(item.mesh);
+    });
+    this.lootItems = [];
   }
 }

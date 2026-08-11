@@ -1,282 +1,231 @@
 /**
- * BLOCK ZONE: Player Controller & 3D Blocky Character Model
+ * BLOCK ZONE: Player — Blocky character model with correct ground detection
  */
 class Player {
   constructor(scene) {
     this.scene = scene;
-    this.isPlayer = true;
-    this.name = 'Player';
+    this.mesh  = new THREE.Group();
 
-    this.health = 100;
-    this.maxHealth = 100;
-    this.shield = 50;
+    this.velocity    = new THREE.Vector3();
+    this.isGrounded  = false;
+    this.isJumping   = false;
+    this.isSprinting = false;
+    this.isCrouching = false;
+
+    this.hp       = 100;
+    this.shield   = 50;
+    this.maxHp    = 100;
     this.maxShield = 50;
+    this.kills    = 0;
+    this.isDead   = false;
 
-    this.walkSpeed = 11;
-    this.sprintSpeed = 18;
-    this.velocity = new THREE.Vector3();
-    this.isGrounded = true;
-
-    this.currentWeapon = 'ASSAULT';
-    this.ammo = WEAPON_CONFIGS.ASSAULT.magSize;
-    this.reserveAmmo = WEAPON_CONFIGS.ASSAULT.reserveAmmo;
-    this.isReloading = false;
-    this.lastFireTime = 0;
-    this.kills = 0;
+    this.moveSpeed   = 6.0;
+    this.sprintMult  = 1.65;
+    this.crouchMult  = 0.5;
+    this.jumpForce   = 8.5;
+    this.gravity     = -22;
+    this.GROUND_Y    = 0;   // feet-on-ground Y for mesh origin
 
     this.keys = {};
-    this.mouseLeft = false;
-    this.mouseRight = false;
+    this._initInput();
 
-    this.buildCharacterModel();
-    this.initControls();
-  }
-
-  buildCharacterModel() {
-    this.mesh = new THREE.Group();
-    this.mesh.position.set(0, 1.2, 0);
-
-    // Head (0.7 x 0.7 x 0.7)
-    const headMat = new THREE.MeshLambertMaterial({ color: 0xffd1a4 });
-    this.head = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.7, 0.7), headMat);
-    this.head.name = 'head';
-    this.head.position.y = 1.6;
-    this.head.castShadow = true;
-    this.mesh.add(this.head);
-
-    // Hair / Helmet Cap
-    const hairMat = new THREE.MeshLambertMaterial({ color: 0x1e3a8a });
-    const hair = new THREE.Mesh(new THREE.BoxGeometry(0.74, 0.25, 0.74), hairMat);
-    hair.position.y = 0.28;
-    this.head.add(hair);
-
-    // Torso (Blue Jacket)
-    const bodyMat = new THREE.MeshLambertMaterial({ color: 0x2563eb });
-    this.body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.9, 0.45), bodyMat);
-    this.body.position.y = 0.85;
-    this.body.castShadow = true;
-    this.mesh.add(this.body);
-
-    // Tactical Backpack
-    const packMat = new THREE.MeshLambertMaterial({ color: 0x475569 });
-    const pack = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.65, 0.25), packMat);
-    pack.position.set(0, 0, -0.32);
-    this.body.add(pack);
-
-    // Left Arm
-    const armMat = new THREE.MeshLambertMaterial({ color: 0x2563eb });
-    this.leftArm = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.8, 0.28), armMat);
-    this.leftArm.position.set(-0.56, 0.85, 0);
-    this.leftArm.castShadow = true;
-    this.mesh.add(this.leftArm);
-
-    // Right Arm (Holding Gun)
-    this.rightArm = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.8, 0.28), armMat);
-    this.rightArm.position.set(0.56, 0.85, 0);
-    this.rightArm.castShadow = true;
-    this.mesh.add(this.rightArm);
-
-    // Held Weapon Mesh
-    const gunMat = new THREE.MeshLambertMaterial({ color: 0x1f2937 });
-    this.gunMesh = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.22, 0.7), gunMat);
-    this.gunMesh.position.set(0, -0.3, 0.35);
-    this.rightArm.add(this.gunMesh);
-
-    // Left Leg
-    const legMat = new THREE.MeshLambertMaterial({ color: 0x1e293b });
-    this.leftLeg = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.85, 0.34), legMat);
-    this.leftLeg.position.set(-0.22, 0, 0);
-    this.leftLeg.castShadow = true;
-    this.mesh.add(this.leftLeg);
-
-    // Right Leg
-    this.rightLeg = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.85, 0.34), legMat);
-    this.rightLeg.position.set(0.22, 0, 0);
-    this.rightLeg.castShadow = true;
-    this.mesh.add(this.rightLeg);
-
+    this._buildCharacter();
+    // Start off-screen until drop
+    this.mesh.position.set(0, -200, 0);
     this.scene.add(this.mesh);
   }
 
-  initControls() {
-    window.addEventListener('keydown', (e) => {
-      this.keys[e.code] = true;
-      if (e.code === 'KeyR') this.reload();
-    });
+  /* ─── Character geometry ──────────────────────────────────────────── */
+  _buildCharacter() {
+    const skinColor  = 0xffd699;
+    const bodyColor  = 0x2563eb; // Blue jacket
+    const pantColor  = 0x374151; // Dark pants
+    const bootColor  = 0x1c1917; // Dark boots
 
-    window.addEventListener('keyup', (e) => {
-      this.keys[e.code] = false;
-    });
+    const skin  = new THREE.MeshLambertMaterial({ color: skinColor });
+    const body  = new THREE.MeshLambertMaterial({ color: bodyColor });
+    const pants = new THREE.MeshLambertMaterial({ color: pantColor });
+    const boots = new THREE.MeshLambertMaterial({ color: bootColor });
 
-    window.addEventListener('mousedown', (e) => {
-      if (e.button === 0) this.mouseLeft = true;
-      if (e.button === 2) this.mouseRight = true;
-    });
+    // HEAD — top at y=2.38, center at y=1.98
+    this.head = this._box(0.62, 0.72, 0.62, skin);
+    this.head.position.set(0, 1.96, 0);
 
-    window.addEventListener('mouseup', (e) => {
-      if (e.button === 0) this.mouseLeft = false;
-      if (e.button === 2) this.mouseRight = false;
-    });
+    // HELMET (decorative)
+    const helmetMat = new THREE.MeshLambertMaterial({ color: 0x1e293b });
+    this.helmet = this._box(0.65, 0.28, 0.65, helmetMat);
+    this.helmet.position.set(0, 2.26, 0);
 
-    window.addEventListener('contextmenu', (e) => e.preventDefault());
+    // TORSO — y center 1.25, extends 0.82–1.67
+    this.torso = this._box(0.78, 0.85, 0.44, body);
+    this.torso.position.set(0, 1.26, 0);
+
+    // ARMS
+    this.leftArm  = this._box(0.28, 0.75, 0.30, body);
+    this.rightArm = this._box(0.28, 0.75, 0.30, body);
+    this.leftArm.position.set(-0.55,  1.20, 0);
+    this.rightArm.position.set( 0.55, 1.20, 0);
+
+    // HANDS
+    this.leftHand  = this._box(0.26, 0.22, 0.26, skin);
+    this.rightHand = this._box(0.26, 0.22, 0.26, skin);
+    this.leftHand.position.set(-0.55,  0.77, 0);
+    this.rightHand.position.set( 0.55, 0.77, 0);
+
+    // HIPS — y 0.72
+    this.hips = this._box(0.72, 0.28, 0.40, pants);
+    this.hips.position.set(0, 0.72, 0);
+
+    // LEGS — each leg bottom at y=0, top at y=0.70
+    this.leftLeg  = this._box(0.32, 0.72, 0.36, pants);
+    this.rightLeg = this._box(0.32, 0.72, 0.36, pants);
+    this.leftLeg.position.set(-0.20,  0.36, 0);
+    this.rightLeg.position.set( 0.20, 0.36, 0);
+
+    // BOOTS
+    this.leftBoot  = this._box(0.34, 0.22, 0.40, boots);
+    this.rightBoot = this._box(0.34, 0.22, 0.40, boots);
+    this.leftBoot.position.set(-0.20,  0.11, 0.04);
+    this.rightBoot.position.set( 0.20, 0.11, 0.04);
+
+    // WEAPON (rifle stub)
+    const gunMat = new THREE.MeshLambertMaterial({ color: 0x111827 });
+    this.gun = this._box(0.14, 0.14, 0.72, gunMat);
+    this.gun.position.set(0.55, 1.05, -0.30);
+
+    [this.head, this.helmet, this.torso,
+     this.leftArm, this.rightArm, this.leftHand, this.rightHand,
+     this.hips, this.leftLeg, this.rightLeg,
+     this.leftBoot, this.rightBoot, this.gun].forEach(m => this.mesh.add(m));
+
+    // Name tag
+    this.mesh.userData.isPlayer = true;
   }
 
-  equipWeapon(weaponKey) {
-    if (!WEAPON_CONFIGS[weaponKey]) return;
-    this.currentWeapon = weaponKey;
-    this.ammo = WEAPON_CONFIGS[weaponKey].magSize;
-    this.reserveAmmo = Math.max(this.reserveAmmo, WEAPON_CONFIGS[weaponKey].reserveAmmo);
-
-    // Update gun color
-    this.gunMesh.material.color.setHex(WEAPON_CONFIGS[weaponKey].color);
-    this.updateHUD();
+  _box(w, h, d, mat) {
+    return new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
   }
 
-  reload() {
-    if (this.isReloading) return;
-    const config = WEAPON_CONFIGS[this.currentWeapon];
-    if (this.ammo >= config.magSize || this.reserveAmmo <= 0) return;
-
-    this.isReloading = true;
-    if (window.audioManager) window.audioManager.playReload();
-
-    setTimeout(() => {
-      const needed = config.magSize - this.ammo;
-      const toLoad = Math.min(needed, this.reserveAmmo);
-      this.ammo += toLoad;
-      this.reserveAmmo -= toLoad;
-      this.isReloading = false;
-      this.updateHUD();
-    }, 900);
+  /* ─── Input ─────────────────────────────────────────────────────────── */
+  _initInput() {
+    window.addEventListener('keydown', (e) => { this.keys[e.code] = true; });
+    window.addEventListener('keyup',   (e) => { this.keys[e.code] = false; });
   }
 
-  takeDamage(amount, shooter, isStorm = false) {
-    if (this.health <= 0) return;
+  /* ─── Update ─────────────────────────────────────────────────────────── */
+  update(dt, cameraRig, worldGround) {
+    if (this.isDead) return;
 
-    let remaining = amount;
-    if (!isStorm && this.shield > 0) {
-      if (this.shield >= remaining) {
-        this.shield -= remaining;
-        remaining = 0;
-      } else {
-        remaining -= this.shield;
-        this.shield = 0;
-      }
-    }
+    const forward = cameraRig.getForwardDir();
+    const right   = cameraRig.getRightDir();
 
-    this.health = Math.max(0, this.health - remaining);
-    this.updateHUD();
-
-    // Damage visual flash
-    const flashEl = document.getElementById('damage-flash');
-    if (flashEl) {
-      flashEl.classList.add('active');
-      setTimeout(() => flashEl.classList.remove('active'), 120);
-    }
-
-    if (this.health <= 0) {
-      this.die(shooter ? shooter.name : (isStorm ? 'The Storm' : 'Unknown'));
-    }
-  }
-
-  die(killerName) {
-    if (window.audioManager) window.audioManager.playEliminated();
-    if (window.gameInstance) {
-      window.gameInstance.onPlayerDied(killerName);
-    }
-  }
-
-  updateHUD() {
-    if (window.hud) {
-      window.hud.updateHealth(this.health, this.maxHealth, this.shield, this.maxShield);
-      window.hud.updateWeapon(WEAPON_CONFIGS[this.currentWeapon], this.ammo, this.reserveAmmo);
-    }
-  }
-
-  update(dt, cameraRig, world, weaponSystem) {
-    if (this.health <= 0) return;
-
-    const isSprinting = this.keys['ShiftLeft'] || this.keys['ShiftRight'];
-    const currentSpeed = isSprinting ? this.sprintSpeed : this.walkSpeed;
-
-    cameraRig.isAiming = this.mouseRight && cameraRig.isLocked;
-
-    // Movement relative to camera yaw
-    const yaw = cameraRig.yawObject.rotation.y;
-    const forward = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
-    const right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
-
+    // ── Movement input ──
     const moveDir = new THREE.Vector3();
-    if (this.keys['KeyW'] || this.keys['ArrowUp']) moveDir.add(forward);
-    if (this.keys['KeyS'] || this.keys['ArrowDown']) moveDir.sub(forward);
+    if (this.keys['KeyW'] || this.keys['ArrowUp'])    moveDir.add(forward.clone().negate());
+    if (this.keys['KeyS'] || this.keys['ArrowDown'])  moveDir.add(forward);
+    if (this.keys['KeyA'] || this.keys['ArrowLeft'])  moveDir.add(right.clone().negate());
     if (this.keys['KeyD'] || this.keys['ArrowRight']) moveDir.add(right);
-    if (this.keys['KeyA'] || this.keys['ArrowLeft']) moveDir.sub(right);
 
-    const isMoving = moveDir.lengthSq() > 0.001;
+    const isMoving = moveDir.lengthSq() > 0;
+
+    this.isSprinting = isMoving && (this.keys['ShiftLeft'] || this.keys['ShiftRight']);
+    this.isCrouching = this.keys['KeyC'] || this.keys['ControlLeft'];
+
+    let speed = this.moveSpeed;
+    if (this.isSprinting) speed *= this.sprintMult;
+    if (this.isCrouching) speed *= this.crouchMult;
+
     if (isMoving) {
-      moveDir.normalize();
+      moveDir.normalize().multiplyScalar(speed);
+      this.velocity.x = moveDir.x;
+      this.velocity.z = moveDir.z;
 
-      const nextPos = this.mesh.position.clone().add(moveDir.clone().multiplyScalar(currentSpeed * dt));
-      if (!world.checkCollision(nextPos, 0.75)) {
-        this.mesh.position.x = nextPos.x;
-        this.mesh.position.z = nextPos.z;
-      }
-
-      // Rotate character model smoothly toward movement or aim direction
-      if (cameraRig.isAiming || this.mouseLeft) {
-        this.mesh.rotation.y = yaw;
-      } else {
-        const targetAngle = Math.atan2(moveDir.x, moveDir.z);
-        this.mesh.rotation.y = targetAngle;
-      }
-    } else if (cameraRig.isAiming || this.mouseLeft) {
-      this.mesh.rotation.y = yaw;
+      // Rotate character to face movement direction
+      const targetYaw = Math.atan2(moveDir.x, moveDir.z);
+      this.mesh.rotation.y = THREE.MathUtils.lerp(
+        this.mesh.rotation.y, targetYaw, 0.22
+      );
+    } else {
+      // Damping
+      this.velocity.x *= 0.72;
+      this.velocity.z *= 0.72;
     }
 
-    // Jump & Gravity
-    if (this.keys['Space'] && this.isGrounded) {
-      this.velocity.y = 12.0;
-      this.isGrounded = false;
+    // ── Jump ──
+    if ((this.keys['Space'] || this.keys['KeyF']) && this.isGrounded) {
+      this.velocity.y = this.jumpForce;
+      this.isGrounded  = false;
+      this.isJumping   = true;
     }
 
-    this.velocity.y -= 28.0 * dt; // Gravity
+    // ── Gravity ──
+    this.velocity.y += this.gravity * dt;
+
+    // ── Move ──
+    this.mesh.position.x += this.velocity.x * dt;
     this.mesh.position.y += this.velocity.y * dt;
+    this.mesh.position.z += this.velocity.z * dt;
 
-    if (this.mesh.position.y <= 0) {
-      this.mesh.position.y = 0;
+    // ── Ground collision ──
+    const groundY = worldGround ? worldGround(this.mesh.position.x, this.mesh.position.z) : 0;
+    if (this.mesh.position.y <= groundY) {
+      this.mesh.position.y = groundY;
       this.velocity.y = 0;
       this.isGrounded = true;
+      this.isJumping  = false;
     }
 
-    // Walking Limb Animation
-    const animSpeed = isSprinting ? 14 : 9;
-    const time = performance.now() * 0.001 * animSpeed;
-    if (isMoving && this.isGrounded) {
-      this.leftLeg.rotation.x = Math.sin(time) * 0.6;
-      this.rightLeg.rotation.x = -Math.sin(time) * 0.6;
-      this.leftArm.rotation.x = -Math.sin(time) * 0.5;
-      if (!cameraRig.isAiming && !this.mouseLeft) {
-        this.rightArm.rotation.x = Math.sin(time) * 0.5;
-      } else {
-        this.rightArm.rotation.x = -0.6;
-      }
+    // ── Map boundary clamp ──
+    const LIMIT = 240;
+    this.mesh.position.x = Math.max(-LIMIT, Math.min(LIMIT, this.mesh.position.x));
+    this.mesh.position.z = Math.max(-LIMIT, Math.min(LIMIT, this.mesh.position.z));
+
+    // ── Animate limbs ──
+    this._animateLegs(isMoving, dt);
+
+    // ── Crouching squish ──
+    const crouchScale = this.isCrouching ? 0.7 : 1.0;
+    this.mesh.scale.y = THREE.MathUtils.lerp(this.mesh.scale.y, crouchScale, 0.15);
+  }
+
+  _animateLegs(isMoving, dt) {
+    if (!this._legTimer) this._legTimer = 0;
+    if (isMoving) {
+      this._legTimer += dt * (this.isSprinting ? 9 : 5.5);
     } else {
-      this.leftLeg.rotation.x = THREE.MathUtils.lerp(this.leftLeg.rotation.x, 0, 0.2);
-      this.rightLeg.rotation.x = THREE.MathUtils.lerp(this.rightLeg.rotation.x, 0, 0.2);
-      this.leftArm.rotation.x = THREE.MathUtils.lerp(this.leftArm.rotation.x, 0, 0.2);
-      if (!cameraRig.isAiming && !this.mouseLeft) {
-        this.rightArm.rotation.x = THREE.MathUtils.lerp(this.rightArm.rotation.x, 0, 0.2);
-      } else {
-        this.rightArm.rotation.x = -0.6;
-      }
+      this._legTimer = THREE.MathUtils.lerp(this._legTimer, 0, 0.1);
     }
+    const swing = Math.sin(this._legTimer) * 0.38;
+    if (this.leftLeg)  this.leftLeg.rotation.x  =  swing;
+    if (this.rightLeg) this.rightLeg.rotation.x  = -swing;
+    if (this.leftArm)  this.leftArm.rotation.x   = -swing * 0.5;
+    if (this.rightArm) this.rightArm.rotation.x  =  swing * 0.5;
+  }
 
-    // Firing Mechanism
-    if (this.mouseLeft && cameraRig.isLocked) {
-      const shootOrigin = cameraRig.getCameraPosition();
-      const shootDir = cameraRig.getForwardDirection();
-      weaponSystem.fire(this, shootOrigin, shootDir, this.currentWeapon);
-      this.updateHUD();
+  takeDamage(amount) {
+    if (this.isDead) return;
+    if (this.shield > 0) {
+      const absorbed = Math.min(this.shield, amount);
+      this.shield -= absorbed;
+      amount -= absorbed;
+    }
+    this.hp = Math.max(0, this.hp - amount);
+    if (this.hp <= 0) {
+      this.isDead = true;
+      this.mesh.rotation.z = Math.PI / 2;
     }
   }
+
+  respawn(x, y, z) {
+    this.mesh.position.set(x, y, z);
+    this.mesh.rotation.set(0, 0, 0);
+    this.mesh.scale.set(1, 1, 1);
+    this.velocity.set(0, 0, 0);
+    this.hp     = this.maxHp;
+    this.shield = this.maxShield;
+    this.isDead = false;
+    this.isGrounded = false;
+  }
+
+  getPosition() { return this.mesh.position.clone(); }
 }

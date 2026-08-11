@@ -1,183 +1,321 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Block Zone — Battle Royale</title>
-  <link rel="stylesheet" href="style.css?v=78">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&family=Press+Start+2P&display=swap" rel="stylesheet">
-  <!-- Three.js from CDN -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Orbitron:wght@700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
 </head>
 <body>
-  <!-- 3D Canvas -->
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SHARED THREE.JS CANVAS (always behind everything)
+  ══════════════════════════════════════════════════════════════ -->
   <canvas id="game-canvas"></canvas>
-  
-  <!-- In-Game HUD -->
-  <div id="hud" class="hidden">
-    <!-- Top Left: Health & Shield -->
-    <div class="hud-panel hud-top-left">
-      <div class="stat-bar-group">
-        <div class="stat-label">❤️ HP <span id="hp">100</span>/100</div>
-        <div class="bar-bg"><div class="bar-fill hp-fill" id="hp-fill" style="width: 100%;"></div></div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       HOME SCREEN
+  ══════════════════════════════════════════════════════════════ -->
+  <div id="home-screen" class="screen">
+
+    <!-- Top bar -->
+    <div class="home-topbar">
+      <div class="topbar-logo">
+        <span class="logo-block">BLOCK</span>
+        <span class="logo-zone">ZONE</span>
       </div>
-      <div class="stat-bar-group">
-        <div class="stat-label">🛡 SHIELD <span id="sp">50</span>/50</div>
-        <div class="bar-bg"><div class="bar-fill sp-fill" id="sp-fill" style="width: 100%;"></div></div>
+      <div class="topbar-right">
+        <div class="player-info">
+          <div class="player-avatar">🟦</div>
+          <div class="player-details">
+            <span class="player-name">PLAYER_ONE</span>
+            <span class="player-level">LVL 14</span>
+          </div>
+        </div>
+        <div class="topbar-stats">
+          <div class="stat-pill"><span class="stat-icon">🏆</span><span id="stat-wins">0</span> WINS</div>
+          <div class="stat-pill"><span class="stat-icon">💀</span><span id="stat-kills">0</span> KILLS</div>
+        </div>
       </div>
     </div>
 
-    <!-- Top Center: Safe Zone Warning & Distance -->
-    <div class="hud-panel hud-top-center">
-      <div id="zone-warning" class="zone-warning-text">⚠ ZONE CLOSING IN <span id="zone-timer">0:45</span></div>
-      <div id="zone-distance" class="zone-dist-text">Zone: <span id="dist-to-zone">Inside Safe Zone</span></div>
-    </div>
-
-    <!-- Top Right: Alive Counter & Kill Feed -->
-    <div class="hud-panel hud-top-right">
-      <div class="alive-badge">🎯 <span id="alive">20</span> ALIVE</div>
-      <div id="kill-feed" class="kill-feed-box"></div>
-    </div>
-
-    <!-- Bottom Right: Weapon & Ammo -->
-    <div class="hud-panel hud-bottom-right">
-      <div class="weapon-display">
-        <div class="weapon-title" id="weapon-name">ASSAULT RIFLE</div>
-        <div class="ammo-count"><span id="ammo-clip">30</span> / <span id="ammo-reserve">120</span></div>
+    <!-- Center hero area -->
+    <div class="home-hero">
+      <div class="hero-badge">SEASON 1 · BLOCKY ISLAND</div>
+      <div class="hero-title">
+        <div class="title-main">BLOCK ZONE</div>
+        <div class="title-sub">BATTLE ROYALE</div>
       </div>
-      <div class="controls-hint">[LMB] Shoot · [RMB] Aim · [R] Reload · [E] Loot</div>
+      <div class="hero-tagline">20 Players · 1 Survivor · Last Block Standing</div>
     </div>
 
-    <!-- Center Crosshair -->
-    <div id="crosshair">
-      <div class="ch-dot"></div>
-      <div class="ch-line ch-top"></div>
-      <div class="ch-line ch-bottom"></div>
-      <div class="ch-line ch-left"></div>
-      <div class="ch-line ch-right"></div>
+    <!-- Play panel (bottom center) -->
+    <div class="home-play-panel">
+      <div class="play-mode-selector">
+        <button class="mode-tab active" data-mode="solo">SOLO</button>
+        <button class="mode-tab" data-mode="duo" style="opacity:.45;cursor:not-allowed">DUO</button>
+        <button class="mode-tab" data-mode="squad" style="opacity:.45;cursor:not-allowed">SQUAD</button>
+      </div>
+
+      <div class="play-info">
+        <div class="play-info-row">
+          <span class="pi-label">MODE</span>
+          <span class="pi-value">SOLO DROP</span>
+        </div>
+        <div class="play-info-row">
+          <span class="pi-label">PLAYERS</span>
+          <span class="pi-value">20</span>
+        </div>
+        <div class="play-info-row">
+          <span class="pi-label">MAP</span>
+          <span class="pi-value">BLOCKY ISLAND</span>
+        </div>
+      </div>
+
+      <button id="btn-solo" class="btn-play">
+        <span class="btn-play-icon">✈</span>
+        <span>DROP IN</span>
+      </button>
+
+      <div class="play-controls-hint">
+        <span>WASD Move</span>
+        <span>MOUSE Look</span>
+        <span>SPACE Jump/Drop</span>
+        <span>SHIFT Sprint</span>
+        <span>C Crouch</span>
+      </div>
     </div>
 
-    <!-- Interaction Prompt -->
-    <div id="interact-prompt" class="interact-prompt hidden">
-      <span class="key-badge">E</span> Pick Up <strong id="interact-name">Assault Rifle</strong>
+    <!-- Side panel: season info -->
+    <div class="home-season-panel">
+      <div class="season-header">SEASON 1</div>
+      <div class="season-progress">
+        <div class="season-bar">
+          <div class="season-bar-fill" style="width:34%"></div>
+        </div>
+        <span class="season-xp">1,250 / 5,000 XP</span>
+      </div>
+      <div class="season-rewards">
+        <div class="reward active">🏅</div>
+        <div class="reward">🎯</div>
+        <div class="reward">⚔️</div>
+        <div class="reward">🏆</div>
+      </div>
     </div>
 
-    <!-- Damage Flash Overlay -->
-    <div id="damage-flash" class="damage-flash"></div>
+    <!-- Settings gear -->
+    <button class="home-settings-btn" id="home-settings-toggle">⚙</button>
+
+    <!-- Mini settings panel -->
+    <div class="home-settings-panel hidden" id="home-settings-panel">
+      <div class="settings-title">SETTINGS</div>
+      <div class="settings-row">
+        <label>Mouse Sensitivity</label>
+        <input type="range" id="sens-slider" min="0.3" max="3.0" step="0.1" value="1.0" />
+        <span id="sens-value">1.0x</span>
+      </div>
+      <div class="settings-row">
+        <label>FOV</label>
+        <span>70°</span>
+      </div>
+      <div class="settings-row">
+        <label>Shadows</label>
+        <span>ON</span>
+      </div>
+    </div>
+
+  </div><!-- /home-screen -->
+
+  <!-- ═══════════════════════════════════════════════════════════
+       DROP SCREEN (while riding the plane)
+  ══════════════════════════════════════════════════════════════ -->
+  <div id="drop-screen" class="screen hidden">
+    <div class="drop-overlay">
+      <div class="drop-title">✈ TRANSPORT PLANE</div>
+      <div class="drop-subtitle">Find your landing spot!</div>
+      <div class="drop-instructions">
+        <div class="drop-key-hint">
+          <kbd>SPACE</kbd> or <kbd>F</kbd>
+          <span>JUMP OUT</span>
+        </div>
+      </div>
+      <div class="drop-altitude">
+        <div class="alt-label">ALTITUDE</div>
+        <div class="alt-value" id="drop-altitude">90m</div>
+      </div>
+      <div class="drop-players-ready">
+        <span id="drop-count">20</span> players ready
+      </div>
+    </div>
+    <!-- Minimap shown during drop too -->
+    <div class="drop-minimap-hint">Check the minimap for safe zones!</div>
   </div>
 
-  <!-- Single Top-Right Minimap Container -->
-  <div id="minimap-container" class="hidden">
-    <canvas id="minimap-canvas" width="160" height="160"></canvas>
-    <div class="minimap-border"></div>
-  </div>
-  
-  <!-- Main Menu Overlay -->
-  <div id="main-menu">
-    <div class="menu-backdrop"></div>
-    <div class="menu-content">
-      <div class="br-logo-badge">MINI ROYALE</div>
-      <h1 class="game-title-text">BLOCK ZONE</h1>
-      <h2 class="game-subtitle-text">20-PLAYER BATTLE ROYALE</h2>
-      
-      <div class="menu-stats-row">
-        <div class="menu-stat-pill">🏝 500m Island</div>
-        <div class="menu-stat-pill">🤖 19 Smart Bots</div>
-        <div class="menu-stat-pill">🔫 5 Weapons</div>
-        <div class="menu-stat-pill">⭕ Shrinking Storm</div>
-      </div>
+  <!-- ═══════════════════════════════════════════════════════════
+       HUD OVERLAY (shown during PLAYING + PARACHUTE)
+  ══════════════════════════════════════════════════════════════ -->
+  <div id="hud-overlay" class="screen hidden">
 
-      <div class="menu-buttons">
-        <button id="btn-play" class="btn-primary">▶ DROP INTO BATTLE</button>
-        <button id="btn-settings" class="btn-secondary">⚙ SETTINGS</button>
-        <button id="btn-back-home" class="btn-secondary" onclick="window.location.href='/'">🏠 DASHBOARD</button>
-      </div>
+    <!-- Top-left: Alive counter -->
+    <div class="hud-alive">
+      <div class="alive-icon">👥</div>
+      <div class="alive-num" id="hud-alive">20</div>
+      <div class="alive-label">ALIVE</div>
+    </div>
 
-      <div id="settings-panel" class="settings-panel hidden">
-        <div class="setting-row">
-          <label>Mouse Sensitivity: <span id="sens-val">1.0</span></label>
-          <input type="range" id="sens-slider" min="0.2" max="3.0" step="0.1" value="1.0">
+    <!-- Top-center: Zone timer + match time -->
+    <div class="hud-top-center">
+      <div class="match-time" id="hud-match-time">5:00</div>
+      <div class="zone-warning hidden" id="hud-zone-warning">⚠ ZONE CLOSING IN <span id="hud-zone-timer">60</span>s</div>
+    </div>
+
+    <!-- Top-right: Kills -->
+    <div class="hud-kills">
+      <div class="kills-num" id="hud-kills">0</div>
+      <div class="kills-label">KILLS</div>
+    </div>
+
+    <!-- Bottom-left: HP + Shield bars -->
+    <div class="hud-vitals">
+      <div class="vital-row">
+        <span class="vital-icon">❤️</span>
+        <div class="vital-bar-wrap">
+          <div class="vital-bar hp-bar" id="hp-bar"></div>
+        </div>
+        <span class="vital-num" id="hp-num">100</span>
+      </div>
+      <div class="vital-row">
+        <span class="vital-icon">🛡️</span>
+        <div class="vital-bar-wrap">
+          <div class="vital-bar shield-bar" id="shield-bar"></div>
+        </div>
+        <span class="vital-num" id="shield-num">50</span>
+      </div>
+    </div>
+
+    <!-- Bottom-center: Weapon info + crosshair -->
+    <div class="hud-weapon">
+      <div class="weapon-name" id="hud-weapon-name">FISTS</div>
+      <div class="weapon-ammo" id="hud-ammo">—</div>
+    </div>
+
+    <!-- Crosshair -->
+    <div class="crosshair">
+      <div class="ch-h"></div>
+      <div class="ch-v"></div>
+    </div>
+
+    <!-- Bottom-right: Minimap -->
+    <div class="hud-minimap">
+      <canvas id="minimap-canvas" width="180" height="180"></canvas>
+      <div class="minimap-label">MAP</div>
+    </div>
+
+    <!-- Kill feed (top right below kills) -->
+    <div class="hud-killfeed" id="hud-killfeed"></div>
+
+    <!-- Zone damage indicator -->
+    <div class="zone-damage-flash hidden" id="zone-flash">
+      <div class="zone-flash-text">⚠ OUTSIDE SAFE ZONE — TAKE DAMAGE</div>
+    </div>
+
+    <!-- Parachute indicator -->
+    <div class="parachute-indicator hidden" id="parachute-hud">
+      <div class="chute-icon">🪂</div>
+      <div class="chute-text" id="chute-text">FREE FALL</div>
+      <div class="chute-alt" id="chute-alt">90m</div>
+    </div>
+
+    <!-- Loot popup -->
+    <div class="loot-popup hidden" id="loot-popup"></div>
+
+    <!-- Escape menu hint -->
+    <div class="esc-hint">ESC — Menu</div>
+
+  </div><!-- /hud-overlay -->
+
+  <!-- ═══════════════════════════════════════════════════════════
+       DEATH SCREEN
+  ══════════════════════════════════════════════════════════════ -->
+  <div id="death-screen" class="screen hidden">
+    <div class="death-overlay">
+      <div class="death-title">YOU WERE ELIMINATED</div>
+      <div class="death-stats">
+        <div class="ds-row">
+          <span class="ds-label">PLACEMENT</span>
+          <span class="ds-value" id="death-place">#14</span>
+        </div>
+        <div class="ds-row">
+          <span class="ds-label">KILLS</span>
+          <span class="ds-value" id="death-kills">0</span>
+        </div>
+        <div class="ds-row">
+          <span class="ds-label">SURVIVED</span>
+          <span class="ds-value" id="death-time">0:00</span>
         </div>
       </div>
-
-      <div class="controls-guide-card">
-        <div class="cg-title">CONTROLS</div>
-        <div class="cg-grid">
-          <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Move</div>
-          <div><kbd>SHIFT</kbd> Sprint</div>
-          <div><kbd>SPACE</kbd> Jump</div>
-          <div><kbd>MOUSE</kbd> Aim / Look</div>
-          <div><kbd>LMB</kbd> Shoot</div>
-          <div><kbd>RMB</kbd> Zoom Aim</div>
-          <div><kbd>R</kbd> Reload</div>
-          <div><kbd>E</kbd> Pick Up Loot</div>
-        </div>
+      <div class="death-actions">
+        <button class="btn-secondary" id="btn-respawn">PLAY AGAIN</button>
+        <button class="btn-secondary" id="btn-quit">MAIN MENU</button>
       </div>
     </div>
   </div>
 
-  <!-- Elimination Screen -->
-  <div id="death-screen" class="hidden screen-overlay">
-    <div class="result-card defeat-card">
-      <h1 class="result-heading defeat-heading">ELIMINATED</h1>
-      <p class="result-sub">Eliminated by <strong id="killer-name">Bot_07</strong></p>
-      
-      <div class="result-stats-grid">
-        <div class="result-stat-box">
-          <div class="rs-label">PLACEMENT</div>
-          <div class="rs-value" id="placement-val">#12</div>
-        </div>
-        <div class="result-stat-box">
-          <div class="rs-label">ELIMINATIONS</div>
-          <div class="rs-value" id="kills-val">3</div>
-        </div>
+  <!-- ═══════════════════════════════════════════════════════════
+       VICTORY SCREEN
+  ══════════════════════════════════════════════════════════════ -->
+  <div id="win-screen" class="screen hidden">
+    <div class="win-overlay">
+      <div class="win-crown">👑</div>
+      <div class="win-title">#1 VICTORY ROYALE</div>
+      <div class="win-subtitle">BLOCK ZONE CHAMPION!</div>
+      <div class="win-stats">
+        <div class="ds-row"><span class="ds-label">KILLS</span><span class="ds-value" id="win-kills">0</span></div>
+        <div class="ds-row"><span class="ds-label">DAMAGE</span><span class="ds-value" id="win-damage">0</span></div>
       </div>
-
-      <div class="result-actions">
-        <button id="btn-play-again" class="btn-primary">PLAY AGAIN</button>
-        <button class="btn-secondary" onclick="window.location.href='/'">RETURN TO CONSOLE</button>
-      </div>
-    </div>
-  </div>
-  
-  <!-- Victory Royale Screen -->
-  <div id="victory-screen" class="hidden screen-overlay">
-    <div class="result-card victory-card">
-      <div class="trophy-icon">🏆</div>
-      <h1 class="result-heading victory-heading">VICTORY ROYALE</h1>
-      <h2 class="victory-sub">#1 SURVIVOR</h2>
-      
-      <div class="result-stats-grid">
-        <div class="result-stat-box">
-          <div class="rs-label">PLACEMENT</div>
-          <div class="rs-value gold-text">#1</div>
-        </div>
-        <div class="result-stat-box">
-          <div class="rs-label">ELIMINATIONS</div>
-          <div class="rs-value" id="v-kills-val">7</div>
-        </div>
-      </div>
-
-      <div class="result-actions">
-        <button id="btn-vic-play-again" class="btn-primary">PLAY AGAIN</button>
-        <button class="btn-secondary" onclick="window.location.href='/'">RETURN TO CONSOLE</button>
-      </div>
+      <button class="btn-secondary" id="btn-win-menu">MAIN MENU</button>
     </div>
   </div>
 
-  <!-- Game Scripts Loaded in Dependency Order -->
-  <script src="js/AudioManager.js?v=78"></script>
-  <script src="js/World.js?v=78"></script>
-  <script src="js/Camera.js?v=78"></script>
-  <script src="js/WeaponSystem.js?v=78"></script>
-  <script src="js/LootSystem.js?v=78"></script>
-  <script src="js/SafeZone.js?v=78"></script>
-  <script src="js/BotAI.js?v=78"></script>
-  <script src="js/Player.js?v=78"></script>
-  <script src="js/HUD.js?v=78"></script>
-  <script src="js/Minimap.js?v=78"></script>
-  <script src="js/game.js?v=78"></script>
+  <!-- Scripts: load order matters! -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="js/World.js"></script>
+  <script src="js/Camera.js"></script>
+  <script src="js/Player.js"></script>
+  <script src="js/Plane.js"></script>
+  <script src="js/BotAI.js"></script>
+  <script src="js/SafeZone.js"></script>
+  <script src="js/LootSystem.js"></script>
+  <script src="js/HUD.js"></script>
+  <script src="js/game.js"></script>
+
+  <script>
+    // Settings panel toggle
+    document.getElementById('home-settings-toggle').addEventListener('click', () => {
+      document.getElementById('home-settings-panel').classList.toggle('hidden');
+    });
+
+    // Mode tabs (cosmetic only for now)
+    document.querySelectorAll('.mode-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+      });
+    });
+
+    // Respawn button
+    document.addEventListener('DOMContentLoaded', () => {
+      const respawnBtn = document.getElementById('btn-respawn');
+      if (respawnBtn) respawnBtn.addEventListener('click', () => {
+        if (window.gameInstance) window.gameInstance.startDrop();
+      });
+      const winMenuBtn = document.getElementById('btn-win-menu');
+      if (winMenuBtn) winMenuBtn.addEventListener('click', () => {
+        if (window.gameInstance) window.gameInstance._backToMenu();
+      });
+    });
+  </script>
+
 </body>
 </html>

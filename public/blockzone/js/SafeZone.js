@@ -58,6 +58,8 @@ class SafeZone {
   }
 
   update(dt, entities, player) {
+    if (!this._started) return true; // not started yet, always safe
+
     this.phaseTimer -= dt;
     const isShrinking = this.state === 'SHRINKING';
 
@@ -78,7 +80,6 @@ class SafeZone {
         this.currentRadius = this.nextRadius;
         this.center.copy(this.nextCenter);
 
-        // Advance to next phase
         this.currentPhaseIndex++;
         if (this.currentPhaseIndex < ZONE_PHASES.length) {
           this.phaseConfig = ZONE_PHASES[this.currentPhaseIndex];
@@ -98,30 +99,36 @@ class SafeZone {
     this.stormMesh.scale.set(this.currentRadius, 1, this.currentRadius);
     this.stormMesh.material.opacity = 0.2 + Math.sin(performance.now() * 0.003) * 0.05;
 
-    // Apply Storm Damage to all living entities outside
-    const dps = this.phaseConfig.dps;
-    entities.forEach(ent => {
-      if (ent.health > 0 && ent.mesh) {
-        const distToCenter = new THREE.Vector2(ent.mesh.position.x, ent.mesh.position.z)
-          .distanceTo(new THREE.Vector2(this.center.x, this.center.z));
-        
-        if (distToCenter > this.currentRadius) {
-          ent.takeDamage(dps * dt, null, true); // true = storm damage
-        }
-      }
-    });
-
-    // Update HUD
-    if (window.hud && player && player.mesh) {
-      const m = Math.floor(Math.max(0, this.phaseTimer) / 60);
-      const s = String(Math.floor(Math.max(0, this.phaseTimer) % 60)).padStart(2, '0');
-      const timerStr = `${m}:${s}`;
-
+    // Check player inside zone
+    if (player && player.mesh) {
       const pDist = new THREE.Vector2(player.mesh.position.x, player.mesh.position.z)
         .distanceTo(new THREE.Vector2(this.center.x, this.center.z));
-      const distOutside = Math.max(0, pDist - this.currentRadius);
-
-      window.hud.updateZone(timerStr, isShrinking, distOutside);
+      return pDist <= this.currentRadius;
     }
+    return true;
+  }
+
+  start() { this._started = true; }
+
+  reset() {
+    this._started = false;
+    this.center.set(0, 0, 0);
+    this.currentRadius = this.worldSize * 0.48;
+    this.currentPhaseIndex = 0;
+    this.phaseConfig = ZONE_PHASES[0];
+    this.state = 'WAITING';
+    this.phaseTimer = this.phaseConfig.waitTime;
+    this.nextCenter = this.getRandomSubCenter(this.center, this.currentRadius, this.phaseConfig.radius);
+    this.nextRadius = this.phaseConfig.radius;
+  }
+
+  getTimeToShrink() { return this.phaseTimer; }
+
+  getInfo() {
+    return {
+      cx: this.center.x,
+      cz: this.center.z,
+      radius: this.currentRadius
+    };
   }
 }

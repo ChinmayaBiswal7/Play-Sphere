@@ -1,137 +1,202 @@
 /**
- * BLOCK ZONE: HUD & Screen Overlay Manager
+ * BLOCK ZONE: HUD Manager — matches the new index.html structure
  */
-class HUDManager {
+class HUD {
   constructor() {
-    this.hudEl = document.getElementById('hud');
-    this.minimapContainer = document.getElementById('minimap-container');
+    this._alive   = document.getElementById('hud-alive');
+    this._time    = document.getElementById('hud-match-time');
+    this._kills   = document.getElementById('hud-kills');
 
-    this.hpEl = document.getElementById('hp');
-    this.hpFill = document.getElementById('hp-fill');
-    this.spEl = document.getElementById('sp');
-    this.spFill = document.getElementById('sp-fill');
+    this._hpBar    = document.getElementById('hp-bar');
+    this._hpNum    = document.getElementById('hp-num');
+    this._shldBar  = document.getElementById('shield-bar');
+    this._shldNum  = document.getElementById('shield-num');
 
-    this.weaponNameEl = document.getElementById('weapon-name');
-    this.ammoClipEl = document.getElementById('ammo-clip');
-    this.ammoReserveEl = document.getElementById('ammo-reserve');
+    this._weaponName = document.getElementById('hud-weapon-name');
+    this._ammo       = document.getElementById('hud-ammo');
 
-    this.zoneWarningEl = document.getElementById('zone-warning');
-    this.zoneTimerEl = document.getElementById('zone-timer');
-    this.distToZoneEl = document.getElementById('dist-to-zone');
+    this._zoneWarn  = document.getElementById('hud-zone-warning');
+    this._zoneTimer = document.getElementById('hud-zone-timer');
 
-    this.aliveEl = document.getElementById('alive');
-    this.killFeedEl = document.getElementById('kill-feed');
+    this._killfeed  = document.getElementById('hud-killfeed');
 
-    this.interactPromptEl = document.getElementById('interact-prompt');
-    this.interactNameEl = document.getElementById('interact-name');
+    this._minimap  = document.getElementById('minimap-canvas');
+    this._mmCtx    = this._minimap ? this._minimap.getContext('2d') : null;
 
-    this.deathScreen = document.getElementById('death-screen');
-    this.victoryScreen = document.getElementById('victory-screen');
+    this._zoneFlash  = document.getElementById('zone-flash');
+    this._parachuteHud = document.getElementById('parachute-hud');
+    this._chuteText  = document.getElementById('chute-text');
+    this._chuteAlt   = document.getElementById('chute-alt');
+    this._lootPopup  = document.getElementById('loot-popup');
   }
 
-  showHUD() {
-    if (this.hudEl) this.hudEl.classList.remove('hidden');
-    if (this.minimapContainer) this.minimapContainer.classList.remove('hidden');
+  show() {
+    const el = document.getElementById('hud-overlay');
+    if (el) el.classList.remove('hidden');
+    if (this._parachuteHud) this._parachuteHud.classList.add('hidden');
   }
 
-  hideHUD() {
-    if (this.hudEl) this.hudEl.classList.add('hidden');
-    if (this.minimapContainer) this.minimapContainer.classList.add('hidden');
+  reset() {
+    if (this._hpBar)   this._hpBar.style.width   = '100%';
+    if (this._shldBar) this._shldBar.style.width  = '50%';
+    if (this._hpNum)   this._hpNum.textContent    = '100';
+    if (this._shldNum) this._shldNum.textContent  = '50';
+    if (this._alive)   this._alive.textContent    = '20';
+    if (this._kills)   this._kills.textContent    = '0';
+    if (this._killfeed) this._killfeed.innerHTML  = '';
   }
 
-  updateHealth(hp, maxHp, sp, maxSp) {
-    if (this.hpEl) this.hpEl.innerText = Math.max(0, Math.floor(hp));
-    if (this.hpFill) this.hpFill.style.width = `${Math.max(0, (hp / maxHp) * 100)}%`;
+  /** Main update — called every frame during PLAYING */
+  update(data) {
+    const { hp, maxHp, shield, maxShield, kills, alive, timeLeft, zoneTime, playerPos, safeZone } = data;
 
-    if (this.spEl) this.spEl.innerText = Math.max(0, Math.floor(sp));
-    if (this.spFill) this.spFill.style.width = `${Math.max(0, (sp / maxSp) * 100)}%`;
-  }
+    // HP
+    if (this._hpBar)   this._hpBar.style.width   = `${(hp / maxHp) * 100}%`;
+    if (this._hpNum)   this._hpNum.textContent    = Math.ceil(hp);
+    if (this._shldBar) this._shldBar.style.width  = `${(shield / maxShield) * 100}%`;
+    if (this._shldNum) this._shldNum.textContent  = Math.ceil(shield);
 
-  updateWeapon(weaponObj, clip, reserve) {
-    if (!weaponObj) {
-      if (this.weaponNameEl) this.weaponNameEl.innerText = 'UNARMED';
-      if (this.ammoClipEl) this.ammoClipEl.innerText = '-';
-      if (this.ammoReserveEl) this.ammoReserveEl.innerText = '-';
+    // Stats
+    if (this._alive) this._alive.textContent = alive;
+    if (this._kills) this._kills.textContent = kills;
+
+    // Time
+    if (this._time) {
+      const m = Math.floor(timeLeft / 60);
+      const s = Math.floor(timeLeft % 60).toString().padStart(2, '0');
+      this._time.textContent = `${m}:${s}`;
+    }
+
+    // Zone warning
+    if (zoneTime !== undefined && zoneTime < 30) {
+      if (this._zoneWarn) this._zoneWarn.classList.remove('hidden');
+      if (this._zoneTimer) this._zoneTimer.textContent = Math.ceil(zoneTime);
     } else {
-      if (this.weaponNameEl) this.weaponNameEl.innerText = weaponObj.name;
-      if (this.ammoClipEl) this.ammoClipEl.innerText = clip;
-      if (this.ammoReserveEl) this.ammoReserveEl.innerText = reserve;
-    }
-  }
-
-  updateZone(timerStr, isShrinking, distOutside) {
-    if (this.zoneTimerEl) this.zoneTimerEl.innerText = timerStr;
-    if (this.distToZoneEl) {
-      this.distToZoneEl.innerText = distOutside > 0
-        ? `${Math.floor(distOutside)}m Outside Safe Zone`
-        : 'Inside Safe Zone';
+      if (this._zoneWarn) this._zoneWarn.classList.add('hidden');
     }
 
-    if (this.zoneWarningEl) {
-      if (isShrinking) {
-        this.zoneWarningEl.style.color = '#ef4444';
-        this.zoneWarningEl.innerText = `⚠ STORM SHRINKING — ${timerStr}`;
-      } else {
-        this.zoneWarningEl.style.color = '#fb923c';
-        this.zoneWarningEl.innerText = `⚠ ZONE CLOSING IN ${timerStr}`;
+    // Zone damage flash (outside zone)
+    if (safeZone && playerPos) {
+      const dist = Math.sqrt(
+        (playerPos.x - safeZone.cx) ** 2 +
+        (playerPos.z - safeZone.cz) ** 2
+      );
+      const outside = dist > safeZone.radius;
+      if (this._zoneFlash) {
+        if (outside) this._zoneFlash.classList.remove('hidden');
+        else this._zoneFlash.classList.add('hidden');
       }
     }
+
+    // Minimap
+    this._drawMinimap(playerPos, safeZone, alive);
   }
 
-  updateAlive(count) {
-    if (this.aliveEl) this.aliveEl.innerText = count;
+  /** Update during parachute drop */
+  updateParachute(altitude, chuteDeployed) {
+    if (!this._parachuteHud) return;
+    this._parachuteHud.classList.remove('hidden');
+    if (this._chuteText) this._chuteText.textContent = chuteDeployed ? 'CHUTE OPEN' : 'FREE FALL';
+    if (this._chuteAlt)  this._chuteAlt.textContent  = `${Math.max(0, Math.floor(altitude))}m`;
   }
 
-  showInteract(label) {
-    if (this.interactPromptEl) {
-      if (this.interactNameEl) this.interactNameEl.innerText = label;
-      this.interactPromptEl.classList.remove('hidden');
+  hideParachute() {
+    if (this._parachuteHud) this._parachuteHud.classList.add('hidden');
+  }
+
+  _drawMinimap(playerPos, safeZone, alive) {
+    if (!this._mmCtx || !playerPos) return;
+    const ctx = this._mmCtx;
+    const W = 180, H = 180;
+    const WORLD = 500;
+    const scale = W / WORLD;
+
+    ctx.clearRect(0, 0, W, H);
+
+    // Background
+    ctx.fillStyle = 'rgba(10,20,40,0.9)';
+    ctx.beginPath();
+    ctx.arc(W/2, H/2, W/2, 0, Math.PI*2);
+    ctx.fill();
+
+    // Safe zone circle
+    if (safeZone) {
+      const cx = (safeZone.cx + WORLD/2) * scale;
+      const cz = (safeZone.cz + WORLD/2) * scale;
+      const r  = safeZone.radius * scale;
+      ctx.beginPath();
+      ctx.arc(cx, cz, r, 0, Math.PI*2);
+      ctx.strokeStyle = 'rgba(59,130,246,0.85)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(59,130,246,0.06)';
+      ctx.fill();
+    }
+
+    // Ground terrain tint (green patches)
+    ctx.fillStyle = 'rgba(34,197,94,0.15)';
+    ctx.beginPath();
+    ctx.arc(W/2, H/2, W/2 * 0.92, 0, Math.PI*2);
+    ctx.fill();
+
+    // Village marker
+    const vx = WORLD/2 * scale, vz = WORLD/2 * scale;
+    ctx.fillStyle = 'rgba(251,191,36,0.7)';
+    ctx.fillRect(vx - 3, vz - 3, 6, 6);
+
+    // Player dot
+    const px = (playerPos.x + WORLD/2) * scale;
+    const pz = (playerPos.z + WORLD/2) * scale;
+    ctx.beginPath();
+    ctx.arc(px, pz, 5, 0, Math.PI*2);
+    ctx.fillStyle = '#22c55e';
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Circular clip mask
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-in';
+    ctx.beginPath();
+    ctx.arc(W/2, H/2, W/2, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  addKill(killerName, victimName, isPlayerKill = false) {
+    if (!this._killfeed) return;
+
+    const entry = document.createElement('div');
+    entry.className = 'killfeed-entry';
+    if (isPlayerKill) entry.style.borderColor = '#22c55e';
+    entry.textContent = `${killerName} ⚔ ${victimName}`;
+    this._killfeed.prepend(entry);
+
+    setTimeout(() => entry.remove(), 5000);
+
+    // Keep max 5
+    while (this._killfeed.children.length > 5) {
+      this._killfeed.lastChild.remove();
     }
   }
 
-  hideInteract() {
-    if (this.interactPromptEl) this.interactPromptEl.classList.add('hidden');
+  showLootPickup(itemName) {
+    if (!this._lootPopup) return;
+    this._lootPopup.textContent = `+ ${itemName}`;
+    this._lootPopup.classList.remove('hidden');
+    clearTimeout(this._lootTimer);
+    this._lootTimer = setTimeout(() => {
+      if (this._lootPopup) this._lootPopup.classList.add('hidden');
+    }, 2200);
   }
 
-  addKill(killer, killed) {
-    if (!this.killFeedEl) return;
-    const item = document.createElement('div');
-    item.className = 'kill-feed-item';
-    item.innerText = `${killer} eliminated ${killed}`;
-    this.killFeedEl.appendChild(item);
-
-    setTimeout(() => {
-      if (this.killFeedEl.contains(item)) {
-        this.killFeedEl.removeChild(item);
-      }
-    }, 4500);
-  }
-
-  showDeathScreen(killerName, placement, kills) {
-    this.hideHUD();
-    document.exitPointerLock();
-
-    const killerEl = document.getElementById('killer-name');
-    const placeEl = document.getElementById('placement-val');
-    const killsEl = document.getElementById('kills-val');
-
-    if (killerEl) killerEl.innerText = killerName;
-    if (placeEl) placeEl.innerText = `#${placement}`;
-    if (killsEl) killsEl.innerText = kills;
-
-    if (this.deathScreen) this.deathScreen.classList.remove('hidden');
-  }
-
-  showVictoryScreen(kills) {
-    this.hideHUD();
-    document.exitPointerLock();
-
-    const vkillsEl = document.getElementById('v-kills-val');
-    if (vkillsEl) vkillsEl.innerText = kills;
-
-    if (this.victoryScreen) this.victoryScreen.classList.remove('hidden');
-    if (window.audioManager) window.audioManager.playVictory();
+  setWeapon(name, ammoClip, ammoReserve) {
+    if (this._weaponName) this._weaponName.textContent = name || 'FISTS';
+    if (this._ammo) {
+      this._ammo.textContent = ammoClip !== undefined
+        ? `${ammoClip} / ${ammoReserve}`
+        : '—';
+    }
   }
 }
-
-window.hud = new HUDManager();

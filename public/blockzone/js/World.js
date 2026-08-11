@@ -21,12 +21,24 @@ class World {
   init() {
     this.createTerrain();
     this.createRoads();
+    this.createGrass();
     this.createCentralVillage();
     this.createGreenForest();
     this.createOldFarm();
     this.createStoneHill();
     this.createFactory();
     this.createBlueLake();
+    this.createScatteredProps();
+  }
+
+  /** Returns ground Y at given XZ — flat for now, hook for hills later */
+  getGroundY(x, z) {
+    // Stone hill elevation
+    const hx = -130, hz = 120;
+    const dx = x - hx, dz = z - hz;
+    if (Math.abs(dx) < 20 && Math.abs(dz) < 20) return 8;   // top of hill
+    if (Math.abs(dx) < 34 && Math.abs(dz) < 34) return 4;   // first layer
+    return 0;
   }
 
   createTerrain() {
@@ -53,6 +65,56 @@ class World {
     ocean.rotation.x = -Math.PI / 2;
     ocean.position.y = -0.4;
     this.scene.add(ocean);
+  }
+
+  // ── GRASS PATCHES ─────────────────────────────────────────────────────
+  createGrass() {
+    // Instanced grass blades using boxes — very efficient
+    const bladeW = 0.18, bladeD = 0.18;
+    const grassColors = [0x22c55e, 0x16a34a, 0x4ade80, 0x15803d, 0x86efac];
+
+    // We'll create 5 color groups of instanced meshes for performance
+    grassColors.forEach((col, ci) => {
+      const mat = new THREE.MeshLambertMaterial({ color: col });
+      const COUNT = 600;
+      const dummy = new THREE.Object3D();
+      const geo = new THREE.BoxGeometry(bladeW, 1, bladeD);
+      const inst = new THREE.InstancedMesh(geo, mat, COUNT);
+      inst.castShadow = false;
+
+      for (let i = 0; i < COUNT; i++) {
+        const gx = (Math.random() - 0.5) * 460;
+        const gz = (Math.random() - 0.5) * 460;
+
+        // Skip roads
+        if (Math.abs(gx) < 8 || Math.abs(gz) < 8) continue;
+        // Skip lake
+        if (Math.abs(gx - 0) < 45 && Math.abs(gz - 150) < 30) continue;
+
+        const h = 0.35 + Math.random() * 0.55;
+        const gy = this.getGroundY(gx, gz);
+        dummy.position.set(gx, gy + h / 2, gz);
+        dummy.scale.set(1, h, 1);
+        dummy.rotation.y = Math.random() * Math.PI;
+        dummy.updateMatrix();
+        inst.setMatrixAt(i, dummy.matrix);
+      }
+      inst.instanceMatrix.needsUpdate = true;
+      this.scene.add(inst);
+    });
+
+    // Tall dead grass / reeds near lake
+    const reedMat = new THREE.MeshLambertMaterial({ color: 0xb45309 });
+    for (let i = 0; i < 60; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const rad   = 38 + Math.random() * 10;
+      const rx = rad * Math.cos(angle);
+      const rz = 150 + rad * Math.sin(angle);
+      const h  = 1.2 + Math.random() * 1.2;
+      const reed = new THREE.Mesh(new THREE.BoxGeometry(0.25, h, 0.25), reedMat);
+      reed.position.set(rx, h / 2, rz);
+      this.scene.add(reed);
+    }
   }
 
   createRoads() {
@@ -441,5 +503,67 @@ class World {
     this.addTree(lx + 45, lz + 25, 1.2);
     this.addRock(lx - 38, lz + 10, 1.4);
     this.addRock(lx + 38, lz - 10, 1.3);
+  }
+
+  // ── SCATTERED PROPS ACROSS ENTIRE MAP ─────────────────────────────────
+  createScatteredProps() {
+    // Lone trees dotted all over the island
+    const loneTreePositions = [
+      [70, -70], [-70, 70], [100, 30], [-100, -30],
+      [50, 100], [-50, -100], [80, 80], [-80, -80],
+      [120, -60], [-120, 60], [30, -150], [-30, 150],
+      [160, 10], [-160, -10], [0, -160]
+    ];
+    loneTreePositions.forEach(([x, z]) => {
+      this.addTree(x + (Math.random()-0.5)*12, z + (Math.random()-0.5)*12, 0.9 + Math.random()*0.5);
+    });
+
+    // Scattered rocks everywhere
+    for (let i = 0; i < 25; i++) {
+      const rx = (Math.random() - 0.5) * 440;
+      const rz = (Math.random() - 0.5) * 440;
+      if (Math.abs(rx) < 60 && Math.abs(rz) < 60) continue; // skip village center
+      this.addRock(rx, rz, 0.8 + Math.random() * 0.7);
+    }
+
+    // Abandoned cars (simple blocky shapes)
+    const carPositions = [
+      [60, 5], [-60, -5], [5, -80], [-5, 80], [110, -110]
+    ];
+    const carColor = [0x7f1d1d, 0x1e3a5f, 0x14532d, 0x451a03, 0x312e81];
+    carPositions.forEach(([x, z], i) => {
+      const g = new THREE.Group();
+      g.position.set(x, 0, z);
+      g.rotation.y = Math.random() * Math.PI;
+      const bodyMat = new THREE.MeshLambertMaterial({ color: carColor[i] });
+      const body = new THREE.Mesh(new THREE.BoxGeometry(4.5, 1.8, 9), bodyMat);
+      body.position.y = 1.2;
+      g.add(body);
+      const cab = new THREE.Mesh(new THREE.BoxGeometry(3.8, 1.4, 4.5),
+        new THREE.MeshLambertMaterial({ color: carColor[i] }));
+      cab.position.set(0, 2.6, -0.8);
+      g.add(cab);
+      const windshield = new THREE.Mesh(new THREE.BoxGeometry(3.6, 1.1, 0.2),
+        new THREE.MeshLambertMaterial({ color: 0x93c5fd, transparent: true, opacity: 0.7 }));
+      windshield.position.set(0, 2.6, 1.4);
+      g.add(windshield);
+      // Wheels
+      const wheelMat = new THREE.MeshLambertMaterial({ color: 0x111827 });
+      [[-1.9,-3],[-1.9,3],[1.9,-3],[1.9,3]].forEach(([wx,wz]) => {
+        const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.65, 0.8, 8), wheelMat);
+        wheel.rotation.z = Math.PI/2;
+        wheel.position.set(wx, 0.65, wz);
+        g.add(wheel);
+      });
+      this.scene.add(g);
+      this.registerCollidable(x, z, 4.8, 9.5);
+    });
+
+    // Extra bushes across the map
+    for (let i = 0; i < 40; i++) {
+      const bx = (Math.random() - 0.5) * 420;
+      const bz = (Math.random() - 0.5) * 420;
+      this.addBush(bx, bz);
+    }
   }
 }
