@@ -195,17 +195,23 @@
 
   /* ── CLOCK ── */
   function initClock() {
-    const el = document.getElementById('ps5-clock-display');
     const tick = () => {
-      const d = new Date();
-      let h = d.getHours();
-      const m = String(d.getMinutes()).padStart(2,'0');
-      const ap = h >= 12 ? 'PM' : 'AM';
-      h = h % 12 || 12;
-      if (el) el.textContent = `${h}:${m} ${ap}`;
+      try {
+        const el = document.getElementById('ps5-clock-display');
+        if (!el) return;
+        const d = new Date();
+        let h = d.getHours();
+        const m = String(d.getMinutes()).padStart(2,'0');
+        const ap = h >= 12 ? 'PM' : 'AM';
+        h = h % 12 || 12;
+        el.textContent = `${h}:${m} ${ap}`;
+      } catch(e) {}
     };
-    tick(); setInterval(tick, 1000);
+    tick();
+    setInterval(tick, 1000);
   }
+  // Also expose globally so ps5_boot.js can call window.startClock()
+  window.startClock = initClock;
 
   /* ── PARTICLES ── */
   function initParticles() {
@@ -475,7 +481,22 @@
     window.addEventListener('click', startMusic);
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-  else init();
+  function safeInit() {
+    try { init(); } catch(e) { console.error('[PS5Dashboard] init error:', e); }
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', safeInit);
+  else safeInit();
+
+  // Fallback: re-run selectGame + clock 500ms after page load in case of race conditions
+  window.addEventListener('load', () => {
+    setTimeout(() => {
+      try {
+        const el = document.getElementById('ps5-clock-display');
+        if (el && (el.textContent === '00:00 AM' || el.textContent === '')) initClock();
+        if (cards && cards.length > 0) selectGame(selectedIndex);
+      } catch(e) {}
+    }, 500);
+  });
 
 })();
