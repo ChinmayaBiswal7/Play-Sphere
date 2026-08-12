@@ -34,7 +34,7 @@ html, body {
   inset: 0;
   width: 100%; height: 100%;
   z-index: 0;
-  filter: brightness(0.45) saturate(1.2);
+  filter: brightness(0.72) saturate(1.15);
 }
 
 /* ── SCREEN SYSTEM ── */

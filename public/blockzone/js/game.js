@@ -7,17 +7,24 @@
 class BlockZoneGame {
   constructor() {
     // ── Canvas & Renderer ────────────────────────────────────────────────
-    this.canvas   = document.getElementById('game-canvas');
-    this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true });
+    this.canvas   = document.getElementById('bg-canvas');
+    if (!this.canvas) {
+      // Create canvas if not found
+      this.canvas = document.createElement('canvas');
+      this.canvas.id = 'bg-canvas';
+      document.body.prepend(this.canvas);
+    }
+    this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true, alpha: false });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type    = THREE.PCFSoftShadowMap;
-    this.renderer.setClearColor(0x87ceeb);
+    this.renderer.setClearColor(0x1a3a5c);
 
     // ── Scene ────────────────────────────────────────────────────────────
     this.scene = new THREE.Scene();
-    this.scene.fog = new THREE.FogExp2(0x87ceeb, 0.0025);
+    this.scene.fog = new THREE.FogExp2(0x1a3050, 0.0022); // Deep dusk blue fog
+    this.scene.background = new THREE.Color(0x0d1b2a); // Dark night sky
 
     // ── Lighting ─────────────────────────────────────────────────────────
     this._setupLighting();
@@ -61,25 +68,32 @@ class BlockZoneGame {
   }
 
   _setupLighting() {
-    const ambient = new THREE.AmbientLight(0xfff4e0, 0.55);
+    // Dark moody ambient — low intensity since it's dusk
+    const ambient = new THREE.AmbientLight(0x2244aa, 0.4);
     this.scene.add(ambient);
 
-    const sun = new THREE.DirectionalLight(0xfffde7, 1.1);
-    sun.position.set(80, 120, 60);
+    // Golden sunset sun from low angle
+    const sun = new THREE.DirectionalLight(0xff8c42, 1.3);
+    sun.position.set(-200, 60, -150); // Low angle from the west
     sun.castShadow = true;
     sun.shadow.mapSize.set(2048, 2048);
     sun.shadow.camera.near   = 1;
-    sun.shadow.camera.far    = 500;
-    sun.shadow.camera.left   = -250;
-    sun.shadow.camera.right  = 250;
-    sun.shadow.camera.top    = 250;
-    sun.shadow.camera.bottom = -250;
+    sun.shadow.camera.far    = 600;
+    sun.shadow.camera.left   = -280;
+    sun.shadow.camera.right  = 280;
+    sun.shadow.camera.top    = 280;
+    sun.shadow.camera.bottom = -280;
     sun.shadow.bias = -0.0004;
     this.scene.add(sun);
 
-    // Soft fill light
-    const fill = new THREE.HemisphereLight(0x87ceeb, 0x3a7d44, 0.42);
+    // Cool blue fill from opposite — gives depth
+    const fill = new THREE.DirectionalLight(0x4488ff, 0.3);
+    fill.position.set(200, 40, 200);
     this.scene.add(fill);
+
+    // Hemisphere: cool blue sky, dark earth
+    const hemi = new THREE.HemisphereLight(0x1a3060, 0x1a2a10, 0.45);
+    this.scene.add(hemi);
   }
 
   // ── MENU ─────────────────────────────────────────────────────────────────
