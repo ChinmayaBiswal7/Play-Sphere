@@ -1,6 +1,15 @@
 /**
  * BLOCK ZONE: Procedural Loot Spawning & Pickups
  */
+// WEAPON_CONFIGS may be defined by BotAI.js — fallback if not
+const WEAPON_CONFIGS = window.WEAPON_CONFIGS || {
+  ASSAULT: { name: 'Assault Rifle',  magSize: 30, damage: 30, fireRate: 0.12, color: 0xf97316 },
+  SMG:     { name: 'SMG',            magSize: 25, damage: 20, fireRate: 0.09, color: 0x38bdf8 },
+  SHOTGUN: { name: 'Shotgun',        magSize: 8,  damage: 50, fireRate: 0.6,  color: 0xa855f7 },
+  PISTOL:  { name: 'Pistol',         magSize: 12, damage: 25, fireRate: 0.3,  color: 0xfacc15 },
+  SNIPER:  { name: 'Sniper Rifle',   magSize: 5,  damage: 90, fireRate: 1.2,  color: 0x22c55e }
+};
+
 class LootSystem {
   constructor(scene, worldSize = 500) {
     this.scene = scene;

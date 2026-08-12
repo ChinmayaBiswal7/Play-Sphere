@@ -84,19 +84,20 @@ class BlockZoneGame {
 
   // ── MENU ─────────────────────────────────────────────────────────────────
   _initMenuButtons() {
+    // Main DROP IN button (new PUBG-style UI)
+    const dropBtn = document.getElementById('btn-drop-in');
+    if (dropBtn) dropBtn.addEventListener('click', () => this.startDrop());
+
+    // Legacy btn-solo fallback
     const startBtn = document.getElementById('btn-solo');
     if (startBtn) startBtn.addEventListener('click', () => this.startDrop());
 
+    // Back to PlaySphere
     const quitBtn = document.getElementById('btn-quit');
-    if (quitBtn) quitBtn.addEventListener('click', () => this._backToMenu());
+    if (quitBtn) quitBtn.addEventListener('click', () => window.history.back());
 
-    // Sensitivity slider
-    const sensSlider = document.getElementById('sens-slider');
-    if (sensSlider) sensSlider.addEventListener('input', (e) => {
-      this.camera.setSensitivity(parseFloat(e.target.value));
-      const label = document.getElementById('sens-value');
-      if (label) label.textContent = parseFloat(e.target.value).toFixed(1) + 'x';
-    });
+    const homeBack = document.getElementById('btn-home-back');
+    if (homeBack) homeBack.addEventListener('click', () => window.history.back());
   }
 
   _showScreen(id) {
