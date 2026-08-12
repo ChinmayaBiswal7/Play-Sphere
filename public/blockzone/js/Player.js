@@ -121,8 +121,8 @@ class Player {
 
     // ── Movement input ──
     const moveDir = new THREE.Vector3();
-    if (this.keys['KeyW'] || this.keys['ArrowUp'])    moveDir.add(forward.clone().negate());
-    if (this.keys['KeyS'] || this.keys['ArrowDown'])  moveDir.add(forward);
+    if (this.keys['KeyW'] || this.keys['ArrowUp'])    moveDir.add(forward);
+    if (this.keys['KeyS'] || this.keys['ArrowDown'])  moveDir.add(forward.clone().negate());
     if (this.keys['KeyA'] || this.keys['ArrowLeft'])  moveDir.add(right.clone().negate());
     if (this.keys['KeyD'] || this.keys['ArrowRight']) moveDir.add(right);
 

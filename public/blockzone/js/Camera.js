@@ -8,8 +8,8 @@ class CameraRig {
     this.camera.position.set(0, 5, 10);
 
     // Explicit angle storage — no Three.js rotation objects
-    this.yaw   = Math.PI;  // Face south initially
-    this.pitch = 0.18;     // Slight downward look
+    this.yaw   = 0;     // Face forward (south, -Z axis)
+    this.pitch = 0.15;  // Slight downward look
 
     this.isLocked   = false;
     this.isAiming   = false;
@@ -92,14 +92,14 @@ class CameraRig {
     this.camera.lookAt(this._lookTarget);
   }
 
-  /** XZ plane movement direction (for WASD) */
+  /** XZ forward direction based on yaw */
   getForwardDir() {
-    return new THREE.Vector3(-Math.sin(this.yaw), 0, -Math.cos(this.yaw)).normalize();
+    // yaw=0 → forward is -Z (Three.js convention: camera looks toward -Z)
+    return new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw)).normalize();
   }
 
   getRightDir() {
-    const f = this.getForwardDir();
-    return new THREE.Vector3(f.z, 0, -f.x).normalize();
+    return new THREE.Vector3(Math.cos(this.yaw), 0, -Math.sin(this.yaw)).normalize();
   }
 
   /** Full 3D direction (for shooting) */

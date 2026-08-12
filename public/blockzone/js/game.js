@@ -115,12 +115,40 @@ class BlockZoneGame {
   }
 
   _showScreen(id) {
-    ['home-screen', 'drop-screen', 'hud-overlay', 'death-screen', 'win-screen'].forEach(s => {
+    // Hide home/result overlays
+    ['home-screen', 'drop-screen', 'death-screen', 'win-screen'].forEach(s => {
       const el = document.getElementById(s);
       if (el) el.classList.add('hidden');
     });
-    const target = document.getElementById(id);
-    if (target) target.classList.remove('hidden');
+
+    // game-screen (holds HUD + minimap) — show when playing/dropping
+    const gameScr = document.getElementById('game-screen');
+
+    if (id === 'home-screen') {
+      const home = document.getElementById('home-screen');
+      if (home) home.classList.remove('hidden');
+      if (gameScr) gameScr.classList.add('hidden');
+      const hud = document.getElementById('hud-overlay');
+      if (hud) hud.classList.add('hidden');
+    } else if (id === 'drop-screen') {
+      const drop = document.getElementById('drop-screen');
+      if (drop) drop.classList.remove('hidden');
+      if (gameScr) gameScr.classList.remove('hidden'); // show minimap during drop
+      const hud = document.getElementById('hud-overlay');
+      if (hud) hud.classList.add('hidden');
+    } else if (id === 'hud-overlay') {
+      if (gameScr) gameScr.classList.remove('hidden');
+      const hud = document.getElementById('hud-overlay');
+      if (hud) hud.classList.remove('hidden');
+    } else if (id === 'death-screen') {
+      if (gameScr) gameScr.classList.add('hidden');
+      const d = document.getElementById('death-screen');
+      if (d) d.classList.remove('hidden');
+    } else if (id === 'win-screen') {
+      if (gameScr) gameScr.classList.add('hidden');
+      const w = document.getElementById('win-screen');
+      if (w) w.classList.remove('hidden');
+    }
   }
 
   _backToMenu() {
@@ -193,8 +221,8 @@ class BlockZoneGame {
     // Show HUD and hide drop screen
     this._showScreen('hud-overlay');
 
-    // Camera free aim during parachute
-    this.camera.yaw = Math.PI; // face south
+    // Camera: face toward map center
+    this.camera.yaw = 0;
   }
 
   // ── PARACHUTE UPDATE ─────────────────────────────────────────────────────
