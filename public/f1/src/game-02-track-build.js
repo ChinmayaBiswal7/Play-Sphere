@@ -377,6 +377,7 @@
       const arrow = new THREE.Mesh(arrowGeo, arrowMat);
       arrow.position.set(0, 2.3, -0.2);
       arrow.rotation.x = Math.PI;
+      arrow.visible = false; // Hidden so it never obstructs first-person, onboard, or garage views
       mesh.add(arrow);
       mesh.playerArrow = arrow;
     }

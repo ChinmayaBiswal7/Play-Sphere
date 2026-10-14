@@ -31,6 +31,8 @@ app.use(express.static(path.join(__dirname, 'public'), {
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
+    } else if (filePath.endsWith('.js')) {
+      res.setHeader('Cache-Control', 'no-cache, must-revalidate');
     } else if (/\.(jpg|jpeg|png|gif|svg|webp|woff2?|mp3|ogg|wav)$/i.test(filePath)) {
       res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
     }

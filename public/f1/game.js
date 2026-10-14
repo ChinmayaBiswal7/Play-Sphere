@@ -418,7 +418,7 @@
       const pBoxT = 0.26 + (selectedTeamIndex + 0.5) * (0.74 - 0.26) / totalBoxes;
       const tang = pitCurve.getTangentAt(pBoxT).normalize();
       const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-      const exitDir = norm.clone().multiplyScalar(-0.82).add(tang.clone().multiplyScalar(0.57)).normalize();
+      const exitDir = norm.clone().negate().normalize(); // straight out through the wide open garage doors
       playerKart.heading = Math.atan2(exitDir.x, exitDir.z);
       playerKart.mesh.rotation.y = playerKart.heading;
     }
@@ -3049,16 +3049,20 @@
       playerKart.pitZone = "PIT_BOX";
       playerKart.currentPath = "PIT";
       const totalBoxes = F1_TEAMS.length;
-      const pBoxT = 0.30 + (selectedTeamIndex / Math.max(1, totalBoxes - 1)) * 0.40;
+      const T_START = 0.26;
+      const T_END = 0.74;
+      const TEAM_STEP = (T_END - T_START) / totalBoxes;
+      const pBoxT = T_START + (selectedTeamIndex + 0.5) * TEAM_STEP;
       pitProgress = pBoxT;
       
       if (pitCurve && playerKart.mesh) {
         const pt = pitCurve.getPointAt(pBoxT);
         const tang = pitCurve.getTangentAt(pBoxT).normalize();
         const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-        playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(16.5)));
-        playerKart.mesh.lookAt(pt); // faces directly out of garage toward the pit lane!
-        playerKart.heading = Math.atan2(pt.x - playerKart.mesh.position.x, pt.z - playerKart.mesh.position.z);
+        playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(16.0)));
+        const exitDir = norm.clone().negate().normalize(); // points straight out of garage door towards pit road
+        playerKart.heading = Math.atan2(exitDir.x, exitDir.z);
+        playerKart.mesh.rotation.set(0, playerKart.heading, 0);
       }
       playerKart.qualifyingState = "GARAGE";
       playerKart.speed = 0.0;
@@ -4535,6 +4539,7 @@
       const arrow = new THREE.Mesh(arrowGeo, arrowMat);
       arrow.position.set(0, 2.3, -0.2);
       arrow.rotation.x = Math.PI;
+      arrow.visible = false; // Hidden so it never obstructs first-person, onboard, or garage views
       mesh.add(arrow);
       mesh.playerArrow = arrow;
     }
@@ -6402,13 +6407,14 @@
       const tang = pitCurve.getTangentAt(pBoxT).normalize();
       const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
 
-      // Placed inside spacious garage bay (at offset +15.5m), angled forward-outward towards pit apron
-      playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(15.5)));
-      const exitDir = norm.clone().multiplyScalar(-0.82).add(tang.clone().multiplyScalar(0.57)).normalize();
+      // Placed inside spacious garage bay (at offset +16.0m), facing straight out of garage door towards pit apron
+      playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(16.0)));
+      const exitDir = norm.clone().negate().normalize(); // straight out towards pit lane
       playerKart.heading = Math.atan2(exitDir.x, exitDir.z);
       playerKart.mesh.rotation.y = playerKart.heading;
       playerKart.mesh.rotation.x = 0;
       playerKart.mesh.rotation.z = 0;
+      if (playerKart.mesh.playerArrow) playerKart.mesh.playerArrow.visible = false;
       return;
     }
 
@@ -7669,13 +7675,16 @@
           const pPos = playerKart.mesh.position;
           const dist = pPos.distanceTo(slot.position);
           
-          // 1. Orient the yellow navigation arrow
-          playerKart.mesh.playerArrow.rotation.set(0, 0, 0); // clear
-          const dx = slot.position.x - pPos.x;
-          const dz = slot.position.z - pPos.z;
-          const angleToSlot = Math.atan2(dx, dz) - playerKart.heading;
-          playerKart.mesh.playerArrow.rotation.y = angleToSlot;
-          playerKart.mesh.playerArrow.rotation.x = -Math.PI / 3; // tilt to point there!
+          // 1. Orient the yellow navigation arrow (only visible in 3rd-person chase view during formation lap)
+          if (playerKart.mesh && playerKart.mesh.playerArrow) {
+            playerKart.mesh.playerArrow.visible = (currentCameraView !== 'cockpit' && playerKart.qualifyingState !== 'GARAGE' && !playerKart.isExitingGarage);
+            playerKart.mesh.playerArrow.rotation.set(0, 0, 0); // clear
+            const dx = slot.position.x - pPos.x;
+            const dz = slot.position.z - pPos.z;
+            const angleToSlot = Math.atan2(dx, dz) - playerKart.heading;
+            playerKart.mesh.playerArrow.rotation.y = angleToSlot;
+            playerKart.mesh.playerArrow.rotation.x = -Math.PI / 3; // tilt to point there!
+          }
           
           // 2. Compute heading difference and speed
           const headingDiff = Math.abs(Math.atan2(Math.sin(playerKart.heading - slot.heading), Math.cos(playerKart.heading - slot.heading)));
@@ -10363,6 +10372,9 @@
       if (playerKart.mesh && playerKart.mesh.tCam) {
         playerKart.mesh.tCam.visible = false;
       }
+      if (playerKart.mesh && playerKart.mesh.playerArrow) {
+        playerKart.mesh.playerArrow.visible = false;
+      }
 
       camera.position.copy(camPos);
 
@@ -11620,6 +11632,7 @@
 
   function triggerPitStop() {
     if (isPitStopActive) return;
+    if (playerKart && (playerKart.qualifyingState === "GARAGE" || playerKart.isExitingGarage)) return;
     isPitStopActive = true;
     hasStoppedAtPitBox = true;
     

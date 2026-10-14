@@ -62,6 +62,9 @@
       if (playerKart.mesh && playerKart.mesh.tCam) {
         playerKart.mesh.tCam.visible = false;
       }
+      if (playerKart.mesh && playerKart.mesh.playerArrow) {
+        playerKart.mesh.playerArrow.visible = false;
+      }
 
       camera.position.copy(camPos);
 

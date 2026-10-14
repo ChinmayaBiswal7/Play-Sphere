@@ -288,16 +288,20 @@
       playerKart.pitZone = "PIT_BOX";
       playerKart.currentPath = "PIT";
       const totalBoxes = F1_TEAMS.length;
-      const pBoxT = 0.30 + (selectedTeamIndex / Math.max(1, totalBoxes - 1)) * 0.40;
+      const T_START = 0.26;
+      const T_END = 0.74;
+      const TEAM_STEP = (T_END - T_START) / totalBoxes;
+      const pBoxT = T_START + (selectedTeamIndex + 0.5) * TEAM_STEP;
       pitProgress = pBoxT;
       
       if (pitCurve && playerKart.mesh) {
         const pt = pitCurve.getPointAt(pBoxT);
         const tang = pitCurve.getTangentAt(pBoxT).normalize();
         const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-        playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(16.5)));
-        playerKart.mesh.lookAt(pt); // faces directly out of garage toward the pit lane!
-        playerKart.heading = Math.atan2(pt.x - playerKart.mesh.position.x, pt.z - playerKart.mesh.position.z);
+        playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(16.0)));
+        const exitDir = norm.clone().negate().normalize(); // points straight out of garage door towards pit road
+        playerKart.heading = Math.atan2(exitDir.x, exitDir.z);
+        playerKart.mesh.rotation.set(0, playerKart.heading, 0);
       }
       playerKart.qualifyingState = "GARAGE";
       playerKart.speed = 0.0;

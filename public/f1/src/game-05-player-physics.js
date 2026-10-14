@@ -92,13 +92,14 @@
       const tang = pitCurve.getTangentAt(pBoxT).normalize();
       const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
 
-      // Placed inside spacious garage bay (at offset +15.5m), angled forward-outward towards pit apron
-      playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(15.5)));
-      const exitDir = norm.clone().multiplyScalar(-0.82).add(tang.clone().multiplyScalar(0.57)).normalize();
+      // Placed inside spacious garage bay (at offset +16.0m), facing straight out of garage door towards pit apron
+      playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(16.0)));
+      const exitDir = norm.clone().negate().normalize(); // straight out towards pit lane
       playerKart.heading = Math.atan2(exitDir.x, exitDir.z);
       playerKart.mesh.rotation.y = playerKart.heading;
       playerKart.mesh.rotation.x = 0;
       playerKart.mesh.rotation.z = 0;
+      if (playerKart.mesh.playerArrow) playerKart.mesh.playerArrow.visible = false;
       return;
     }
 
@@ -1359,13 +1360,16 @@
           const pPos = playerKart.mesh.position;
           const dist = pPos.distanceTo(slot.position);
           
-          // 1. Orient the yellow navigation arrow
-          playerKart.mesh.playerArrow.rotation.set(0, 0, 0); // clear
-          const dx = slot.position.x - pPos.x;
-          const dz = slot.position.z - pPos.z;
-          const angleToSlot = Math.atan2(dx, dz) - playerKart.heading;
-          playerKart.mesh.playerArrow.rotation.y = angleToSlot;
-          playerKart.mesh.playerArrow.rotation.x = -Math.PI / 3; // tilt to point there!
+          // 1. Orient the yellow navigation arrow (only visible in 3rd-person chase view during formation lap)
+          if (playerKart.mesh && playerKart.mesh.playerArrow) {
+            playerKart.mesh.playerArrow.visible = (currentCameraView !== 'cockpit' && playerKart.qualifyingState !== 'GARAGE' && !playerKart.isExitingGarage);
+            playerKart.mesh.playerArrow.rotation.set(0, 0, 0); // clear
+            const dx = slot.position.x - pPos.x;
+            const dz = slot.position.z - pPos.z;
+            const angleToSlot = Math.atan2(dx, dz) - playerKart.heading;
+            playerKart.mesh.playerArrow.rotation.y = angleToSlot;
+            playerKart.mesh.playerArrow.rotation.x = -Math.PI / 3; // tilt to point there!
+          }
           
           // 2. Compute heading difference and speed
           const headingDiff = Math.abs(Math.atan2(Math.sin(playerKart.heading - slot.heading), Math.cos(playerKart.heading - slot.heading)));

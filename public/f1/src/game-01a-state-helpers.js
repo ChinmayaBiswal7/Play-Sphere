@@ -410,7 +410,7 @@
       const pBoxT = 0.26 + (selectedTeamIndex + 0.5) * (0.74 - 0.26) / totalBoxes;
       const tang = pitCurve.getTangentAt(pBoxT).normalize();
       const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-      const exitDir = norm.clone().multiplyScalar(-0.82).add(tang.clone().multiplyScalar(0.57)).normalize();
+      const exitDir = norm.clone().negate().normalize(); // straight out through the wide open garage doors
       playerKart.heading = Math.atan2(exitDir.x, exitDir.z);
       playerKart.mesh.rotation.y = playerKart.heading;
     }

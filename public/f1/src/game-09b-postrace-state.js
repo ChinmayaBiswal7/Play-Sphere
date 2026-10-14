@@ -422,6 +422,7 @@
 
   function triggerPitStop() {
     if (isPitStopActive) return;
+    if (playerKart && (playerKart.qualifyingState === "GARAGE" || playerKart.isExitingGarage)) return;
     isPitStopActive = true;
     hasStoppedAtPitBox = true;
     

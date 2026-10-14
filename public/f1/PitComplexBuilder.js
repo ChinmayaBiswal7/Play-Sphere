@@ -8,9 +8,9 @@
 // - Far Right: Spacious high-tech Garages with wide open bays and engineers at side walls
 // =========================================================
 
-const GARAGE_WIDTH        = 14.0;
-const GARAGE_DEPTH        = 16.0;
-const GARAGE_HEIGHT       = 6.5;
+const GARAGE_WIDTH        = 22.0;
+const GARAGE_DEPTH        = 18.0;
+const GARAGE_HEIGHT       = 7.2;
 const PIT_WALL_HEIGHT     = 1.1;
 const TEAM_BUILDING_DEPTH = 16.0;
 const TEAM_BUILDING_HEIGHT= 8.5;
@@ -361,15 +361,15 @@ class PitComplexBuilder {
                 tProgress: tCenter
             });
 
-            // ── SPACIOUS HIGH-TECH GARAGE BODY (+17.5m offset, Depth 14.0m) ──
-            const garagePos = pos.clone().add(norm.clone().multiplyScalar(17.5));
+            // ── SPACIOUS HIGH-TECH GARAGE BODY (+19.0m offset, Depth 18.0m, Width 22.0m) ──
+            const garagePos = pos.clone().add(norm.clone().multiplyScalar(19.0));
             garagePos.y = GARAGE_HEIGHT / 2;
 
             const garageGroup = new THREE.Group();
 
-            // Back wall
+            // Back wall (located at local +Z so the front at local -Z facing the track is completely wide open!)
             const backWall = this.box(GARAGE_WIDTH - 0.2, GARAGE_HEIGHT, 0.3, 0x1e293b);
-            backWall.position.set(0, 0, -GARAGE_DEPTH / 2);
+            backWall.position.set(0, 0, GARAGE_DEPTH / 2);
             garageGroup.add(backWall);
 
             // Left partition wall
@@ -382,7 +382,7 @@ class PitComplexBuilder {
             rightWall.position.set(GARAGE_WIDTH / 2, 0, 0);
             garageGroup.add(rightWall);
 
-            // High Ceiling Roof
+            // High Cathedral Ceiling Roof
             const roof = this.box(GARAGE_WIDTH, 0.3, GARAGE_DEPTH, 0x0f172a);
             roof.position.set(0, GARAGE_HEIGHT / 2, 0);
             garageGroup.add(roof);
@@ -397,30 +397,30 @@ class PitComplexBuilder {
             garageGroup.add(epoxyFloor);
 
             // Overhead High-Lumen Linear LED Ceiling Lights
-            for (let l = -5.0; l <= 5.0; l += 2.5) {
+            for (let l = -6.0; l <= 6.0; l += 3.0) {
                 const ledStrip = new THREE.Mesh(
-                    new THREE.BoxGeometry(GARAGE_WIDTH - 2.5, 0.06, 0.25),
+                    new THREE.BoxGeometry(GARAGE_WIDTH - 3.0, 0.06, 0.25),
                     new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 1.2 })
                 );
                 ledStrip.position.set(0, GARAGE_HEIGHT / 2 - 0.15, l);
                 garageGroup.add(ledStrip);
             }
 
-            // High-Tech Diagnostics & Tool Trolleys along side walls (Keeping 10m open center)
+            // High-Tech Diagnostics & Tool Trolleys along side walls (Leaving 18m wide open central bay)
             [-1, 1].forEach(side => {
-                const wallX = side * (GARAGE_WIDTH / 2 - 0.5);
-                for (let s = -4.5; s <= 4.5; s += 3.0) {
+                const wallX = side * (GARAGE_WIDTH / 2 - 0.7);
+                for (let s = -6.0; s <= 6.0; s += 3.0) {
                     // Tool cabinet
-                    const cabinet = this.box(0.8, 1.1, 1.6, side === -1 ? team.color : 0x1f2937, 0.4, 0.5);
-                    cabinet.position.set(wallX, -GARAGE_HEIGHT / 2 + 0.55, s);
+                    const cabinet = this.box(0.9, 1.2, 1.8, side === -1 ? team.color : 0x1f2937, 0.4, 0.5);
+                    cabinet.position.set(wallX, -GARAGE_HEIGHT / 2 + 0.60, s);
                     garageGroup.add(cabinet);
 
                     // Telemetry monitor above cabinet
                     const diagScreen = new THREE.Mesh(
-                        new THREE.BoxGeometry(0.08, 1.1, 1.8),
+                        new THREE.BoxGeometry(0.08, 1.2, 2.0),
                         new THREE.MeshStandardMaterial({ color: 0x090d16, emissive: 0x06b6d4, emissiveIntensity: 0.7 })
                     );
-                    diagScreen.position.set(side * (GARAGE_WIDTH / 2 - 0.12), 0.7, s);
+                    diagScreen.position.set(side * (GARAGE_WIDTH / 2 - 0.15), 0.7, s);
                     garageGroup.add(diagScreen);
                 }
             });
@@ -485,14 +485,14 @@ class PitComplexBuilder {
                 return person;
             };
 
-            // Engineers positioned back at side walls (huge 10m open clearance for the car!)
+            // Engineers positioned back at side walls (Massive 18m open clearance for car)
             const mechanics = [
-                createGarageMechanic(-5.2, 2.5, Math.PI / 3, 'aero_front_l'),
-                createGarageMechanic(5.2, 2.5, -Math.PI / 3, 'aero_front_r'),
-                createGarageMechanic(-5.4, 0.0, Math.PI / 2, 'telemetry'),
-                createGarageMechanic(5.4, 0.0, -Math.PI / 2, 'mechanic_r'),
-                createGarageMechanic(-5.2, -2.5, Math.PI / 2, 'tyre_l'),
-                createGarageMechanic(5.2, -2.5, -Math.PI / 2, 'tyre_r')
+                createGarageMechanic(-9.0, 3.0, Math.PI / 3, 'aero_front_l'),
+                createGarageMechanic(9.0, 3.0, -Math.PI / 3, 'aero_front_r'),
+                createGarageMechanic(-9.4, 0.0, Math.PI / 2, 'telemetry'),
+                createGarageMechanic(9.4, 0.0, -Math.PI / 2, 'mechanic_r'),
+                createGarageMechanic(-9.0, -3.0, Math.PI / 2, 'tyre_l'),
+                createGarageMechanic(9.0, -3.0, -Math.PI / 2, 'tyre_r')
             ];
 
             garageGroup.mechanics = mechanics;
