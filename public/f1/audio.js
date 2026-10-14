@@ -1,15 +1,32 @@
 /**
- * Web Audio API Synthesizer for Apex Stars Chibi F1
+ * Professional Web Audio API Synthesizer for Formula 1 Racing
+ * Multi-layer procedural F1 V6 Turbo-Hybrid / V10 engine audio engine:
+ * - Dual detuned sawtooth combustion harmonics with waveshaper tube overdrive (metallic exhaust bite)
+ * - Deep sub-bass cylinder displacement growl (cockpit vibration)
+ * - Dynamic high-RPM turbocharger compressor spool & whistle (1800Hz - 5200Hz)
+ * - Ignition cut fuel-burn shift pops & exhaust overrun crackle
+ * - Pneumatic pit stop wheel gun (Paoli impact wrench) and hydraulic jack drop SFX
  */
 
 class ApexAudioEngine {
   constructor() {
     this.ctx = null;
     this.masterGain = null;
-    this.engineOsc = null;
+    this.compressor = null;
+    this.masterVolume = 0.40;
+
+    // Engine node references
+    this.combustionOsc1 = null;
+    this.combustionOsc2 = null;
+    this.subOsc = null;
+    this.turboOsc = null;
+    this.turboGain = null;
     this.engineGain = null;
+    this.exhaustFilter = null;
+    this.distortionNode = null;
     this.isPlayingEngine = false;
-    this.masterVolume = 0.35; // Default volume
+
+    this.lastRPM = 1500;
   }
 
   init() {
@@ -17,9 +34,19 @@ class ApexAudioEngine {
     try {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
       this.ctx = new AudioCtx();
-      
+
+      // Master compressor to ensure clean loud acoustics without digital clipping
+      this.compressor = this.ctx.createDynamicsCompressor();
+      this.compressor.threshold.setValueAtTime(-18, this.ctx.currentTime);
+      this.compressor.knee.setValueAtTime(12, this.ctx.currentTime);
+      this.compressor.ratio.setValueAtTime(6, this.ctx.currentTime);
+      this.compressor.attack.setValueAtTime(0.003, this.ctx.currentTime);
+      this.compressor.release.setValueAtTime(0.15, this.ctx.currentTime);
+
       this.masterGain = this.ctx.createGain();
       this.masterGain.gain.setValueAtTime(this.masterVolume, this.ctx.currentTime);
+
+      this.compressor.connect(this.masterGain);
       this.masterGain.connect(this.ctx.destination);
     } catch (e) {
       console.warn("Web Audio API not supported:", e);
@@ -27,10 +54,10 @@ class ApexAudioEngine {
   }
 
   setVolume(val) {
-    this.masterVolume = val;
+    this.masterVolume = Math.max(0.0, Math.min(1.0, val));
     this.resume();
     if (this.masterGain && this.ctx) {
-      this.masterGain.gain.setValueAtTime(val, this.ctx.currentTime);
+      this.masterGain.gain.setValueAtTime(this.masterVolume, this.ctx.currentTime);
     }
   }
 
@@ -41,192 +68,396 @@ class ApexAudioEngine {
     }
   }
 
-  // Synthesized motor engine sound
+  _makeDistortionCurve(amount = 25) {
+    const k = amount;
+    const n_samples = 44100;
+    const curve = new Float32Array(n_samples);
+    const deg = Math.PI / 180;
+    for (let i = 0; i < n_samples; ++i) {
+      const x = (i * 2) / n_samples - 1;
+      curve[i] = ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x));
+    }
+    return curve;
+  }
+
+  // Multi-layer procedural Formula 1 Engine Sound
   startEngine() {
     this.resume();
     if (!this.ctx || this.isPlayingEngine) return;
 
     try {
-      this.engineOsc = this.ctx.createOscillator();
+      const now = this.ctx.currentTime;
+
+      // 1. Primary Engine Gain
       this.engineGain = this.ctx.createGain();
-      
-      // Combine saw and triangle for rich cartoonish motor sound
-      this.engineOsc.type = 'sawtooth';
-      this.engineOsc.frequency.setValueAtTime(55, this.ctx.currentTime); // low pitch start
-      
-      this.engineGain.gain.setValueAtTime(0.04, this.ctx.currentTime);
-      
-      this.engineOsc.connect(this.engineGain);
-      this.engineGain.connect(this.masterGain);
-      
-      this.engineOsc.start(0);
+      this.engineGain.gain.setValueAtTime(0.065, now);
+
+      // 2. Waveshaper Distortion (gives high-rev F1 exhaust raspy scream)
+      this.distortionNode = this.ctx.createWaveShaper();
+      this.distortionNode.curve = this._makeDistortionCurve(16);
+      this.distortionNode.oversample = '2x';
+
+      // 3. Exhaust Resonance Peaking Filter
+      this.exhaustFilter = this.ctx.createBiquadFilter();
+      this.exhaustFilter.type = 'peaking';
+      this.exhaustFilter.frequency.setValueAtTime(650, now);
+      this.exhaustFilter.Q.setValueAtTime(2.8, now);
+      this.exhaustFilter.gain.setValueAtTime(7.0, now);
+
+      // 4. Primary Combustion Sawtooth (Fundamental combustion order)
+      this.combustionOsc1 = this.ctx.createOscillator();
+      this.combustionOsc1.type = 'sawtooth';
+      this.combustionOsc1.frequency.setValueAtTime(75, now); // ~1500 RPM idle base
+
+      // 5. Secondary Detuned Sawtooth (2nd harmonic richness + chorus bite)
+      this.combustionOsc2 = this.ctx.createOscillator();
+      this.combustionOsc2.type = 'sawtooth';
+      this.combustionOsc2.frequency.setValueAtTime(150, now);
+      this.combustionOsc2.detune.setValueAtTime(8, now); // +8 cents detune
+
+      // 6. Sub-bass displacement rumble (Cockpit physical growl)
+      this.subOsc = this.ctx.createOscillator();
+      this.subOsc.type = 'triangle';
+      this.subOsc.frequency.setValueAtTime(37.5, now);
+
+      const subGain = this.ctx.createGain();
+      subGain.gain.setValueAtTime(0.4, now);
+      this.subOsc.connect(subGain);
+      subGain.connect(this.distortionNode);
+
+      // 7. Turbocharger Spool Whistle (Sine wave spooling 1800Hz - 5200Hz)
+      this.turboOsc = this.ctx.createOscillator();
+      this.turboOsc.type = 'sine';
+      this.turboOsc.frequency.setValueAtTime(1800, now);
+
+      this.turboGain = this.ctx.createGain();
+      this.turboGain.gain.setValueAtTime(0.015, now);
+      this.turboOsc.connect(this.turboGain);
+      this.turboGain.connect(this.exhaustFilter);
+
+      // Wire combustion through distortion -> filter -> engineGain -> compressor
+      this.combustionOsc1.connect(this.distortionNode);
+      this.combustionOsc2.connect(this.distortionNode);
+      this.distortionNode.connect(this.exhaustFilter);
+      this.exhaustFilter.connect(this.engineGain);
+      this.engineGain.connect(this.compressor);
+
+      this.combustionOsc1.start(now);
+      this.combustionOsc2.start(now);
+      this.subOsc.start(now);
+      this.turboOsc.start(now);
+
       this.isPlayingEngine = true;
-    } catch(e) {}
+    } catch(e) {
+      console.warn("Failed to start F1 engine synthesizer:", e);
+    }
   }
 
-  // Update pitch frequency based on car speed (speed is from 0 to 100)
-  // Update pitch frequency based on engine RPM (1500 to 15000)
+  // Update pitch frequency based on engine RPM (1500 idle to 15000 redline)
   updateEnginePitch(rpm) {
-    if (!this.isPlayingEngine || !this.engineOsc) return;
-    const baseFreq = 55;
-    const maxFreq = 500;
-    const targetFreq = baseFreq + ((rpm - 1500) / (15000 - 1500)) * (maxFreq - baseFreq);
-    this.engineOsc.frequency.setTargetAtTime(targetFreq, this.ctx.currentTime, 0.04);
+    if (!this.isPlayingEngine || !this.combustionOsc1 || !this.ctx) return;
+    const now = this.ctx.currentTime;
+    const clampedRPM = Math.max(1200, Math.min(15500, rpm || 1500));
+    this.lastRPM = clampedRPM;
+
+    // Real F1 V6 4-stroke firing order: 3 firings per engine revolution
+    // Base frequency f = (RPM / 60) * 3
+    // At 1500 RPM: 75 Hz
+    // At 12000 RPM: 600 Hz
+    // At 14500 RPM: 725 Hz (with 2nd harmonic scream at 1450 Hz)
+    const baseFreq = (clampedRPM / 60.0) * 3.0;
+    const harmFreq = baseFreq * 2.003;
+    const subFreq = baseFreq * 0.5;
+
+    // Turbocharger spool frequency: 1800 Hz at idle to 5200 Hz at redline
+    const rpmFactor = (clampedRPM - 1500) / (15000 - 1500);
+    const turboFreq = 1800 + Math.pow(rpmFactor, 1.3) * 3400;
+    const turboVol = 0.008 + Math.pow(rpmFactor, 1.5) * 0.055;
+
+    // Exhaust resonance filter tracking
+    const filterFreq = 550 + rpmFactor * 2200;
+
+    this.combustionOsc1.frequency.setTargetAtTime(baseFreq, now, 0.025);
+    this.combustionOsc2.frequency.setTargetAtTime(harmFreq, now, 0.025);
+    if (this.subOsc) this.subOsc.frequency.setTargetAtTime(subFreq, now, 0.03);
+
+    if (this.turboOsc && this.turboGain) {
+      this.turboOsc.frequency.setTargetAtTime(turboFreq, now, 0.04);
+      this.turboGain.gain.setTargetAtTime(turboVol, now, 0.05);
+    }
+
+    if (this.exhaustFilter) {
+      this.exhaustFilter.frequency.setTargetAtTime(filterFreq, now, 0.03);
+    }
   }
 
-  // Momentarily cut engine sound gain to simulate clutch shift fuel cut
+  // Clutch ignition cut + explosive exhaust backfire bang on upshift/downshift
   triggerShiftCut() {
     if (!this.isPlayingEngine || !this.engineGain || !this.ctx) return;
     const now = this.ctx.currentTime;
+
+    // Sudden 40ms gain drop to simulate ignition cut
     this.engineGain.gain.cancelScheduledValues(now);
-    this.engineGain.gain.setValueAtTime(0.002, now);
-    this.engineGain.gain.linearRampToValueAtTime(0.04, now + 0.05); // restore after 50ms
+    this.engineGain.gain.setValueAtTime(0.005, now);
+    this.engineGain.gain.linearRampToValueAtTime(0.065, now + 0.045);
+
+    // Explosive exhaust pop / backfire
+    this.playBackfirePop();
+  }
+
+  // Sharp exhaust backfire pop
+  playBackfirePop() {
+    this.resume();
+    if (!this.ctx) return;
+    try {
+      const now = this.ctx.currentTime;
+      // Low-end combustion explosion thump
+      const popOsc = this.ctx.createOscillator();
+      const popGain = this.ctx.createGain();
+      popOsc.type = 'triangle';
+      popOsc.frequency.setValueAtTime(140, now);
+      popOsc.frequency.exponentialRampToValueAtTime(40, now + 0.06);
+
+      popGain.gain.setValueAtTime(0.22, now);
+      popGain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+
+      popOsc.connect(popGain);
+      popGain.connect(this.compressor);
+
+      popOsc.start(now);
+      popOsc.stop(now + 0.08);
+
+      // High metallic crackle (filtered noise burst)
+      const bufferSize = this.ctx.sampleRate * 0.05;
+      const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+      const data = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.3));
+      }
+
+      const noise = this.ctx.createBufferSource();
+      noise.buffer = noiseBuffer;
+
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(1600, now);
+      filter.Q.setValueAtTime(1.5, now);
+
+      const noiseGain = this.ctx.createGain();
+      noiseGain.gain.setValueAtTime(0.18, now);
+      noiseGain.gain.exponentialRampToValueAtTime(0.005, now + 0.05);
+
+      noise.connect(filter);
+      filter.connect(noiseGain);
+      noiseGain.connect(this.compressor);
+
+      noise.start(now);
+      noise.stop(now + 0.06);
+    } catch(e) {}
+  }
+
+  // Realistic Pneumatic Impact Wrench / Wheel Gun sound for pit stops
+  playWheelGun() {
+    this.resume();
+    if (!this.ctx) return;
+    try {
+      const now = this.ctx.currentTime;
+      const pulses = 8; // rapid 40Hz nut gun impact chatter
+      const pulseInterval = 0.024; // 24ms per impact hammer
+
+      for (let i = 0; i < pulses; i++) {
+        const t = now + i * pulseInterval;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(750 + Math.random() * 200, t);
+        osc.frequency.exponentialRampToValueAtTime(180, t + 0.018);
+
+        gain.gain.setValueAtTime(0.14, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.020);
+
+        osc.connect(gain);
+        gain.connect(this.compressor);
+
+        osc.start(t);
+        osc.stop(t + 0.022);
+      }
+    } catch(e) {}
+  }
+
+  // Heavy hydraulic jack drop metallic clank
+  playJackDrop() {
+    this.resume();
+    if (!this.ctx) return;
+    try {
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(95, now);
+      osc.frequency.exponentialRampToValueAtTime(35, now + 0.12);
+
+      gain.gain.setValueAtTime(0.25, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+
+      osc.connect(gain);
+      gain.connect(this.compressor);
+
+      osc.start(now);
+      osc.stop(now + 0.15);
+    } catch(e) {}
   }
 
   stopEngine() {
     if (!this.isPlayingEngine) return;
     try {
-      this.engineOsc.stop(0);
-      this.engineOsc.disconnect();
-      this.engineGain.disconnect();
+      const now = this.ctx ? this.ctx.currentTime : 0;
+      if (this.combustionOsc1) { this.combustionOsc1.stop(now); this.combustionOsc1.disconnect(); }
+      if (this.combustionOsc2) { this.combustionOsc2.stop(now); this.combustionOsc2.disconnect(); }
+      if (this.subOsc) { this.subOsc.stop(now); this.subOsc.disconnect(); }
+      if (this.turboOsc) { this.turboOsc.stop(now); this.turboOsc.disconnect(); }
+      if (this.engineGain) this.engineGain.disconnect();
     } catch(e) {}
     this.isPlayingEngine = false;
   }
 
-  // Play button click
+  // UI button click
   playClick() {
     this.resume();
     if (!this.ctx) return;
     try {
+      const now = this.ctx.currentTime;
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(600, this.ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(150, this.ctx.currentTime + 0.12);
-      
-      gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
-      
+      osc.frequency.setValueAtTime(700, now);
+      osc.frequency.exponentialRampToValueAtTime(220, now + 0.08);
+
+      gain.gain.setValueAtTime(0.12, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+
       osc.connect(gain);
-      gain.connect(this.masterGain);
-      
-      osc.start(0);
-      osc.stop(this.ctx.currentTime + 0.15);
+      gain.connect(this.compressor);
+
+      osc.start(now);
+      osc.stop(now + 0.1);
     } catch(e) {}
   }
 
-  // Star item pickup sound
+  // Radio chime / upgrade notification
   playPickup() {
     this.resume();
     if (!this.ctx) return;
     try {
       const now = this.ctx.currentTime;
-      // Arpeggio sound
-      [440, 554, 659, 880].forEach((freq, idx) => {
+      [523.25, 659.25, 783.99, 1046.5].forEach((freq, idx) => {
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(freq, now + idx * 0.06);
-        
-        gain.gain.setValueAtTime(0.08, now + idx * 0.06);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.06 + 0.15);
-        
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.05);
+
+        gain.gain.setValueAtTime(0.07, now + idx * 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.05 + 0.14);
+
         osc.connect(gain);
-        gain.connect(this.masterGain);
-        
-        osc.start(now + idx * 0.06);
-        osc.stop(now + idx * 0.06 + 0.2);
+        gain.connect(this.compressor);
+
+        osc.start(now + idx * 0.05);
+        osc.stop(now + idx * 0.05 + 0.16);
       });
     } catch(e) {}
   }
 
-  // Nitrous boost zoom
+  // ERS boost / KERS deployment whistle
   playBoost() {
     this.resume();
     if (!this.ctx) return;
     try {
+      const now = this.ctx.currentTime;
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
       osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(180, this.ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(700, this.ctx.currentTime + 0.55);
-      
-      gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.6);
-      
+      osc.frequency.setValueAtTime(240, now);
+      osc.frequency.exponentialRampToValueAtTime(950, now + 0.45);
+
+      gain.gain.setValueAtTime(0.09, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+
       osc.connect(gain);
-      gain.connect(this.masterGain);
-      
-      osc.start(0);
-      osc.stop(this.ctx.currentTime + 0.65);
+      gain.connect(this.compressor);
+
+      osc.start(now);
+      osc.stop(now + 0.52);
     } catch(e) {}
   }
 
-  // Drift screech sound
+  // Tyre drift screech
   playDriftScreech() {
     this.resume();
     if (!this.ctx) return;
     try {
+      const now = this.ctx.currentTime;
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
       osc.type = 'triangle';
-      osc.frequency.setValueAtTime(350, this.ctx.currentTime);
-      // Wobble frequency for screeching effect
-      osc.frequency.linearRampToValueAtTime(380, this.ctx.currentTime + 0.05);
-      osc.frequency.linearRampToValueAtTime(320, this.ctx.currentTime + 0.1);
-      
-      gain.gain.setValueAtTime(0.03, this.ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.12);
-      
+      osc.frequency.setValueAtTime(360, now);
+      osc.frequency.linearRampToValueAtTime(420, now + 0.04);
+      osc.frequency.linearRampToValueAtTime(310, now + 0.09);
+
+      gain.gain.setValueAtTime(0.04, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
+
       osc.connect(gain);
-      gain.connect(this.masterGain);
-      
-      osc.start(0);
-      osc.stop(this.ctx.currentTime + 0.15);
+      gain.connect(this.compressor);
+
+      osc.start(now);
+      osc.stop(now + 0.12);
     } catch(e) {}
   }
 
-  // Rocket shot sound
   playShoot() {
     this.resume();
     if (!this.ctx) return;
     try {
+      const now = this.ctx.currentTime;
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
       osc.type = 'square';
-      osc.frequency.setValueAtTime(400, this.ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 0.3);
-      
-      gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.35);
-      
+      osc.frequency.setValueAtTime(400, now);
+      osc.frequency.exponentialRampToValueAtTime(80, now + 0.25);
+
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+
       osc.connect(gain);
-      gain.connect(this.masterGain);
-      
-      osc.start(0);
-      osc.stop(this.ctx.currentTime + 0.4);
+      gain.connect(this.compressor);
+
+      osc.start(now);
+      osc.stop(now + 0.32);
     } catch(e) {}
   }
 
-  // Crash / Spinout buzzer
   playSpinout() {
     this.resume();
     if (!this.ctx) return;
     try {
+      const now = this.ctx.currentTime;
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
       osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(110, this.ctx.currentTime);
-      osc.frequency.linearRampToValueAtTime(50, this.ctx.currentTime + 0.4);
-      
-      gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.45);
-      
+      osc.frequency.setValueAtTime(130, now);
+      osc.frequency.linearRampToValueAtTime(45, now + 0.35);
+
+      gain.gain.setValueAtTime(0.12, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+
       osc.connect(gain);
-      gain.connect(this.masterGain);
-      
-      osc.start(0);
-      osc.stop(this.ctx.currentTime + 0.5);
+      gain.connect(this.compressor);
+
+      osc.start(now);
+      osc.stop(now + 0.42);
     } catch(e) {}
   }
 }

@@ -382,37 +382,40 @@
     }
     playerKart.hasDrivenOutThisSession = true;
 
-    if (typeof window.isPitReleaseSafe === 'function' && !window.isPitReleaseSafe(playerKart)) {
-      playerKart.pitReleaseWaiting = true;
-      playerKart.driveOutAutopilot = true;
-      playerKart.driveOutState = "GARAGE_HOLD";
-      playerKart.controlsEnabled = false;
-      
-      playerKart.qualifyingState = "PIT_EXIT";
-      playerKart.inPitLane = true;
-      isPitting = true;
-      hasStoppedAtPitBox = true;
-      playerKart.pitZone = "PIT_BOX";
-      playerKart.pitLimiterActive = true;
-      playerKart.speed = 0.0;
-      currentGear = 0;
-      rdShowMessage('PIT LANE TRAFFIC // HOLD', 2.0, '#ef4444');
-    } else {
-      playerKart.driveOutAutopilot = true;
-      playerKart.driveOutState = "GARAGE_EXIT";
-      playerKart.controlsEnabled = false;
+    // Grant 100% MANUAL CONTROL immediately - NO robotic animation or forced slide!
+    playerKart.driveOutAutopilot = false;
+    playerKart.driveOutState = "NONE";
+    playerKart.controlsEnabled = true;
+    playerKart.isExitingGarage = true;
 
-      playerKart.qualifyingState = "PIT_EXIT";
-      playerKart.inPitLane = true;
-      isPitting = true;
-      hasStoppedAtPitBox = true;
-      playerKart.pitZone = "PIT_BOX";
-      playerKart.pitLimiterActive = true;
-      playerKart.speed = 11.0;
-      currentGear = 1;
+    playerKart.qualifyingState = "OUT_LAP";
+    playerKart.inPitLane = true;
+    isPitting = true;
+    hasStoppedAtPitBox = true;
+    playerKart.pitZone = "PIT_LANE";
+    playerKart.pitLimiterActive = true;
+    playerKart.speed = 0.0;
+    currentGear = 1;
+
+    // Mechanics immediately clear the central bay by stepping back against the walls
+    if (window.f1ActiveGarages) {
+      window.f1ActiveGarages.forEach(g => {
+        if (g.mechanics) {
+          g.mechanics.forEach(m => {
+            const targetX = m.baseX > 0 ? (m.baseX + 1.8) : (m.baseX - 1.8);
+            m.position.x = targetX;
+          });
+        }
+      });
     }
-    
-    speakEngineerRadio("Green light at pit exit. Limiter is active, drive out.", 40);
+
+    if (window.ApexAudio) {
+      window.ApexAudio.startEngine();
+      window.ApexAudio.updateEnginePitch(2600);
+    }
+
+    rdShowMessage('MANUAL CONTROL // DRIVE OUT // LIMITER: 80 KM/H', 3.5, '#10b981');
+    speakEngineerRadio("Green light! Pit limiter is active, steer out to the pit lane.", 40);
 
     setTimeout(() => {
       if (!window.timingTowerManuallyToggled && isRaceActive) {

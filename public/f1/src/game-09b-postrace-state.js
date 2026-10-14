@@ -327,40 +327,82 @@
     const crewMat = new THREE.MeshStandardMaterial({ color: crewColor, roughness: 0.5 });
     
     const pPos = playerKart.mesh.position;
-    const tang = pitCurve.getTangentAt(pitProgress);
+    const tang = pitCurve.getTangentAt(pitProgress).normalize();
     const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
 
-    // Wheel changers and jacks targets
+    // Compound colors for fresh tires
+    const compoundColors = {
+      soft: 0xef4444,
+      medium: 0xfacc15,
+      hard: 0xffffff,
+      intermediate: 0x22c55e,
+      wet: 0x3b82f6
+    };
+    const cColor = compoundColors[activeCompound || 'medium'] || 0xfacc15;
+    const tyreMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 });
+    const stripeMat = new THREE.MeshStandardMaterial({ color: cColor, emissive: cColor, emissiveIntensity: 0.6 });
+
+    // 10-person pit crew: 4 gunners, 4 tire carriers, 2 jack mechanics
     const crewTargets = [
-      // Left side wheel changers
-      pPos.clone().add(norm.clone().multiplyScalar(1.5)).add(tang.clone().multiplyScalar(1.1)),
-      pPos.clone().add(norm.clone().multiplyScalar(1.5)).add(tang.clone().multiplyScalar(-1.1)),
-      // Right side wheel changers
-      pPos.clone().add(norm.clone().multiplyScalar(-1.5)).add(tang.clone().multiplyScalar(1.1)),
-      pPos.clone().add(norm.clone().multiplyScalar(-1.5)).add(tang.clone().multiplyScalar(-1.1)),
+      // Left side wheel gunners
+      { pos: pPos.clone().add(norm.clone().multiplyScalar(1.3)).add(tang.clone().multiplyScalar(1.2)), role: 'wheel_gun_fl' },
+      { pos: pPos.clone().add(norm.clone().multiplyScalar(1.3)).add(tang.clone().multiplyScalar(-1.2)), role: 'wheel_gun_rl' },
+      // Right side wheel gunners
+      { pos: pPos.clone().add(norm.clone().multiplyScalar(-1.3)).add(tang.clone().multiplyScalar(1.2)), role: 'wheel_gun_fr' },
+      { pos: pPos.clone().add(norm.clone().multiplyScalar(-1.3)).add(tang.clone().multiplyScalar(-1.2)), role: 'wheel_gun_rr' },
+      // Left side tyre carriers (bringing new tyres to the car)
+      { pos: pPos.clone().add(norm.clone().multiplyScalar(2.1)).add(tang.clone().multiplyScalar(1.2)), role: 'carrier_fl' },
+      { pos: pPos.clone().add(norm.clone().multiplyScalar(2.1)).add(tang.clone().multiplyScalar(-1.2)), role: 'carrier_rl' },
+      // Right side tyre carriers (bringing new tyres to the car)
+      { pos: pPos.clone().add(norm.clone().multiplyScalar(-2.1)).add(tang.clone().multiplyScalar(1.2)), role: 'carrier_fr' },
+      { pos: pPos.clone().add(norm.clone().multiplyScalar(-2.1)).add(tang.clone().multiplyScalar(-1.2)), role: 'carrier_rr' },
       // Front Jack mechanic
-      pPos.clone().add(tang.clone().multiplyScalar(2.5)),
+      { pos: pPos.clone().add(tang.clone().multiplyScalar(2.6)), role: 'jack_front' },
       // Rear Jack mechanic
-      pPos.clone().add(tang.clone().multiplyScalar(-2.5))
+      { pos: pPos.clone().add(tang.clone().multiplyScalar(-2.6)), role: 'jack_rear' }
     ];
 
-    crewTargets.forEach((targetPos, idx) => {
+    crewTargets.forEach((item, idx) => {
+      const targetPos = item.pos;
       const crewGroup = new THREE.Group();
       
-      // Body (Suit)
-      const suit = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.0, 0.5), crewMat);
+      // Body (Team suit)
+      const suit = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.95, 0.45), crewMat);
       suit.position.y = 0.5;
       suit.castShadow = true;
       crewGroup.add(suit);
       
       // Helmet
-      const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.24, 16, 16), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.15 }));
-      helmet.position.y = 1.15;
+      const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 16), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.15 }));
+      helmet.position.y = 1.12;
       helmet.castShadow = true;
       crewGroup.add(helmet);
 
-      // Standby position: further out to simulate running out from garage!
-      const offsetVec = idx < 4 ? norm.clone().multiplyScalar(5.0 * Math.sign(idx < 2 ? 1 : -1)) : norm.clone().multiplyScalar(5.0);
+      // Role Props
+      if (item.role.startsWith('carrier_')) {
+        // Fresh Tyre Prop held in mechanic's hands
+        const tyreProp = new THREE.Group();
+        const rubber = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.14, 12, 24), tyreMat);
+        tyreProp.add(rubber);
+        const stripe = new THREE.Mesh(new THREE.TorusGeometry(0.33, 0.02, 8, 24), stripeMat);
+        tyreProp.add(stripe);
+        tyreProp.position.set(0, 0.65, 0.32);
+        crewGroup.add(tyreProp);
+        crewGroup.tyreProp = tyreProp;
+      } else if (item.role.startsWith('wheel_gun_')) {
+        // Paoli Wheel Gun
+        const gun = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.14, 0.42), new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8 }));
+        gun.position.set(0, 0.52, 0.25);
+        crewGroup.add(gun);
+      } else if (item.role === 'jack_front' || item.role === 'jack_rear') {
+        // Quick-lift Jack
+        const jack = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.12, 1.1), new THREE.MeshStandardMaterial({ color: 0xfacc15, metalness: 0.6 }));
+        jack.position.set(0, 0.18, 0.4);
+        crewGroup.add(jack);
+      }
+
+      // Standby position: starts further back on apron/garage threshold
+      const offsetVec = idx < 8 ? norm.clone().multiplyScalar(4.0 * Math.sign(idx % 4 < 2 ? 1 : -1)) : norm.clone().multiplyScalar(4.0);
       const standbyPos = targetPos.clone().add(offsetVec);
       
       crewGroup.position.copy(standbyPos);
@@ -371,7 +413,8 @@
       pitCrew.push({
         group: crewGroup,
         standby: standbyPos,
-        target: targetPos
+        target: targetPos,
+        role: item.role
       });
       pitCrewBoxes.push(crewGroup);
     });
@@ -392,20 +435,28 @@
       window.ApexAudio.playDriftScreech();
     }
 
-    // Spawn pit crew at standby positions
+    // Set overhead traffic light to RED
+    if (window.f1PitBoxes && window.f1PitBoxes[selectedTeamIndex]) {
+      const box = window.f1PitBoxes[selectedTeamIndex].group;
+      if (box && box.redLed && box.greenLed) {
+        box.redLed.material.emissiveIntensity = 1.0;
+        box.greenLed.material.emissiveIntensity = 0.05;
+      }
+    }
+
+    // Spawn 10-person pit crew outside at the green pit box
     spawnPitCrewBoxes();
 
     document.getElementById('pit-progress-fill').style.width = '0%';
     document.getElementById('pit-stop-overlay').classList.remove('hidden');
-    document.getElementById('pit-prompt-text').innerText = "PIT CREW RUNNING OUT FROM GARAGE...";
+    document.getElementById('pit-prompt-text').innerText = "PIT CREW MOVING TO WHEELS...";
 
-    // Hide or show tyre compound selector depending on if pre-selected via voice!
+    // Tyre compound selector
     const titleEl = document.getElementById('pit-select-compound-title');
     const containerEl = document.getElementById('pit-compound-selector-container');
     if (window.voiceSelectedCompound) {
       if (titleEl) titleEl.style.display = 'none';
       if (containerEl) containerEl.style.display = 'none';
-      // Sync selected tyre styling
       const btn = document.getElementById(`compound-${window.voiceSelectedCompound}`);
       if (btn) {
         const btns = document.querySelectorAll('.compound-btn');
@@ -428,8 +479,12 @@
   function tapPitStopQTE() {
     if (pitStopPhase !== "CHANGING_TYRES") return;
     
-    if (window.ApexAudio) window.ApexAudio.playPickup(); // mechanical tap sound
-    window.pitQTEProgress = (window.pitQTEProgress || 0.0) + 8.5;
+    if (window.ApexAudio && typeof window.ApexAudio.playWheelGun === 'function') {
+      window.ApexAudio.playWheelGun();
+    } else if (window.ApexAudio) {
+      window.ApexAudio.playPickup();
+    }
+    window.pitQTEProgress = (window.pitQTEProgress || 0.0) + 12.0;
 
     if (window.pitQTEProgress >= 100.0) {
       window.pitQTEProgress = 100.0;
@@ -454,7 +509,7 @@
         window.updateCarTyreColor(playerKart);
       }
       
-      // Reset snap helpers and steering inputs to prevent pulling on exit
+      // Reset steering inputs to prevent pulling on exit
       playerKart.pitStopSnapTime = undefined;
       playerKart.pitStopStartPos = undefined;
       playerKart.pitStopStartHeading = undefined;
@@ -471,27 +526,43 @@
       updateTelemetryPanelUI();
     }
 
-    // Reset voice tyre compound selection!
     window.voiceSelectedCompound = null;
 
-    // Transfer crew to running-back list instead of removing instantly
+    // Turn overhead traffic light to GREEN
+    if (window.f1PitBoxes && window.f1PitBoxes[selectedTeamIndex]) {
+      const box = window.f1PitBoxes[selectedTeamIndex].group;
+      if (box && box.redLed && box.greenLed) {
+        box.redLed.material.emissiveIntensity = 0.05;
+        box.greenLed.material.emissiveIntensity = 1.0;
+      }
+    }
+
+    if (window.ApexAudio && typeof window.ApexAudio.playJackDrop === 'function') {
+      window.ApexAudio.playJackDrop();
+    }
+
+    // Transfer crew to running-back list
     runningBackCrew = [...pitCrew];
     pitCrew = [];
     pitCrewBoxes = [];
 
-    // Schedule cleanup of running-back crew after 1.8 seconds (giving them time to jog back)
     const activeRunningCrew = [...runningBackCrew];
     setTimeout(() => {
       activeRunningCrew.forEach(c => scene.remove(c.group));
       runningBackCrew = runningBackCrew.filter(rc => !activeRunningCrew.includes(rc));
     }, 1800);
 
-    document.getElementById('pit-prompt-text').innerText = "PIT STOP COMPLETE! GREEN LIGHT!";
+    document.getElementById('pit-prompt-text').innerText = "TYRES FITTED! GREEN LIGHT!";
     if (playerKart) {
       playerKart.boostTime = 0.0;
       playerKart.speed = 0.0;
-      currentGear = 0; // Starts in Neutral - player shifts and drives out manually
+      currentGear = 1; // 1st gear ready for launch
+      playerKart.controlsEnabled = true;
+      playerKart.driveOutAutopilot = false;
+      playerKart.driveOutState = "NONE";
     }
+
+    speakEngineerRadio("Box complete! Green light, go, go, go!", 40);
 
     setTimeout(() => {
       document.getElementById('pit-stop-overlay').classList.add('hidden');

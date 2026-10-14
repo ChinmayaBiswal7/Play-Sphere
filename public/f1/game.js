@@ -390,37 +390,40 @@
     }
     playerKart.hasDrivenOutThisSession = true;
 
-    if (typeof window.isPitReleaseSafe === 'function' && !window.isPitReleaseSafe(playerKart)) {
-      playerKart.pitReleaseWaiting = true;
-      playerKart.driveOutAutopilot = true;
-      playerKart.driveOutState = "GARAGE_HOLD";
-      playerKart.controlsEnabled = false;
-      
-      playerKart.qualifyingState = "PIT_EXIT";
-      playerKart.inPitLane = true;
-      isPitting = true;
-      hasStoppedAtPitBox = true;
-      playerKart.pitZone = "PIT_BOX";
-      playerKart.pitLimiterActive = true;
-      playerKart.speed = 0.0;
-      currentGear = 0;
-      rdShowMessage('PIT LANE TRAFFIC // HOLD', 2.0, '#ef4444');
-    } else {
-      playerKart.driveOutAutopilot = true;
-      playerKart.driveOutState = "GARAGE_EXIT";
-      playerKart.controlsEnabled = false;
+    // Grant 100% MANUAL CONTROL immediately - NO robotic animation or forced slide!
+    playerKart.driveOutAutopilot = false;
+    playerKart.driveOutState = "NONE";
+    playerKart.controlsEnabled = true;
+    playerKart.isExitingGarage = true;
 
-      playerKart.qualifyingState = "PIT_EXIT";
-      playerKart.inPitLane = true;
-      isPitting = true;
-      hasStoppedAtPitBox = true;
-      playerKart.pitZone = "PIT_BOX";
-      playerKart.pitLimiterActive = true;
-      playerKart.speed = 11.0;
-      currentGear = 1;
+    playerKart.qualifyingState = "OUT_LAP";
+    playerKart.inPitLane = true;
+    isPitting = true;
+    hasStoppedAtPitBox = true;
+    playerKart.pitZone = "PIT_LANE";
+    playerKart.pitLimiterActive = true;
+    playerKart.speed = 0.0;
+    currentGear = 1;
+
+    // Mechanics immediately clear the central bay by stepping back against the walls
+    if (window.f1ActiveGarages) {
+      window.f1ActiveGarages.forEach(g => {
+        if (g.mechanics) {
+          g.mechanics.forEach(m => {
+            const targetX = m.baseX > 0 ? (m.baseX + 1.8) : (m.baseX - 1.8);
+            m.position.x = targetX;
+          });
+        }
+      });
     }
-    
-    speakEngineerRadio("Green light at pit exit. Limiter is active, drive out.", 40);
+
+    if (window.ApexAudio) {
+      window.ApexAudio.startEngine();
+      window.ApexAudio.updateEnginePitch(2600);
+    }
+
+    rdShowMessage('MANUAL CONTROL // DRIVE OUT // LIMITER: 80 KM/H', 3.5, '#10b981');
+    speakEngineerRadio("Green light! Pit limiter is active, steer out to the pit lane.", 40);
 
     setTimeout(() => {
       if (!window.timingTowerManuallyToggled && isRaceActive) {
@@ -6060,15 +6063,29 @@
         }
       } 
       else if (pitStopPhase === "LIFTING") {
-        window.pitLiftTimer = (window.pitLiftTimer || 0.0) + delta * 2.5;
-        playerKart.mesh.position.y = THREE.MathUtils.lerp(0.1, 0.45, Math.min(1.0, window.pitLiftTimer));
+        window.pitLiftTimer = (window.pitLiftTimer || 0.0) + delta * 2.8;
+        playerKart.mesh.position.y = THREE.MathUtils.lerp(0.1, 0.42, Math.min(1.0, window.pitLiftTimer));
         if (window.pitLiftTimer >= 1.0) {
           pitStopPhase = "CHANGING_TYRES";
-          document.getElementById('pit-prompt-text').innerText = "RAPIDLY PRESS SPACEBAR TO SPEED UP NUT GUN!";
+          document.getElementById('pit-prompt-text').innerText = "WHEEL GUNS AT WORK // TYRE CHANGE IN PROGRESS...";
+          if (window.ApexAudio && typeof window.ApexAudio.playWheelGun === 'function') {
+            window.ApexAudio.playWheelGun();
+          }
         }
       }
       else if (pitStopPhase === "CHANGING_TYRES") {
-        const progress = window.pitQTEProgress || 0.0;
+        // Smooth automatic progression (2.6s pitstop) + tap boost
+        window.pitQTEProgress = (window.pitQTEProgress || 0.0) + delta * 38.0;
+        document.getElementById('pit-progress-fill').style.width = `${Math.min(100, window.pitQTEProgress)}%`;
+
+        if (window.pitQTEProgress > 45 && !window.pitGunSecondBurstPlayed) {
+          window.pitGunSecondBurstPlayed = true;
+          if (window.ApexAudio && typeof window.ApexAudio.playWheelGun === 'function') {
+            window.ApexAudio.playWheelGun();
+          }
+        }
+
+        const progress = window.pitQTEProgress;
         if (playerKart.mesh.wheels) {
           playerKart.mesh.wheels.forEach(w => {
             if (progress > 15 && progress < 55) {
@@ -6082,16 +6099,39 @@
             }
           });
         }
+
+        // Animate tyre carriers delivering and fitting tyres
+        pitCrew.forEach(c => {
+          if (c.role && c.role.startsWith('carrier_')) {
+            if (progress < 60) {
+              c.group.position.lerp(c.target, delta * 5.0);
+            } else {
+              if (c.group.tyreProp) c.group.tyreProp.visible = false;
+              c.group.position.lerp(c.standby, delta * 3.5);
+            }
+          }
+        });
+
+        if (window.pitQTEProgress >= 100.0) {
+          window.pitQTEProgress = 100.0;
+          window.pitGunSecondBurstPlayed = false;
+          pitStopPhase = "LOWERING";
+          window.pitLowerTimer = 0.0;
+          document.getElementById('pit-prompt-text').innerText = "LOWERING CAR ON JACKS...";
+          if (window.ApexAudio && typeof window.ApexAudio.playJackDrop === 'function') {
+            window.ApexAudio.playJackDrop();
+          }
+        }
       }
       else if (pitStopPhase === "LOWERING") {
-        window.pitLowerTimer = (window.pitLowerTimer || 0.0) + delta * 3.5;
-        playerKart.mesh.position.y = THREE.MathUtils.lerp(0.45, 0.1, Math.min(1.0, window.pitLowerTimer));
+        window.pitLowerTimer = (window.pitLowerTimer || 0.0) + delta * 3.8;
+        playerKart.mesh.position.y = THREE.MathUtils.lerp(0.42, 0.1, Math.min(1.0, window.pitLowerTimer));
         
         if (playerKart.mesh.wheels) {
           playerKart.mesh.wheels.forEach(w => w.position.x = w.originalX);
         }
 
-        // Crew starts running back to standby positions
+        // Crew starts jogging back to standby positions
         pitCrew.forEach(c => {
           c.group.position.lerp(c.standby, delta * 4.5);
           c.group.lookAt(c.standby);
@@ -6454,15 +6494,15 @@
       playerKart.currentPath = "PIT";
       
       const totalBoxes = F1_TEAMS.length;
-      const pBoxT = 0.30 + (selectedTeamIndex / Math.max(1, totalBoxes - 1)) * 0.40;
+      const pBoxT = 0.28 + (selectedTeamIndex + 0.5) * (0.72 - 0.28) / totalBoxes;
       pitProgress = pBoxT;
       
       const pt = pitCurve.getPointAt(pBoxT);
       const tang = pitCurve.getTangentAt(pBoxT).normalize();
       const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
 
-      playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(16.5)));
-      // Headings: car points directly forward out of the garage towards the pit apron
+      // Placed inside spacious garage bay, facing directly towards open door / pit apron
+      playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(15.0)));
       playerKart.heading = Math.atan2(-norm.x, -norm.z);
       playerKart.mesh.rotation.y = playerKart.heading;
       playerKart.mesh.rotation.x = 0;
@@ -7645,29 +7685,35 @@
       }
       playerKart.speed = Math.min(playerKart.speed, collisionSpeedLimit);
 
-      // Stop at pit box / garage return
+      // Stop at green pit box on pit lane apron (Never teleport into garage during pit stop!)
       if (!isPitStopActive && !hasStoppedAtPitBox) {
-        if (pitProgress >= stopT) {
-          pitProgress = stopT;
-          
-          // Snap position to pit box so tyre change animation renders aligned
-          const pos = pitCurve.getPointAt(stopT);
-          const tang = pitCurve.getTangentAt(stopT).normalize();
-          const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-          const boxPos = pos.clone().add(norm.multiplyScalar(6.0));
+        const totalBoxes = F1_TEAMS.length;
+        const pBoxT = 0.28 + (selectedTeamIndex + 0.5) * (0.72 - 0.28) / totalBoxes;
+        const pos = pitCurve.getPointAt(pBoxT);
+        const tang = pitCurve.getTangentAt(pBoxT).normalize();
+        const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
+        const boxPos = pos.clone().add(norm.multiplyScalar(5.5));
+
+        const distToBox = playerKart.mesh.position.distanceTo(boxPos);
+        const isNearBox = (distToBox < 3.2) || (pitProgress >= (pBoxT - 0.015) && playerKart.sideOffset > 3.0) || (pitProgress >= pBoxT);
+
+        if (pitProgress >= (pBoxT - 0.06) && pitProgress <= (pBoxT + 0.04)) {
+          rdShowMessage('PULL INTO GREEN PIT BOX // BRAKE & STOP', 0.2, '#10b981');
+        }
+
+        if (isNearBox) {
+          pitProgress = pBoxT;
           playerKart.mesh.position.copy(boxPos);
           playerKart.heading = Math.atan2(tang.x, tang.z);
+          playerKart.mesh.rotation.y = playerKart.heading;
           playerKart.speed = 0.0;
 
-          if (currentSessionIndex === 0 || currentSessionIndex === 1) {
-            returnToGarage();
-          } else {
-            triggerPitStop();
-          }
+          // Always trigger authentic F1 outside pit stop in ALL sessions (Practice, Qualifying, Race)
+          triggerPitStop();
         }
       } else if (!isPitStopActive && hasStoppedAtPitBox) {
         // Post-pit stop exit logic
-        if (pitProgress >= 0.99) {
+        if (pitProgress >= 0.98) {
           playerKart.inPitLane = false;
           isPitting = false;
           hasStoppedAtPitBox = false; // Reset to allow future pit stops!
@@ -7680,7 +7726,7 @@
           playerKart.sideOffset = 6.0; // exit lane side offset
           
           playerKart.driveOutAutopilot = false;
-          playerKart.driveOutState = "COMPLETE";
+          playerKart.driveOutState = "NONE";
           playerKart.controlsEnabled = true;
           
           // Sync steer inputs to avoid snaps
@@ -7688,6 +7734,8 @@
           playerKart.filteredSteeringInput = 0.0;
           playerKart.steeringAngle = 0.0;
           
+          rdShowMessage('PIT EXIT // TRACK CLEAR // GO GO GO!', 3.0, '#38bdf8');
+          speakEngineerRadio("Pit exit clear. Push hard!", 40);
           console.log("[PIT EXIT] MANUAL CONTROL RESTORED");
         }
       }
@@ -10368,7 +10416,7 @@
     
     // Cinematic on-board rollout camera inside garage and exiting through doors (Zero Wall Clipping!)
     const inGarage = (playerKart.qualifyingState === "GARAGE");
-    const isExitingGarage = (playerKart.driveOutState === "PIT_LANE" && (playerKart.garageExitLerp === undefined || playerKart.garageExitLerp > 0.02));
+    const isExitingGarage = (playerKart.isExitingGarage && (playerKart.sideOffset === undefined || playerKart.sideOffset > 6.0));
 
     if ((inGarage || isExitingGarage) && pitCurve) {
       camera.up.set(0, 1, 0);
@@ -11538,40 +11586,82 @@
     const crewMat = new THREE.MeshStandardMaterial({ color: crewColor, roughness: 0.5 });
     
     const pPos = playerKart.mesh.position;
-    const tang = pitCurve.getTangentAt(pitProgress);
+    const tang = pitCurve.getTangentAt(pitProgress).normalize();
     const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
 
-    // Wheel changers and jacks targets
+    // Compound colors for fresh tires
+    const compoundColors = {
+      soft: 0xef4444,
+      medium: 0xfacc15,
+      hard: 0xffffff,
+      intermediate: 0x22c55e,
+      wet: 0x3b82f6
+    };
+    const cColor = compoundColors[activeCompound || 'medium'] || 0xfacc15;
+    const tyreMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 });
+    const stripeMat = new THREE.MeshStandardMaterial({ color: cColor, emissive: cColor, emissiveIntensity: 0.6 });
+
+    // 10-person pit crew: 4 gunners, 4 tire carriers, 2 jack mechanics
     const crewTargets = [
-      // Left side wheel changers
-      pPos.clone().add(norm.clone().multiplyScalar(1.5)).add(tang.clone().multiplyScalar(1.1)),
-      pPos.clone().add(norm.clone().multiplyScalar(1.5)).add(tang.clone().multiplyScalar(-1.1)),
-      // Right side wheel changers
-      pPos.clone().add(norm.clone().multiplyScalar(-1.5)).add(tang.clone().multiplyScalar(1.1)),
-      pPos.clone().add(norm.clone().multiplyScalar(-1.5)).add(tang.clone().multiplyScalar(-1.1)),
+      // Left side wheel gunners
+      { pos: pPos.clone().add(norm.clone().multiplyScalar(1.3)).add(tang.clone().multiplyScalar(1.2)), role: 'wheel_gun_fl' },
+      { pos: pPos.clone().add(norm.clone().multiplyScalar(1.3)).add(tang.clone().multiplyScalar(-1.2)), role: 'wheel_gun_rl' },
+      // Right side wheel gunners
+      { pos: pPos.clone().add(norm.clone().multiplyScalar(-1.3)).add(tang.clone().multiplyScalar(1.2)), role: 'wheel_gun_fr' },
+      { pos: pPos.clone().add(norm.clone().multiplyScalar(-1.3)).add(tang.clone().multiplyScalar(-1.2)), role: 'wheel_gun_rr' },
+      // Left side tyre carriers (bringing new tyres to the car)
+      { pos: pPos.clone().add(norm.clone().multiplyScalar(2.1)).add(tang.clone().multiplyScalar(1.2)), role: 'carrier_fl' },
+      { pos: pPos.clone().add(norm.clone().multiplyScalar(2.1)).add(tang.clone().multiplyScalar(-1.2)), role: 'carrier_rl' },
+      // Right side tyre carriers (bringing new tyres to the car)
+      { pos: pPos.clone().add(norm.clone().multiplyScalar(-2.1)).add(tang.clone().multiplyScalar(1.2)), role: 'carrier_fr' },
+      { pos: pPos.clone().add(norm.clone().multiplyScalar(-2.1)).add(tang.clone().multiplyScalar(-1.2)), role: 'carrier_rr' },
       // Front Jack mechanic
-      pPos.clone().add(tang.clone().multiplyScalar(2.5)),
+      { pos: pPos.clone().add(tang.clone().multiplyScalar(2.6)), role: 'jack_front' },
       // Rear Jack mechanic
-      pPos.clone().add(tang.clone().multiplyScalar(-2.5))
+      { pos: pPos.clone().add(tang.clone().multiplyScalar(-2.6)), role: 'jack_rear' }
     ];
 
-    crewTargets.forEach((targetPos, idx) => {
+    crewTargets.forEach((item, idx) => {
+      const targetPos = item.pos;
       const crewGroup = new THREE.Group();
       
-      // Body (Suit)
-      const suit = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.0, 0.5), crewMat);
+      // Body (Team suit)
+      const suit = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.95, 0.45), crewMat);
       suit.position.y = 0.5;
       suit.castShadow = true;
       crewGroup.add(suit);
       
       // Helmet
-      const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.24, 16, 16), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.15 }));
-      helmet.position.y = 1.15;
+      const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 16), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.15 }));
+      helmet.position.y = 1.12;
       helmet.castShadow = true;
       crewGroup.add(helmet);
 
-      // Standby position: further out to simulate running out from garage!
-      const offsetVec = idx < 4 ? norm.clone().multiplyScalar(5.0 * Math.sign(idx < 2 ? 1 : -1)) : norm.clone().multiplyScalar(5.0);
+      // Role Props
+      if (item.role.startsWith('carrier_')) {
+        // Fresh Tyre Prop held in mechanic's hands
+        const tyreProp = new THREE.Group();
+        const rubber = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.14, 12, 24), tyreMat);
+        tyreProp.add(rubber);
+        const stripe = new THREE.Mesh(new THREE.TorusGeometry(0.33, 0.02, 8, 24), stripeMat);
+        tyreProp.add(stripe);
+        tyreProp.position.set(0, 0.65, 0.32);
+        crewGroup.add(tyreProp);
+        crewGroup.tyreProp = tyreProp;
+      } else if (item.role.startsWith('wheel_gun_')) {
+        // Paoli Wheel Gun
+        const gun = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.14, 0.42), new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8 }));
+        gun.position.set(0, 0.52, 0.25);
+        crewGroup.add(gun);
+      } else if (item.role === 'jack_front' || item.role === 'jack_rear') {
+        // Quick-lift Jack
+        const jack = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.12, 1.1), new THREE.MeshStandardMaterial({ color: 0xfacc15, metalness: 0.6 }));
+        jack.position.set(0, 0.18, 0.4);
+        crewGroup.add(jack);
+      }
+
+      // Standby position: starts further back on apron/garage threshold
+      const offsetVec = idx < 8 ? norm.clone().multiplyScalar(4.0 * Math.sign(idx % 4 < 2 ? 1 : -1)) : norm.clone().multiplyScalar(4.0);
       const standbyPos = targetPos.clone().add(offsetVec);
       
       crewGroup.position.copy(standbyPos);
@@ -11582,7 +11672,8 @@
       pitCrew.push({
         group: crewGroup,
         standby: standbyPos,
-        target: targetPos
+        target: targetPos,
+        role: item.role
       });
       pitCrewBoxes.push(crewGroup);
     });
@@ -11603,20 +11694,28 @@
       window.ApexAudio.playDriftScreech();
     }
 
-    // Spawn pit crew at standby positions
+    // Set overhead traffic light to RED
+    if (window.f1PitBoxes && window.f1PitBoxes[selectedTeamIndex]) {
+      const box = window.f1PitBoxes[selectedTeamIndex].group;
+      if (box && box.redLed && box.greenLed) {
+        box.redLed.material.emissiveIntensity = 1.0;
+        box.greenLed.material.emissiveIntensity = 0.05;
+      }
+    }
+
+    // Spawn 10-person pit crew outside at the green pit box
     spawnPitCrewBoxes();
 
     document.getElementById('pit-progress-fill').style.width = '0%';
     document.getElementById('pit-stop-overlay').classList.remove('hidden');
-    document.getElementById('pit-prompt-text').innerText = "PIT CREW RUNNING OUT FROM GARAGE...";
+    document.getElementById('pit-prompt-text').innerText = "PIT CREW MOVING TO WHEELS...";
 
-    // Hide or show tyre compound selector depending on if pre-selected via voice!
+    // Tyre compound selector
     const titleEl = document.getElementById('pit-select-compound-title');
     const containerEl = document.getElementById('pit-compound-selector-container');
     if (window.voiceSelectedCompound) {
       if (titleEl) titleEl.style.display = 'none';
       if (containerEl) containerEl.style.display = 'none';
-      // Sync selected tyre styling
       const btn = document.getElementById(`compound-${window.voiceSelectedCompound}`);
       if (btn) {
         const btns = document.querySelectorAll('.compound-btn');
@@ -11639,8 +11738,12 @@
   function tapPitStopQTE() {
     if (pitStopPhase !== "CHANGING_TYRES") return;
     
-    if (window.ApexAudio) window.ApexAudio.playPickup(); // mechanical tap sound
-    window.pitQTEProgress = (window.pitQTEProgress || 0.0) + 8.5;
+    if (window.ApexAudio && typeof window.ApexAudio.playWheelGun === 'function') {
+      window.ApexAudio.playWheelGun();
+    } else if (window.ApexAudio) {
+      window.ApexAudio.playPickup();
+    }
+    window.pitQTEProgress = (window.pitQTEProgress || 0.0) + 12.0;
 
     if (window.pitQTEProgress >= 100.0) {
       window.pitQTEProgress = 100.0;
@@ -11665,7 +11768,7 @@
         window.updateCarTyreColor(playerKart);
       }
       
-      // Reset snap helpers and steering inputs to prevent pulling on exit
+      // Reset steering inputs to prevent pulling on exit
       playerKart.pitStopSnapTime = undefined;
       playerKart.pitStopStartPos = undefined;
       playerKart.pitStopStartHeading = undefined;
@@ -11682,27 +11785,43 @@
       updateTelemetryPanelUI();
     }
 
-    // Reset voice tyre compound selection!
     window.voiceSelectedCompound = null;
 
-    // Transfer crew to running-back list instead of removing instantly
+    // Turn overhead traffic light to GREEN
+    if (window.f1PitBoxes && window.f1PitBoxes[selectedTeamIndex]) {
+      const box = window.f1PitBoxes[selectedTeamIndex].group;
+      if (box && box.redLed && box.greenLed) {
+        box.redLed.material.emissiveIntensity = 0.05;
+        box.greenLed.material.emissiveIntensity = 1.0;
+      }
+    }
+
+    if (window.ApexAudio && typeof window.ApexAudio.playJackDrop === 'function') {
+      window.ApexAudio.playJackDrop();
+    }
+
+    // Transfer crew to running-back list
     runningBackCrew = [...pitCrew];
     pitCrew = [];
     pitCrewBoxes = [];
 
-    // Schedule cleanup of running-back crew after 1.8 seconds (giving them time to jog back)
     const activeRunningCrew = [...runningBackCrew];
     setTimeout(() => {
       activeRunningCrew.forEach(c => scene.remove(c.group));
       runningBackCrew = runningBackCrew.filter(rc => !activeRunningCrew.includes(rc));
     }, 1800);
 
-    document.getElementById('pit-prompt-text').innerText = "PIT STOP COMPLETE! GREEN LIGHT!";
+    document.getElementById('pit-prompt-text').innerText = "TYRES FITTED! GREEN LIGHT!";
     if (playerKart) {
       playerKart.boostTime = 0.0;
       playerKart.speed = 0.0;
-      currentGear = 0; // Starts in Neutral - player shifts and drives out manually
+      currentGear = 1; // 1st gear ready for launch
+      playerKart.controlsEnabled = true;
+      playerKart.driveOutAutopilot = false;
+      playerKart.driveOutState = "NONE";
     }
+
+    speakEngineerRadio("Box complete! Green light, go, go, go!", 40);
 
     setTimeout(() => {
       document.getElementById('pit-stop-overlay').classList.add('hidden');

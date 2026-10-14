@@ -83,15 +83,15 @@
       playerKart.currentPath = "PIT";
       
       const totalBoxes = F1_TEAMS.length;
-      const pBoxT = 0.30 + (selectedTeamIndex / Math.max(1, totalBoxes - 1)) * 0.40;
+      const pBoxT = 0.28 + (selectedTeamIndex + 0.5) * (0.72 - 0.28) / totalBoxes;
       pitProgress = pBoxT;
       
       const pt = pitCurve.getPointAt(pBoxT);
       const tang = pitCurve.getTangentAt(pBoxT).normalize();
       const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
 
-      playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(16.5)));
-      // Headings: car points directly forward out of the garage towards the pit apron
+      // Placed inside spacious garage bay, facing directly towards open door / pit apron
+      playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(15.0)));
       playerKart.heading = Math.atan2(-norm.x, -norm.z);
       playerKart.mesh.rotation.y = playerKart.heading;
       playerKart.mesh.rotation.x = 0;
@@ -1274,29 +1274,35 @@
       }
       playerKart.speed = Math.min(playerKart.speed, collisionSpeedLimit);
 
-      // Stop at pit box / garage return
+      // Stop at green pit box on pit lane apron (Never teleport into garage during pit stop!)
       if (!isPitStopActive && !hasStoppedAtPitBox) {
-        if (pitProgress >= stopT) {
-          pitProgress = stopT;
-          
-          // Snap position to pit box so tyre change animation renders aligned
-          const pos = pitCurve.getPointAt(stopT);
-          const tang = pitCurve.getTangentAt(stopT).normalize();
-          const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-          const boxPos = pos.clone().add(norm.multiplyScalar(6.0));
+        const totalBoxes = F1_TEAMS.length;
+        const pBoxT = 0.28 + (selectedTeamIndex + 0.5) * (0.72 - 0.28) / totalBoxes;
+        const pos = pitCurve.getPointAt(pBoxT);
+        const tang = pitCurve.getTangentAt(pBoxT).normalize();
+        const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
+        const boxPos = pos.clone().add(norm.multiplyScalar(5.5));
+
+        const distToBox = playerKart.mesh.position.distanceTo(boxPos);
+        const isNearBox = (distToBox < 3.2) || (pitProgress >= (pBoxT - 0.015) && playerKart.sideOffset > 3.0) || (pitProgress >= pBoxT);
+
+        if (pitProgress >= (pBoxT - 0.06) && pitProgress <= (pBoxT + 0.04)) {
+          rdShowMessage('PULL INTO GREEN PIT BOX // BRAKE & STOP', 0.2, '#10b981');
+        }
+
+        if (isNearBox) {
+          pitProgress = pBoxT;
           playerKart.mesh.position.copy(boxPos);
           playerKart.heading = Math.atan2(tang.x, tang.z);
+          playerKart.mesh.rotation.y = playerKart.heading;
           playerKart.speed = 0.0;
 
-          if (currentSessionIndex === 0 || currentSessionIndex === 1) {
-            returnToGarage();
-          } else {
-            triggerPitStop();
-          }
+          // Always trigger authentic F1 outside pit stop in ALL sessions (Practice, Qualifying, Race)
+          triggerPitStop();
         }
       } else if (!isPitStopActive && hasStoppedAtPitBox) {
         // Post-pit stop exit logic
-        if (pitProgress >= 0.99) {
+        if (pitProgress >= 0.98) {
           playerKart.inPitLane = false;
           isPitting = false;
           hasStoppedAtPitBox = false; // Reset to allow future pit stops!
@@ -1309,7 +1315,7 @@
           playerKart.sideOffset = 6.0; // exit lane side offset
           
           playerKart.driveOutAutopilot = false;
-          playerKart.driveOutState = "COMPLETE";
+          playerKart.driveOutState = "NONE";
           playerKart.controlsEnabled = true;
           
           // Sync steer inputs to avoid snaps
@@ -1317,6 +1323,8 @@
           playerKart.filteredSteeringInput = 0.0;
           playerKart.steeringAngle = 0.0;
           
+          rdShowMessage('PIT EXIT // TRACK CLEAR // GO GO GO!', 3.0, '#38bdf8');
+          speakEngineerRadio("Pit exit clear. Push hard!", 40);
           console.log("[PIT EXIT] MANUAL CONTROL RESTORED");
         }
       }

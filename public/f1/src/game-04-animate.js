@@ -60,15 +60,29 @@
         }
       } 
       else if (pitStopPhase === "LIFTING") {
-        window.pitLiftTimer = (window.pitLiftTimer || 0.0) + delta * 2.5;
-        playerKart.mesh.position.y = THREE.MathUtils.lerp(0.1, 0.45, Math.min(1.0, window.pitLiftTimer));
+        window.pitLiftTimer = (window.pitLiftTimer || 0.0) + delta * 2.8;
+        playerKart.mesh.position.y = THREE.MathUtils.lerp(0.1, 0.42, Math.min(1.0, window.pitLiftTimer));
         if (window.pitLiftTimer >= 1.0) {
           pitStopPhase = "CHANGING_TYRES";
-          document.getElementById('pit-prompt-text').innerText = "RAPIDLY PRESS SPACEBAR TO SPEED UP NUT GUN!";
+          document.getElementById('pit-prompt-text').innerText = "WHEEL GUNS AT WORK // TYRE CHANGE IN PROGRESS...";
+          if (window.ApexAudio && typeof window.ApexAudio.playWheelGun === 'function') {
+            window.ApexAudio.playWheelGun();
+          }
         }
       }
       else if (pitStopPhase === "CHANGING_TYRES") {
-        const progress = window.pitQTEProgress || 0.0;
+        // Smooth automatic progression (2.6s pitstop) + tap boost
+        window.pitQTEProgress = (window.pitQTEProgress || 0.0) + delta * 38.0;
+        document.getElementById('pit-progress-fill').style.width = `${Math.min(100, window.pitQTEProgress)}%`;
+
+        if (window.pitQTEProgress > 45 && !window.pitGunSecondBurstPlayed) {
+          window.pitGunSecondBurstPlayed = true;
+          if (window.ApexAudio && typeof window.ApexAudio.playWheelGun === 'function') {
+            window.ApexAudio.playWheelGun();
+          }
+        }
+
+        const progress = window.pitQTEProgress;
         if (playerKart.mesh.wheels) {
           playerKart.mesh.wheels.forEach(w => {
             if (progress > 15 && progress < 55) {
@@ -82,16 +96,39 @@
             }
           });
         }
+
+        // Animate tyre carriers delivering and fitting tyres
+        pitCrew.forEach(c => {
+          if (c.role && c.role.startsWith('carrier_')) {
+            if (progress < 60) {
+              c.group.position.lerp(c.target, delta * 5.0);
+            } else {
+              if (c.group.tyreProp) c.group.tyreProp.visible = false;
+              c.group.position.lerp(c.standby, delta * 3.5);
+            }
+          }
+        });
+
+        if (window.pitQTEProgress >= 100.0) {
+          window.pitQTEProgress = 100.0;
+          window.pitGunSecondBurstPlayed = false;
+          pitStopPhase = "LOWERING";
+          window.pitLowerTimer = 0.0;
+          document.getElementById('pit-prompt-text').innerText = "LOWERING CAR ON JACKS...";
+          if (window.ApexAudio && typeof window.ApexAudio.playJackDrop === 'function') {
+            window.ApexAudio.playJackDrop();
+          }
+        }
       }
       else if (pitStopPhase === "LOWERING") {
-        window.pitLowerTimer = (window.pitLowerTimer || 0.0) + delta * 3.5;
-        playerKart.mesh.position.y = THREE.MathUtils.lerp(0.45, 0.1, Math.min(1.0, window.pitLowerTimer));
+        window.pitLowerTimer = (window.pitLowerTimer || 0.0) + delta * 3.8;
+        playerKart.mesh.position.y = THREE.MathUtils.lerp(0.42, 0.1, Math.min(1.0, window.pitLowerTimer));
         
         if (playerKart.mesh.wheels) {
           playerKart.mesh.wheels.forEach(w => w.position.x = w.originalX);
         }
 
-        // Crew starts running back to standby positions
+        // Crew starts jogging back to standby positions
         pitCrew.forEach(c => {
           c.group.position.lerp(c.standby, delta * 4.5);
           c.group.lookAt(c.standby);
