@@ -1,3 +1,8 @@
+  function lerpHeading(current, target, alpha) {
+    let diff = (target - current + Math.PI * 3) % (Math.PI * 2) - Math.PI;
+    return current + diff * THREE.MathUtils.clamp(alpha, 0, 1);
+  }
+
   function updatePlayerPhysics(delta) {
     if (!playerKart || !playerKart.mesh) return;
     let isGravel = false;
@@ -25,13 +30,13 @@
     if (isPitStopActive && pitCurve) {
       playerKart.speed = 0.0;
       const totalBoxes = F1_TEAMS.length;
-      const stopT = 0.30 + (selectedTeamIndex / Math.max(1, totalBoxes - 1)) * 0.40;
+      const stopT = 0.26 + (selectedTeamIndex + 0.5) * (0.74 - 0.26) / totalBoxes;
       pitProgress = stopT;
       
       const pt = pitCurve.getPointAt(stopT);
       const tang = pitCurve.getTangentAt(stopT).normalize();
       const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-      const boxPos = pt.clone().add(norm.multiplyScalar(6.0));
+      const boxPos = pt.clone().add(norm.multiplyScalar(6.5));
       
       // Smoothly interpolate position and heading over the first 0.4 seconds of the stop
       if (playerKart.pitStopSnapTime === undefined) {
@@ -46,12 +51,9 @@
       
       playerKart.mesh.position.lerpVectors(playerKart.pitStopStartPos, boxPos, tSmooth);
       
-      // Interpolate heading
+      // Interpolate heading safely without reversal flips
       const targetHeading = Math.atan2(tang.x, tang.z);
-      let diff = targetHeading - playerKart.pitStopStartHeading;
-      while (diff < -Math.PI) diff += Math.PI * 2;
-      while (diff > Math.PI) diff -= Math.PI * 2;
-      playerKart.heading = playerKart.pitStopStartHeading + diff * tSmooth;
+      playerKart.heading = lerpHeading(playerKart.pitStopStartHeading, targetHeading, tSmooth);
       
       // Set visual rotation setting (look direction)
       playerKart.mesh.rotation.y = playerKart.heading;
@@ -83,16 +85,17 @@
       playerKart.currentPath = "PIT";
       
       const totalBoxes = F1_TEAMS.length;
-      const pBoxT = 0.28 + (selectedTeamIndex + 0.5) * (0.72 - 0.28) / totalBoxes;
+      const pBoxT = 0.26 + (selectedTeamIndex + 0.5) * (0.74 - 0.26) / totalBoxes;
       pitProgress = pBoxT;
       
       const pt = pitCurve.getPointAt(pBoxT);
       const tang = pitCurve.getTangentAt(pBoxT).normalize();
       const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
 
-      // Placed inside spacious garage bay, facing directly towards open door / pit apron
-      playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(15.0)));
-      playerKart.heading = Math.atan2(-norm.x, -norm.z);
+      // Placed inside spacious garage bay (at offset +15.5m), angled forward-outward towards pit apron
+      playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(15.5)));
+      const exitDir = norm.clone().multiplyScalar(-0.82).add(tang.clone().multiplyScalar(0.57)).normalize();
+      playerKart.heading = Math.atan2(exitDir.x, exitDir.z);
       playerKart.mesh.rotation.y = playerKart.heading;
       playerKart.mesh.rotation.x = 0;
       playerKart.mesh.rotation.z = 0;
@@ -1167,7 +1170,7 @@
           
           // Heading response: rotate heading slightly back parallel to track tangent
           const targetHeading = Math.atan2(tang.x, tang.z);
-          playerKart.heading = THREE.MathUtils.lerp(playerKart.heading, targetHeading, 0.45);
+          playerKart.heading = lerpHeading(playerKart.heading, targetHeading, 0.45);
 
           const impact = Math.abs(playerKart.speed);
           playerKart.speed = 8.0;
@@ -1223,32 +1226,32 @@
       playerKart.currentOffset = pitProj.progress; // keep synced for timing tower
       playerKart.sideOffset = pitProj.lateralOffset; // keep synced
 
-      // Pit lane walls boundaries (left wall at -4.0, right wall at 9.5)
-      if (pitProj.lateralOffset < -4.0) {
+      // Pit lane boundaries: Left pit wall at -4.1m, Right garage wall up to +22.0m (spacious 26m corridor)
+      if (pitProj.lateralOffset < -4.1) {
         const pos = pitCurve.getPointAt(pitProj.progress);
         const tang = pitCurve.getTangentAt(pitProj.progress).normalize();
         const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-        playerKart.mesh.position.copy(pos.add(norm.multiplyScalar(-3.9)));
+        playerKart.mesh.position.copy(pos.add(norm.multiplyScalar(-4.0)));
         playerKart.speed = Math.max(0.0, playerKart.speed - delta * 10.0);
-        // Gently correct heading parallel to pit lane tangent
+        // Correct heading parallel to pit lane tangent without reversing
         const targetHeading = Math.atan2(tang.x, tang.z);
-        playerKart.heading = THREE.MathUtils.lerp(playerKart.heading, targetHeading, delta * 6.0);
+        playerKart.heading = lerpHeading(playerKart.heading, targetHeading, delta * 6.0);
       } else {
-        const maxLateral = (pitProj.progress >= 0.22 && pitProj.progress <= 0.78) ? 18.5 : 9.5;
+        const maxLateral = (pitProj.progress >= 0.22 && pitProj.progress <= 0.78) ? 22.0 : 10.0;
         if (pitProj.lateralOffset > maxLateral) {
           const pos = pitCurve.getPointAt(pitProj.progress);
           const tang = pitCurve.getTangentAt(pitProj.progress).normalize();
           const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
           playerKart.mesh.position.copy(pos.add(norm.multiplyScalar(maxLateral - 0.1)));
           playerKart.speed = Math.max(0.0, playerKart.speed - delta * 10.0);
-          // Gently correct heading parallel to pit lane tangent
           const targetHeading = Math.atan2(tang.x, tang.z);
-          playerKart.heading = THREE.MathUtils.lerp(playerKart.heading, targetHeading, delta * 6.0);
+          playerKart.heading = lerpHeading(playerKart.heading, targetHeading, delta * 6.0);
         }
       }
 
       // Proximity braking inside pit lane to avoid hitting moving karts in front
-      const stopT = 0.30 + (selectedTeamIndex / Math.max(1, F1_TEAMS.length - 1)) * 0.40;
+      const totalBoxes = F1_TEAMS.length;
+      const stopT = 0.26 + (selectedTeamIndex + 0.5) * (0.74 - 0.26) / totalBoxes;
       let collisionSpeedLimit = (playerKart.pitZone === "PIT_ENTRY" || playerKart.pitZone === "PIT_LANE") ? 11.0 : 28.0;
       
       if (!isPitStopActive && playerKart.speed > 0.0) {
@@ -1276,18 +1279,17 @@
 
       // Stop at green pit box on pit lane apron (Never teleport into garage during pit stop!)
       if (!isPitStopActive && !hasStoppedAtPitBox) {
-        const totalBoxes = F1_TEAMS.length;
-        const pBoxT = 0.28 + (selectedTeamIndex + 0.5) * (0.72 - 0.28) / totalBoxes;
+        const pBoxT = 0.26 + (selectedTeamIndex + 0.5) * (0.74 - 0.26) / totalBoxes;
         const pos = pitCurve.getPointAt(pBoxT);
         const tang = pitCurve.getTangentAt(pBoxT).normalize();
         const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-        const boxPos = pos.clone().add(norm.multiplyScalar(5.5));
+        const boxPos = pos.clone().add(norm.multiplyScalar(6.5));
 
         const distToBox = playerKart.mesh.position.distanceTo(boxPos);
-        const isNearBox = (distToBox < 3.2) || (pitProgress >= (pBoxT - 0.015) && playerKart.sideOffset > 3.0) || (pitProgress >= pBoxT);
+        const isNearBox = (distToBox < 3.2) || (pitProgress >= (pBoxT - 0.015) && playerKart.sideOffset > 4.0) || (pitProgress >= pBoxT);
 
         if (pitProgress >= (pBoxT - 0.06) && pitProgress <= (pBoxT + 0.04)) {
-          rdShowMessage('PULL INTO GREEN PIT BOX // BRAKE & STOP', 0.2, '#10b981');
+          rdShowMessage('PULL INTO PIT BOX // BRAKE & STOP', 0.2, '#10b981');
         }
 
         if (isNearBox) {
@@ -1739,7 +1741,7 @@
       
       const tang = trackCurve.getTangentAt(playerKart.currentOffset).normalize();
       const targetHeading = Math.atan2(tang.x, tang.z);
-      playerKart.heading = THREE.MathUtils.lerp(playerKart.heading, targetHeading, delta * 6.0);
+      playerKart.heading = lerpHeading(playerKart.heading, targetHeading, delta * 6.0);
 
       const playerForward = getPlayerForward(playerKart);
       const headingAlignment = playerForward.dot(tang);

@@ -92,6 +92,8 @@
   // ─── Illegal Overtake (under yellow sector) ────────────────────
   function checkIllegalOvertake(delta) {
     if (!isRaceActive || !playerKart) return;
+    // Only active during actual GP race (session 2) and on the main track (not in pit lane)
+    if (currentSessionIndex !== 2 || playerKart.inPitLane || isStartingSequence || postRaceActive) return;
     if (illegalOvertakeWarningTimer > 0) {
       illegalOvertakeWarningTimer -= delta;
       return;

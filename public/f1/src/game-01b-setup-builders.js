@@ -872,178 +872,43 @@
 
     // ── Road meshes ────────────────────────────────────────────────────
     
-    // 1. Fast lane (4m wide): extruded along the ENTIRE pitCurve (entry -> parallel -> exit)
-    const fastLaneGeo = createCustomTrackGeometry(pitCurve, 4.0, 120);
-    const fastLaneMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.9 });
+    // 1. Unified Fast Lane (6.5m wide): dark asphalt extruded along the entire pitCurve
+    const fastLaneGeo = createCustomTrackGeometry(pitCurve, 6.5, 120);
+    const fastLaneMat = new THREE.MeshStandardMaterial({ color: 0x18191c, roughness: 0.88 });
     const fastLaneMesh = new THREE.Mesh(fastLaneGeo, fastLaneMat);
+    fastLaneMesh.receiveShadow = true;
     scene.add(fastLaneMesh);
 
-    // 2. Working lane (8m wide): only built along the parallel portion (index 3 to 9)
-    const parallelPts = [];
-    for (let s = 3; s <= 9; s++) {
-      const t = straightPts[s];
-      const pt   = trackCurve.getPointAt(t);
-      const tang = trackCurve.getTangentAt(t).normalize();
-      const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-      parallelPts.push(pt.clone().add(norm.multiplyScalar(23.0))); // Working lane center is at 23.0m offset!
-    }
-    const parallelCurve = new THREE.CatmullRomCurve3(parallelPts, false, "catmullrom", 0.5);
-    const workingLaneGeo = createCustomTrackGeometry(parallelCurve, 8.0, 60);
-    const workingLaneMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.95 });
-    const workingLaneMesh = new THREE.Mesh(workingLaneGeo, workingLaneMat);
-    workingLaneMesh.position.y = 0.005; // slightly above fast lane
-    scene.add(workingLaneMesh);
-
-    // 3. Grass runoff strip: between the main road and the fast lane (index 3 to 9)
-    const runoffPts = [];
-    for (let s = 3; s <= 9; s++) {
-      const t = straightPts[s];
-      const pt   = trackCurve.getPointAt(t);
-      const tang = trackCurve.getTangentAt(t).normalize();
-      const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-      runoffPts.push(pt.clone().add(norm.multiplyScalar(11.0)));
-    }
-    const runoffCurve = new THREE.CatmullRomCurve3(runoffPts, false, "catmullrom", 0.5);
-    const runoffGeo  = createCustomTrackGeometry(runoffCurve, 5.0, 60);
-    const runoffMat  = new THREE.MeshStandardMaterial({ color: 0x2d5a27, roughness: 1.0 });
-    const runoffMesh = new THREE.Mesh(runoffGeo, runoffMat);
-    runoffMesh.position.y = -0.01;
-    scene.add(runoffMesh);
-
-    // ── Concrete pit wall: built only along the parallel portion (index 3 to 9)
-    const pitWallMat = new THREE.MeshStandardMaterial({ color: 0xd1d5db, roughness: 0.85 });
-    for (let s = 3; s < 9; s++) {
-      const wallA = trackCurve.getPointAt(straightPts[s]).clone().add(
-        new THREE.Vector3(-trackCurve.getTangentAt(straightPts[s]).z, 0, trackCurve.getTangentAt(straightPts[s]).x).normalize().multiplyScalar(14.0)
-      );
-      const wallB = trackCurve.getPointAt(straightPts[s + 1]).clone().add(
-        new THREE.Vector3(-trackCurve.getTangentAt(straightPts[s + 1]).z, 0, trackCurve.getTangentAt(straightPts[s + 1]).x).normalize().multiplyScalar(14.0)
-      );
-      const mid   = wallA.clone().lerp(wallB, 0.5);
-      const segLen = wallA.distanceTo(wallB);
-      if (segLen < 0.1) continue;
-      const wallSeg = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.6, segLen + 0.05), pitWallMat);
-      wallSeg.position.copy(mid);
-      wallSeg.position.y += 0.3;
-      wallSeg.lookAt(wallB.clone().add(new THREE.Vector3(0, 0.3, 0)));
-      scene.add(wallSeg);
-    }
-
-    // ── Pit box markings (evenly spaced along the parallel section t=0.30 to 0.70 on the working lane at 23.0m offset)
-    const teamColors = F1_TEAMS.map(t => parseInt(t.color.replace('#',''), 16));
-    const totalBoxes = F1_TEAMS.length;
-    for (let b = 0; b < totalBoxes; b++) {
-      const boxT = 0.30 + (b / Math.max(1, totalBoxes - 1)) * 0.40;
-      const pitPt  = pitCurve.getPointAt(boxT);
-      const pitTng = pitCurve.getTangentAt(boxT).normalize();
-      const pitNm  = new THREE.Vector3(-pitTng.z, 0, pitTng.x).normalize();
-      const boxMat = new THREE.MeshBasicMaterial({ color: teamColors[b] });
-      const boxMesh = new THREE.Mesh(new THREE.BoxGeometry(7.8, 0.04, 1.0), boxMat);
-      boxMesh.position.copy(pitPt).add(pitNm.clone().multiplyScalar(6.0));
-      boxMesh.position.y = 0.04;
-      boxMesh.lookAt(boxMesh.position.clone().add(pitTng));
-      scene.add(boxMesh);
-
-      const labelMesh = new THREE.Mesh(
-        new THREE.BoxGeometry(0.18, 0.05, 4.0),
-        new THREE.MeshBasicMaterial({ color: 0xffffff })
-      );
-      labelMesh.position.copy(pitPt).add(pitNm.clone().multiplyScalar(6.0));
-      labelMesh.position.y = 0.045;
-      labelMesh.lookAt(labelMesh.position.clone().add(pitTng));
-      scene.add(labelMesh);
-    }
-
-    // ── Green guide line (centre of the actual path driven by the player's car)
-    const guidePts = [];
+    // 2. White Boundary Lines along Fast Lane (left edge at -3.25m, right edge at +3.25m)
+    const lineMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85 });
+    const fastLanePtsL = [];
+    const fastLanePtsR = [];
     for (let j = 0; j <= 120; j++) {
-      const tProgress = j / 120;
-      const pt   = pitCurve.getPointAt(tProgress);
-      const tang = pitCurve.getTangentAt(tProgress).normalize();
+      const t = j / 120;
+      const pt = pitCurve.getPointAt(t);
+      const tang = pitCurve.getTangentAt(t).normalize();
       const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-
-      // Mirror the exact lateral offset logic followed during player drive execution (centered on player team box 0 at stopT=0.30)
-      let lateralOffset = 0.0;
-      const transitionWindow = 0.11;
-      const stopT = 0.30; 
-
-      if (tProgress < stopT) {
-        if (tProgress > stopT - transitionWindow) {
-          const factor = (tProgress - (stopT - transitionWindow)) / transitionWindow;
-          const tSmooth = factor * factor * (3 - 2 * factor);
-          lateralOffset = tSmooth * 6.0;
-        } else {
-          lateralOffset = 0.0;
-        }
-      } else {
-        if (tProgress < stopT + transitionWindow) {
-          const factor = (tProgress - stopT) / transitionWindow;
-          const tSmooth = factor * factor * (3 - 2 * factor);
-          lateralOffset = 6.0 - tSmooth * 6.0;
-        } else {
-          lateralOffset = 0.0;
-        }
-      }
-
-      guidePts.push(pt.clone().add(norm.multiplyScalar(lateralOffset)));
+      fastLanePtsL.push(pt.clone().add(norm.clone().multiplyScalar(-3.25)));
+      fastLanePtsR.push(pt.clone().add(norm.clone().multiplyScalar(3.25)));
     }
-    const pitLineGeo = new THREE.BufferGeometry().setFromPoints(guidePts);
-    const pitLineMat = new THREE.LineBasicMaterial({ color: 0x22c55e, transparent: true, opacity: 0.85 });
-    pitGuideLine = new THREE.Line(pitLineGeo, pitLineMat);
-    pitGuideLine.position.y = 0.03;
-    scene.add(pitGuideLine);
+    const boundaryL = new THREE.Line(new THREE.BufferGeometry().setFromPoints(fastLanePtsL), lineMat);
+    const boundaryR = new THREE.Line(new THREE.BufferGeometry().setFromPoints(fastLanePtsR), lineMat);
+    boundaryL.position.y = 0.035;
+    boundaryR.position.y = 0.035;
+    scene.add(boundaryL, boundaryR);
 
-    // ── Edge painted lines (edges of the working lane - parallel section only)
-    const edgePtsL = [], edgePtsR = [];
-    for (let j = 0; j <= 60; j++) {
-      const tProgress = 0.25 + (j / 60) * 0.50; // parallel working section (from 0.25 to 0.75)
-      const pt   = pitCurve.getPointAt(tProgress);
-      const tang = pitCurve.getTangentAt(tProgress).normalize();
+    // 3. Entry & Exit Painted Chevrons / Transition Blend Lines
+    const entryChevronPts = [];
+    for (let c = 0; c <= 20; c++) {
+      const t = (c / 20) * 0.15;
+      const pt = pitCurve.getPointAt(t);
+      const tang = pitCurve.getTangentAt(t).normalize();
       const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-      edgePtsL.push(pt.clone().add(norm.clone().multiplyScalar(2.0)));  // left edge of working lane (19m)
-      edgePtsR.push(pt.clone().add(norm.clone().multiplyScalar(10.0))); // right edge of working lane (27m)
+      entryChevronPts.push(pt.clone().add(norm.clone().multiplyScalar(-3.25)));
     }
-    const edgeLL = new THREE.Line(new THREE.BufferGeometry().setFromPoints(edgePtsL), new THREE.LineBasicMaterial({ color: 0xffffff }));
-    const edgeLR = new THREE.Line(new THREE.BufferGeometry().setFromPoints(edgePtsR), new THREE.LineBasicMaterial({ color: 0xffffff }));
-    edgeLL.position.y = 0.04;
-    edgeLR.position.y = 0.04;
-    scene.add(edgeLL, edgeLR);
-
-    // ── Entry painted lines (edges of entry road)
-    const entryPtsL = [], entryPtsR = [];
-    for (let j = 0; j <= 40; j++) {
-      const tProgress = (j / 40) * 0.30;
-      const pt   = pitCurve.getPointAt(tProgress);
-      const tang = pitCurve.getTangentAt(tProgress).normalize();
-      const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-      entryPtsL.push(pt.clone().add(norm.clone().multiplyScalar(-2.0))); // left edge (-2.0m)
-      if (tProgress <= 0.25) {
-        entryPtsR.push(pt.clone().add(norm.clone().multiplyScalar(2.0)));  // right edge (+2.0m)
-      }
-    }
-    const entryLL = new THREE.Line(new THREE.BufferGeometry().setFromPoints(entryPtsL), new THREE.LineBasicMaterial({ color: 0xffffff }));
-    const entryLR = new THREE.Line(new THREE.BufferGeometry().setFromPoints(entryPtsR), new THREE.LineBasicMaterial({ color: 0xffffff }));
-    entryLL.position.y = 0.04;
-    entryLR.position.y = 0.04;
-    scene.add(entryLL, entryLR);
-
-    // ── Exit painted lines (edges of exit road)
-    const exitPtsL = [], exitPtsR = [];
-    for (let j = 0; j <= 40; j++) {
-      const tProgress = 0.70 + (j / 40) * 0.30;
-      const pt   = pitCurve.getPointAt(tProgress);
-      const tang = pitCurve.getTangentAt(tProgress).normalize();
-      const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-      exitPtsL.push(pt.clone().add(norm.clone().multiplyScalar(-2.0))); // left edge (-2.0m)
-      if (tProgress >= 0.75) {
-        exitPtsR.push(pt.clone().add(norm.clone().multiplyScalar(2.0)));  // right edge (+2.0m)
-      }
-    }
-    const exitLL = new THREE.Line(new THREE.BufferGeometry().setFromPoints(exitPtsL), new THREE.LineBasicMaterial({ color: 0xffffff }));
-    const exitLR = new THREE.Line(new THREE.BufferGeometry().setFromPoints(exitPtsR), new THREE.LineBasicMaterial({ color: 0xffffff }));
-    exitLL.position.y = 0.04;
-    exitLR.position.y = 0.04;
-    scene.add(exitLL, exitLR);
+    const entryBlend = new THREE.Line(new THREE.BufferGeometry().setFromPoints(entryChevronPts), new THREE.LineBasicMaterial({ color: 0xffffff }));
+    entryBlend.position.y = 0.04;
+    scene.add(entryBlend);
 
     // ── PitComplexBuilder — garages + buildings
     const pitBuilder = new PitComplexBuilder(F1_TEAMS);
@@ -1498,23 +1363,22 @@
     const tang = pitCurve.getTangentAt(stopT).normalize();
     const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
 
-    // Snapped pit box position (+6.0m offset on working lane)
-    const boxPos = pos.clone().add(norm.multiplyScalar(6.0));
+    // Snapped pit box position (+6.5m offset on working apron)
+    const boxPos = pos.clone().add(norm.multiplyScalar(6.5));
 
-    // Sleek flat pit box ground decal (NO tall 3D box blocking view!)
-    const geo = new THREE.PlaneGeometry(6.5, 3.2);
-    const teamCol = F1_TEAMS[selectedTeamIndex] ? parseInt(F1_TEAMS[selectedTeamIndex].color.replace('#',''), 16) : 0x22c55e;
+    // Sleek flat pit box ground highlight (clean glowing outline, flush on concrete)
+    const geo = new THREE.PlaneGeometry(4.8, 6.2);
     const mat = new THREE.MeshBasicMaterial({
-      color: teamCol,
+      color: 0x10b981,
       transparent: true,
-      opacity: 0.45,
+      opacity: 0.35,
       side: THREE.DoubleSide
     });
 
     const mesh = new THREE.Mesh(geo, mat);
     mesh.rotation.x = -Math.PI / 2;
     mesh.position.copy(boxPos);
-    mesh.position.y = 0.04; // flush with asphalt surface
+    mesh.position.y = 0.038;
     mesh.lookAt(boxPos.clone().add(new THREE.Vector3(0, 1, 0)));
 
     scene.add(mesh);

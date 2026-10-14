@@ -1637,14 +1637,8 @@
   </div>
 
   <div id="hud-layer">
-    <!-- Mic Button Container (Bottom Right) -->
-    <div class="mic-btn-container">
-      <button class="mic-circle-btn" id="hud-mic-btn" onclick="toggleVoiceListening()">🎤</button>
-      <div style="font-family: 'Orbitron', sans-serif; font-size: 0.55rem; color: rgba(255,255,255,0.4); text-align: center; margin-top: 4px; letter-spacing: 0.5px;">RADIO (V)</div>
-    </div>
-
-    <!-- Telemetry Toggle Button Container (Bottom Right, next to Mic) -->
-    <div class="telemetry-btn-container">
+    <!-- Telemetry Toggle Button Container (Bottom Right) -->
+    <div class="telemetry-btn-container" style="position: absolute; bottom: 24px; right: 24px; z-index: 60; pointer-events: auto; display: flex; flex-direction: column; align-items: center;">
       <button class="telemetry-circle-btn" id="hud-telemetry-btn" onclick="toggleTelemetryPanel()">📊</button>
       <div style="font-family: 'Orbitron', sans-serif; font-size: 0.55rem; color: rgba(255,255,255,0.4); text-align: center; margin-top: 4px; letter-spacing: 0.5px;">STATUS (T)</div>
     </div>

@@ -397,6 +397,16 @@
     playerKart.speed = 0.0;
     currentGear = 1;
 
+    if (pitCurve) {
+      const totalBoxes = F1_TEAMS.length;
+      const pBoxT = 0.26 + (selectedTeamIndex + 0.5) * (0.74 - 0.26) / totalBoxes;
+      const tang = pitCurve.getTangentAt(pBoxT).normalize();
+      const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
+      const exitDir = norm.clone().multiplyScalar(-0.82).add(tang.clone().multiplyScalar(0.57)).normalize();
+      playerKart.heading = Math.atan2(exitDir.x, exitDir.z);
+      playerKart.mesh.rotation.y = playerKart.heading;
+    }
+
     // Mechanics immediately clear the central bay by stepping back against the walls
     if (window.f1ActiveGarages) {
       window.f1ActiveGarages.forEach(g => {

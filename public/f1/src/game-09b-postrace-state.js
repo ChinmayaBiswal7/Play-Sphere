@@ -395,9 +395,9 @@
         gun.position.set(0, 0.52, 0.25);
         crewGroup.add(gun);
       } else if (item.role === 'jack_front' || item.role === 'jack_rear') {
-        // Quick-lift Jack
-        const jack = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.12, 1.1), new THREE.MeshStandardMaterial({ color: 0xfacc15, metalness: 0.6 }));
-        jack.position.set(0, 0.18, 0.4);
+        // Sleek low-profile titanium quick-lift jack (dark metallic, no eye-level obstruction)
+        const jack = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.08, 0.7), new THREE.MeshStandardMaterial({ color: 0x1f242d, metalness: 0.8, roughness: 0.3 }));
+        jack.position.set(0, 0.04, 0.3);
         crewGroup.add(jack);
       }
 

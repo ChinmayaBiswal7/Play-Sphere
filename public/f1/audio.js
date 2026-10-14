@@ -18,6 +18,7 @@ class ApexAudioEngine {
     // Engine node references
     this.combustionOsc1 = null;
     this.combustionOsc2 = null;
+    this.combustionOsc3 = null;
     this.subOsc = null;
     this.turboOsc = null;
     this.turboGain = null;
@@ -90,19 +91,19 @@ class ApexAudioEngine {
 
       // 1. Primary Engine Gain
       this.engineGain = this.ctx.createGain();
-      this.engineGain.gain.setValueAtTime(0.065, now);
+      this.engineGain.gain.setValueAtTime(0.055, now);
 
       // 2. Waveshaper Distortion (gives high-rev F1 exhaust raspy scream)
       this.distortionNode = this.ctx.createWaveShaper();
-      this.distortionNode.curve = this._makeDistortionCurve(16);
+      this.distortionNode.curve = this._makeDistortionCurve(18);
       this.distortionNode.oversample = '2x';
 
       // 3. Exhaust Resonance Peaking Filter
       this.exhaustFilter = this.ctx.createBiquadFilter();
       this.exhaustFilter.type = 'peaking';
-      this.exhaustFilter.frequency.setValueAtTime(650, now);
-      this.exhaustFilter.Q.setValueAtTime(2.8, now);
-      this.exhaustFilter.gain.setValueAtTime(7.0, now);
+      this.exhaustFilter.frequency.setValueAtTime(550, now);
+      this.exhaustFilter.Q.setValueAtTime(3.0, now);
+      this.exhaustFilter.gain.setValueAtTime(6.0, now);
 
       // 4. Primary Combustion Sawtooth (Fundamental combustion order)
       this.combustionOsc1 = this.ctx.createOscillator();
@@ -115,23 +116,32 @@ class ApexAudioEngine {
       this.combustionOsc2.frequency.setValueAtTime(150, now);
       this.combustionOsc2.detune.setValueAtTime(8, now); // +8 cents detune
 
+      // 5b. 3rd Harmonic (V6 3-cylinder bank firing order character)
+      this.combustionOsc3 = this.ctx.createOscillator();
+      this.combustionOsc3.type = 'triangle';
+      this.combustionOsc3.frequency.setValueAtTime(225, now);
+      const osc3Gain = this.ctx.createGain();
+      osc3Gain.gain.setValueAtTime(0.45, now);
+      this.combustionOsc3.connect(osc3Gain);
+      osc3Gain.connect(this.distortionNode);
+
       // 6. Sub-bass displacement rumble (Cockpit physical growl)
       this.subOsc = this.ctx.createOscillator();
       this.subOsc.type = 'triangle';
       this.subOsc.frequency.setValueAtTime(37.5, now);
 
       const subGain = this.ctx.createGain();
-      subGain.gain.setValueAtTime(0.4, now);
+      subGain.gain.setValueAtTime(0.45, now);
       this.subOsc.connect(subGain);
       subGain.connect(this.distortionNode);
 
       // 7. Turbocharger Spool Whistle (Sine wave spooling 1800Hz - 5200Hz)
       this.turboOsc = this.ctx.createOscillator();
       this.turboOsc.type = 'sine';
-      this.turboOsc.frequency.setValueAtTime(1800, now);
+      this.turboOsc.frequency.setValueAtTime(1600, now);
 
       this.turboGain = this.ctx.createGain();
-      this.turboGain.gain.setValueAtTime(0.015, now);
+      this.turboGain.gain.setValueAtTime(0.012, now);
       this.turboOsc.connect(this.turboGain);
       this.turboGain.connect(this.exhaustFilter);
 
@@ -144,6 +154,7 @@ class ApexAudioEngine {
 
       this.combustionOsc1.start(now);
       this.combustionOsc2.start(now);
+      this.combustionOsc3.start(now);
       this.subOsc.start(now);
       this.turboOsc.start(now);
 
@@ -161,24 +172,29 @@ class ApexAudioEngine {
     this.lastRPM = clampedRPM;
 
     // Real F1 V6 4-stroke firing order: 3 firings per engine revolution
-    // Base frequency f = (RPM / 60) * 3
-    // At 1500 RPM: 75 Hz
-    // At 12000 RPM: 600 Hz
-    // At 14500 RPM: 725 Hz (with 2nd harmonic scream at 1450 Hz)
     const baseFreq = (clampedRPM / 60.0) * 3.0;
     const harmFreq = baseFreq * 2.003;
+    const harm3Freq = baseFreq * 3.0;
     const subFreq = baseFreq * 0.5;
 
-    // Turbocharger spool frequency: 1800 Hz at idle to 5200 Hz at redline
+    // Load & RPM factor
     const rpmFactor = (clampedRPM - 1500) / (15000 - 1500);
-    const turboFreq = 1800 + Math.pow(rpmFactor, 1.3) * 3400;
+    const turboFreq = 1600 + Math.pow(rpmFactor, 1.35) * 3600;
     const turboVol = 0.008 + Math.pow(rpmFactor, 1.5) * 0.055;
 
-    // Exhaust resonance filter tracking
-    const filterFreq = 550 + rpmFactor * 2200;
+    // Dynamic metallic exhaust resonance filter tracking
+    const filterFreq = 480 + Math.pow(rpmFactor, 1.25) * 2500;
+    const filterGain = 5.0 + rpmFactor * 8.0;
+
+    // Dynamic engine acoustic volume with load
+    const dynamicGain = 0.045 + Math.pow(rpmFactor, 0.8) * 0.04;
+    if (this.engineGain) {
+      this.engineGain.gain.setTargetAtTime(dynamicGain, now, 0.03);
+    }
 
     this.combustionOsc1.frequency.setTargetAtTime(baseFreq, now, 0.025);
     this.combustionOsc2.frequency.setTargetAtTime(harmFreq, now, 0.025);
+    if (this.combustionOsc3) this.combustionOsc3.frequency.setTargetAtTime(harm3Freq, now, 0.025);
     if (this.subOsc) this.subOsc.frequency.setTargetAtTime(subFreq, now, 0.03);
 
     if (this.turboOsc && this.turboGain) {
@@ -188,6 +204,7 @@ class ApexAudioEngine {
 
     if (this.exhaustFilter) {
       this.exhaustFilter.frequency.setTargetAtTime(filterFreq, now, 0.03);
+      this.exhaustFilter.gain.setTargetAtTime(filterGain, now, 0.03);
     }
   }
 
@@ -316,6 +333,7 @@ class ApexAudioEngine {
       const now = this.ctx ? this.ctx.currentTime : 0;
       if (this.combustionOsc1) { this.combustionOsc1.stop(now); this.combustionOsc1.disconnect(); }
       if (this.combustionOsc2) { this.combustionOsc2.stop(now); this.combustionOsc2.disconnect(); }
+      if (this.combustionOsc3) { this.combustionOsc3.stop(now); this.combustionOsc3.disconnect(); }
       if (this.subOsc) { this.subOsc.stop(now); this.subOsc.disconnect(); }
       if (this.turboOsc) { this.turboOsc.stop(now); this.turboOsc.disconnect(); }
       if (this.engineGain) this.engineGain.disconnect();
