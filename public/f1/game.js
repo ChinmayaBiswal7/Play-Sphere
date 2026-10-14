@@ -400,6 +400,14 @@
     playerKart.inPitLane = true;
     isPitting = true;
     hasStoppedAtPitBox = true;
+    isPitStopActive = false;
+    const pitOverlay = document.getElementById('pit-stop-overlay');
+    if (pitOverlay) pitOverlay.classList.add('hidden');
+    if (typeof pitCrewBoxes !== 'undefined' && pitCrewBoxes && pitCrewBoxes.length > 0) {
+      pitCrewBoxes.forEach(c => scene.remove(c));
+      pitCrewBoxes = [];
+      pitCrew = [];
+    }
     playerKart.pitZone = "PIT_LANE";
     playerKart.pitLimiterActive = true;
     playerKart.speed = 0.0;
@@ -3445,8 +3453,9 @@
       vertices.push(v1.x, v1.y, v1.z);
       vertices.push(v2.x, v2.y, v2.z);
 
-      uvs.push(t, 0);
-      uvs.push(t, 1);
+      const u = (sideOffset > 0) ? (1.0 - t) : t;
+      uvs.push(u, 0);
+      uvs.push(u, 1);
     }
 
     for (let i = 0; i < segments; i++) {
@@ -3457,8 +3466,13 @@
       }
       const row1 = i * 2;
       const row2 = (i + 1) * 2;
-      indices.push(row1, row1 + 1, row2);
-      indices.push(row1 + 1, row2 + 1, row2);
+      if (sideOffset > 0) {
+        indices.push(row1, row2, row1 + 1);
+        indices.push(row1 + 1, row2, row2 + 1);
+      } else {
+        indices.push(row1, row1 + 1, row2);
+        indices.push(row1 + 1, row2 + 1, row2);
+      }
     }
 
     const geo = new THREE.BufferGeometry();
@@ -3926,33 +3940,34 @@
     const canopyMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.4 });
     const trussMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.7, roughness: 0.3 });
 
-    // Helper: Build a Tiered Stadium Grandstand with Spectators
+    // Helper: Build a Tiered Stadium Grandstand with Spectators facing towards the track
     const createGrandstand = (length = 40, tiers = 5) => {
       const standGroup = new THREE.Group();
       for (let t = 0; t < tiers; t++) {
         const stepH = 1.2;
         const stepD = 2.0;
-        // Concrete riser
+        // Concrete riser stepping up and back away from track
         const riser = new THREE.Mesh(new THREE.BoxGeometry(length, stepH, stepD), concreteMat);
-        riser.position.set(0, stepH / 2 + t * stepH, t * stepD);
+        riser.position.set(0, stepH / 2 + t * stepH, -t * stepD);
         standGroup.add(riser);
 
-        // Seated spectator row
+        // Seated spectator row facing track (+Z)
         const crowdMesh = new THREE.Mesh(new THREE.PlaneGeometry(length - 0.4, stepH * 0.95), crowdMat);
-        crowdMesh.position.set(0, stepH + t * stepH + 0.1, t * stepD - stepD / 2 + 0.05);
+        crowdMesh.position.set(0, stepH + t * stepH + 0.1, -t * stepD + stepD / 2 - 0.05);
         standGroup.add(crowdMesh);
       }
 
-      // Canopy Roof
+      // Canopy Roof sloping forward over seating tiers
       const roofD = tiers * 2.0 + 3.0;
       const roof = new THREE.Mesh(new THREE.BoxGeometry(length, 0.4, roofD), canopyMat);
-      roof.position.set(0, tiers * 1.2 + 2.5, (tiers * 2.0) / 2 - 1.0);
+      roof.position.set(0, tiers * 1.2 + 2.5, -(tiers * 2.0) / 2 + 1.0);
+      roof.rotation.x = -0.06; // slight forward pitch
       standGroup.add(roof);
 
-      // Support pillars
+      // Support pillars at the back of the grandstand
       [-length / 2 + 2, length / 2 - 2].forEach(x => {
         const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.6, tiers * 1.2 + 2.5, 0.6), trussMat);
-        pillar.position.set(x, (tiers * 1.2 + 2.5) / 2, tiers * 2.0);
+        pillar.position.set(x, (tiers * 1.2 + 2.5) / 2, -(tiers * 2.0));
         standGroup.add(pillar);
       });
 
@@ -4974,11 +4989,12 @@
 
     // Official T-cam mounted on top of airbox
     const tCam = new THREE.Mesh(
-      new THREE.BoxGeometry(0.18, 0.07, 0.08),
-      new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.4 })
+      new THREE.BoxGeometry(0.14, 0.05, 0.06),
+      carbon
     );
-    tCam.position.set(0, 1.06, -0.05);
+    tCam.position.set(0, 1.05, -0.05);
     car.add(tCam);
+    car.tCam = tCam;
 
     // Vertical shark fin running down engine spine
     const sharkFin = new THREE.Mesh(
@@ -5885,6 +5901,8 @@
     let delta = clock.getDelta();
     if (window.isGamePaused) {
       delta = 0.0;
+    } else {
+      delta = Math.min(delta, 0.035); // Smooth 35ms ceiling prevents physics stutter spikes
     }
 
     if (typeof window.debugPlayerFlowTransitions === 'function') {
@@ -6083,8 +6101,13 @@
       updateCameraFollow();
       updateWeatherEvent(delta);
       drawMinimap();
-      updateLeaderboardHUD();
-      updateDebugRacePanel();
+      
+      const nowMs = performance.now();
+      if (!window._lastHudDomUpdate || (nowMs - window._lastHudDomUpdate) > 100) {
+        window._lastHudDomUpdate = nowMs;
+        updateLeaderboardHUD();
+        updateDebugRacePanel();
+      }
       updateRaceDirector(delta); // 🏁 Race Director — VSC, Red Flag, Track Limits, Flags
 
       // Live-update telemetry panel when open
@@ -7125,13 +7148,15 @@
       
       if (lifePercent < 10) {
         hTyreLife.style.color = '#ef4444';
-        if (Math.random() < 0.005) {
+        if (!playerKart.warnedTyresCritical) {
+          playerKart.warnedTyresCritical = true;
           showShiftBlockedHUD("TYRES CRITICAL - PIT RECOMMENDED");
           speakEngineerRadio("Tyres are critical, pit this lap!", 60);
         }
       } else if (lifePercent < 25) {
         hTyreLife.style.color = '#fbbf24';
-        if (Math.random() < 0.003) {
+        if (!playerKart.warnedTyresWorn) {
+          playerKart.warnedTyresWorn = true;
           showShiftBlockedHUD("TYRES WORN");
           speakEngineerRadio("Tyre wear is high, be careful on traction.", 45);
         }
@@ -7573,9 +7598,9 @@
         const boxPos = pos.clone().add(norm.multiplyScalar(6.5));
 
         const distToBox = playerKart.mesh.position.distanceTo(boxPos);
-        const isNearBox = (distToBox < 3.2) || (pitProgress >= (pBoxT - 0.015) && playerKart.sideOffset > 4.0) || (pitProgress >= pBoxT);
+        const isNearBox = (distToBox < 2.8 && Math.abs(playerKart.speed) < 12.0 && playerKart.pitZone === "PIT_LANE" && !playerKart.isExitingGarage);
 
-        if (pitProgress >= (pBoxT - 0.06) && pitProgress <= (pBoxT + 0.04)) {
+        if (pitProgress >= (pBoxT - 0.06) && pitProgress <= (pBoxT + 0.04) && !playerKart.isExitingGarage) {
           rdShowMessage('PULL INTO PIT BOX // BRAKE & STOP', 0.2, '#10b981');
         }
 
@@ -7711,21 +7736,47 @@
     let bestT = 0.0;
     let bestPoint = null;
 
-    const coarseSteps = 300;
-    for (let i = 0; i <= coarseSteps; i++) {
-      const t = i / coarseSteps;
-      const pt = trackCurve.getPointAt(t);
-      if (!pt) continue;
-      const dist = pos.distanceTo(pt);
-      if (dist < minDistance) {
-        minDistance = dist;
-        bestT = t;
-        bestPoint = pt;
+    // Fast path: localized search around player's current known offset
+    const currentT = (playerKart && playerKart.currentOffset !== undefined) ? playerKart.currentOffset : null;
+    let didFastSearch = false;
+
+    if (currentT !== null) {
+      const localSteps = 24;
+      const windowRange = 0.045; // ~80m track window
+      for (let i = -localSteps / 2; i <= localSteps / 2; i++) {
+        const t = (currentT + (i / localSteps) * windowRange * 2 + 1.0) % 1.0;
+        const pt = trackCurve.getPointAt(t);
+        if (!pt) continue;
+        const dist = pos.distanceTo(pt);
+        if (dist < minDistance) {
+          minDistance = dist;
+          bestT = t;
+          bestPoint = pt;
+        }
+      }
+      if (minDistance < 18.0) {
+        didFastSearch = true;
       }
     }
 
-    const fineSteps = 10;
-    const searchRange = 1.0 / coarseSteps;
+    // Fallback coarse search if no prior position or off-track
+    if (!didFastSearch) {
+      const coarseSteps = 120;
+      for (let i = 0; i <= coarseSteps; i++) {
+        const t = i / coarseSteps;
+        const pt = trackCurve.getPointAt(t);
+        if (!pt) continue;
+        const dist = pos.distanceTo(pt);
+        if (dist < minDistance) {
+          minDistance = dist;
+          bestT = t;
+          bestPoint = pt;
+        }
+      }
+    }
+
+    const fineSteps = 8;
+    const searchRange = 0.008;
     let localBestT = bestT;
     for (let i = -fineSteps; i <= fineSteps; i++) {
       const t = (bestT + (i / fineSteps) * searchRange + 1.0) % 1.0;
@@ -10303,11 +10354,15 @@
       const hd = playerKart.heading !== undefined ? playerKart.heading : 0;
       const forward = new THREE.Vector3(Math.sin(hd), 0, Math.cos(hd)).normalize();
 
-      // Camera sits directly at the roll-hoop T-cam attached to the car (y = 1.32, 0.72m behind center)
-      // Traveling synchronously WITH the car through the garage door so it physically cannot clip any walls
+      // Real F1 Broadcast T-Cam position (mounted at roll-hoop apex, y = 1.18, z = +0.18 forward of airbox)
+      // Completely avoids showing any airbox or T-cam box in front of the lens!
       const camPos = pPos.clone()
-        .sub(forward.clone().multiplyScalar(0.72))
-        .add(new THREE.Vector3(0, 1.32, 0));
+        .add(forward.clone().multiplyScalar(0.18))
+        .add(new THREE.Vector3(0, 1.18, 0));
+
+      if (playerKart.mesh && playerKart.mesh.tCam) {
+        playerKart.mesh.tCam.visible = false;
+      }
 
       camera.position.copy(camPos);
 
@@ -10352,9 +10407,15 @@
     let heightVal = 2.0; // default normal
     
     if (isTcam) {
-      distMultiplier = -0.6; // sit on engine airbox cover
-      heightVal = 1.25;      // T-cam elevation height
+      distMultiplier = 0.18; // In front of airbox and T-cam mount looking forward down nose
+      heightVal = 1.18;      // Real F1 T-cam cockpit elevation
+      if (playerKart.mesh && playerKart.mesh.tCam) {
+        playerKart.mesh.tCam.visible = false;
+      }
     } else {
+      if (playerKart.mesh && playerKart.mesh.tCam) {
+        playerKart.mesh.tCam.visible = true;
+      }
       if (window.cameraDistanceSetting === 'near') distMultiplier = -3.8;
       else if (window.cameraDistanceSetting === 'far') distMultiplier = -7.0;
       
@@ -11943,6 +12004,7 @@
   let isRadioSpeaking = false;
   let currentRadioPriority = 0;
   let activeUtterance = null;
+  const recentSpokenRadioMessages = new Map();
 
   function speakEngineerRadio(msg, priorityLevel = 30, isExplicitResponse = false) {
     if (!('speechSynthesis' in window)) return;
@@ -11950,6 +12012,14 @@
     // Convert old true/false priorities
     if (priorityLevel === true) priorityLevel = 100;
     else if (priorityLevel === false) priorityLevel = 30;
+
+    // Suppress repeating identical messages within 45 seconds (unless explicit user response)
+    const nowTime = Date.now();
+    const lastSpoken = recentSpokenRadioMessages.get(msg) || 0;
+    if (!isExplicitResponse && (nowTime - lastSpoken) < 45000) {
+      return; // Debounce identical voice messages
+    }
+    recentSpokenRadioMessages.set(msg, nowTime);
 
     // Display on HUD radio subtitles instantly
     const subEl = document.getElementById('hud-radio-subtitles');

@@ -392,6 +392,14 @@
     playerKart.inPitLane = true;
     isPitting = true;
     hasStoppedAtPitBox = true;
+    isPitStopActive = false;
+    const pitOverlay = document.getElementById('pit-stop-overlay');
+    if (pitOverlay) pitOverlay.classList.add('hidden');
+    if (typeof pitCrewBoxes !== 'undefined' && pitCrewBoxes && pitCrewBoxes.length > 0) {
+      pitCrewBoxes.forEach(c => scene.remove(c));
+      pitCrewBoxes = [];
+      pitCrew = [];
+    }
     playerKart.pitZone = "PIT_LANE";
     playerKart.pitLimiterActive = true;
     playerKart.speed = 0.0;

@@ -692,8 +692,9 @@
       vertices.push(v1.x, v1.y, v1.z);
       vertices.push(v2.x, v2.y, v2.z);
 
-      uvs.push(t, 0);
-      uvs.push(t, 1);
+      const u = (sideOffset > 0) ? (1.0 - t) : t;
+      uvs.push(u, 0);
+      uvs.push(u, 1);
     }
 
     for (let i = 0; i < segments; i++) {
@@ -704,8 +705,13 @@
       }
       const row1 = i * 2;
       const row2 = (i + 1) * 2;
-      indices.push(row1, row1 + 1, row2);
-      indices.push(row1 + 1, row2 + 1, row2);
+      if (sideOffset > 0) {
+        indices.push(row1, row2, row1 + 1);
+        indices.push(row1 + 1, row2, row2 + 1);
+      } else {
+        indices.push(row1, row1 + 1, row2);
+        indices.push(row1 + 1, row2 + 1, row2);
+      }
     }
 
     const geo = new THREE.BufferGeometry();
@@ -1173,33 +1179,34 @@
     const canopyMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.4 });
     const trussMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.7, roughness: 0.3 });
 
-    // Helper: Build a Tiered Stadium Grandstand with Spectators
+    // Helper: Build a Tiered Stadium Grandstand with Spectators facing towards the track
     const createGrandstand = (length = 40, tiers = 5) => {
       const standGroup = new THREE.Group();
       for (let t = 0; t < tiers; t++) {
         const stepH = 1.2;
         const stepD = 2.0;
-        // Concrete riser
+        // Concrete riser stepping up and back away from track
         const riser = new THREE.Mesh(new THREE.BoxGeometry(length, stepH, stepD), concreteMat);
-        riser.position.set(0, stepH / 2 + t * stepH, t * stepD);
+        riser.position.set(0, stepH / 2 + t * stepH, -t * stepD);
         standGroup.add(riser);
 
-        // Seated spectator row
+        // Seated spectator row facing track (+Z)
         const crowdMesh = new THREE.Mesh(new THREE.PlaneGeometry(length - 0.4, stepH * 0.95), crowdMat);
-        crowdMesh.position.set(0, stepH + t * stepH + 0.1, t * stepD - stepD / 2 + 0.05);
+        crowdMesh.position.set(0, stepH + t * stepH + 0.1, -t * stepD + stepD / 2 - 0.05);
         standGroup.add(crowdMesh);
       }
 
-      // Canopy Roof
+      // Canopy Roof sloping forward over seating tiers
       const roofD = tiers * 2.0 + 3.0;
       const roof = new THREE.Mesh(new THREE.BoxGeometry(length, 0.4, roofD), canopyMat);
-      roof.position.set(0, tiers * 1.2 + 2.5, (tiers * 2.0) / 2 - 1.0);
+      roof.position.set(0, tiers * 1.2 + 2.5, -(tiers * 2.0) / 2 + 1.0);
+      roof.rotation.x = -0.06; // slight forward pitch
       standGroup.add(roof);
 
-      // Support pillars
+      // Support pillars at the back of the grandstand
       [-length / 2 + 2, length / 2 - 2].forEach(x => {
         const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.6, tiers * 1.2 + 2.5, 0.6), trussMat);
-        pillar.position.set(x, (tiers * 1.2 + 2.5) / 2, tiers * 2.0);
+        pillar.position.set(x, (tiers * 1.2 + 2.5) / 2, -(tiers * 2.0));
         standGroup.add(pillar);
       });
 

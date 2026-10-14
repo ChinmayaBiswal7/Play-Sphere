@@ -831,11 +831,12 @@
 
     // Official T-cam mounted on top of airbox
     const tCam = new THREE.Mesh(
-      new THREE.BoxGeometry(0.18, 0.07, 0.08),
-      new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.4 })
+      new THREE.BoxGeometry(0.14, 0.05, 0.06),
+      carbon
     );
-    tCam.position.set(0, 1.06, -0.05);
+    tCam.position.set(0, 1.05, -0.05);
     car.add(tCam);
+    car.tCam = tCam;
 
     // Vertical shark fin running down engine spine
     const sharkFin = new THREE.Mesh(

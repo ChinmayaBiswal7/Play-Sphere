@@ -838,13 +838,15 @@
       
       if (lifePercent < 10) {
         hTyreLife.style.color = '#ef4444';
-        if (Math.random() < 0.005) {
+        if (!playerKart.warnedTyresCritical) {
+          playerKart.warnedTyresCritical = true;
           showShiftBlockedHUD("TYRES CRITICAL - PIT RECOMMENDED");
           speakEngineerRadio("Tyres are critical, pit this lap!", 60);
         }
       } else if (lifePercent < 25) {
         hTyreLife.style.color = '#fbbf24';
-        if (Math.random() < 0.003) {
+        if (!playerKart.warnedTyresWorn) {
+          playerKart.warnedTyresWorn = true;
           showShiftBlockedHUD("TYRES WORN");
           speakEngineerRadio("Tyre wear is high, be careful on traction.", 45);
         }
@@ -1286,9 +1288,9 @@
         const boxPos = pos.clone().add(norm.multiplyScalar(6.5));
 
         const distToBox = playerKart.mesh.position.distanceTo(boxPos);
-        const isNearBox = (distToBox < 3.2) || (pitProgress >= (pBoxT - 0.015) && playerKart.sideOffset > 4.0) || (pitProgress >= pBoxT);
+        const isNearBox = (distToBox < 2.8 && Math.abs(playerKart.speed) < 12.0 && playerKart.pitZone === "PIT_LANE" && !playerKart.isExitingGarage);
 
-        if (pitProgress >= (pBoxT - 0.06) && pitProgress <= (pBoxT + 0.04)) {
+        if (pitProgress >= (pBoxT - 0.06) && pitProgress <= (pBoxT + 0.04) && !playerKart.isExitingGarage) {
           rdShowMessage('PULL INTO PIT BOX // BRAKE & STOP', 0.2, '#10b981');
         }
 
@@ -1424,21 +1426,47 @@
     let bestT = 0.0;
     let bestPoint = null;
 
-    const coarseSteps = 300;
-    for (let i = 0; i <= coarseSteps; i++) {
-      const t = i / coarseSteps;
-      const pt = trackCurve.getPointAt(t);
-      if (!pt) continue;
-      const dist = pos.distanceTo(pt);
-      if (dist < minDistance) {
-        minDistance = dist;
-        bestT = t;
-        bestPoint = pt;
+    // Fast path: localized search around player's current known offset
+    const currentT = (playerKart && playerKart.currentOffset !== undefined) ? playerKart.currentOffset : null;
+    let didFastSearch = false;
+
+    if (currentT !== null) {
+      const localSteps = 24;
+      const windowRange = 0.045; // ~80m track window
+      for (let i = -localSteps / 2; i <= localSteps / 2; i++) {
+        const t = (currentT + (i / localSteps) * windowRange * 2 + 1.0) % 1.0;
+        const pt = trackCurve.getPointAt(t);
+        if (!pt) continue;
+        const dist = pos.distanceTo(pt);
+        if (dist < minDistance) {
+          minDistance = dist;
+          bestT = t;
+          bestPoint = pt;
+        }
+      }
+      if (minDistance < 18.0) {
+        didFastSearch = true;
       }
     }
 
-    const fineSteps = 10;
-    const searchRange = 1.0 / coarseSteps;
+    // Fallback coarse search if no prior position or off-track
+    if (!didFastSearch) {
+      const coarseSteps = 120;
+      for (let i = 0; i <= coarseSteps; i++) {
+        const t = i / coarseSteps;
+        const pt = trackCurve.getPointAt(t);
+        if (!pt) continue;
+        const dist = pos.distanceTo(pt);
+        if (dist < minDistance) {
+          minDistance = dist;
+          bestT = t;
+          bestPoint = pt;
+        }
+      }
+    }
+
+    const fineSteps = 8;
+    const searchRange = 0.008;
     let localBestT = bestT;
     for (let i = -fineSteps; i <= fineSteps; i++) {
       const t = (bestT + (i / fineSteps) * searchRange + 1.0) % 1.0;

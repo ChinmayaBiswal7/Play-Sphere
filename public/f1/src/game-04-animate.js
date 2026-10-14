@@ -6,6 +6,8 @@
     let delta = clock.getDelta();
     if (window.isGamePaused) {
       delta = 0.0;
+    } else {
+      delta = Math.min(delta, 0.035); // Smooth 35ms ceiling prevents physics stutter spikes
     }
 
     if (typeof window.debugPlayerFlowTransitions === 'function') {
@@ -204,8 +206,13 @@
       updateCameraFollow();
       updateWeatherEvent(delta);
       drawMinimap();
-      updateLeaderboardHUD();
-      updateDebugRacePanel();
+      
+      const nowMs = performance.now();
+      if (!window._lastHudDomUpdate || (nowMs - window._lastHudDomUpdate) > 100) {
+        window._lastHudDomUpdate = nowMs;
+        updateLeaderboardHUD();
+        updateDebugRacePanel();
+      }
       updateRaceDirector(delta); // 🏁 Race Director — VSC, Red Flag, Track Limits, Flags
 
       // Live-update telemetry panel when open

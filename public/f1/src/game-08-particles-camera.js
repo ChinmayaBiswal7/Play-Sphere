@@ -53,11 +53,15 @@
       const hd = playerKart.heading !== undefined ? playerKart.heading : 0;
       const forward = new THREE.Vector3(Math.sin(hd), 0, Math.cos(hd)).normalize();
 
-      // Camera sits directly at the roll-hoop T-cam attached to the car (y = 1.32, 0.72m behind center)
-      // Traveling synchronously WITH the car through the garage door so it physically cannot clip any walls
+      // Real F1 Broadcast T-Cam position (mounted at roll-hoop apex, y = 1.18, z = +0.18 forward of airbox)
+      // Completely avoids showing any airbox or T-cam box in front of the lens!
       const camPos = pPos.clone()
-        .sub(forward.clone().multiplyScalar(0.72))
-        .add(new THREE.Vector3(0, 1.32, 0));
+        .add(forward.clone().multiplyScalar(0.18))
+        .add(new THREE.Vector3(0, 1.18, 0));
+
+      if (playerKart.mesh && playerKart.mesh.tCam) {
+        playerKart.mesh.tCam.visible = false;
+      }
 
       camera.position.copy(camPos);
 
@@ -102,9 +106,15 @@
     let heightVal = 2.0; // default normal
     
     if (isTcam) {
-      distMultiplier = -0.6; // sit on engine airbox cover
-      heightVal = 1.25;      // T-cam elevation height
+      distMultiplier = 0.18; // In front of airbox and T-cam mount looking forward down nose
+      heightVal = 1.18;      // Real F1 T-cam cockpit elevation
+      if (playerKart.mesh && playerKart.mesh.tCam) {
+        playerKart.mesh.tCam.visible = false;
+      }
     } else {
+      if (playerKart.mesh && playerKart.mesh.tCam) {
+        playerKart.mesh.tCam.visible = true;
+      }
       if (window.cameraDistanceSetting === 'near') distMultiplier = -3.8;
       else if (window.cameraDistanceSetting === 'far') distMultiplier = -7.0;
       

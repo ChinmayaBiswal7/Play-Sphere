@@ -205,6 +205,7 @@
   let isRadioSpeaking = false;
   let currentRadioPriority = 0;
   let activeUtterance = null;
+  const recentSpokenRadioMessages = new Map();
 
   function speakEngineerRadio(msg, priorityLevel = 30, isExplicitResponse = false) {
     if (!('speechSynthesis' in window)) return;
@@ -212,6 +213,14 @@
     // Convert old true/false priorities
     if (priorityLevel === true) priorityLevel = 100;
     else if (priorityLevel === false) priorityLevel = 30;
+
+    // Suppress repeating identical messages within 45 seconds (unless explicit user response)
+    const nowTime = Date.now();
+    const lastSpoken = recentSpokenRadioMessages.get(msg) || 0;
+    if (!isExplicitResponse && (nowTime - lastSpoken) < 45000) {
+      return; // Debounce identical voice messages
+    }
+    recentSpokenRadioMessages.set(msg, nowTime);
 
     // Display on HUD radio subtitles instantly
     const subEl = document.getElementById('hud-radio-subtitles');
