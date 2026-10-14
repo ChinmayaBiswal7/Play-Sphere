@@ -298,7 +298,7 @@
         const pt = pitCurve.getPointAt(pBoxT);
         const tang = pitCurve.getTangentAt(pBoxT).normalize();
         const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-        playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(16.0)));
+        playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(24.0)));
         const exitDir = norm.clone().negate().normalize(); // points straight out of garage door towards pit road
         playerKart.heading = Math.atan2(exitDir.x, exitDir.z);
         playerKart.mesh.rotation.set(0, playerKart.heading, 0);
@@ -703,8 +703,8 @@
 
     for (let i = 0; i < segments; i++) {
       const t = i / segments;
-      // Skip indexing segments on the right pit side (10.5) inside the entire pit lane range (t >= 0.965 || t <= 0.065)
-      if (sideOffset > 0 && (t >= 0.965 || t <= 0.065)) {
+      // Skip indexing segments on right pit side (10.5) inside entire pit straight range (t >= 0.930 || t <= 0.090)
+      if (sideOffset > 0 && (t >= 0.930 || t <= 0.090)) {
         continue;
       }
       const row1 = i * 2;
@@ -882,14 +882,14 @@
 
     // ── Road meshes ────────────────────────────────────────────────────
     
-    // 1. Unified Fast Lane (6.5m wide): dark asphalt extruded along the entire pitCurve
-    const fastLaneGeo = createCustomTrackGeometry(pitCurve, 6.5, 120);
+    // 1. Unified Fast Lane (8.0m wide): dark asphalt extruded along the entire pitCurve
+    const fastLaneGeo = createCustomTrackGeometry(pitCurve, 8.0, 120);
     const fastLaneMat = new THREE.MeshStandardMaterial({ color: 0x18191c, roughness: 0.88 });
     const fastLaneMesh = new THREE.Mesh(fastLaneGeo, fastLaneMat);
     fastLaneMesh.receiveShadow = true;
     scene.add(fastLaneMesh);
 
-    // 2. White Boundary Lines along Fast Lane (left edge at -3.25m, right edge at +3.25m)
+    // 2. White Boundary Lines along Fast Lane (left edge at -4.0m, right edge at +4.0m)
     const lineMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85 });
     const fastLanePtsL = [];
     const fastLanePtsR = [];
@@ -898,8 +898,8 @@
       const pt = pitCurve.getPointAt(t);
       const tang = pitCurve.getTangentAt(t).normalize();
       const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-      fastLanePtsL.push(pt.clone().add(norm.clone().multiplyScalar(-3.25)));
-      fastLanePtsR.push(pt.clone().add(norm.clone().multiplyScalar(3.25)));
+      fastLanePtsL.push(pt.clone().add(norm.clone().multiplyScalar(-4.0)));
+      fastLanePtsR.push(pt.clone().add(norm.clone().multiplyScalar(4.0)));
     }
     const boundaryL = new THREE.Line(new THREE.BufferGeometry().setFromPoints(fastLanePtsL), lineMat);
     const boundaryR = new THREE.Line(new THREE.BufferGeometry().setFromPoints(fastLanePtsR), lineMat);

@@ -92,8 +92,8 @@
       const tang = pitCurve.getTangentAt(pBoxT).normalize();
       const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
 
-      // Placed inside spacious garage bay (at offset +16.0m), facing straight out of garage door towards pit apron
-      playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(16.0)));
+      // Placed inside spacious garage bay (at offset +24.0m), facing straight out of garage door towards pit apron
+      playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(24.0)));
       const exitDir = norm.clone().negate().normalize(); // straight out towards pit lane
       playerKart.heading = Math.atan2(exitDir.x, exitDir.z);
       playerKart.mesh.rotation.y = playerKart.heading;
@@ -1127,7 +1127,12 @@
 
     // Grass / Gravel traps / Barrier collision
     isGravel = false;
-    const isEnteringPitLane = playerKart.currentOffset >= 0.960 && playerKart.sideOffset > 0.0 && isPitting;
+    const isEnteringPitLane = (playerKart.currentOffset >= 0.930 || playerKart.currentOffset <= 0.090) && playerKart.sideOffset > 0.0;
+    if (isEnteringPitLane && playerKart.sideOffset > 3.8 && !playerKart.inPitLane) {
+      playerKart.inPitLane = true;
+      isPitting = true;
+      playerKart.pitZone = "PIT_ENTRY";
+    }
     
     if (!isEnteringPitLane && !playerKart.inPitLane) {
       if (Math.abs(playerKart.sideOffset) > 8.8) {
@@ -1229,26 +1234,12 @@
       playerKart.currentOffset = pitProj.progress; // keep synced for timing tower
       playerKart.sideOffset = pitProj.lateralOffset; // keep synced
 
-      // Pit lane boundaries: Left pit wall at -4.1m, Right garage wall up to +22.0m (spacious 26m corridor)
-      if (pitProj.lateralOffset < -4.1) {
-        const pos = pitCurve.getPointAt(pitProj.progress);
-        const tang = pitCurve.getTangentAt(pitProj.progress).normalize();
-        const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-        playerKart.mesh.position.copy(pos.add(norm.multiplyScalar(-4.0)));
-        playerKart.speed = Math.max(0.0, playerKart.speed - delta * 10.0);
-        // Correct heading parallel to pit lane tangent without reversing
-        const targetHeading = Math.atan2(tang.x, tang.z);
-        playerKart.heading = lerpHeading(playerKart.heading, targetHeading, delta * 6.0);
-      } else {
-        const maxLateral = (pitProj.progress >= 0.22 && pitProj.progress <= 0.78) ? 22.0 : 10.0;
-        if (pitProj.lateralOffset > maxLateral) {
-          const pos = pitCurve.getPointAt(pitProj.progress);
-          const tang = pitCurve.getTangentAt(pitProj.progress).normalize();
-          const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-          playerKart.mesh.position.copy(pos.add(norm.multiplyScalar(maxLateral - 0.1)));
-          playerKart.speed = Math.max(0.0, playerKart.speed - delta * 10.0);
-          const targetHeading = Math.atan2(tang.x, tang.z);
-          playerKart.heading = lerpHeading(playerKart.heading, targetHeading, delta * 6.0);
+      // Pit lane boundaries: Left pit wall at -6.8m, Right garage wall up to +32.0m (Ultra-spacious 38m corridor!)
+      if (!playerKart.isExitingGarage && playerKart.qualifyingState !== "GARAGE") {
+        if (pitProj.lateralOffset < -6.8) {
+          playerKart.speed = Math.max(0.0, playerKart.speed - delta * 12.0);
+        } else if (pitProj.lateralOffset > 32.0) {
+          playerKart.speed = Math.max(0.0, playerKart.speed - delta * 12.0);
         }
       }
 
@@ -1286,7 +1277,7 @@
         const pos = pitCurve.getPointAt(pBoxT);
         const tang = pitCurve.getTangentAt(pBoxT).normalize();
         const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-        const boxPos = pos.clone().add(norm.multiplyScalar(6.5));
+        const boxPos = pos.clone().add(norm.multiplyScalar(9.5));
 
         const distToBox = playerKart.mesh.position.distanceTo(boxPos);
         const isNearBox = (distToBox < 2.8 && Math.abs(playerKart.speed) < 12.0 && playerKart.pitZone === "PIT_LANE" && !playerKart.isExitingGarage);

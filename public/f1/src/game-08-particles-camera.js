@@ -97,22 +97,22 @@
 
       camera.up.set(0, 1, 0);
 
-    let tangent;
-    if (playerKart.inPitLane && pitCurve) {
-      tangent = pitCurve.getTangentAt(pitProgress);
-    } else {
-      tangent = trackCurve.getTangentAt(playerKart.currentOffset);
-    }
+    // Car forward direction derived directly from player's vehicle heading (Never flips backward!):
+    const hd = playerKart.heading !== undefined ? playerKart.heading : 0;
+    const carForward = new THREE.Vector3(Math.sin(hd), 0, Math.cos(hd)).normalize();
     
     const isTcam = (window.cameraDistanceSetting === 'tcam');
-    let distMultiplier = -5.4; // default normal
-    let heightVal = 2.0; // default normal
+    let distMultiplier = -5.4; // default normal (behind car)
+    let heightVal = 2.0;       // default normal
     
     if (isTcam) {
       distMultiplier = 0.18; // In front of airbox and T-cam mount looking forward down nose
       heightVal = 1.18;      // Real F1 T-cam cockpit elevation
       if (playerKart.mesh && playerKart.mesh.tCam) {
         playerKart.mesh.tCam.visible = false;
+      }
+      if (playerKart.mesh && playerKart.mesh.playerArrow) {
+        playerKart.mesh.playerArrow.visible = false;
       }
     } else {
       if (playerKart.mesh && playerKart.mesh.tCam) {
@@ -125,7 +125,8 @@
       else if (window.cameraHeightSetting === 'high') heightVal = 2.8;
     }
     
-    const backOffset = tangent.clone().multiplyScalar(distMultiplier);
+    // Position camera along car's actual heading vector:
+    const backOffset = carForward.clone().multiplyScalar(distMultiplier);
     backOffset.y = heightVal;
  
     const targetCamPos = pPos.clone().add(backOffset);
@@ -134,7 +135,7 @@
     if (isTcam) {
       camera.position.copy(targetCamPos); // Rock-steady, attached to chassis
     } else {
-      camera.position.lerp(targetCamPos, 0.12);
+      camera.position.lerp(targetCamPos, 0.14);
     }
  
     // Dynamic FOV scaling based on speed & base FOV setting
@@ -152,11 +153,13 @@
     }
  
     if (isTcam) {
-      // T-cam looks far ahead along the car's heading tangent to align view
-      const targetLookAt = pPos.clone().add(tangent.clone().multiplyScalar(20.0)).add(new THREE.Vector3(0, 0.75, 0));
+      // T-cam looks far ahead along the car's actual nosecone
+      const targetLookAt = pPos.clone().add(carForward.clone().multiplyScalar(20.0)).add(new THREE.Vector3(0, 0.75, 0));
       camera.lookAt(targetLookAt);
     } else {
-      camera.lookAt(pPos.clone().add(new THREE.Vector3(0, 0.5, 0)));
+      // Chase camera looks directly ahead through the car
+      const targetLookAt = pPos.clone().add(carForward.clone().multiplyScalar(6.0)).add(new THREE.Vector3(0, 0.6, 0));
+      camera.lookAt(targetLookAt);
     }
   }
 

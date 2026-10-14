@@ -3059,7 +3059,7 @@
         const pt = pitCurve.getPointAt(pBoxT);
         const tang = pitCurve.getTangentAt(pBoxT).normalize();
         const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-        playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(16.0)));
+        playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(24.0)));
         const exitDir = norm.clone().negate().normalize(); // points straight out of garage door towards pit road
         playerKart.heading = Math.atan2(exitDir.x, exitDir.z);
         playerKart.mesh.rotation.set(0, playerKart.heading, 0);
@@ -3464,8 +3464,8 @@
 
     for (let i = 0; i < segments; i++) {
       const t = i / segments;
-      // Skip indexing segments on the right pit side (10.5) inside the entire pit lane range (t >= 0.965 || t <= 0.065)
-      if (sideOffset > 0 && (t >= 0.965 || t <= 0.065)) {
+      // Skip indexing segments on right pit side (10.5) inside entire pit straight range (t >= 0.930 || t <= 0.090)
+      if (sideOffset > 0 && (t >= 0.930 || t <= 0.090)) {
         continue;
       }
       const row1 = i * 2;
@@ -3643,14 +3643,14 @@
 
     // ── Road meshes ────────────────────────────────────────────────────
     
-    // 1. Unified Fast Lane (6.5m wide): dark asphalt extruded along the entire pitCurve
-    const fastLaneGeo = createCustomTrackGeometry(pitCurve, 6.5, 120);
+    // 1. Unified Fast Lane (8.0m wide): dark asphalt extruded along the entire pitCurve
+    const fastLaneGeo = createCustomTrackGeometry(pitCurve, 8.0, 120);
     const fastLaneMat = new THREE.MeshStandardMaterial({ color: 0x18191c, roughness: 0.88 });
     const fastLaneMesh = new THREE.Mesh(fastLaneGeo, fastLaneMat);
     fastLaneMesh.receiveShadow = true;
     scene.add(fastLaneMesh);
 
-    // 2. White Boundary Lines along Fast Lane (left edge at -3.25m, right edge at +3.25m)
+    // 2. White Boundary Lines along Fast Lane (left edge at -4.0m, right edge at +4.0m)
     const lineMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85 });
     const fastLanePtsL = [];
     const fastLanePtsR = [];
@@ -3659,8 +3659,8 @@
       const pt = pitCurve.getPointAt(t);
       const tang = pitCurve.getTangentAt(t).normalize();
       const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-      fastLanePtsL.push(pt.clone().add(norm.clone().multiplyScalar(-3.25)));
-      fastLanePtsR.push(pt.clone().add(norm.clone().multiplyScalar(3.25)));
+      fastLanePtsL.push(pt.clone().add(norm.clone().multiplyScalar(-4.0)));
+      fastLanePtsR.push(pt.clone().add(norm.clone().multiplyScalar(4.0)));
     }
     const boundaryL = new THREE.Line(new THREE.BufferGeometry().setFromPoints(fastLanePtsL), lineMat);
     const boundaryR = new THREE.Line(new THREE.BufferGeometry().setFromPoints(fastLanePtsR), lineMat);
@@ -6407,8 +6407,8 @@
       const tang = pitCurve.getTangentAt(pBoxT).normalize();
       const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
 
-      // Placed inside spacious garage bay (at offset +16.0m), facing straight out of garage door towards pit apron
-      playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(16.0)));
+      // Placed inside spacious garage bay (at offset +24.0m), facing straight out of garage door towards pit apron
+      playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(24.0)));
       const exitDir = norm.clone().negate().normalize(); // straight out towards pit lane
       playerKart.heading = Math.atan2(exitDir.x, exitDir.z);
       playerKart.mesh.rotation.y = playerKart.heading;
@@ -7442,7 +7442,12 @@
 
     // Grass / Gravel traps / Barrier collision
     isGravel = false;
-    const isEnteringPitLane = playerKart.currentOffset >= 0.960 && playerKart.sideOffset > 0.0 && isPitting;
+    const isEnteringPitLane = (playerKart.currentOffset >= 0.930 || playerKart.currentOffset <= 0.090) && playerKart.sideOffset > 0.0;
+    if (isEnteringPitLane && playerKart.sideOffset > 3.8 && !playerKart.inPitLane) {
+      playerKart.inPitLane = true;
+      isPitting = true;
+      playerKart.pitZone = "PIT_ENTRY";
+    }
     
     if (!isEnteringPitLane && !playerKart.inPitLane) {
       if (Math.abs(playerKart.sideOffset) > 8.8) {
@@ -7544,26 +7549,12 @@
       playerKart.currentOffset = pitProj.progress; // keep synced for timing tower
       playerKart.sideOffset = pitProj.lateralOffset; // keep synced
 
-      // Pit lane boundaries: Left pit wall at -4.1m, Right garage wall up to +22.0m (spacious 26m corridor)
-      if (pitProj.lateralOffset < -4.1) {
-        const pos = pitCurve.getPointAt(pitProj.progress);
-        const tang = pitCurve.getTangentAt(pitProj.progress).normalize();
-        const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-        playerKart.mesh.position.copy(pos.add(norm.multiplyScalar(-4.0)));
-        playerKart.speed = Math.max(0.0, playerKart.speed - delta * 10.0);
-        // Correct heading parallel to pit lane tangent without reversing
-        const targetHeading = Math.atan2(tang.x, tang.z);
-        playerKart.heading = lerpHeading(playerKart.heading, targetHeading, delta * 6.0);
-      } else {
-        const maxLateral = (pitProj.progress >= 0.22 && pitProj.progress <= 0.78) ? 22.0 : 10.0;
-        if (pitProj.lateralOffset > maxLateral) {
-          const pos = pitCurve.getPointAt(pitProj.progress);
-          const tang = pitCurve.getTangentAt(pitProj.progress).normalize();
-          const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-          playerKart.mesh.position.copy(pos.add(norm.multiplyScalar(maxLateral - 0.1)));
-          playerKart.speed = Math.max(0.0, playerKart.speed - delta * 10.0);
-          const targetHeading = Math.atan2(tang.x, tang.z);
-          playerKart.heading = lerpHeading(playerKart.heading, targetHeading, delta * 6.0);
+      // Pit lane boundaries: Left pit wall at -6.8m, Right garage wall up to +32.0m (Ultra-spacious 38m corridor!)
+      if (!playerKart.isExitingGarage && playerKart.qualifyingState !== "GARAGE") {
+        if (pitProj.lateralOffset < -6.8) {
+          playerKart.speed = Math.max(0.0, playerKart.speed - delta * 12.0);
+        } else if (pitProj.lateralOffset > 32.0) {
+          playerKart.speed = Math.max(0.0, playerKart.speed - delta * 12.0);
         }
       }
 
@@ -7601,7 +7592,7 @@
         const pos = pitCurve.getPointAt(pBoxT);
         const tang = pitCurve.getTangentAt(pBoxT).normalize();
         const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-        const boxPos = pos.clone().add(norm.multiplyScalar(6.5));
+        const boxPos = pos.clone().add(norm.multiplyScalar(9.5));
 
         const distToBox = playerKart.mesh.position.distanceTo(boxPos);
         const isNearBox = (distToBox < 2.8 && Math.abs(playerKart.speed) < 12.0 && playerKart.pitZone === "PIT_LANE" && !playerKart.isExitingGarage);
@@ -10407,22 +10398,22 @@
 
       camera.up.set(0, 1, 0);
 
-    let tangent;
-    if (playerKart.inPitLane && pitCurve) {
-      tangent = pitCurve.getTangentAt(pitProgress);
-    } else {
-      tangent = trackCurve.getTangentAt(playerKart.currentOffset);
-    }
+    // Car forward direction derived directly from player's vehicle heading (Never flips backward!):
+    const hd = playerKart.heading !== undefined ? playerKart.heading : 0;
+    const carForward = new THREE.Vector3(Math.sin(hd), 0, Math.cos(hd)).normalize();
     
     const isTcam = (window.cameraDistanceSetting === 'tcam');
-    let distMultiplier = -5.4; // default normal
-    let heightVal = 2.0; // default normal
+    let distMultiplier = -5.4; // default normal (behind car)
+    let heightVal = 2.0;       // default normal
     
     if (isTcam) {
       distMultiplier = 0.18; // In front of airbox and T-cam mount looking forward down nose
       heightVal = 1.18;      // Real F1 T-cam cockpit elevation
       if (playerKart.mesh && playerKart.mesh.tCam) {
         playerKart.mesh.tCam.visible = false;
+      }
+      if (playerKart.mesh && playerKart.mesh.playerArrow) {
+        playerKart.mesh.playerArrow.visible = false;
       }
     } else {
       if (playerKart.mesh && playerKart.mesh.tCam) {
@@ -10435,7 +10426,8 @@
       else if (window.cameraHeightSetting === 'high') heightVal = 2.8;
     }
     
-    const backOffset = tangent.clone().multiplyScalar(distMultiplier);
+    // Position camera along car's actual heading vector:
+    const backOffset = carForward.clone().multiplyScalar(distMultiplier);
     backOffset.y = heightVal;
  
     const targetCamPos = pPos.clone().add(backOffset);
@@ -10444,7 +10436,7 @@
     if (isTcam) {
       camera.position.copy(targetCamPos); // Rock-steady, attached to chassis
     } else {
-      camera.position.lerp(targetCamPos, 0.12);
+      camera.position.lerp(targetCamPos, 0.14);
     }
  
     // Dynamic FOV scaling based on speed & base FOV setting
@@ -10462,11 +10454,13 @@
     }
  
     if (isTcam) {
-      // T-cam looks far ahead along the car's heading tangent to align view
-      const targetLookAt = pPos.clone().add(tangent.clone().multiplyScalar(20.0)).add(new THREE.Vector3(0, 0.75, 0));
+      // T-cam looks far ahead along the car's actual nosecone
+      const targetLookAt = pPos.clone().add(carForward.clone().multiplyScalar(20.0)).add(new THREE.Vector3(0, 0.75, 0));
       camera.lookAt(targetLookAt);
     } else {
-      camera.lookAt(pPos.clone().add(new THREE.Vector3(0, 0.5, 0)));
+      // Chase camera looks directly ahead through the car
+      const targetLookAt = pPos.clone().add(carForward.clone().multiplyScalar(6.0)).add(new THREE.Vector3(0, 0.6, 0));
+      camera.lookAt(targetLookAt);
     }
   }
 
