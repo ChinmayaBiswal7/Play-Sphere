@@ -1649,12 +1649,6 @@
       <div style="font-family: 'Orbitron', sans-serif; font-size: 0.55rem; color: rgba(255,255,255,0.4); text-align: center; margin-top: 4px; letter-spacing: 0.5px;">STATUS (T)</div>
     </div>
 
-    <!-- Wireless Controller Pairing Button Container (Hidden when no gamepad/controller connected) -->
-    <div class="controller-btn-container" id="hud-controller-container" style="display: none;">
-      <button class="telemetry-circle-btn" id="hud-controller-btn" onclick="window.openF1ControllerModal()" title="Link Wireless Phone Controller">🎮</button>
-      <div style="font-family: 'Orbitron', sans-serif; font-size: 0.55rem; color: rgba(255,255,255,0.4); text-align: center; margin-top: 4px; letter-spacing: 0.5px;">PAD</div>
-    </div>
-
     <!-- Slide-out Telemetry / Car Status Panel (Bottom Right, above buttons) -->
     <div id="hud-telemetry-panel">
       <div style="font-family: 'Orbitron', sans-serif; font-size: 0.72rem; color: var(--neon-cyan); font-weight: 900; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 4px; display: flex; justify-content: space-between; align-items: center;">
@@ -2009,10 +2003,6 @@
       <div class="f1-footer-bar">
         <div class="footer-prompt"><span class="prompt-key prompt-select-key">ENTER</span> SELECT</div>
         <div class="footer-prompt"><span class="prompt-key prompt-back-key">ESC</span> BACK</div>
-        <div class="footer-prompt" id="btn-f1-controller" onclick="window.openF1ControllerModal()" style="display:none; cursor:pointer; color:var(--neon-cyan); margin-left:6px;">
-          <span class="prompt-btn" style="background:var(--neon-cyan); color:#000; border:none;">📱</span>
-          <span id="f1-footer-controller-text">LINK CONTROLLER</span>
-        </div>
       </div>
     </div>
 

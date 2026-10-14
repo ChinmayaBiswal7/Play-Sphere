@@ -42,25 +42,30 @@
     if (postRaceActive || isStartingSequence) return;
     const pPos = playerKart.mesh.position;
     
-    // Cinematic 3D view inside the garage showing car, halo, mechanics and pit lane view
-    if (playerKart.qualifyingState === "GARAGE" && pitCurve) {
+    // Cinematic on-board rollout camera inside garage and exiting through doors (Zero Wall Clipping!)
+    const inGarage = (playerKart.qualifyingState === "GARAGE");
+    const isExitingGarage = (playerKart.driveOutState === "PIT_LANE" && (playerKart.garageExitLerp === undefined || playerKart.garageExitLerp > 0.02));
+
+    if ((inGarage || isExitingGarage) && pitCurve) {
       camera.up.set(0, 1, 0);
-      const totalBoxes = F1_TEAMS.length;
-      const teamIdx = typeof selectedTeamIndex !== 'undefined' ? selectedTeamIndex : 0;
-      const pBoxT = 0.30 + (teamIdx / Math.max(1, totalBoxes - 1)) * 0.40;
-      const pt = pitCurve.getPointAt(pBoxT);
-      const tang = pitCurve.getTangentAt(pBoxT).normalize();
-      const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-      
-      // Position camera slightly behind and to the side of the car, elevated inside the garage
-      const camPos = pPos.clone().add(norm.clone().multiplyScalar(2.6)).add(tang.clone().multiplyScalar(0.6));
-      camPos.y = pPos.y + 1.45;
-      
-      window.claimCameraOwner("GARAGE_CINEMATIC");
+      window.claimCameraOwner("GARAGE_ROLLOUT");
+
+      const hd = playerKart.heading !== undefined ? playerKart.heading : 0;
+      const forward = new THREE.Vector3(Math.sin(hd), 0, Math.cos(hd)).normalize();
+
+      // Camera sits directly at the roll-hoop T-cam attached to the car (y = 1.32, 0.72m behind center)
+      // Traveling synchronously WITH the car through the garage door so it physically cannot clip any walls
+      const camPos = pPos.clone()
+        .sub(forward.clone().multiplyScalar(0.72))
+        .add(new THREE.Vector3(0, 1.32, 0));
+
       camera.position.copy(camPos);
-      
-      // Look forward along car's nose out of the garage door towards pit road
-      const targetLookAt = pPos.clone().sub(norm.clone().multiplyScalar(3.5)).add(new THREE.Vector3(0, 0.65, 0));
+
+      // Look straight forward along car's nosecone through the Halo
+      const targetLookAt = pPos.clone()
+        .add(forward.clone().multiplyScalar(16.0))
+        .add(new THREE.Vector3(0, 0.68, 0));
+
       camera.lookAt(targetLookAt);
       camera.updateProjectionMatrix();
       return;

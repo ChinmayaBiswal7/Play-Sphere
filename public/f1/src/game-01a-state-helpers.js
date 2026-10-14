@@ -2693,18 +2693,6 @@
         el.className = 'prompt-key prompt-back-key';
       }
     });
-
-    // 2. Hide / show HUD wireless controller button
-    const hudCtrlContainer = document.getElementById('hud-controller-container');
-    if (hudCtrlContainer) {
-      hudCtrlContainer.style.display = isConnected ? 'flex' : 'none';
-    }
-
-    // 3. Hide / show landing footer controller button
-    const f1FooterCtrl = document.getElementById('btn-f1-controller');
-    if (f1FooterCtrl) {
-      f1FooterCtrl.style.display = isConnected ? 'flex' : 'none';
-    }
   }
   window.updateControllerPromptKeybinds = updateControllerPromptKeybinds;
 

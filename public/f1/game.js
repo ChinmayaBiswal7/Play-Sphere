@@ -2701,18 +2701,6 @@
         el.className = 'prompt-key prompt-back-key';
       }
     });
-
-    // 2. Hide / show HUD wireless controller button
-    const hudCtrlContainer = document.getElementById('hud-controller-container');
-    if (hudCtrlContainer) {
-      hudCtrlContainer.style.display = isConnected ? 'flex' : 'none';
-    }
-
-    // 3. Hide / show landing footer controller button
-    const f1FooterCtrl = document.getElementById('btn-f1-controller');
-    if (f1FooterCtrl) {
-      f1FooterCtrl.style.display = isConnected ? 'flex' : 'none';
-    }
   }
   window.updateControllerPromptKeybinds = updateControllerPromptKeybinds;
 
@@ -3372,36 +3360,44 @@
     return geo;
   }
 
-  // Helper: Calculate safety distance from position to track curve
+  // ── Fast Track Curve Point Cache to eliminate lag ──
+  let cachedTrackPoints = null;
+  function getCachedTrackPoints() {
+    if (!cachedTrackPoints && trackCurve) {
+      cachedTrackPoints = [];
+      const steps = 120;
+      for (let i = 0; i <= steps; i++) {
+        cachedTrackPoints.push(trackCurve.getPointAt(i / steps));
+      }
+    }
+    return cachedTrackPoints;
+  }
+
+  // Helper: Fast distance check from position to track curve (Zero Lag!)
   function getDistanceToTrack(pos) {
-    if (!pos) return Infinity;
-    if (!trackCurve || !trackCurve.points || trackCurve.points.length === 0) return Infinity;
-    let minDist = Infinity;
-    const steps = 300;
-    for (let i = 0; i <= steps; i++) {
-      const pt = trackCurve.getPointAt(i / steps);
-      if (!pt) continue;
-      const d = pos.distanceTo(pt);
-      if (d < minDist) minDist = d;
+    if (!pos || !trackCurve) return Infinity;
+    const pts = getCachedTrackPoints();
+    if (!pts || pts.length === 0) return Infinity;
+    let minDistSq = Infinity;
+    for (let i = 0; i < pts.length; i++) {
+      const dSq = pos.distanceToSquared(pts[i]);
+      if (dSq < minDistSq) minDistSq = dSq;
     }
-    return minDist;
+    return Math.sqrt(minDistSq);
   }
 
-  // Helper: Calculate safety distance from position to pit lane curve
+  // Helper: Fast distance check from position to pit lane curve
   function getDistanceToPit(pos) {
-    if (!pos) return Infinity;
-    if (!pitCurve || !pitCurve.points || pitCurve.points.length === 0) return Infinity;
-    let minDist = Infinity;
-    const steps = 150;
-    for (let i = 0; i <= steps; i++) {
-      const pt = pitCurve.getPointAt(i / steps);
+    if (!pos || !pitCurve) return Infinity;
+    let minDistSq = Infinity;
+    for (let i = 0; i <= 40; i++) {
+      const pt = pitCurve.getPointAt(i / 40);
       if (!pt) continue;
-      const d = pos.distanceTo(pt);
-      if (d < minDist) minDist = d;
+      const dSq = pos.distanceToSquared(pt);
+      if (dSq < minDistSq) minDistSq = dSq;
     }
-    return minDist;
+    return Math.sqrt(minDistSq);
   }
-
 
   // Helper to check if a track t offset is near the pit lane entry/exit gaps
   function isNearPitGap(t) {
@@ -3462,15 +3458,64 @@
     return geo;
   }
 
-  function buildRoad() {
-    // Road (width 16m)
-    const trackGeo = createCustomTrackGeometry(trackCurve, 16.0, 220);
-    const trackMat = new THREE.MeshStandardMaterial({ color: 0x27272a, roughness: 0.75, metalness: 0.1 });
-    trackMesh = new THREE.Mesh(trackGeo, trackMat);
-    scene.add(trackMesh);
+  // Helper to generate a continuous flat stripe ribbon along the track (for white edge lines)
+  function createTrackStripeGeometry(curve, offset, width, segmentsCount = 220) {
+    const vertices = [];
+    const indices = [];
+    const uvs = [];
 
-    // Kerbs (width 17.6m) — pushed down 3cm to kill z-fighting, striped red/white
-    const kerbGeo = createCustomTrackGeometry(trackCurve, 17.6, 220);
+    for (let i = 0; i <= segmentsCount; i++) {
+      const t = i / segmentsCount;
+      const p = curve.getPointAt(t);
+      const tang = curve.getTangentAt(t);
+      const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
+
+      const centerPt = p.clone().add(norm.clone().multiplyScalar(offset));
+      centerPt.y += 0.012; // slightly elevated above asphalt
+
+      const pL = centerPt.clone().add(norm.clone().multiplyScalar(-width / 2));
+      const pR = centerPt.clone().add(norm.clone().multiplyScalar(width / 2));
+
+      vertices.push(pL.x, pL.y, pL.z);
+      vertices.push(pR.x, pR.y, pR.z);
+
+      uvs.push(0, t);
+      uvs.push(1, t);
+
+      if (i < segmentsCount) {
+        const row1 = i * 2;
+        const row2 = (i + 1) * 2;
+        indices.push(row1, row1 + 1, row2);
+        indices.push(row1 + 1, row2 + 1, row2);
+      }
+    }
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    geo.setIndex(indices);
+    geo.computeVertexNormals();
+    return geo;
+  }
+
+  function buildRoad() {
+    // ═══════════════════════════════════════════════════════════════════
+    // MULTI-LAYER AUTHENTIC F1 CIRCUIT ROAD & RUNOFF LAYERS:
+    // 1. Green Astroturf / Painted Runoff Collar (width 21.0m)
+    // 2. Alternating Red/White Ribbed Kerbs (width 18.2m)
+    // 3. Main Dark Asphalt Track (width 16.0m)
+    // 4. Solid Crisp White Track Edge Lines (left & right at ±7.88m)
+    // ═══════════════════════════════════════════════════════════════════
+
+    // 1. Green Astroturf / Painted Collar Runoff (width 21.0m, y = -0.04)
+    const astroGeo = createCustomTrackGeometry(trackCurve, 21.2, 220);
+    const astroMat = new THREE.MeshStandardMaterial({ color: 0x14532d, roughness: 0.95 });
+    const astroMesh = new THREE.Mesh(astroGeo, astroMat);
+    astroMesh.position.y = -0.04;
+    scene.add(astroMesh);
+
+    // 2. Ribbed Kerbs (width 18.2m, y = -0.02)
+    const kerbGeo = createCustomTrackGeometry(trackCurve, 18.2, 220);
     const kerbCanvas = document.createElement('canvas');
     kerbCanvas.width = 64; kerbCanvas.height = 64;
     const kctx = kerbCanvas.getContext('2d');
@@ -3479,25 +3524,36 @@
     for (let i = 0; i < 4; i++) kctx.fillRect(0, i * 16, 64, 8);
     const kerbTex = new THREE.CanvasTexture(kerbCanvas);
     kerbTex.wrapS = kerbTex.wrapT = THREE.RepeatWrapping;
-    kerbTex.repeat.set(1, 60);
+    kerbTex.repeat.set(1, 75);
     const kerbMat = new THREE.MeshStandardMaterial({ map: kerbTex, roughness: 0.85 });
     const kerbMesh = new THREE.Mesh(kerbGeo, kerbMat);
-    kerbMesh.position.y = -0.03;
+    kerbMesh.position.y = -0.02;
     scene.add(kerbMesh);
 
-    // dashed white center road lines (flat planes to avoid 3D white-black shading artifacts)
+    // 3. Main Asphalt Track (width 16.0m)
+    const trackGeo = createCustomTrackGeometry(trackCurve, 16.0, 220);
+    const trackMat = new THREE.MeshStandardMaterial({ color: 0x27272a, roughness: 0.75, metalness: 0.1 });
+    trackMesh = new THREE.Mesh(trackGeo, trackMat);
+    scene.add(trackMesh);
+
+    // 4. Solid White Track Edge Boundary Lines (Continuous crisp stripes along left & right)
+    const lineMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+    const leftWhiteLine = new THREE.Mesh(createTrackStripeGeometry(trackCurve, -7.88, 0.22), lineMat);
+    const rightWhiteLine = new THREE.Mesh(createTrackStripeGeometry(trackCurve, 7.88, 0.22), lineMat);
+    scene.add(leftWhiteLine, rightWhiteLine);
+
+    // 5. Dashed white center road lines
     for (let i = 0; i < 150; i++) {
       const t = i / 150;
       const p = trackCurve.getPointAt(t);
       const tang = trackCurve.getTangentAt(t);
-      const lineGeo = new THREE.PlaneGeometry(0.18, 1.8);
-      const lineMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
-      const line = new THREE.Mesh(lineGeo, lineMat);
-      line.position.copy(p);
-      line.position.y = 0.015; // slightly above road surface
-      line.lookAt(p.clone().add(tang));
-      line.rotateX(Math.PI / 2);
-      scene.add(line);
+      const dashGeo = new THREE.PlaneGeometry(0.18, 1.8);
+      const dash = new THREE.Mesh(dashGeo, lineMat);
+      dash.position.copy(p);
+      dash.position.y = 0.015;
+      dash.lookAt(p.clone().add(tang));
+      dash.rotateX(Math.PI / 2);
+      scene.add(dash);
     }
   }
 
@@ -3884,90 +3940,64 @@
 
   function buildScenery() {
     // ═══════════════════════════════════════════════════════════════════
-    // LUSH GREEN RACEWAY SCENERY & 3D TREES IN PERIMETER GROVES
+    // ZERO-LAG SCENERY: FAST PRE-CALCULATED GROVES & ROLLING TERRAIN
     // ═══════════════════════════════════════════════════════════════════
 
-    // Vibrant grass terrain texture
+    // 1. Vibrant grass terrain texture
     const groundCanvas = document.createElement('canvas');
-    groundCanvas.width = 256;
-    groundCanvas.height = 256;
+    groundCanvas.width = 128;
+    groundCanvas.height = 128;
     const gctx = groundCanvas.getContext('2d');
     gctx.fillStyle = '#1e7b34'; // rich racetrack emerald green
-    gctx.fillRect(0, 0, 256, 256);
-    // Subtle grass blade variations
+    gctx.fillRect(0, 0, 128, 128);
     gctx.fillStyle = '#166534';
-    for (let i = 0; i < 400; i++) {
-      const gx = Math.random() * 256;
-      const gy = Math.random() * 256;
-      gctx.fillRect(gx, gy, 3, 3);
-    }
-    gctx.fillStyle = '#22c55e';
-    for (let i = 0; i < 200; i++) {
-      const gx = Math.random() * 256;
-      const gy = Math.random() * 256;
-      gctx.fillRect(gx, gy, 2, 2);
-    }
+    gctx.fillRect(0, 0, 64, 64);
+    gctx.fillRect(64, 64, 64, 64);
     const groundTex = new THREE.CanvasTexture(groundCanvas);
     groundTex.wrapS = groundTex.wrapT = THREE.RepeatWrapping;
-    groundTex.repeat.set(100, 100);
+    groundTex.repeat.set(80, 80);
 
     const groundGeo = new THREE.PlaneGeometry(1600, 1600);
-    const groundMat = new THREE.MeshStandardMaterial({ map: groundTex, roughness: 0.9 });
+    const groundMat = new THREE.MeshStandardMaterial({ map: groundTex, roughness: 0.95 });
     const ground = new THREE.Mesh(groundGeo, groundMat);
     ground.rotation.x = -Math.PI / 2;
     ground.position.y = -0.10;
     scene.add(ground);
 
-    // 🌳 3D Trees Safely in the Surrounding Hills and Perimeter Fields
+    // 2. Fast 3D Trees planted at safe spline offsets outside the barriers (Zero lag distance checks!)
     const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5c3a21, roughness: 0.9 });
-    const foliageMat1 = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.75 }); // rich green
-    const foliageMat2 = new THREE.MeshStandardMaterial({ color: 0x166534, roughness: 0.8 });  // dark forest
-    const foliageMat3 = new THREE.MeshStandardMaterial({ color: 0x22c55e, roughness: 0.7 });  // bright spring
+    const foliageMat1 = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.8 });
+    const foliageMat2 = new THREE.MeshStandardMaterial({ color: 0x166534, roughness: 0.85 });
 
-    const createTree = (x, z, scale = 1.0) => {
-      const treeGroup = new THREE.Group();
-      // Trunk
-      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.3 * scale, 0.45 * scale, 3.5 * scale, 8), trunkMat);
-      trunk.position.y = 1.75 * scale;
-      trunk.castShadow = true;
-      treeGroup.add(trunk);
+    const treeSteps = 32;
+    for (let i = 0; i < treeSteps; i++) {
+      const t = (i / treeSteps);
+      const pt = trackCurve.getPointAt(t);
+      const tang = trackCurve.getTangentAt(t).normalize();
+      const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
 
-      // Foliage tiers
-      const fMat = scale > 1.1 ? foliageMat2 : (scale < 0.9 ? foliageMat3 : foliageMat1);
-      const c1 = new THREE.Mesh(new THREE.ConeGeometry(2.4 * scale, 3.6 * scale, 8), fMat);
-      c1.position.y = 4.0 * scale;
-      c1.castShadow = true;
-      treeGroup.add(c1);
+      // Place trees on both outer sides safely 26m away from track center
+      [-1, 1].forEach((side) => {
+        if (side === 1 && (t >= 0.95 || t <= 0.08)) return; // skip pit building side
+        const treePos = pt.clone().add(norm.clone().multiplyScalar(side * (24.0 + (i % 3) * 6.0)));
 
-      const c2 = new THREE.Mesh(new THREE.ConeGeometry(1.8 * scale, 3.0 * scale, 8), fMat);
-      c2.position.y = 5.8 * scale;
-      c2.castShadow = true;
-      treeGroup.add(c2);
+        const treeGroup = new THREE.Group();
+        const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.45, 3.5, 6), trunkMat);
+        trunk.position.y = 1.75;
+        treeGroup.add(trunk);
 
-      const c3 = new THREE.Mesh(new THREE.ConeGeometry(1.2 * scale, 2.4 * scale, 8), fMat);
-      c3.position.y = 7.4 * scale;
-      c3.castShadow = true;
-      treeGroup.add(c3);
+        const fMat = i % 2 === 0 ? foliageMat1 : foliageMat2;
+        const c1 = new THREE.Mesh(new THREE.ConeGeometry(2.4, 3.6, 6), fMat);
+        c1.position.y = 4.2;
+        treeGroup.add(c1);
 
-      treeGroup.position.set(x, 0, z);
-      return treeGroup;
-    };
+        const c2 = new THREE.Mesh(new THREE.ConeGeometry(1.6, 2.8, 6), fMat);
+        c2.position.y = 6.2;
+        treeGroup.add(c2);
 
-    // Plant 90 trees in perimeter groves safely >22m away from the track curve
-    const treeCount = 90;
-    for (let i = 0; i < treeCount; i++) {
-      const angle = (i / treeCount) * Math.PI * 2;
-      const radius = 95.0 + ((i * 17) % 180);
-      const x = Math.sin(angle) * radius;
-      const z = Math.cos(angle) * radius;
-      const pos = new THREE.Vector3(x, 0, z);
-
-      // Verify distance to track is completely safe (>20m)
-      if (getDistanceToTrack(pos) < 22.0) continue;
-
-      const scale = 0.8 + ((i % 5) * 0.15);
-      const tree = createTree(x, z, scale);
-      scene.add(tree);
+        treeGroup.position.copy(treePos);
+        scene.add(treeGroup);
+      });
     }
 
     // 🌊 OCEAN PROMENADE WATER (Sunset Coast)
@@ -3983,53 +4013,216 @@
 
   function buildGrandstandsAndSponsors() {
     // ═══════════════════════════════════════════════════════════════════
-    // MODERN F1 START/FINISH GANTRY & SHADED GRANDSTANDS
+    // AUTHENTIC F1 STADIUM COMPLEX:
+    // 1. Spectator Crowd Tiers ("pepe" / fans cheering in team merchandise)
+    // 2. Covered Cantilever Roof Grandstands along Main Straight & Turn 1
+    // 3. Portimao VIP Architectural Glass Tower (matching User Reference 4)
+    // 4. Overhead EA Sports & F1 Sponsorship Gantries
+    // 5. Brake Distance Boards (150m, 100m, 50m before corners)
     // ═══════════════════════════════════════════════════════════════════
-    const startPos = trackCurve.getPointAt(0);
-    const startTangent = trackCurve.getTangentAt(0).normalize();
-    const startNorm = new THREE.Vector3(-startTangent.z, 0, startTangent.x).normalize();
 
-    const bannerGroup = new THREE.Group();
-    bannerGroup.position.copy(startPos);
-    bannerGroup.lookAt(startPos.clone().add(startTangent));
+    // 1. High-Res Spectator Crowd Canvas Texture (Thousands of fans)
+    const crowdCanvas = document.createElement('canvas');
+    crowdCanvas.width = 512;
+    crowdCanvas.height = 128;
+    const cctx = crowdCanvas.getContext('2d');
+    cctx.fillStyle = '#1e293b';
+    cctx.fillRect(0, 0, 512, 128);
+    const fanColors = ['#ef4444', '#00d7b6', '#0090ff', '#ff8000', '#22c55e', '#facc15', '#ffffff'];
+    for (let row = 0; row < 6; row++) {
+      const y = row * 21 + 4;
+      for (let col = 0; col < 64; col++) {
+        const x = col * 8;
+        cctx.fillStyle = fanColors[(row * 13 + col * 7) % fanColors.length];
+        cctx.fillRect(x + 1, y, 6, 8); // shirt
+        cctx.fillStyle = '#fbcfe8';
+        cctx.fillRect(x + 2, y - 4, 4, 4); // face
+      }
+    }
+    const crowdTex = new THREE.CanvasTexture(crowdCanvas);
+    crowdTex.wrapS = crowdTex.wrapT = THREE.RepeatWrapping;
+    crowdTex.repeat.set(6, 1);
+    const crowdMat = new THREE.MeshBasicMaterial({ map: crowdTex });
 
-    // Metallic Overhead Gantry Pillars
-    const gantryMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.8, roughness: 0.3 });
-    const p1 = new THREE.Mesh(new THREE.BoxGeometry(0.8, 12, 0.8), gantryMat);
-    p1.position.set(-10, 6, 0);
-    const p2 = new THREE.Mesh(new THREE.BoxGeometry(0.8, 12, 0.8), gantryMat);
-    p2.position.set(10, 6, 0);
-    bannerGroup.add(p1, p2);
+    const concreteMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.8 });
+    const canopyMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.4 });
+    const trussMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.7, roughness: 0.3 });
 
-    // Gantry Overhead Truss
-    const truss = new THREE.Mesh(new THREE.BoxGeometry(20.8, 1.6, 1.2), gantryMat);
-    truss.position.set(0, 11.2, 0);
-    bannerGroup.add(truss);
+    // Helper: Build a Tiered Stadium Grandstand with Spectators
+    const createGrandstand = (length = 40, tiers = 5) => {
+      const standGroup = new THREE.Group();
+      for (let t = 0; t < tiers; t++) {
+        const stepH = 1.2;
+        const stepD = 2.0;
+        // Concrete riser
+        const riser = new THREE.Mesh(new THREE.BoxGeometry(length, stepH, stepD), concreteMat);
+        riser.position.set(0, stepH / 2 + t * stepH, t * stepD);
+        standGroup.add(riser);
 
-    // Official Rolex / F1 Start Finish Banner
-    const textCanvas = document.createElement('canvas');
-    textCanvas.width = 1024;
-    textCanvas.height = 128;
-    const ctx = textCanvas.getContext('2d');
-    ctx.fillStyle = "#006039"; // Rolex Green
-    ctx.fillRect(0, 0, 1024, 128);
-    ctx.fillStyle = "#ffd700"; // Rolex Gold
-    ctx.fillRect(0, 0, 1024, 8);
-    ctx.fillRect(0, 120, 1024, 8);
-    ctx.font = "900 52px 'Impact', sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText("FORMULA 1 GRAND PRIX", 512, 64);
+        // Seated spectator row
+        const crowdMesh = new THREE.Mesh(new THREE.PlaneGeometry(length - 0.4, stepH * 0.95), crowdMat);
+        crowdMesh.position.set(0, stepH + t * stepH + 0.1, t * stepD - stepD / 2 + 0.05);
+        standGroup.add(crowdMesh);
+      }
 
-    const textTex = new THREE.CanvasTexture(textCanvas);
-    const labelMesh = new THREE.Mesh(
-      new THREE.PlaneGeometry(18, 2.2),
-      new THREE.MeshBasicMaterial({ map: textTex, side: THREE.DoubleSide })
-    );
-    labelMesh.position.set(0, 11.2, 0.65);
-    bannerGroup.add(labelMesh);
+      // Canopy Roof
+      const roofD = tiers * 2.0 + 3.0;
+      const roof = new THREE.Mesh(new THREE.BoxGeometry(length, 0.4, roofD), canopyMat);
+      roof.position.set(0, tiers * 1.2 + 2.5, (tiers * 2.0) / 2 - 1.0);
+      standGroup.add(roof);
 
-    scene.add(bannerGroup);
+      // Support pillars
+      [-length / 2 + 2, length / 2 - 2].forEach(x => {
+        const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.6, tiers * 1.2 + 2.5, 0.6), trussMat);
+        pillar.position.set(x, (tiers * 1.2 + 2.5) / 2, tiers * 2.0);
+        standGroup.add(pillar);
+      });
+
+      return standGroup;
+    };
+
+    // A. Main Pit Straight Grandstand (opposite the pit lane)
+    const tMain = 0.01;
+    const pMain = trackCurve.getPointAt(tMain);
+    const tngMain = trackCurve.getTangentAt(tMain).normalize();
+    const nrmMain = new THREE.Vector3(-tngMain.z, 0, tngMain.x).normalize();
+    const mainStand = createGrandstand(70, 6);
+    mainStand.position.copy(pMain).add(nrmMain.clone().multiplyScalar(-18.5));
+    mainStand.lookAt(mainStand.position.clone().add(nrmMain));
+    scene.add(mainStand);
+
+    // B. Turn 1 Stadium Grandstand (overlooking the first braking corner)
+    const tT1 = 0.14;
+    const pT1 = trackCurve.getPointAt(tT1);
+    const tngT1 = trackCurve.getTangentAt(tT1).normalize();
+    const nrmT1 = new THREE.Vector3(-tngT1.z, 0, tngT1.x).normalize();
+    const t1Stand = createGrandstand(50, 5);
+    t1Stand.position.copy(pT1).add(nrmT1.clone().multiplyScalar(-19.0));
+    t1Stand.lookAt(t1Stand.position.clone().add(nrmT1));
+    scene.add(t1Stand);
+
+    // 2. Portimao VIP Circular Architectural Control Tower (User Reference Image 4)
+    const towerGroup = new THREE.Group();
+    const glassMat = new THREE.MeshStandardMaterial({ color: 0x06b6d4, metalness: 0.9, roughness: 0.1, transparent: true, opacity: 0.75 });
+    const concreteWhite = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.6 });
+
+    // 4 cylindrical tiers of VIP observation suites
+    for (let fl = 0; fl < 4; fl++) {
+      const flH = 3.6;
+      const flR = 8.5 - fl * 0.6;
+      // Glass cylinder
+      const glassCyl = new THREE.Mesh(new THREE.CylinderGeometry(flR, flR, flH - 0.4, 24), glassMat);
+      glassCyl.position.y = flH / 2 + fl * flH;
+      towerGroup.add(glassCyl);
+
+      // Balcony floor ring
+      const ring = new THREE.Mesh(new THREE.CylinderGeometry(flR + 0.8, flR + 0.8, 0.4, 24), concreteWhite);
+      ring.position.y = fl * flH;
+      towerGroup.add(ring);
+    }
+    // Rooftop observation terrace & communications mast
+    const terrace = new THREE.Mesh(new THREE.CylinderGeometry(6.0, 6.0, 0.5, 24), concreteWhite);
+    terrace.position.y = 4 * 3.6;
+    towerGroup.add(terrace);
+
+    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.25, 8.0, 8), trussMat);
+    mast.position.y = 4 * 3.6 + 4.0;
+    towerGroup.add(mast);
+
+    // Position VIP Tower near main straight / pit entrance
+    const tTower = 0.93;
+    const pTower = trackCurve.getPointAt(tTower);
+    const nrmTower = new THREE.Vector3(-trackCurve.getTangentAt(tTower).z, 0, trackCurve.getTangentAt(tTower).x).normalize();
+    towerGroup.position.copy(pTower).add(nrmTower.clone().multiplyScalar(-24.0));
+    scene.add(towerGroup);
+
+    // 3. Brake Distance Marker Boards (150m, 100m, 50m before braking zones)
+    // Canvas texture for boards
+    const createBrakeBoard = (meters) => {
+      const bCanvas = document.createElement('canvas');
+      bCanvas.width = 128; bCanvas.height = 128;
+      const bctx = bCanvas.getContext('2d');
+      bctx.fillStyle = '#ffffff';
+      bctx.fillRect(0, 0, 128, 128);
+      bctx.strokeStyle = '#000000';
+      bctx.lineWidth = 10;
+      bctx.strokeRect(5, 5, 118, 118);
+      bctx.fillStyle = '#000000';
+      bctx.font = '900 68px Arial Black, sans-serif';
+      bctx.textAlign = 'center';
+      bctx.textBaseline = 'middle';
+      bctx.fillText(String(meters), 64, 66);
+      const bTex = new THREE.CanvasTexture(bCanvas);
+      const bMat = new THREE.MeshBasicMaterial({ map: bTex, side: THREE.DoubleSide });
+      const bMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.6), bMat);
+      bMesh.position.y = 0.85;
+      const bPost = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.7, 8), concreteMat);
+      bPost.position.y = 0.85;
+      const grp = new THREE.Group();
+      grp.add(bMesh, bPost);
+      return grp;
+    };
+
+    // Place before Turn 1 (t = 0.075, 0.085, 0.095)
+    [
+      { t: 0.075, m: 150 },
+      { t: 0.085, m: 100 },
+      { t: 0.095, m: 50 },
+      { t: 0.380, m: 150 },
+      { t: 0.390, m: 100 },
+      { t: 0.400, m: 50 }
+    ].forEach(item => {
+      const pt = trackCurve.getPointAt(item.t);
+      const tng = trackCurve.getTangentAt(item.t).normalize();
+      const nrm = new THREE.Vector3(-tng.z, 0, tng.x).normalize();
+      const board = createBrakeBoard(item.m);
+      board.position.copy(pt).add(nrm.clone().multiplyScalar(-9.5)); // sits on runoff edge
+      board.lookAt(board.position.clone().add(tng));
+      scene.add(board);
+    });
+
+    // 4. Overhead EA Sports / F1 Sponsorship Gantries (Matching User Reference 3)
+    const createGantry = (tLoc, titleText) => {
+      const gPos = trackCurve.getPointAt(tLoc);
+      const gTang = trackCurve.getTangentAt(tLoc).normalize();
+      const gGroup = new THREE.Group();
+      gGroup.position.copy(gPos);
+      gGroup.lookAt(gPos.clone().add(gTang));
+
+      const p1 = new THREE.Mesh(new THREE.BoxGeometry(0.8, 12, 0.8), trussMat);
+      p1.position.set(-10, 6, 0);
+      const p2 = new THREE.Mesh(new THREE.BoxGeometry(0.8, 12, 0.8), trussMat);
+      p2.position.set(10, 6, 0);
+      gGroup.add(p1, p2);
+
+      const truss = new THREE.Mesh(new THREE.BoxGeometry(20.8, 1.6, 1.2), trussMat);
+      truss.position.set(0, 11.2, 0);
+      gGroup.add(truss);
+
+      const gCanvas = document.createElement('canvas');
+      gCanvas.width = 1024; gCanvas.height = 128;
+      const gx = gCanvas.getContext('2d');
+      gx.fillStyle = '#0f172a';
+      gx.fillRect(0, 0, 1024, 128);
+      gx.fillStyle = '#e10600';
+      gx.fillRect(0, 0, 1024, 8);
+      gx.fillRect(0, 120, 1024, 8);
+      gx.fillStyle = '#ffffff';
+      gx.font = "900 48px 'Impact', sans-serif";
+      gx.textAlign = 'center';
+      gx.textBaseline = 'middle';
+      gx.fillText(titleText, 512, 64);
+
+      const gTex = new THREE.CanvasTexture(gCanvas);
+      const gLabel = new THREE.Mesh(new THREE.PlaneGeometry(18, 2.2), new THREE.MeshBasicMaterial({ map: gTex, side: THREE.DoubleSide }));
+      gLabel.position.set(0, 11.2, 0.65);
+      gGroup.add(gLabel);
+      return gGroup;
+    };
+
+    // Start/Finish Gantry & Mid-Lap Gantry
+    scene.add(createGantry(0.0, "FORMULA 1 GRAND PRIX // 2026"));
+    scene.add(createGantry(0.50, "EA SPORTS F1 // PIRELLI"));
   }
 
   function spawnPlayerPitBoxVisual() {
@@ -10173,25 +10366,30 @@
     if (postRaceActive || isStartingSequence) return;
     const pPos = playerKart.mesh.position;
     
-    // Cinematic 3D view inside the garage showing car, halo, mechanics and pit lane view
-    if (playerKart.qualifyingState === "GARAGE" && pitCurve) {
+    // Cinematic on-board rollout camera inside garage and exiting through doors (Zero Wall Clipping!)
+    const inGarage = (playerKart.qualifyingState === "GARAGE");
+    const isExitingGarage = (playerKart.driveOutState === "PIT_LANE" && (playerKart.garageExitLerp === undefined || playerKart.garageExitLerp > 0.02));
+
+    if ((inGarage || isExitingGarage) && pitCurve) {
       camera.up.set(0, 1, 0);
-      const totalBoxes = F1_TEAMS.length;
-      const teamIdx = typeof selectedTeamIndex !== 'undefined' ? selectedTeamIndex : 0;
-      const pBoxT = 0.30 + (teamIdx / Math.max(1, totalBoxes - 1)) * 0.40;
-      const pt = pitCurve.getPointAt(pBoxT);
-      const tang = pitCurve.getTangentAt(pBoxT).normalize();
-      const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-      
-      // Position camera slightly behind and to the side of the car, elevated inside the garage
-      const camPos = pPos.clone().add(norm.clone().multiplyScalar(2.6)).add(tang.clone().multiplyScalar(0.6));
-      camPos.y = pPos.y + 1.45;
-      
-      window.claimCameraOwner("GARAGE_CINEMATIC");
+      window.claimCameraOwner("GARAGE_ROLLOUT");
+
+      const hd = playerKart.heading !== undefined ? playerKart.heading : 0;
+      const forward = new THREE.Vector3(Math.sin(hd), 0, Math.cos(hd)).normalize();
+
+      // Camera sits directly at the roll-hoop T-cam attached to the car (y = 1.32, 0.72m behind center)
+      // Traveling synchronously WITH the car through the garage door so it physically cannot clip any walls
+      const camPos = pPos.clone()
+        .sub(forward.clone().multiplyScalar(0.72))
+        .add(new THREE.Vector3(0, 1.32, 0));
+
       camera.position.copy(camPos);
-      
-      // Look forward along car's nose out of the garage door towards pit road
-      const targetLookAt = pPos.clone().sub(norm.clone().multiplyScalar(3.5)).add(new THREE.Vector3(0, 0.65, 0));
+
+      // Look straight forward along car's nosecone through the Halo
+      const targetLookAt = pPos.clone()
+        .add(forward.clone().multiplyScalar(16.0))
+        .add(new THREE.Vector3(0, 0.68, 0));
+
       camera.lookAt(targetLookAt);
       camera.updateProjectionMatrix();
       return;
