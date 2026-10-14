@@ -828,7 +828,7 @@
     window.ApexAudio.masterVolume = 0.35;
     window.engineSoundEnabled = true;
     window.radioVolume = 1.0;
-    window.voiceSpeechEnabled = false; // OFF by default!
+    window.voiceSpeechEnabled = true; // Enabled by default!
     window.graphicsShadows = 'high';
     window.particlesEnabled = true;
     window.resScaleSetting = 'native';

@@ -87,24 +87,181 @@ class PitComplexBuilder {
             const garageGroup = new THREE.Group();
             
             // Back wall (rear of garage)
-            const backWall = this.box(GARAGE_WIDTH - 0.3, GARAGE_HEIGHT, 0.2, 0xd0d0d0);
+            const backWall = this.box(GARAGE_WIDTH - 0.3, GARAGE_HEIGHT, 0.2, 0x1e293b);
             backWall.position.set(0, 0, -GARAGE_DEPTH / 2);
             garageGroup.add(backWall);
 
             // Left wall
-            const leftWall = this.box(0.2, GARAGE_HEIGHT, GARAGE_DEPTH, 0xc0c0c0);
+            const leftWall = this.box(0.2, GARAGE_HEIGHT, GARAGE_DEPTH, 0x334155);
             leftWall.position.set(-GARAGE_WIDTH / 2, 0, 0);
             garageGroup.add(leftWall);
 
             // Right wall
-            const rightWall = this.box(0.2, GARAGE_HEIGHT, GARAGE_DEPTH, 0xc0c0c0);
+            const rightWall = this.box(0.2, GARAGE_HEIGHT, GARAGE_DEPTH, 0x334155);
             rightWall.position.set(GARAGE_WIDTH / 2, 0, 0);
             garageGroup.add(rightWall);
 
             // Roof
-            const garageRoof = this.box(GARAGE_WIDTH - 0.3, 0.2, GARAGE_DEPTH, 0xa0a0a0);
+            const garageRoof = this.box(GARAGE_WIDTH - 0.3, 0.2, GARAGE_DEPTH, 0x0f172a);
             garageRoof.position.set(0, GARAGE_HEIGHT / 2, 0);
             garageGroup.add(garageRoof);
+
+            // Polished epoxy garage floor
+            const floorMat = new THREE.MeshStandardMaterial({
+                color: 0x1e293b,
+                roughness: 0.3,
+                metalness: 0.4
+            });
+            const garageFloor = new THREE.Mesh(
+                new THREE.BoxGeometry(GARAGE_WIDTH - 0.3, 0.1, GARAGE_DEPTH),
+                floorMat
+            );
+            garageFloor.position.set(0, -GARAGE_HEIGHT / 2 + 0.05, 0);
+            garageGroup.add(garageFloor);
+
+            // Pit car stop guides on floor
+            const guideMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
+            const guideLineL = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 4.0), guideMat);
+            guideLineL.rotation.x = -Math.PI / 2;
+            guideLineL.position.set(-1.1, -GARAGE_HEIGHT / 2 + 0.12, 0.2);
+            garageGroup.add(guideLineL);
+
+            const guideLineR = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 4.0), guideMat);
+            guideLineR.rotation.x = -Math.PI / 2;
+            guideLineR.position.set(1.1, -GARAGE_HEIGHT / 2 + 0.12, 0.2);
+            garageGroup.add(guideLineR);
+
+            // Overhead LED gantry light bars
+            for (let l = -3; l <= 3; l += 2.5) {
+                const lightBar = new THREE.Mesh(
+                    new THREE.BoxGeometry(GARAGE_WIDTH - 2.0, 0.08, 0.25),
+                    new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 1.0 })
+                );
+                lightBar.position.set(0, GARAGE_HEIGHT / 2 - 0.2, l);
+                garageGroup.add(lightBar);
+            }
+
+            // High-tech wall telemetry screens & tool trolleys
+            const screenMat = new THREE.MeshStandardMaterial({
+                color: 0x0f172a,
+                emissive: 0x06b6d4,
+                emissiveIntensity: 0.7
+            });
+            // Left wall telemetry screens
+            for (let s = -3.5; s <= 3.5; s += 2.8) {
+                const screen = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.2, 1.8), screenMat);
+                screen.position.set(-GARAGE_WIDTH / 2 + 0.15, 0.5, s);
+                garageGroup.add(screen);
+
+                // Tool trolley cabinet underneath
+                const cabinet = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.8, 1.0, 1.4),
+                    new THREE.MeshStandardMaterial({ color: team.color, roughness: 0.5 })
+                );
+                cabinet.position.set(-GARAGE_WIDTH / 2 + 0.5, -GARAGE_HEIGHT / 2 + 0.55, s);
+                garageGroup.add(cabinet);
+            }
+
+            // Right wall telemetry screens & cabinets
+            for (let s = -3.5; s <= 3.5; s += 2.8) {
+                const screen = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.2, 1.8), screenMat);
+                screen.position.set(GARAGE_WIDTH / 2 - 0.15, 0.5, s);
+                garageGroup.add(screen);
+
+                const cabinet = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.8, 1.0, 1.4),
+                    new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.6 })
+                );
+                cabinet.position.set(GARAGE_WIDTH / 2 - 0.5, -GARAGE_HEIGHT / 2 + 0.55, s);
+                garageGroup.add(cabinet);
+            }
+
+            // ── Pit Crew Engineers / Mechanics in garage ──
+            const crewMat = new THREE.MeshStandardMaterial({ color: team.color, roughness: 0.6 });
+            const trousersMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.8 });
+            const skinMat = new THREE.MeshStandardMaterial({ color: 0xd4a373, roughness: 0.5 });
+            const headsetMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.3 });
+
+            const createMechanic = (x, z, rotY, role) => {
+                const person = new THREE.Group();
+                person.baseX = x;
+                person.baseZ = z;
+                person.role = role;
+
+                // Legs
+                const legL = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.65, 0.16), trousersMat);
+                legL.position.set(-0.1, 0.32, 0);
+                person.add(legL);
+                const legR = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.65, 0.16), trousersMat);
+                legR.position.set(0.1, 0.32, 0);
+                person.add(legR);
+
+                // Torso (team polo/overalls)
+                const torso = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.50, 0.22), crewMat);
+                torso.position.set(0, 0.85, 0);
+                person.add(torso);
+
+                // Head
+                const head = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 16), skinMat);
+                head.position.set(0, 1.22, 0);
+                person.add(head);
+
+                // Team Cap / Radio Headset
+                const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.08, 16), crewMat);
+                cap.position.set(0, 1.30, 0);
+                person.add(cap);
+
+                const headset = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.025, 8, 16), headsetMat);
+                headset.position.set(0, 1.24, 0);
+                headset.rotation.z = Math.PI / 2;
+                person.add(headset);
+
+                // Arms
+                const armL = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.42, 0.1), crewMat);
+                armL.position.set(-0.25, 0.82, 0.05);
+                armL.rotation.x = Math.PI / 8;
+                person.add(armL);
+
+                const armR = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.42, 0.1), crewMat);
+                armR.position.set(0.25, 0.82, 0.05);
+                armR.rotation.x = Math.PI / 8;
+                person.add(armR);
+
+                // Telemetry tablet or tool
+                if (role === 'telemetry') {
+                    const tablet = new THREE.Mesh(
+                        new THREE.BoxGeometry(0.22, 0.16, 0.02),
+                        new THREE.MeshStandardMaterial({ color: 0x06b6d4, emissive: 0x06b6d4, emissiveIntensity: 0.6 })
+                    );
+                    tablet.position.set(0, 0.82, 0.22);
+                    tablet.rotation.x = -Math.PI / 4;
+                    person.add(tablet);
+                }
+
+                person.position.set(x, -GARAGE_HEIGHT / 2, z);
+                person.rotation.y = rotY;
+                return person;
+            };
+
+            const mechanics = [
+                // Front left wing aero engineer
+                createMechanic(-1.3, 1.8, Math.PI / 3, 'aero_front_l'),
+                // Front right wing aero engineer
+                createMechanic(1.3, 1.8, -Math.PI / 3, 'aero_front_r'),
+                // Left sidepod telemetry engineer leaning towards cockpit
+                createMechanic(-1.4, 0.2, Math.PI / 2, 'telemetry'),
+                // Right sidepod mechanic
+                createMechanic(1.4, 0.2, -Math.PI / 2, 'mechanic_r'),
+                // Rear tyre engineer
+                createMechanic(-1.4, -1.8, Math.PI / 2, 'tyre_l'),
+                createMechanic(1.4, -1.8, -Math.PI / 2, 'tyre_r')
+            ];
+
+            garageGroup.mechanics = mechanics;
+            mechanics.forEach(m => garageGroup.add(m));
+
+            window.f1ActiveGarages = window.f1ActiveGarages || [];
+            window.f1ActiveGarages.push(garageGroup);
 
             garageGroup.position.copy(garagePos);
             garageGroup.lookAt(garagePos.clone().sub(norm)); // faces track

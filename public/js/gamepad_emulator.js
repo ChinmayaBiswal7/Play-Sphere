@@ -217,13 +217,28 @@
 
   // ── 5. SOCKET CONNECTION FOR REMOTE MOBILE CONTROLLER ──
   const params = new URLSearchParams(window.location.search);
-  const room = params.get('room') || params.get('roomCode');
+  const room = params.get('room') || params.get('roomCode') || sessionStorage.getItem('activeRoomCode') || localStorage.getItem('play_sphere_room');
 
-  if (room && !window.socket && typeof io !== 'undefined') {
+  if (!window.socket && typeof io !== 'undefined') {
     window.socket = io();
     window.socket.on('connect', () => {
-      console.log(`[Gamepad Emulator] Remote controller linked to room: ${room}`);
-      window.socket.emit('join-room-pc');
+      console.log(`[Gamepad Emulator] Remote controller socket linked. Room: ${room || 'new'}`);
+      window.socket.emit('join-room-pc', room ? { roomCode: room } : {});
+    });
+    window.socket.on('room-created', ({ roomCode }) => {
+      window.roomCode = roomCode;
+      try { localStorage.setItem('play_sphere_room', roomCode); } catch(e) {}
+    });
+    window.socket.on('phone-connected', ({ phoneSlot }) => {
+      window.controllerConnected = true;
+      console.log(`[Gamepad Emulator] Phone ${phoneSlot} connected as wireless controller.`);
+      // If playing racing/f1 game, ask phone to adopt racing layout
+      if (window.location.pathname.includes('/f1') || window.location.pathname.includes('/racing')) {
+        window.socket.emit('layout-change', { layout: 'racing' });
+      }
+    });
+    window.socket.on('phone-disconnected', () => {
+      window.controllerConnected = false;
     });
   }
 
@@ -238,6 +253,18 @@
       if (data.type === 'joystick') {
         window.controllerInput.joystickX = data.x;
         window.controllerInput.joystickY = data.y;
+
+        // Dispatch analog steering & throttle keys for all games
+        const deadzone = 0.22;
+        setKey('KeyA', data.x < -deadzone);
+        setKey('ArrowLeft', data.x < -deadzone);
+        setKey('KeyD', data.x > deadzone);
+        setKey('ArrowRight', data.x > deadzone);
+
+        setKey('KeyW', data.y < -deadzone);
+        setKey('ArrowUp', data.y < -deadzone);
+        setKey('KeyS', data.y > deadzone);
+        setKey('ArrowDown', data.y > deadzone);
       } 
       else if (data.type === 'aim-joystick') {
         window.controllerInput.aimX = data.x;
@@ -271,33 +298,43 @@
         if (data.btn === 'ps')         window.controllerInput.btnPs         = isPressed;
 
         // Map remote phone buttons to virtual keyboard events
-        if (data.btn === 'cross') {
+        if (data.btn === 'r2') {
+          // R2 = Throttle / Accelerate in racing & sports
+          setKey('KeyW', isPressed);
+          setKey('ArrowUp', isPressed);
+          setKey('ShiftLeft', isPressed);
+        }
+        else if (data.btn === 'l2') {
+          // L2 = Brake / Reverse
+          setKey('KeyS', isPressed);
+          setKey('ArrowDown', isPressed);
+        }
+        else if (data.btn === 'cross') {
           setKey('Space', isPressed);
           setKey('Enter', isPressed);
+          setKey('KeyW', isPressed); // Alternate accelerate / select
         }
         else if (data.btn === 'circle') {
           setKey('KeyX', isPressed);
+          setKey('KeyS', isPressed); // Alternate brake / cancel
         }
         else if (data.btn === 'square') {
           setKey('KeyR', isPressed);
+          setKey('Space', isPressed); // Drift handbrake
         }
         else if (data.btn === 'triangle') {
-          setKey('KeyV', isPressed);
+          setKey('KeyV', isPressed); // Team Radio
           setKey('KeyM', isPressed);
+          setKey('ShiftLeft', isPressed); // DRS flap
         }
         else if (data.btn === 'l1') {
-          setKey('KeyQ', isPressed);
+          setKey('KeyQ', isPressed); // Downshift
         }
         else if (data.btn === 'r1') {
-          setKey('KeyE', isPressed);
+          setKey('KeyE', isPressed); // Upshift
         }
-        else if (data.btn === 'l2') {
-          // L2 = brake / reverse (maps to S key)
-          setKey('KeyS', isPressed);
-        }
-        else if (data.btn === 'r2') {
-          // R2 = DRS / Overtake Mode (maps to ShiftLeft)
-          setKey('ShiftLeft', isPressed);
+        else if (data.btn === 'touchpad') {
+          setKey('KeyT', isPressed); // Telemetry
         }
         else if (data.btn === 'options') {
           setKey('Escape', isPressed);

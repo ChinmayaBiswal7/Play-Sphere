@@ -88,10 +88,11 @@
       
       const pt = pitCurve.getPointAt(pBoxT);
       const tang = pitCurve.getTangentAt(pBoxT).normalize();
-      
       const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-      playerKart.mesh.position.copy(pt.clone().add(norm.multiplyScalar(17.0)));
-      playerKart.heading = Math.atan2(tang.x, tang.z);
+
+      playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(16.5)));
+      // Headings: car points directly forward out of the garage towards the pit apron
+      playerKart.heading = Math.atan2(-norm.x, -norm.z);
       playerKart.mesh.rotation.y = playerKart.heading;
       playerKart.mesh.rotation.x = 0;
       playerKart.mesh.rotation.z = 0;
@@ -164,6 +165,40 @@
 
       // 7. Status / Telemetry panel: Button 9 (Start)
       if (gp.buttons[9] && gp.buttons[9].pressed) {
+        gamepadStatusPressed = true;
+      }
+    }
+
+    // Wireless Mobile Phone Controller integration (window.controllerInput)
+    const ctrl = window.controllerInput;
+    if (ctrl) {
+      if (Math.abs(ctrl.joystickX) > 0.08) {
+        gamepadSteer = ctrl.joystickX;
+      }
+      if (ctrl.joystickY < -0.15) {
+        gamepadThrottle = Math.max(gamepadThrottle, Math.min(1.0, -ctrl.joystickY));
+      } else if (ctrl.joystickY > 0.15) {
+        gamepadBrake = Math.max(gamepadBrake, Math.min(1.0, ctrl.joystickY));
+      }
+      if (ctrl.btnR2 || ctrl.btnCross) {
+        gamepadThrottle = 1.0;
+      }
+      if (ctrl.btnL2 || ctrl.btnCircle) {
+        gamepadBrake = 1.0;
+      }
+      if (ctrl.btnSquare) {
+        gamepadDrift = true;
+      }
+      if (ctrl.btnTriangle) {
+        gamepadDrsPressed = true;
+      }
+      if (ctrl.btnR1) {
+        gamepadUpshiftPressed = true;
+      }
+      if (ctrl.btnL1) {
+        gamepadDownshiftPressed = true;
+      }
+      if (ctrl.btnTouchpad || ctrl.btnOptions) {
         gamepadStatusPressed = true;
       }
     }
@@ -718,19 +753,19 @@
       }
     }
 
-    // Update 10 LEDs above the steering HUD based on RPM (range: 9000 to 14000)
-    for (let i = 0; i < 10; i++) {
+    // Update 15 LEDs above the steering HUD based on RPM (range: 9000 to 14000)
+    for (let i = 0; i < 15; i++) {
       const led = document.getElementById(`led-${i}`);
       if (led) {
-        const threshold = 9000 + i * 500;
-        if (currentRPM >= 14300) {
-          // Flash ALL shift lights!
-          led.style.backgroundColor = Math.floor(clock.getElapsedTime() * 12.0) % 2 === 0 ? (i < 4 ? '#22c55e' : (i < 7 ? '#eab308' : '#ef4444')) : '#1f2937';
+        const threshold = 9000 + i * 340;
+        const ledCol = i < 5 ? '#22c55e' : (i < 10 ? '#ef4444' : '#a855f7');
+        if (currentRPM >= 14200) {
+          // Flash ALL shift lights on rev limiter!
+          led.style.backgroundColor = Math.floor(clock.getElapsedTime() * 14.0) % 2 === 0 ? ledCol : '#111827';
         } else if (currentRPM >= threshold) {
-          // Light up sequentially: Green (first 4) -> Yellow (next 3) -> Red (last 3)
-          led.style.backgroundColor = i < 4 ? '#22c55e' : (i < 7 ? '#eab308' : '#ef4444');
+          led.style.backgroundColor = ledCol;
         } else {
-          led.style.backgroundColor = '#1f2937'; // Off
+          led.style.backgroundColor = '#1e293b'; // Off
         }
       }
     }
@@ -1612,6 +1647,19 @@
 
     if (playerKart.driveOutState === "PIT_LANE") {
       pitProgress += (11.0 * delta) / pitCurve.getLength();
+
+      // Animate garage mechanics smoothly stepping back toward walls
+      if (window.f1ActiveGarages && window.f1ActiveGarages.length > 0) {
+        window.f1ActiveGarages.forEach(g => {
+          if (g.mechanics) {
+            g.mechanics.forEach(m => {
+              const targetX = m.baseX > 0 ? (m.baseX + 1.2) : (m.baseX - 1.2);
+              m.position.x = THREE.MathUtils.lerp(m.position.x, targetX, delta * 3.0);
+            });
+          }
+        });
+      }
+
       if (pitProgress >= 0.99) {
         pitProgress = 1.0;
         playerKart.driveOutState = "MAIN_TRACK_MERGE";
@@ -1627,16 +1675,29 @@
         playerKart.mergeStartOffset = 6.0;
       } else {
         if (playerKart.garageExitLerp === undefined) playerKart.garageExitLerp = 1.0;
-        playerKart.garageExitLerp = Math.max(0.0, playerKart.garageExitLerp - delta * 0.8); // rollout in 1.25s
+        playerKart.garageExitLerp = Math.max(0.0, playerKart.garageExitLerp - delta * 0.7); // smooth rollout
         
         const pt = pitCurve.getPointAt(pitProgress);
         const tang = pitCurve.getTangentAt(pitProgress).normalize();
         const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
         
-        // Lerp from 17.0m (garage) to 0.0m (pit lane fast/working lane)
-        const latOffset = playerKart.garageExitLerp * 17.0;
-        playerKart.mesh.position.copy(pt.clone().add(norm.multiplyScalar(latOffset)));
-        playerKart.heading = Math.atan2(tang.x, tang.z);
+        // S-curve smooth transition from 16.5m (inside garage bay) to 0.0m (pit fast lane)
+        const tS = playerKart.garageExitLerp;
+        const smoothOffset = tS * tS * (3 - 2 * tS) * 16.5;
+        playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(smoothOffset)));
+
+        // Smooth heading blend:
+        // When tS > 0.45: car is rolling straight out the garage doors along -norm
+        // When tS < 0.45: car smoothly blends heading from -norm to tang (along pit lane)
+        const garageHeading = Math.atan2(-norm.x, -norm.z);
+        const pitLaneHeading = Math.atan2(tang.x, tang.z);
+        const turnFactor = Math.min(1.0, Math.max(0.0, (1.0 - tS / 0.55)));
+        const smoothTurn = turnFactor * turnFactor * (3 - 2 * turnFactor);
+        
+        // Shortest angular interpolation
+        let diff = (pitLaneHeading - garageHeading + Math.PI * 3) % (Math.PI * 2) - Math.PI;
+        playerKart.heading = garageHeading + diff * smoothTurn;
+        playerKart.mesh.rotation.y = playerKart.heading;
         playerKart.speed = 11.0;
       }
     }

@@ -156,15 +156,39 @@ function updateLayout(layout) {
 
   if (!ui.roleText) return;
 
+  const btnR2 = document.getElementById('btn-r2');
+  const btnL2 = document.getElementById('btn-l2');
+  const btnR1 = document.getElementById('btn-r1');
+  const btnL1 = document.getElementById('btn-l1');
+
   if (layout === 'bowling') {
     ui.roleText.innerText = 'BOWLING MODE';
     ui.roleText.style.color = '#facc15';
+    if (btnR2) btnR2.innerText = 'R2';
+    if (btnL2) btnL2.innerText = 'L2';
+    if (btnR1) btnR1.innerText = 'R1';
+    if (btnL1) btnL1.innerText = 'L1';
   } else if (layout === 'batting') {
     ui.roleText.innerText = 'BATTING MODE';
     ui.roleText.style.color = '#10b981';
+    if (btnR2) btnR2.innerText = 'R2';
+    if (btnL2) btnL2.innerText = 'L2';
+    if (btnR1) btnR1.innerText = 'R1';
+    if (btnL1) btnL1.innerText = 'L1';
+  } else if (layout === 'racing' || layout === 'f1') {
+    ui.roleText.innerText = 'F1 RACING MODE';
+    ui.roleText.style.color = '#ef4444';
+    if (btnR2) btnR2.innerText = 'GAS';
+    if (btnL2) btnL2.innerText = 'BRAKE';
+    if (btnR1) btnR1.innerText = 'GEAR+';
+    if (btnL1) btnL1.innerText = 'GEAR-';
   } else {
     ui.roleText.innerText = 'DASHBOARD CONTROLLER';
     ui.roleText.style.color = '#60a5fa';
+    if (btnR2) btnR2.innerText = 'R2';
+    if (btnL2) btnL2.innerText = 'L2';
+    if (btnR1) btnR1.innerText = 'R1';
+    if (btnL1) btnL1.innerText = 'L1';
   }
 }
 

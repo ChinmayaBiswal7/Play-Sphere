@@ -148,14 +148,29 @@ io.on('connection', (socket) => {
     socket.emit('friends-presence-response', statusMap);
   });
 
-  socket.on('join-room-pc', () => {
-    const roomCode = generateRoomCode();
-    rooms[roomCode] = {
-      pcSocketId: socket.id,
-      phoneSockets: [],
-      layoutState: 'bowling',
-      disconnectTimeout: null
-    };
+  socket.on('join-room-pc', (payload = {}) => {
+    let reqCode = (payload && payload.roomCode) ? payload.roomCode.toUpperCase().trim() : null;
+    let roomCode = reqCode;
+    let room = roomCode ? rooms[roomCode] : null;
+
+    if (!room) {
+      if (!roomCode) {
+        roomCode = generateRoomCode();
+      }
+      rooms[roomCode] = {
+        pcSocketId: socket.id,
+        phoneSockets: [],
+        layoutState: 'bowling',
+        disconnectTimeout: null
+      };
+      room = rooms[roomCode];
+    } else {
+      room.pcSocketId = socket.id;
+      if (room.disconnectTimeout) {
+        clearTimeout(room.disconnectTimeout);
+        room.disconnectTimeout = null;
+      }
+    }
 
     socket.join(roomCode);
     socket.roomCode = roomCode;
@@ -166,7 +181,17 @@ io.on('connection', (socket) => {
       localIp,
       port: PORT
     });
-    console.log(`Room created: ${roomCode} by PC socket ${socket.id}`);
+
+    // If phones are already connected in this room, notify PC immediately!
+    if (room.phoneSockets && room.phoneSockets.length > 0) {
+      room.phoneSockets.forEach((phoneId, idx) => {
+        if (phoneId) {
+          socket.emit('phone-connected', { phoneSlot: idx + 1, socketId: phoneId });
+        }
+      });
+    }
+
+    console.log(`PC socket ${socket.id} joined/linked Room ${roomCode}`);
   });
 
   socket.on('join-room-phone', ({ roomCode, slot }) => {

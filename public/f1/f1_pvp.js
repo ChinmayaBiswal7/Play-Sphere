@@ -8,9 +8,12 @@
   const params = new URLSearchParams(window.location.search);
   const roomCode = params.get('room');
 
-  if (!roomCode) return;
+  // Only activate PvP sync if explicitly in PvP mode (from multiplayer lobby or challenge)
+  const isActualPvP = (sessionStorage.getItem('ps_match_role') === 'host' || sessionStorage.getItem('ps_match_role') === 'guest' || window.location.hash === '#host' || window.location.hash === '#guest' || params.get('mode') === 'pvp');
 
-  console.log(`[F1 PvP] Intercepting startup for Room: ${roomCode}`);
+  if (!roomCode || !isActualPvP) return;
+
+  console.log(`[F1 PvP] Intercepting startup for PvP Room: ${roomCode}`);
 
   window.matchMode = 'PVP';
   window.cricketPvPRole = (sessionStorage.getItem('ps_match_role') === 'host' || window.location.hash === '#host') ? 'host' : 'guest';

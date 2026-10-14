@@ -42,7 +42,7 @@
     if (postRaceActive || isStartingSequence) return;
     const pPos = playerKart.mesh.position;
     
-    // T-cam view inside the garage looking forward out of the shutter door
+    // Cinematic 3D view inside the garage showing car, halo, mechanics and pit lane view
     if (playerKart.qualifyingState === "GARAGE" && pitCurve) {
       camera.up.set(0, 1, 0);
       const totalBoxes = F1_TEAMS.length;
@@ -52,15 +52,15 @@
       const tang = pitCurve.getTangentAt(pBoxT).normalize();
       const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
       
-      // Position camera at T-cam on the car (0.6m behind center, 1.25m height)
-      const camPos = pPos.clone().add(norm.clone().multiplyScalar(0.6));
-      camPos.y = pPos.y + 1.25;
+      // Position camera slightly behind and to the side of the car, elevated inside the garage
+      const camPos = pPos.clone().add(norm.clone().multiplyScalar(2.6)).add(tang.clone().multiplyScalar(0.6));
+      camPos.y = pPos.y + 1.45;
       
       window.claimCameraOwner("GARAGE_CINEMATIC");
       camera.position.copy(camPos);
       
-      // Look forward out of the garage door towards pit road
-      const targetLookAt = pt.clone().add(new THREE.Vector3(0, 0.8, 0));
+      // Look forward along car's nose out of the garage door towards pit road
+      const targetLookAt = pPos.clone().sub(norm.clone().multiplyScalar(3.5)).add(new THREE.Vector3(0, 0.65, 0));
       camera.lookAt(targetLookAt);
       camera.updateProjectionMatrix();
       return;

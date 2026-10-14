@@ -295,8 +295,9 @@
         const pt = pitCurve.getPointAt(pBoxT);
         const tang = pitCurve.getTangentAt(pBoxT).normalize();
         const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-        playerKart.mesh.position.copy(pt.clone().add(norm.multiplyScalar(17.0)));
-        playerKart.mesh.lookAt(pt.clone().add(tang));
+        playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(16.5)));
+        playerKart.mesh.lookAt(pt); // faces directly out of garage toward the pit lane!
+        playerKart.heading = Math.atan2(pt.x - playerKart.mesh.position.x, pt.z - playerKart.mesh.position.z);
       }
       playerKart.qualifyingState = "GARAGE";
       playerKart.speed = 0.0;
@@ -1006,270 +1007,311 @@
   }
 
   function buildRunoffAndBarriers() {
-    const postMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.6 }); // metallic grey
-    const railMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.5 }); // white/silver continuous railing
-    
-    // A. Extrude continuous smooth curved Armco rails along both left and right sides
-    const leftRail1 = new THREE.Mesh(createArmcoGeometry(trackCurve, -10.5, 0.3, 0.18), railMat);
-    const leftRail2 = new THREE.Mesh(createArmcoGeometry(trackCurve, -10.5, 0.65, 0.18), railMat);
-    const leftRail3 = new THREE.Mesh(createArmcoGeometry(trackCurve, -10.5, 1.0, 0.18), railMat);
-    
-    const rightRail1 = new THREE.Mesh(createArmcoGeometry(trackCurve, 10.5, 0.3, 0.18), railMat);
-    const rightRail2 = new THREE.Mesh(createArmcoGeometry(trackCurve, 10.5, 0.65, 0.18), railMat);
-    const rightRail3 = new THREE.Mesh(createArmcoGeometry(trackCurve, 10.5, 1.0, 0.18), railMat);
+    // ═══════════════════════════════════════════════════════════════════
+    // AUTHENTIC CONTINUOUS F1 ARMCO & CONCRETE BARRIERS WITH SPONSOR BOARDS
+    // & METAL CATCH FENCING (NO DISCONNECTED VILLAGE PILLARS)
+    // ═══════════════════════════════════════════════════════════════════
 
-    scene.add(leftRail1, leftRail2, leftRail3, rightRail1, rightRail2, rightRail3);
+    // 1. High-Res Multi-Sponsor Canvas Texture
+    const bannerCanvas = document.createElement('canvas');
+    bannerCanvas.width = 1536;
+    bannerCanvas.height = 192;
+    const bctx = bannerCanvas.getContext('2d');
 
-    // B. Place vertical support posts every 4 meters along both sides (skipping pit entry/exit gaps)
-    const postCount = 180;
-    for (let i = 0; i < postCount; i++) {
-      const t = i / postCount;
+    const sponsors = [
+      { name: "ROLEX", bg: "#006039", fg: "#ffd700", sub: "GENEVE" },
+      { name: "PIRELLI", bg: "#d9001b", fg: "#ffd700", sub: "P ZERO" },
+      { name: "ARAMCO", bg: "#00a3e0", fg: "#ffffff", sub: "ENERGY" },
+      { name: "QATAR", bg: "#5c0632", fg: "#ffffff", sub: "AIRWAYS" },
+      { name: "DHL", bg: "#ffcc00", fg: "#d40511", sub: "EXPRESS" },
+      { name: "SALESFORCE", bg: "#0176d3", fg: "#ffffff", sub: "CRM" }
+    ];
+
+    const segW = bannerCanvas.width / sponsors.length;
+    sponsors.forEach((sp, i) => {
+      const x = i * segW;
+      bctx.fillStyle = sp.bg;
+      bctx.fillRect(x, 0, segW, 192);
+
+      // Top & bottom border strips
+      bctx.fillStyle = "rgba(255,255,255,0.3)";
+      bctx.fillRect(x, 0, segW, 10);
+      bctx.fillRect(x, 182, segW, 10);
+
+      // Sponsor Brand Name
+      bctx.fillStyle = sp.fg;
+      bctx.font = "900 48px 'Impact', 'Arial Black', sans-serif";
+      bctx.textAlign = "center";
+      bctx.textBaseline = "middle";
+      bctx.fillText(sp.name, x + segW / 2, 85);
+
+      // Subtitle
+      bctx.font = "700 18px 'Arial', sans-serif";
+      bctx.fillText(sp.sub, x + segW / 2, 138);
+    });
+
+    const bannerTex = new THREE.CanvasTexture(bannerCanvas);
+    bannerTex.wrapS = bannerTex.wrapT = THREE.RepeatWrapping;
+    bannerTex.repeat.set(36, 1);
+
+    const bannerMat = new THREE.MeshStandardMaterial({
+      map: bannerTex,
+      roughness: 0.65,
+      metalness: 0.15,
+      side: THREE.DoubleSide
+    });
+
+    // Concrete barrier top cap material
+    const capMat = new THREE.MeshStandardMaterial({
+      color: 0xe2e8f0,
+      roughness: 0.8
+    });
+
+    // 2. High-Tech Catch Fence Wire Mesh
+    const fenceCanvas = document.createElement('canvas');
+    fenceCanvas.width = 64;
+    fenceCanvas.height = 64;
+    const fctx = fenceCanvas.getContext('2d');
+    fctx.fillStyle = "rgba(10,15,25,0.0)";
+    fctx.fillRect(0, 0, 64, 64);
+    fctx.strokeStyle = "rgba(220, 230, 245, 0.55)";
+    fctx.lineWidth = 1.8;
+    fctx.beginPath();
+    fctx.moveTo(0, 0); fctx.lineTo(64, 64);
+    fctx.moveTo(64, 0); fctx.lineTo(0, 64);
+    fctx.stroke();
+
+    const fenceTex = new THREE.CanvasTexture(fenceCanvas);
+    fenceTex.wrapS = fenceTex.wrapT = THREE.RepeatWrapping;
+    fenceTex.repeat.set(100, 3);
+
+    const fenceMat = new THREE.MeshBasicMaterial({
+      map: fenceTex,
+      transparent: true,
+      opacity: 0.70,
+      side: THREE.DoubleSide
+    });
+
+    // 3. Extrude Continuous Solid Barrier Walls (Left & Right)
+    const leftBarrier = new THREE.Mesh(createArmcoGeometry(trackCurve, -10.5, 0.0, 0.95), bannerMat);
+    const rightBarrier = new THREE.Mesh(createArmcoGeometry(trackCurve, 10.5, 0.0, 0.95), bannerMat);
+    scene.add(leftBarrier, rightBarrier);
+
+    // Top Chamfer Cap on Barriers
+    const leftCap = new THREE.Mesh(createArmcoGeometry(trackCurve, -10.5, 0.92, 0.08), capMat);
+    const rightCap = new THREE.Mesh(createArmcoGeometry(trackCurve, 10.5, 0.92, 0.08), capMat);
+    scene.add(leftCap, rightCap);
+
+    // Continuous Safety Catch Fencing (above the concrete barrier, y = 0.95 to 2.35)
+    const leftFence = new THREE.Mesh(createArmcoGeometry(trackCurve, -10.52, 0.95, 1.4), fenceMat);
+    const rightFence = new THREE.Mesh(createArmcoGeometry(trackCurve, 10.52, 0.95, 1.4), fenceMat);
+    scene.add(leftFence, rightFence);
+
+    // Metal Catch Fence Support Stanchions (slender angled poles every 12 meters)
+    const poleMat = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.7, roughness: 0.3 });
+    const stanchionCount = 70;
+    for (let i = 0; i < stanchionCount; i++) {
+      const t = i / stanchionCount;
       const p = trackCurve.getPointAt(t);
       const tang = trackCurve.getTangentAt(t);
       const normal = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
 
-      [-1, 1].forEach((side) => {
-        // Skip posts on the pit-lane side (right, side === 1) inside the entire pit lane range (t >= 0.965 || t <= 0.065)
-        if (side === 1 && (t >= 0.965 || t <= 0.065)) {
-          return;
-        }
-        const postPos = p.clone().add(normal.clone().multiplyScalar(side * 10.5));
-        // Curvature crossover guard: do not spawn posts on top of the road surface on tight bends
-        if (getDistanceToTrack(postPos) < 9.2) {
-          return;
-        }
-        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 1.4, 8), postMat);
-        post.position.copy(postPos);
-        post.position.y += 0.7;
-        post.castShadow = true;
-        scene.add(post);
+      [-1, 1].forEach(side => {
+        if (side === 1 && (t >= 0.965 || t <= 0.065)) return; // skip pit lane
+        const polePos = p.clone().add(normal.clone().multiplyScalar(side * 10.55));
+        if (getDistanceToTrack(polePos) < 9.2) return;
+
+        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.4, 8), poleMat);
+        pole.position.copy(polePos);
+        pole.position.y += 1.2;
+        pole.rotation.z = side * 0.08; // angled slightly inward like real F1 catch fence
+        scene.add(pole);
       });
     }
   }
 
   function buildScenery() {
-    const palmBaseMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.9 }); // brown
-    const palmLeavesMat = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.8 }); // green
-    const rockMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.9 });
-    const bushMat = new THREE.MeshStandardMaterial({ color: 0x166534, roughness: 0.9 });
-    
-    // Trees loop suppressed as requested to ensure no trees on the track or near the pit road
+    // ═══════════════════════════════════════════════════════════════════
+    // LUSH GREEN RACEWAY SCENERY & 3D TREES IN PERIMETER GROVES
+    // ═══════════════════════════════════════════════════════════════════
 
-    if (activeTrack === 0) {
-      // 🌊 OCEAN PROMENADE WATER (Only for Sunset Coast!)
-      const waterGeo = new THREE.PlaneGeometry(1000, 400);
-      const waterMat = new THREE.MeshStandardMaterial({ color: 0x0369a1, roughness: 0.2, metalness: 0.8 }); // shiny deep blue
-      const water = new THREE.Mesh(waterGeo, waterMat);
-      water.rotation.x = -Math.PI / 2;
-      water.position.set(0, -0.3, -220); // Top ocean side
-      scene.add(water);
-
-      // 🛥️ LUXURY YACHTS Floating in the Marina Promenade
-      const yachtCount = 3;
-      const yachtHullMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.1 });
-      const yachtCabinMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.1 });
-      for (let i = 0; i < yachtCount; i++) {
-        const yachtGroup = new THREE.Group();
-        yachtGroup.position.set(-150 + i * 140, -0.2, -180 + (Math.random() - 0.5) * 40);
-        
-        const hullGeo = new THREE.BoxGeometry(20, 2.5, 8);
-        const hull = new THREE.Mesh(hullGeo, yachtHullMat);
-        yachtGroup.add(hull);
-
-        const cabinGeo = new THREE.BoxGeometry(10, 1.8, 6);
-        const cabin = new THREE.Mesh(cabinGeo, yachtCabinMat);
-        cabin.position.set(-2, 2.0, 0);
-        yachtGroup.add(cabin);
-
-        yachtGroup.rotation.y = (Math.random() - 0.5) * 0.3;
-        scene.add(yachtGroup);
-      }
-    } else {
-      // 🪨 DECORATIVE MOUNTAIN BOULDERS (Only in Alpine Heights!)
-      for (let i = 0; i < 45; i++) {
-        const angle = Math.random() * Math.PI * 2;
-        const radius = 22.0 + Math.random() * 150.0;
-        const x = Math.sin(angle) * radius;
-        const z = Math.cos(angle) * radius;
-        const pos = new THREE.Vector3(x, 0.1, z);
-
-        let minDist = Infinity;
-        let trackY = 0.1;
-        for (let step = 0; step <= 60; step++) {
-          const pt = trackCurve.getPointAt(step / 60);
-          const d = pos.distanceTo(pt);
-          if (d < minDist) {
-            minDist = d;
-            trackY = pt.y;
-          }
-        }
-        pos.y = trackY - 0.2;
-
-        if (minDist < 16.0) continue;
-
-        const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(1.2 + Math.random() * 1.5), rockMat);
-        rock.position.copy(pos);
-        rock.rotation.set(Math.random() * 2, Math.random() * 2, 0);
-        scene.add(rock);
-      }
-
-      // 🏔️ GIANT SNOW-CAPPED ALPINE PEAKS in the far background
-      const mountMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.9 });
-      const snowMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 });
-      for (let i = 0; i < 15; i++) {
-        const angle = (i / 15) * Math.PI * 2 + Math.random() * 0.2;
-        const radius = 260.0 + Math.random() * 100.0;
-        const x = Math.sin(angle) * radius;
-        const z = Math.cos(angle) * radius;
-
-        const mount = new THREE.Group();
-        const baseCone = new THREE.Mesh(new THREE.ConeGeometry(50, 160, 6), mountMat);
-        baseCone.position.y = 80;
-        mount.add(baseCone);
-
-        const capCone = new THREE.Mesh(new THREE.ConeGeometry(19.5, 60, 6), snowMat);
-        capCone.position.y = 130;
-        mount.add(capCone);
-
-        mount.position.set(x, -5, z);
-        scene.add(mount);
-      }
-
-      // Chalet houses loop suppressed as requested to ensure no houses on the track or near the pit road
-
-      // 🚠 ALPINE CABLE GONDOLA SYSTEM (Truss towers and cables)
-      const towerMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.6, roughness: 0.4 });
-      const cabinMat = new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.5 });
-      const towers = [];
-      for (let i = 0; i < 4; i++) {
-        const x = -80 + i * 55;
-        const z = -40 + Math.sin(i) * 20;
-        const tower = new THREE.Mesh(new THREE.BoxGeometry(0.8, 18.0, 0.8), towerMat);
-        tower.position.set(x, 9.0, z);
-        scene.add(tower);
-        towers.push(tower.position.clone().add(new THREE.Vector3(0, 9.0, 0)));
-      }
-
-      const cablePoints = [];
-      towers.forEach(t => cablePoints.push(t));
-      const cableGeo = new THREE.BufferGeometry().setFromPoints(cablePoints);
-      const cableMat = new THREE.LineBasicMaterial({ color: 0x1e293b, linewidth: 2 });
-      const cable = new THREE.Line(cableGeo, cableMat);
-      scene.add(cable);
-
-      if (towers.length >= 2) {
-        const gondola = new THREE.Mesh(new THREE.BoxGeometry(2.5, 1.8, 2.0), cabinMat);
-        const cabinPos = towers[1].clone().lerp(towers[2], 0.5);
-        cabinPos.y -= 1.8;
-        gondola.position.copy(cabinPos);
-        scene.add(gondola);
-      }
-    }
-
-    // Scattered decorative ground vegetation (bushes) suppressed as requested to ensure zero obstacles near track or pit road
-
-
-    // Checkerboard-styled grass terrain to prevent flat green void look
+    // Vibrant grass terrain texture
     const groundCanvas = document.createElement('canvas');
-    groundCanvas.width = 128; groundCanvas.height = 128;
+    groundCanvas.width = 256;
+    groundCanvas.height = 256;
     const gctx = groundCanvas.getContext('2d');
-    gctx.fillStyle = '#14532d'; gctx.fillRect(0, 0, 128, 128);
-    gctx.fillStyle = '#166534'; gctx.fillRect(0, 0, 64, 64); gctx.fillRect(64, 64, 64, 64);
+    gctx.fillStyle = '#1e7b34'; // rich racetrack emerald green
+    gctx.fillRect(0, 0, 256, 256);
+    // Subtle grass blade variations
+    gctx.fillStyle = '#166534';
+    for (let i = 0; i < 400; i++) {
+      const gx = Math.random() * 256;
+      const gy = Math.random() * 256;
+      gctx.fillRect(gx, gy, 3, 3);
+    }
+    gctx.fillStyle = '#22c55e';
+    for (let i = 0; i < 200; i++) {
+      const gx = Math.random() * 256;
+      const gy = Math.random() * 256;
+      gctx.fillRect(gx, gy, 2, 2);
+    }
     const groundTex = new THREE.CanvasTexture(groundCanvas);
     groundTex.wrapS = groundTex.wrapT = THREE.RepeatWrapping;
-    groundTex.repeat.set(80, 80);
-    const groundGeo = new THREE.PlaneGeometry(1200, 1200);
-    const groundMat = new THREE.MeshStandardMaterial({ map: groundTex, roughness: 0.95 });
+    groundTex.repeat.set(100, 100);
+
+    const groundGeo = new THREE.PlaneGeometry(1600, 1600);
+    const groundMat = new THREE.MeshStandardMaterial({ map: groundTex, roughness: 0.9 });
     const ground = new THREE.Mesh(groundGeo, groundMat);
     ground.rotation.x = -Math.PI / 2;
-    ground.position.y = -0.12;
+    ground.position.y = -0.10;
     scene.add(ground);
+
+    // 🌳 3D Trees Safely in the Surrounding Hills and Perimeter Fields
+    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5c3a21, roughness: 0.9 });
+    const foliageMat1 = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.75 }); // rich green
+    const foliageMat2 = new THREE.MeshStandardMaterial({ color: 0x166534, roughness: 0.8 });  // dark forest
+    const foliageMat3 = new THREE.MeshStandardMaterial({ color: 0x22c55e, roughness: 0.7 });  // bright spring
+
+    const createTree = (x, z, scale = 1.0) => {
+      const treeGroup = new THREE.Group();
+      // Trunk
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.3 * scale, 0.45 * scale, 3.5 * scale, 8), trunkMat);
+      trunk.position.y = 1.75 * scale;
+      trunk.castShadow = true;
+      treeGroup.add(trunk);
+
+      // Foliage tiers
+      const fMat = scale > 1.1 ? foliageMat2 : (scale < 0.9 ? foliageMat3 : foliageMat1);
+      const c1 = new THREE.Mesh(new THREE.ConeGeometry(2.4 * scale, 3.6 * scale, 8), fMat);
+      c1.position.y = 4.0 * scale;
+      c1.castShadow = true;
+      treeGroup.add(c1);
+
+      const c2 = new THREE.Mesh(new THREE.ConeGeometry(1.8 * scale, 3.0 * scale, 8), fMat);
+      c2.position.y = 5.8 * scale;
+      c2.castShadow = true;
+      treeGroup.add(c2);
+
+      const c3 = new THREE.Mesh(new THREE.ConeGeometry(1.2 * scale, 2.4 * scale, 8), fMat);
+      c3.position.y = 7.4 * scale;
+      c3.castShadow = true;
+      treeGroup.add(c3);
+
+      treeGroup.position.set(x, 0, z);
+      return treeGroup;
+    };
+
+    // Plant 90 trees in perimeter groves safely >22m away from the track curve
+    const treeCount = 90;
+    for (let i = 0; i < treeCount; i++) {
+      const angle = (i / treeCount) * Math.PI * 2;
+      const radius = 95.0 + ((i * 17) % 180);
+      const x = Math.sin(angle) * radius;
+      const z = Math.cos(angle) * radius;
+      const pos = new THREE.Vector3(x, 0, z);
+
+      // Verify distance to track is completely safe (>20m)
+      if (getDistanceToTrack(pos) < 22.0) continue;
+
+      const scale = 0.8 + ((i % 5) * 0.15);
+      const tree = createTree(x, z, scale);
+      scene.add(tree);
+    }
+
+    // 🌊 OCEAN PROMENADE WATER (Sunset Coast)
+    if (activeTrack === 0) {
+      const waterGeo = new THREE.PlaneGeometry(1200, 500);
+      const waterMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.15, metalness: 0.85 });
+      const water = new THREE.Mesh(waterGeo, waterMat);
+      water.rotation.x = -Math.PI / 2;
+      water.position.set(0, -0.3, -240);
+      scene.add(water);
+    }
   }
 
   function buildGrandstandsAndSponsors() {
-    const greyMat = new THREE.MeshStandardMaterial({ color: 0x4b5563, roughness: 0.7 }); // concrete base grey
-    const seatMat = new THREE.MeshStandardMaterial({ color: 0x1f2937 }); // seating row charcoal
-    const redMat = new THREE.MeshStandardMaterial({ color: 0xd97706 }); // orange/red canopy
-    const spectatorColors = [0xef4444, 0x3b82f6, 0x10b981, 0xfacc15, 0x8b5cf6, 0xf97316];
-
-    // Grandstands and billboards loops suppressed as requested to ensure zero obstacles near track or pit road
-
-    // Start / Finish Banner
+    // ═══════════════════════════════════════════════════════════════════
+    // MODERN F1 START/FINISH GANTRY & SHADED GRANDSTANDS
+    // ═══════════════════════════════════════════════════════════════════
     const startPos = trackCurve.getPointAt(0);
-    const startTangent = trackCurve.getTangentAt(0);
-    
+    const startTangent = trackCurve.getTangentAt(0).normalize();
+    const startNorm = new THREE.Vector3(-startTangent.z, 0, startTangent.x).normalize();
+
     const bannerGroup = new THREE.Group();
     bannerGroup.position.copy(startPos);
     bannerGroup.lookAt(startPos.clone().add(startTangent));
-    
-    const pillarGeo = new THREE.CylinderGeometry(0.3, 0.3, 12, 16);
-    const pillarMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, metalness: 0.5 });
-    
-    const p1 = new THREE.Mesh(pillarGeo, pillarMat);
-    p1.position.set(-8, 6, 0);
-    const p2 = new THREE.Mesh(pillarGeo, pillarMat);
-    p2.position.set(8, 6, 0);
+
+    // Metallic Overhead Gantry Pillars
+    const gantryMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.8, roughness: 0.3 });
+    const p1 = new THREE.Mesh(new THREE.BoxGeometry(0.8, 12, 0.8), gantryMat);
+    p1.position.set(-10, 6, 0);
+    const p2 = new THREE.Mesh(new THREE.BoxGeometry(0.8, 12, 0.8), gantryMat);
+    p2.position.set(10, 6, 0);
     bannerGroup.add(p1, p2);
 
-    const boardGeo = new THREE.BoxGeometry(16, 2.5, 0.4);
-    const boardMat = new THREE.MeshStandardMaterial({ color: 0xf43f5e });
-    const board = new THREE.Mesh(boardGeo, boardMat);
-    board.position.set(0, 11, 0);
-    bannerGroup.add(board);
+    // Gantry Overhead Truss
+    const truss = new THREE.Mesh(new THREE.BoxGeometry(20.8, 1.6, 1.2), gantryMat);
+    truss.position.set(0, 11.2, 0);
+    bannerGroup.add(truss);
 
+    // Official Rolex / F1 Start Finish Banner
     const textCanvas = document.createElement('canvas');
-    textCanvas.width = 512; textCanvas.height = 128;
+    textCanvas.width = 1024;
+    textCanvas.height = 128;
     const ctx = textCanvas.getContext('2d');
-    ctx.fillStyle = "#facc15";
-    ctx.fillRect(0,0,512,128);
-    ctx.fillStyle = "#000000";
-    ctx.font = "bold 58px Fredoka One, sans-serif";
+    ctx.fillStyle = "#006039"; // Rolex Green
+    ctx.fillRect(0, 0, 1024, 128);
+    ctx.fillStyle = "#ffd700"; // Rolex Gold
+    ctx.fillRect(0, 0, 1024, 8);
+    ctx.fillRect(0, 120, 1024, 8);
+    ctx.font = "900 52px 'Impact', sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("START / FINISH", 256, 80);
-    
+    ctx.textBaseline = "middle";
+    ctx.fillText("FORMULA 1 GRAND PRIX", 512, 64);
+
     const textTex = new THREE.CanvasTexture(textCanvas);
-    const labelGeo = new THREE.PlaneGeometry(15, 2);
-    const labelMat = new THREE.MeshBasicMaterial({ map: textTex, side: THREE.DoubleSide });
-    const label = new THREE.Mesh(labelGeo, labelMat);
-    label.position.set(0, 11, 0.21);
-    bannerGroup.add(label);
+    const labelMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(18, 2.2),
+      new THREE.MeshBasicMaterial({ map: textTex, side: THREE.DoubleSide })
+    );
+    labelMesh.position.set(0, 11.2, 0.65);
+    bannerGroup.add(labelMesh);
 
     scene.add(bannerGroup);
   }
 
   function spawnPlayerPitBoxVisual() {
     if (!pitCurve || !scene) return;
-    
+
     if (window.playerPitBoxVisualMesh) {
       scene.remove(window.playerPitBoxVisualMesh);
       window.playerPitBoxVisualMesh = null;
     }
-    
+
     const stopT = 0.30 + (selectedTeamIndex / Math.max(1, F1_TEAMS.length - 1)) * 0.40;
     const pos = pitCurve.getPointAt(stopT);
     const tang = pitCurve.getTangentAt(stopT).normalize();
     const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-    
-    // Snapped pit box position (+6.0m offset)
+
+    // Snapped pit box position (+6.0m offset on working lane)
     const boxPos = pos.clone().add(norm.multiplyScalar(6.0));
-    
-    // Neon green transparent box representing the player's garage area
-    const geo = new THREE.BoxGeometry(4.0, 2.0, 7.0);
-    const mat = new THREE.MeshStandardMaterial({
-      color: 0x22c55e,
+
+    // Sleek flat pit box ground decal (NO tall 3D box blocking view!)
+    const geo = new THREE.PlaneGeometry(6.5, 3.2);
+    const teamCol = F1_TEAMS[selectedTeamIndex] ? parseInt(F1_TEAMS[selectedTeamIndex].color.replace('#',''), 16) : 0x22c55e;
+    const mat = new THREE.MeshBasicMaterial({
+      color: teamCol,
       transparent: true,
-      opacity: 0.32,
-      roughness: 0.2,
-      metalness: 0.1,
-      emissive: 0x22c55e,
-      emissiveIntensity: 0.4
+      opacity: 0.45,
+      side: THREE.DoubleSide
     });
-    
+
     const mesh = new THREE.Mesh(geo, mat);
+    mesh.rotation.x = -Math.PI / 2;
     mesh.position.copy(boxPos);
-    mesh.position.y = 1.0; // sits on ground
-    mesh.lookAt(boxPos.clone().add(tang));
-    
+    mesh.position.y = 0.04; // flush with asphalt surface
+    mesh.lookAt(boxPos.clone().add(new THREE.Vector3(0, 1, 0)));
+
     scene.add(mesh);
     window.playerPitBoxVisualMesh = mesh;
   }

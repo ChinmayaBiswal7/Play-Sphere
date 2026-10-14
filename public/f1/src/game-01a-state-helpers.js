@@ -83,7 +83,7 @@
   const savedRadioVol = localStorage.getItem('apex_stars_radio_volume');
   window.radioVolume = savedRadioVol !== null ? parseFloat(savedRadioVol) : 1.0;
   const savedVoiceSpeech = localStorage.getItem('apex_stars_voice_speech');
-  window.voiceSpeechEnabled = savedVoiceSpeech !== null ? savedVoiceSpeech === 'true' : false; // OFF by default!
+  window.voiceSpeechEnabled = savedVoiceSpeech !== null ? savedVoiceSpeech === 'true' : true; // Enabled by default!
 
   // Graphics settings
   const savedShadows = localStorage.getItem('apex_stars_shadows');
@@ -2605,6 +2605,136 @@
   window.f1SetSelectedTeamIndex = (val) => { selectedTeamIndex = val; };
   window.f1GetKeys = () => keys;
   window.f1SetPlayerKart = (val) => { playerKart = val; };
+
+  // ── WIRELESS PHONE CONTROLLER MODAL LOGIC ──
+  window.openF1ControllerModal = function() {
+    const modal = document.getElementById('f1-controller-modal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    updateF1ControllerModalUI();
+  };
+
+  window.closeF1ControllerModal = function() {
+    const modal = document.getElementById('f1-controller-modal');
+    if (modal) modal.style.display = 'none';
+  };
+
+  function updateF1ControllerModalUI() {
+    const code = window.roomCode || new URLSearchParams(window.location.search).get('room') || sessionStorage.getItem('activeRoomCode') || localStorage.getItem('play_sphere_room');
+    const roomEl = document.getElementById('f1-ctrl-room-val');
+    const qrImg = document.getElementById('f1-ctrl-qr-img');
+    const qrSpinner = document.getElementById('f1-ctrl-qr-spinner');
+    const dot = document.getElementById('f1-ctrl-status-dot');
+    const txt = document.getElementById('f1-ctrl-status-text');
+
+    if (roomEl && code) {
+      roomEl.innerText = code;
+    }
+
+    if (code && qrImg) {
+      const phoneUrl = `${window.location.origin}/controller.html?room=${code}`;
+      qrImg.src = `/qrcode?text=${encodeURIComponent(phoneUrl)}`;
+      qrImg.onload = () => {
+        if (qrSpinner) qrSpinner.style.display = 'none';
+        qrImg.style.display = 'block';
+      };
+    }
+
+    if (window.controllerConnected) {
+      if (dot) { dot.style.background = '#10b981'; dot.style.boxShadow = '0 0 10px #10b981'; }
+      if (txt) { txt.innerText = 'Phone controller connected!'; txt.style.color = '#10b981'; }
+      const footerTxt = document.getElementById('f1-footer-controller-text');
+      if (footerTxt) footerTxt.innerText = 'CONTROLLER: CONNECTED';
+    } else {
+      if (dot) { dot.style.background = '#ef4444'; dot.style.boxShadow = '0 0 8px #ef4444'; }
+      if (txt) { txt.innerText = 'No phone controller linked'; txt.style.color = 'rgba(255,255,255,0.7)'; }
+    }
+    updateControllerPromptKeybinds();
+  }
+  window.updateF1ControllerModalUI = updateF1ControllerModalUI;
+
+  // ── Dynamic Controller Keybind & Prompt UI Updater ──
+  // Hides gamepad buttons and switches prompt keys to ENTER/ESC when no gamepad or phone is connected
+  function updateControllerPromptKeybinds() {
+    let hasGamepad = false;
+    try {
+      if (navigator.getGamepads) {
+        const gps = navigator.getGamepads();
+        for (let i = 0; i < gps.length; i++) {
+          if (gps[i] && gps[i].connected) {
+            hasGamepad = true;
+            break;
+          }
+        }
+      }
+    } catch(e) {}
+
+    const isConnected = hasGamepad || !!window.controllerConnected;
+
+    // 1. Update footer prompt buttons between keyboard keycaps and controller buttons
+    const selectKeyElements = document.querySelectorAll('.prompt-select-key');
+    selectKeyElements.forEach(el => {
+      if (isConnected) {
+        el.innerText = '✕';
+        el.className = 'prompt-btn prompt-select-key';
+      } else {
+        el.innerText = 'ENTER';
+        el.className = 'prompt-key prompt-select-key';
+      }
+    });
+
+    const backKeyElements = document.querySelectorAll('.prompt-back-key');
+    backKeyElements.forEach(el => {
+      if (isConnected) {
+        el.innerText = '◯';
+        el.className = 'prompt-btn prompt-back-key';
+      } else {
+        el.innerText = 'ESC';
+        el.className = 'prompt-key prompt-back-key';
+      }
+    });
+
+    // 2. Hide / show HUD wireless controller button
+    const hudCtrlContainer = document.getElementById('hud-controller-container');
+    if (hudCtrlContainer) {
+      hudCtrlContainer.style.display = isConnected ? 'flex' : 'none';
+    }
+
+    // 3. Hide / show landing footer controller button
+    const f1FooterCtrl = document.getElementById('btn-f1-controller');
+    if (f1FooterCtrl) {
+      f1FooterCtrl.style.display = isConnected ? 'flex' : 'none';
+    }
+  }
+  window.updateControllerPromptKeybinds = updateControllerPromptKeybinds;
+
+  window.addEventListener('gamepadconnected', updateControllerPromptKeybinds);
+  window.addEventListener('gamepaddisconnected', updateControllerPromptKeybinds);
+  setInterval(updateControllerPromptKeybinds, 1000);
+  setTimeout(updateControllerPromptKeybinds, 200);
+
+  // Poll for socket initialization to bind controller events
+  const socketPoll = setInterval(() => {
+    if (window.socket) {
+      clearInterval(socketPoll);
+      window.socket.on('phone-connected', () => {
+        window.controllerConnected = true;
+        updateF1ControllerModalUI();
+        updateControllerPromptKeybinds();
+        if (window.socket) window.socket.emit('layout-change', { layout: 'racing' });
+      });
+      window.socket.on('phone-disconnected', () => {
+        window.controllerConnected = false;
+        updateF1ControllerModalUI();
+        updateControllerPromptKeybinds();
+      });
+      window.socket.on('room-created', ({ roomCode }) => {
+        window.roomCode = roomCode;
+        updateF1ControllerModalUI();
+      });
+      updateF1ControllerModalUI();
+    }
+  }, 250);
 
 
 

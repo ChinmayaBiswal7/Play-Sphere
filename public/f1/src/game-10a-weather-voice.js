@@ -16,9 +16,16 @@
     }
   }
 
+  let isSpeechListening = false;
+
   // ════ VOICE CONTROL ENGINE (WEB SPEECH API) ════
   function setupVoiceRecognition() {
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+      return;
+    }
+    if (recognition) return;
+
+    try {
       const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
       recognition = new SpeechRec();
       recognition.continuous = false;
@@ -26,11 +33,13 @@
       recognition.lang = 'en-US';
 
       recognition.onstart = () => {
+        isSpeechListening = true;
         const btn = document.getElementById('hud-mic-btn');
         if (btn) btn.classList.add('listening');
       };
 
       recognition.onend = () => {
+        isSpeechListening = false;
         const btn = document.getElementById('hud-mic-btn');
         if (btn) btn.classList.remove('listening');
         
@@ -38,28 +47,58 @@
         if (window.keepListeningForVoice) {
           setTimeout(() => {
             try {
-              recognition.start();
+              if (window.keepListeningForVoice && !isSpeechListening) {
+                recognition.start();
+              }
             } catch(e) {}
           }, 300);
         }
       };
 
+      recognition.onerror = (event) => {
+        console.warn("Speech recognition error:", event.error);
+        isSpeechListening = false;
+        const btn = document.getElementById('hud-mic-btn');
+        if (btn) btn.classList.remove('listening');
+        if (event.error === 'not-allowed') {
+          speakEngineerRadio("Microphone permission denied. Allow mic access in browser.", 50, true);
+        }
+      };
+
       recognition.onresult = (event) => {
+        if (!event.results || !event.results[0] || !event.results[0][0]) return;
         const text = event.results[0][0].transcript.toLowerCase();
         parseVoiceCommand(text);
       };
+    } catch(e) {
+      console.warn("Voice recognition init error:", e);
     }
   }
 
   window.toggleVoiceListening = () => {
-    if (!recognition) {
-      speakEngineerRadio("Speech recognition is not supported on this browser.", 10, true);
+    if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+      speakEngineerRadio("Speech recognition is not supported on this browser.", 50, true);
       return;
     }
-    try {
-      recognition.start();
-    } catch(e) {
-      recognition.stop();
+    if (!recognition) {
+      setupVoiceRecognition();
+    }
+    if (!recognition) return;
+
+    if (isSpeechListening) {
+      window.keepListeningForVoice = false;
+      try {
+        recognition.stop();
+      } catch(e) {}
+    } else {
+      try {
+        if (window.speechSynthesis && window.speechSynthesis.paused) {
+          window.speechSynthesis.resume();
+        }
+        recognition.start();
+      } catch(e) {
+        try { recognition.stop(); } catch(err) {}
+      }
     }
   };
 
@@ -168,7 +207,6 @@
   let activeUtterance = null;
 
   function speakEngineerRadio(msg, priorityLevel = 30, isExplicitResponse = false) {
-    if (!isExplicitResponse) return; // Suppress all spontaneous popups/voices
     if (!('speechSynthesis' in window)) return;
     
     // Convert old true/false priorities
@@ -190,8 +228,8 @@
       }, 5500);
     }
 
-    // Suppress automatic speech synthesis unless enabled in settings or user-triggered
-    if (!window.voiceSpeechEnabled && !isExplicitResponse) {
+    // Suppress speech synthesis only if user explicitly turned it off in settings
+    if (window.voiceSpeechEnabled === false && !isExplicitResponse) {
       return;
     }
 
@@ -218,6 +256,10 @@
   function processRadioQueue() {
     if (isRadioSpeaking || radioQueue.length === 0) return;
 
+    if (window.speechSynthesis.paused) {
+      try { window.speechSynthesis.resume(); } catch(e) {}
+    }
+
     isRadioSpeaking = true;
     const msgItem = radioQueue.shift();
     currentRadioPriority = msgItem.priority;
@@ -238,8 +280,9 @@
       utterance.voice = bestVoice;
     }
 
+    utterance.volume = (typeof window.radioVolume === 'number') ? Math.max(0.05, Math.min(1.0, window.radioVolume)) : 1.0;
     utterance.pitch = 0.90; // Natural, clear pitwall radio voice tone
-    utterance.rate = 1.0;
+    utterance.rate = 1.02;
 
     utterance.onend = () => {
       activeUtterance = null;
@@ -257,7 +300,12 @@
       processRadioQueue();
     };
 
-    window.speechSynthesis.speak(utterance);
+    try {
+      window.speechSynthesis.speak(utterance);
+    } catch(err) {
+      console.warn("Speech synthesis error:", err);
+      isRadioSpeaking = false;
+    }
   }
 
   function parseVoiceCommand(text) {
@@ -345,7 +393,7 @@
       
       if (playerIdx === 0) {
         const nextCar = sorted[1];
-        speakEngineerRadio(`You are leading! P1. ${nextCar.name} is 1.5 seconds behind.`, 30, true);
+        speakEngineerRadio(`You are leading! P1. ${nextCar ? nextCar.name : 'The field'} is behind. Keep pushing.`, 30, true);
       } else {
         const carAhead = sorted[playerIdx - 1];
         const aheadGap = ((sorted[playerIdx - 1].currentOffset - playerKart.currentOffset) * 20.0).toFixed(1);
@@ -409,10 +457,10 @@
     }
 
     // 8. Engine Mode voice commands
-    if (text.includes("push") || text.includes("attack") || text.includes("standard") || text.includes("fuel save") || text.includes("save fuel")) {
+    if (text.includes("push") || text.includes("attack") || text.includes("standard") || text.includes("fuel save") || text.includes("save fuel") || text.includes("faster") || text.includes("power")) {
       let mode = 'standard';
-      if (text.includes("push")) mode = 'push';
-      else if (text.includes("attack")) mode = 'attack';
+      if (text.includes("push") || text.includes("faster") || text.includes("power")) mode = 'push';
+      if (text.includes("attack")) mode = 'attack';
       else if (text.includes("save") || text.includes("fuel save")) mode = 'fuel_save';
 
       currentEngineMode = mode;
@@ -426,15 +474,24 @@
       return;
     }
 
-    // 9. DRS activation
-    if (text.includes("drs")) {
+    // 9. Status & Telemetry command
+    if (text.includes("status") || text.includes("telemetry") || text.includes("damage") || text.includes("car")) {
+      toggleTelemetryPanel();
+      const wearVal = Math.floor(tyreWear);
+      const dmgVal = Math.floor(carDamage);
+      speakEngineerRadio(`Car status: Tyre wear at ${wearVal} percent. Damage at ${dmgVal} percent.`, 30, true);
+      return;
+    }
+
+    // 10. DRS activation
+    if (text.includes("drs") || text.includes("wing")) {
       triggerDRS();
       return;
     }
 
-    // 10. Radio check
-    if (text.includes("radio check") || text.includes("hear me")) {
-      speakEngineerRadio("Loud and clear. Five by five.", 10, true);
+    // 11. Radio check
+    if (text.includes("radio check") || text.includes("hear me") || text.includes("hello")) {
+      speakEngineerRadio("Loud and clear. Five by five, radio channel active.", 10, true);
       return;
     }
 
