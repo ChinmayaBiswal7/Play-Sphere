@@ -314,13 +314,15 @@ io.on('connection', (socket) => {
   });
 
   socket.on('controller-input', (data) => {
-    if (socket.roomCode) {
-      const room = rooms[socket.roomCode];
+    const targetRoom = socket.roomCode || (data && data.roomCode);
+    if (targetRoom) {
+      const room = rooms[targetRoom];
       let phoneSlot = 1;
       if (room) {
         phoneSlot = room.phoneSockets.indexOf(socket.id) + 1;
+        if (phoneSlot <= 0) phoneSlot = 1;
       }
-      socket.to(socket.roomCode).emit('controller-input', { ...data, phoneSlot });
+      socket.to(targetRoom).emit('controller-input', { ...data, phoneSlot });
     }
   });
 

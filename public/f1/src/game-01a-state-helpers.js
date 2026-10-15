@@ -2781,7 +2781,6 @@
         window.controllerConnected = true;
         updateF1ControllerModalUI();
         updateControllerPromptKeybinds();
-        if (window.socket) window.socket.emit('layout-change', { layout: 'racing' });
       });
       window.socket.on('phone-disconnected', () => {
         window.controllerConnected = false;

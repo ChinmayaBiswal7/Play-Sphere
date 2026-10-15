@@ -108,20 +108,20 @@
       playerKart.sideOffset = 0.0;
     }
 
-    // ─── GAMEPAD CONTROLLER INTEGRATION ───
-    let gamepadSteer = 0.0;
-    let gamepadThrottle = 0.0;
-    let gamepadBrake = 0.0;
-    let gamepadDrift = false;
-    let gamepadDrsPressed = false;
-    let gamepadUpshiftPressed = false;
-    let gamepadDownshiftPressed = false;
-    let gamepadStatusPressed = false;
+    // ─── MULTI-DEVICE CONCURRENT INPUT (Keyboard + Gamepad + Phone) ───
+    let gpSteer = 0.0;
+    let gpThrottle = 0.0;
+    let gpBrake = 0.0;
+    let gpDrift = false;
+    let gpDrsPressed = false;
+    let gpUpshiftPressed = false;
+    let gpDownshiftPressed = false;
+    let gpStatusPressed = false;
 
     const gamepads = (typeof navigator.getGamepads === 'function') ? navigator.getGamepads() : [];
     let gp = null;
     for (let i = 0; i < gamepads.length; i++) {
-      if (gamepads[i]) {
+      if (gamepads[i] && gamepads[i].connected) {
         gp = gamepads[i];
         break; // first connected gamepad
       }
@@ -129,94 +129,109 @@
 
     if (gp) {
       // 1. Steering (Left Stick horizontal - Axis 0)
-      if (Math.abs(gp.axes[0]) > 0.12) {
-        gamepadSteer = gp.axes[0]; // -1.0 to 1.0
+      if (Math.abs(gp.axes[0]) > 0.10) {
+        gpSteer = gp.axes[0]; // -1.0 to 1.0
       }
       
       // 2. Throttle: Right Trigger (Button 7 value) or Button 0 (A / Cross)
       const rTrigger = gp.buttons[7];
       if (rTrigger && rTrigger.value > 0.05) {
-        gamepadThrottle = rTrigger.value;
+        gpThrottle = rTrigger.value;
       } else if (gp.buttons[0] && gp.buttons[0].pressed) {
-        gamepadThrottle = 1.0;
+        gpThrottle = 1.0;
       }
 
       // 3. Brake: Left Trigger (Button 6 value) or Button 1 (B / Circle)
       const lTrigger = gp.buttons[6];
       if (lTrigger && lTrigger.value > 0.05) {
-        gamepadBrake = lTrigger.value;
+        gpBrake = lTrigger.value;
       } else if (gp.buttons[1] && gp.buttons[1].pressed) {
-        gamepadBrake = 1.0;
+        gpBrake = 1.0;
       }
 
       // 4. Drift: Button 2 (X / Square) or Button 8 (Select/Back)
       if ((gp.buttons[2] && gp.buttons[2].pressed) || (gp.buttons[8] && gp.buttons[8].pressed)) {
-        gamepadDrift = true;
+        gpDrift = true;
       }
 
       // 5. DRS/Overtake: Button 3 (Y / Triangle)
       if (gp.buttons[3] && gp.buttons[3].pressed) {
-        gamepadDrsPressed = true;
+        gpDrsPressed = true;
       }
 
       // 6. Manual Gears: RB (Button 5) for Upshift, LB (Button 4) for Downshift
       if (gp.buttons[5] && gp.buttons[5].pressed) {
-        gamepadUpshiftPressed = true;
+        gpUpshiftPressed = true;
       }
       if (gp.buttons[4] && gp.buttons[4].pressed) {
-        gamepadDownshiftPressed = true;
+        gpDownshiftPressed = true;
       }
 
       // 7. Status / Telemetry panel: Button 9 (Start)
       if (gp.buttons[9] && gp.buttons[9].pressed) {
-        gamepadStatusPressed = true;
+        gpStatusPressed = true;
       }
     }
 
     // Wireless Mobile Phone Controller integration (window.controllerInput)
+    let phoneSteer = 0.0;
+    let phoneThrottle = 0.0;
+    let phoneBrake = 0.0;
+    let phoneDrift = false;
+    let phoneDrsPressed = false;
+    let phoneUpshiftPressed = false;
+    let phoneDownshiftPressed = false;
+    let phoneStatusPressed = false;
+
     const ctrl = window.controllerInput;
     if (ctrl) {
-      if (Math.abs(ctrl.joystickX) > 0.08) {
-        gamepadSteer = ctrl.joystickX;
+      if (Math.abs(ctrl.joystickX) > 0.04) {
+        phoneSteer = ctrl.joystickX;
       }
-      if (ctrl.joystickY < -0.15) {
-        gamepadThrottle = Math.max(gamepadThrottle, Math.min(1.0, -ctrl.joystickY));
-      } else if (ctrl.joystickY > 0.15) {
-        gamepadBrake = Math.max(gamepadBrake, Math.min(1.0, ctrl.joystickY));
+      if (ctrl.joystickY < -0.10) {
+        phoneThrottle = Math.max(phoneThrottle, Math.min(1.0, -ctrl.joystickY));
+      } else if (ctrl.joystickY > 0.10) {
+        phoneBrake = Math.max(phoneBrake, Math.min(1.0, ctrl.joystickY));
       }
       // D-Pad steering and throttle/brake overrides
       if (ctrl.btnDpadLeft) {
-        gamepadSteer = -1.0;
+        phoneSteer = -1.0;
       } else if (ctrl.btnDpadRight) {
-        gamepadSteer = 1.0;
+        phoneSteer = 1.0;
       }
       if (ctrl.btnDpadUp) {
-        gamepadThrottle = 1.0;
+        phoneThrottle = 1.0;
       } else if (ctrl.btnDpadDown) {
-        gamepadBrake = 1.0;
+        phoneBrake = 1.0;
       }
       if (ctrl.btnR2 || ctrl.btnCross) {
-        gamepadThrottle = 1.0;
+        phoneThrottle = 1.0;
       }
       if (ctrl.btnL2 || ctrl.btnCircle) {
-        gamepadBrake = 1.0;
+        phoneBrake = 1.0;
       }
       if (ctrl.btnSquare) {
-        gamepadDrift = true;
+        phoneDrift = true;
       }
       if (ctrl.btnTriangle) {
-        gamepadDrsPressed = true;
+        phoneDrsPressed = true;
       }
       if (ctrl.btnR1) {
-        gamepadUpshiftPressed = true;
+        phoneUpshiftPressed = true;
       }
       if (ctrl.btnL1) {
-        gamepadDownshiftPressed = true;
+        phoneDownshiftPressed = true;
       }
       if (ctrl.btnTouchpad || ctrl.btnOptions) {
-        gamepadStatusPressed = true;
+        phoneStatusPressed = true;
       }
     }
+
+    const gamepadDrift = gpDrift || phoneDrift;
+    const gamepadDrsPressed = gpDrsPressed || phoneDrsPressed;
+    const gamepadUpshiftPressed = gpUpshiftPressed || phoneUpshiftPressed;
+    const gamepadDownshiftPressed = gpDownshiftPressed || phoneDownshiftPressed;
+    const gamepadStatusPressed = gpStatusPressed || phoneStatusPressed;
 
     // Keep track of edge-triggered buttons (pressed this frame but not last frame)
     if (window.lastGamepadDrs === undefined) window.lastGamepadDrs = false;
@@ -300,9 +315,9 @@
     window.lastGamepadDownshift = gamepadDownshiftPressed;
     window.lastGamepadStatus = gamepadStatusPressed;
 
-    // Map consolidated throttle / brake inputs
-    const throttleInput = Math.max(keys.w ? 1.0 : 0.0, gamepadThrottle);
-    const brakeInput = Math.max(keys.s ? 1.0 : 0.0, gamepadBrake);
+    // Map consolidated throttle / brake inputs across Keyboard, Physical Gamepad, and Mobile Phone
+    const throttleInput = Math.min(1.0, Math.max(keys.w || keys.ArrowUp ? 1.0 : 0.0, gpThrottle, phoneThrottle));
+    const brakeInput = Math.min(1.0, Math.max(keys.s || keys.ArrowDown ? 1.0 : 0.0, gpBrake, phoneBrake));
 
     // Lock player speed & gear in starting sequence countdown or grid waiting states
     if (isStartingSequence || window.raceState === "RACE_GRID_WAIT" || window.raceState === "RACE_LIGHTS") {
@@ -932,7 +947,7 @@
       return;
     }
 
-    const isSteering = (keys.a || keys.d || Math.abs(gamepadSteer) > 0.15);
+    const isSteering = (keys.a || keys.d || Math.abs(gpSteer) > 0.12 || Math.abs(phoneSteer) > 0.08);
     const isDriftInput = (keys.Space || gamepadDrift);
     if (isDriftInput && isSteering && Math.abs(playerKart.speed) > 15.0 && !isGravel) {
       if (!playerKart.isDrifting) {
@@ -998,17 +1013,24 @@
       Math.pow(steerSpeedRatio, 0.85)
     );
 
-    // Keyboard / gamepad raw steering inputs
-    let rawSteeringInput = 0.0;
-    if (keys.a || keys.ArrowLeft) {
-      rawSteeringInput += 1.0;
+    // Keyboard / gamepad / phone raw steering inputs
+    let keySteer = 0.0;
+    if (keys.a || keys.ArrowLeft) keySteer += 1.0;
+    if (keys.d || keys.ArrowRight) keySteer -= 1.0;
+
+    let gpAnalogSteer = 0.0;
+    if (Math.abs(gpSteer) > 0.08) {
+      gpAnalogSteer = -gpSteer; // negative axis = steer left (positive yaw)
     }
-    if (keys.d || keys.ArrowRight) {
-      rawSteeringInput -= 1.0;
+
+    let phoneAnalogSteer = 0.0;
+    if (Math.abs(phoneSteer) > 0.04) {
+      phoneAnalogSteer = -phoneSteer;
     }
-    if (gamepadSteer !== 0.0) {
-      rawSteeringInput = -gamepadSteer; // negative gamepad axis = steer left (positive yaw)
-    }
+
+    // Seamless concurrent multi-device steering blending
+    const combinedSteer = keySteer + gpAnalogSteer + phoneAnalogSteer;
+    let rawSteeringInput = THREE.MathUtils.clamp(combinedSteer, -1.0, 1.0);
     playerKart.rawSteeringInput = rawSteeringInput;
 
     // Filter steering input with speed-dependent build rate (heavier steering at high speeds)

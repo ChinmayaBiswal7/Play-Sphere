@@ -32,15 +32,16 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>PlaySphere DualSense Controller</title>
-  <link rel="stylesheet" href="controller.css?v=56">
+  <link rel="stylesheet" href="controller.css?v=62">
   <!-- Socket.io-client -->
   <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
-  <!-- 1. Rotate Screen Warning -->
-  <div class="landscape-warning">
+  <!-- 1. Rotate Screen Warning (Auto hides in landscape, dismissible by tap) -->
+  <div class="landscape-warning" id="landscape-warning">
     <h2>Rotate Your Device</h2>
-    <p>Please rotate your phone to Landscape mode to use the PlaySphere controller.</p>
+    <p>Rotate your phone to Landscape mode for the authentic DualSense controller experience.</p>
+    <button id="dismiss-rotate-btn" style="margin-top:14px; background:#1e293b; color:#94a3b8; border:1px solid #334155; border-radius:8px; padding:6px 14px; font-size:11px; font-weight:700;">Continue Anyway</button>
   </div>
 
   <!-- 2. Room Code Entry Overlay -->
@@ -51,24 +52,25 @@
       
       <input type="text" id="room-input" placeholder="CODE" maxlength="4" autocomplete="off" spellcheck="false">
       <button id="join-btn">CONNECT CONTROLLER</button>
+      <button id="skip-room-btn" style="margin-top:8px; background:transparent; border:none; color:#64748b; font-size:11px; cursor:pointer; text-decoration:underline;">Close & Play</button>
       
       <div id="room-error" class="room-error-msg"></div>
     </div>
   </div>
 
-  <!-- 3. Virtual PlaySphere Controller Layout -->
+  <!-- 3. Universal Virtual PlayStation DualSense Controller -->
   <div class="gamepad-container">
     <!-- Left Top Controls -->
     <div class="top-bar-left">
-      <div class="btn trigger" id="btn-l2">L2<span class="sub-label">BRAKE</span></div>
-      <div class="btn trigger" id="btn-l1">L1<span class="sub-label">GEAR-</span></div>
+      <div class="btn trigger" id="btn-l2">L2</div>
+      <div class="btn trigger" id="btn-l1">L1</div>
       <div class="btn utility-btn" id="btn-create">Create</div>
     </div>
 
     <!-- Right Top Controls -->
     <div class="top-bar-right">
-      <div class="btn trigger" id="btn-r2">R2<span class="sub-label">GAS</span></div>
-      <div class="btn trigger" id="btn-r1">R1<span class="sub-label">GEAR+</span></div>
+      <div class="btn trigger" id="btn-r2">R2</div>
+      <div class="btn trigger" id="btn-r1">R1</div>
       <div class="btn utility-btn" id="btn-options">Options</div>
     </div>
 
@@ -95,8 +97,8 @@
       <div class="touchpad-wrapper">
         <div class="ps5-lightbar ps5-lightbar-left"></div>
         <div class="btn touchpad-stub" id="btn-touchpad">
-          <div style="font-size: 8px; color: #a0aec0; letter-spacing: 0.12em; font-weight: 700; margin-bottom: 2px;">TOUCHPAD</div>
-          <div style="font-size: 11px; font-weight: 800; color: #60a5fa;" id="room-display-code">ROOM: ----</div>
+          <div style="font-size: 8px; color: #94a3b8; letter-spacing: 0.14em; font-weight: 700; margin-bottom: 2px;">TOUCHPAD</div>
+          <div style="font-size: 11px; font-weight: 800; color: #38bdf8;" id="room-display-code">ROOM: ----</div>
         </div>
         <div class="ps5-lightbar ps5-lightbar-right"></div>
       </div>
@@ -106,24 +108,16 @@
         <span id="status-ind" style="width: 7px; height: 7px; border-radius: 50%; background-color: #ef4444; box-shadow: 0 0 6px #ef4444; display: inline-block; transition: all 0.3s ease;"></span>
         <span id="status-text" style="letter-spacing: 0.05em;">DISCONNECTED</span>
       </div>
-      <div style="font-size: 8px; font-weight: 700; color: #ef4444; letter-spacing: 0.05em; margin-top: 4px;" id="role-text">F1 RACING CONTROLLER</div>
+      <div style="font-size: 8px; font-weight: 700; color: #60a5fa; letter-spacing: 0.06em; margin-top: 4px;" id="role-text">DUALSENSE WIRELESS CONTROLLER</div>
     </div>
 
-    <!-- Right Side Controls (Action Gems & R3 Stick Zone) -->
+    <!-- Right Side Controls (Action Buttons & R3 Stick Zone) -->
     <div class="right-grip">
       <div class="action-group">
-        <div class="btn action-btn act-triangle" id="btn-triangle">
-          ▲<span class="act-sub">DRS</span>
-        </div>
-        <div class="btn action-btn act-square" id="btn-square">
-          ■<span class="act-sub">DRIFT</span>
-        </div>
-        <div class="btn action-btn act-circle" id="btn-circle">
-          ●<span class="act-sub">BRAKE</span>
-        </div>
-        <div class="btn action-btn act-cross" id="btn-cross">
-          ✖<span class="act-sub">GAS</span>
-        </div>
+        <div class="btn action-btn act-triangle" id="btn-triangle">▲</div>
+        <div class="btn action-btn act-square" id="btn-square">■</div>
+        <div class="btn action-btn act-circle" id="btn-circle">●</div>
+        <div class="btn action-btn act-cross" id="btn-cross">✖</div>
       </div>
 
       <div class="joystick-zone-right">
@@ -137,6 +131,6 @@
   </div>
 
   <!-- Gamepad Client Script -->
-  <script src="controller.js?v=60"></script>
+  <script src="controller.js?v=62"></script>
 </body>
 </html>

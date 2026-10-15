@@ -238,10 +238,6 @@
       if (typeof window.updateF1ControllerModalUI === 'function') {
         window.updateF1ControllerModalUI();
       }
-      // If playing racing/f1 game, ask phone to adopt racing layout
-      if (window.location.pathname.includes('/f1') || window.location.pathname.includes('/racing')) {
-        window.socket.emit('layout-change', { layout: 'racing' });
-      }
     });
     window.socket.on('phone-disconnected', () => {
       window.controllerConnected = false;

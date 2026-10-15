@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&display=swap');
 
 /* Base Reset & Lock to Landscape */
 * {
@@ -7,7 +7,7 @@
   padding: 0;
   user-select: none;
   -webkit-user-select: none;
-  touch-action: none; /* Prevents default zooming and scrolling */
+  touch-action: none;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -17,10 +17,10 @@ body {
   font-family: 'Outfit', sans-serif;
   width: 100vw;
   height: 100vh;
+  margin: 0;
+  padding: 0;
   overflow: hidden;
-  display: grid;
-  grid-template-rows: 60px 1fr;
-  grid-template-columns: 1fr 1fr;
+  position: relative;
 }
 
 /* Landscape Force Warning */
@@ -30,49 +30,73 @@ body {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: #0f172a;
+  background: #090b10;
   z-index: 999;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   text-align: center;
-  padding: 20px;
+  padding: 24px;
 }
 
 @media (orientation: landscape) {
   .landscape-warning {
-    display: none;
+    display: none !important;
   }
+}
+
+.landscape-warning.dismissed {
+  display: none !important;
 }
 
 .landscape-warning h2 {
   font-size: 1.5rem;
   font-weight: 800;
-  color: #3b82f6;
+  color: #38bdf8;
   margin-bottom: 8px;
+}
+
+.landscape-warning p {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  max-width: 320px;
+}
+
+/* Main Grid Container */
+.gamepad-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: grid;
+  grid-template-rows: 58px 1fr;
+  grid-template-columns: 1fr 1fr;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 100%, #111827 0%, #080a0f 80%);
 }
 
 /* Generic Button Styling */
 .btn {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: #e2e8f0;
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #f1f5f9;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: bold;
-  font-size: 14px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  transition: all 0.1s ease;
+  font-weight: 800;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition: transform 0.05s ease, background 0.05s ease, box-shadow 0.05s ease;
+  touch-action: none;
 }
 
 .btn:active, .btn.active {
-  background: rgba(59, 130, 246, 0.3); /* Blue glow on press */
-  border-color: #3b82f6;
-  box-shadow: 0 0 14px rgba(59, 130, 246, 0.5);
-  transform: scale(0.94);
+  background: rgba(56, 189, 248, 0.35);
+  border-color: #38bdf8;
+  box-shadow: 0 0 18px rgba(56, 189, 248, 0.6);
+  transform: scale(0.93);
 }
 
 /* --- TOP BAR (Triggers & Menu Buttons) --- */
@@ -80,8 +104,8 @@ body {
   grid-row: 1;
   grid-column: 1;
   display: flex;
-  gap: 10px;
-  padding: 10px 20px;
+  gap: 12px;
+  padding: 10px 24px;
   align-items: center;
 }
 
@@ -90,28 +114,43 @@ body {
   grid-column: 2;
   display: flex;
   flex-direction: row-reverse;
-  gap: 10px;
-  padding: 10px 20px;
+  gap: 12px;
+  padding: 10px 24px;
   align-items: center;
 }
 
 .trigger {
-  width: 70px;
-  height: 40px;
-  font-size: 12px;
+  width: 72px;
+  height: 38px;
+  font-size: 13px;
   font-weight: 800;
   background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  letter-spacing: 0.05em;
+}
+
+.trigger:active, .trigger.active {
+  background: #38bdf8;
+  color: #030712;
+  border-color: #7dd3fc;
+  box-shadow: 0 0 18px rgba(56, 189, 248, 0.8);
 }
 
 .utility-btn {
-  width: 75px;
-  height: 30px;
+  width: 70px;
+  height: 28px;
   font-size: 10px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(255, 255, 255, 0.04);
   color: #94a3b8;
-  font-weight: 600;
-  border-color: rgba(255, 255, 255, 0.05);
+  font-weight: 700;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.utility-btn:active, .utility-btn.active {
+  background: #38bdf8;
+  color: #0f172a;
 }
 
 /* --- LEFT GRIP (D-Pad & Left Stick) --- */
@@ -119,38 +158,40 @@ body {
   grid-row: 2;
   grid-column: 1;
   position: relative;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+  width: 100%;
+  height: 100%;
+  padding: 10px 24px 20px;
 }
 
-/* Cross D-Pad Shape */
+/* D-Pad (Cross layout) */
 .dpad {
   position: absolute;
-  top: 10px;
-  left: 40px;
-  width: 120px;
-  height: 120px;
+  top: 14px;
+  left: 28px;
+  width: 126px;
+  height: 126px;
 }
 
 .dpad-btn {
   position: absolute;
-  width: 40px;
-  height: 40px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  font-size: 16px;
+  width: 42px;
+  height: 42px;
+  background: radial-gradient(circle, #1e293b 0%, #0f172a 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 17px;
+  color: #94a3b8;
 }
-.dpad-up    { top: 0; left: 40px; border-radius: 8px 8px 0 0; }
-.dpad-down  { bottom: 0; left: 40px; border-radius: 0 0 8px 8px; }
-.dpad-left  { top: 40px; left: 0; border-radius: 8px 0 0 8px; }
-.dpad-right { top: 40px; right: 0; border-radius: 0 8px 8px 0; }
+
+.dpad-up    { top: 0; left: 42px; border-radius: 10px 10px 0 0; }
+.dpad-down  { bottom: 0; left: 42px; border-radius: 0 0 10px 10px; }
+.dpad-left  { top: 42px; left: 0; border-radius: 10px 0 0 10px; }
+.dpad-right { top: 42px; right: 0; border-radius: 0 10px 10px 0; }
 
 .dpad-btn:active, .dpad-btn.active {
-  background: #3b82f6;
-  border-color: #60a5fa;
-  color: #ffffff;
+  background: #38bdf8;
+  border-color: #7dd3fc;
+  color: #030712;
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.7);
 }
 
 /* --- RIGHT GRIP (Action Buttons & Right Stick) --- */
@@ -158,86 +199,49 @@ body {
   grid-row: 2;
   grid-column: 2;
   position: relative;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  align-items: flex-end;
+  width: 100%;
+  height: 100%;
+  padding: 10px 24px 20px;
 }
 
-/* Diamond Action Buttons Shape */
+/* Action Diamond Buttons */
 .action-group {
   position: absolute;
-  top: 10px;
-  right: 40px;
-  width: 120px;
-  height: 120px;
+  top: 14px;
+  right: 28px;
+  width: 126px;
+  height: 126px;
 }
 
 .action-btn {
   position: absolute;
-  width: 38px;
-  height: 38px;
-  border-radius: 50%; /* Classic round buttons */
-  font-size: 16px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
-}
-.act-triangle { top: 0; left: 41px; color: #10b981; }
-.act-cross    { bottom: 0; left: 41px; color: #3b82f6; }
-.act-square   { top: 41px; left: 0; color: #d946ef; }
-.sub-label {
-  display: block;
-  font-size: 8px;
-  font-weight: 700;
-  color: #38bdf8;
-  letter-spacing: 0.05em;
-  margin-top: 1px;
-}
-
-.act-sub {
-  display: block;
-  font-size: 7px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  margin-top: 1px;
-  opacity: 0.85;
-}
-
-.action-btn {
-  position: absolute;
-  width: 44px;
-  height: 44px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
-  font-size: 15px;
-  font-weight: 800;
-  background: radial-gradient(circle at 35% 35%, rgba(51, 65, 85, 0.6) 0%, rgba(15, 23, 42, 0.8) 100%);
-  border: 2px solid rgba(255, 255, 255, 0.12);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.15);
+  font-size: 16px;
+  font-weight: 900;
+  background: radial-gradient(circle at 35% 35%, rgba(51, 65, 85, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.2);
 }
 
-.act-triangle { top: 0; left: 38px; color: #10b981; }
-.act-square   { top: 38px; left: 0; color: #ec4899; }
-.act-cross    { bottom: 0; left: 38px; color: #38bdf8; }
-.act-circle   { top: 38px; right: 0; color: #ef4444; }
+.act-triangle { top: 0; left: 42px; color: #10b981; }
+.act-square   { top: 42px; left: 0; color: #ec4899; }
+.act-cross    { bottom: 0; left: 42px; color: #38bdf8; }
+.act-circle   { top: 42px; right: 0; color: #ef4444; }
 
-.act-triangle:active, .act-triangle.active { background: #10b981; color: #ffffff; border-color: #34d399; box-shadow: 0 0 18px rgba(16, 185, 129, 0.7); }
-.act-cross:active, .act-cross.active       { background: #3b82f6; color: #ffffff; border-color: #60a5fa; box-shadow: 0 0 18px rgba(59, 130, 246, 0.7); }
-.act-square:active, .act-square.active     { background: #ec4899; color: #ffffff; border-color: #f472b6; box-shadow: 0 0 18px rgba(236, 72, 153, 0.7); }
-.act-circle:active, .act-circle.active     { background: #ef4444; color: #ffffff; border-color: #fca5a5; box-shadow: 0 0 18px rgba(239, 68, 68, 0.7); }
+.act-triangle:active, .act-triangle.active { background: #10b981; color: #ffffff; border-color: #34d399; box-shadow: 0 0 18px rgba(16, 185, 129, 0.8); }
+.act-cross:active, .act-cross.active       { background: #3b82f6; color: #ffffff; border-color: #60a5fa; box-shadow: 0 0 18px rgba(59, 130, 246, 0.8); }
+.act-square:active, .act-square.active     { background: #ec4899; color: #ffffff; border-color: #f472b6; box-shadow: 0 0 18px rgba(236, 72, 153, 0.8); }
+.act-circle:active, .act-circle.active     { background: #ef4444; color: #ffffff; border-color: #fca5a5; box-shadow: 0 0 18px rgba(239, 68, 68, 0.8); }
 
-/* --- JOYSTICKS (Thumb Zones) --- */
+/* --- JOYSTICKS (Spacious ergonomic zones) --- */
 .joystick-zone-left {
   position: absolute;
-  bottom: 12px;
-  left: 120px;
-  width: 140px;
-  height: 140px;
+  bottom: 8px;
+  left: 170px;
+  width: 130px;
+  height: 130px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -246,10 +250,10 @@ body {
 
 .joystick-zone-right {
   position: absolute;
-  bottom: 12px;
-  right: 120px;
-  width: 140px;
-  height: 140px;
+  bottom: 8px;
+  right: 170px;
+  width: 130px;
+  height: 130px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -257,22 +261,22 @@ body {
 }
 
 .thumbstick-base {
-  width: 110px;
-  height: 110px;
-  background: radial-gradient(circle, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.7) 100%);
+  width: 104px;
+  height: 104px;
+  background: radial-gradient(circle, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.75) 100%);
   border: 3px solid #1e293b;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: inset 0 4px 12px rgba(0, 0, 0, 0.7), 0 0 10px rgba(0, 0, 0, 0.3);
+  box-shadow: inset 0 4px 12px rgba(0, 0, 0, 0.7), 0 0 12px rgba(0, 0, 0, 0.4);
   position: relative;
   touch-action: none;
 }
 
 .thumbstick-knob {
-  width: 62px;
-  height: 62px;
+  width: 60px;
+  height: 60px;
   background: radial-gradient(circle at 35% 35%, #475569 0%, #1e293b 70%, #090d16 100%);
   border: 2px solid #64748b;
   border-radius: 50%;
@@ -281,8 +285,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 9px;
-  font-weight: 800;
+  font-size: 10px;
+  font-weight: 900;
   color: #94a3b8;
   letter-spacing: 0.05em;
   user-select: none;
@@ -292,23 +296,24 @@ body {
 
 .thumbstick-knob.active {
   border-color: #38bdf8;
-  box-shadow: 0 0 16px rgba(56, 189, 248, 0.6), inset 0 2px 3px rgba(255, 255, 255, 0.35);
+  box-shadow: 0 0 18px rgba(56, 189, 248, 0.7), inset 0 2px 3px rgba(255, 255, 255, 0.4);
 }
 
 .stick-label {
   pointer-events: none;
 }
 
-/* Center Subtle Logo Touch & DualSense Lightbars */
+/* Center DualSense Touchpad & PS Button */
 .center-ps-zone {
   position: absolute;
-  bottom: 12px;
+  bottom: 8px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
   flex-direction: column;
   align-items: center;
   z-index: 10;
+  pointer-events: auto;
 }
 
 .touchpad-wrapper {
@@ -320,7 +325,7 @@ body {
 
 .ps5-lightbar {
   width: 4px;
-  height: 46px;
+  height: 48px;
   border-radius: 4px;
   background: #38bdf8;
   box-shadow: 0 0 12px #38bdf8;
@@ -335,28 +340,29 @@ body {
   margin-left: 6px;
 }
 
+.touchpad-stub {
+  width: 136px;
+  height: 50px;
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.7) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.4), 0 4px 6px rgba(0,0,0,0.3);
+}
+
 .ps-btn {
   width: 38px;
   height: 38px;
   border-radius: 50%;
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 900;
   background: radial-gradient(circle, #334155 0%, #1e293b 100%);
-  border-color: rgba(255, 255, 255, 0.05);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
-}
-
-.touchpad-stub {
-  width: 140px;
-  height: 52px;
-  background: linear-gradient(180deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.6) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 6px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  box-shadow: inset 0 1px 3px rgba(0,0,0,0.4), 0 4px 6px rgba(0,0,0,0.2);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+  margin-top: 6px;
 }
 
 /* Loader Screen Overlay */
@@ -370,19 +376,20 @@ body {
   justify-content: center;
   align-items: center;
   gap: 16px;
-  transition: opacity 0.4s ease;
+  transition: opacity 0.3s ease;
 }
 
 .loader-screen.hidden {
-  opacity: 0;
-  pointer-events: none;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  display: none !important;
 }
 
 .room-input-box {
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 20px;
-  padding: 30px;
+  padding: 28px;
   max-width: 320px;
   width: 85%;
   text-align: center;
@@ -421,24 +428,24 @@ body {
 }
 
 .room-input-box input:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+  border-color: #38bdf8;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
 }
 
-.room-input-box button {
+.room-input-box button#join-btn {
   width: 100%;
-  background: #3b82f6;
+  background: #38bdf8;
   border: none;
   border-radius: 12px;
   padding: 12px;
   font-size: 1rem;
   font-weight: 800;
-  color: #fff;
+  color: #030712;
   cursor: pointer;
-  box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 4px 10px rgba(56, 189, 248, 0.4);
 }
 
-.room-input-box button:active {
+.room-input-box button#join-btn:active {
   transform: scale(0.97);
 }
 
@@ -447,10 +454,4 @@ body {
   font-size: 0.8rem;
   margin-top: 10px;
   font-weight: 600;
-}
-
-.gamepad-container {
-  width: 100%;
-  height: 100%;
-  display: contents; /* Grid defined in body is used directly */
 }
