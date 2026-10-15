@@ -34,15 +34,19 @@
 
     if (profCard) {
       if (currentUser && !window.profileNeedsComplete) {
-        // Main Profile Hub — fixed size set in CSS, just ensure flex-direction is row
+        // Main Profile Hub — True Fullscreen Steam Big Picture console view
         profCard.style.display = 'flex';
         profCard.style.flexDirection = 'row';
-        profCard.style.width = '840px';
-        profCard.style.height = '500px';
-        profCard.style.maxWidth = '95vw';
+        profCard.style.width = '100vw';
+        profCard.style.height = '100vh';
+        profCard.style.maxWidth = '100vw';
+        profCard.style.maxHeight = '100vh';
+        profCard.style.borderRadius = '0';
+        profCard.style.border = 'none';
+        profCard.style.position = 'fixed';
+        profCard.style.inset = '0';
         profCard.style.minWidth = '';
         profCard.style.minHeight = '';
-        profCard.style.maxHeight = '';
         profCard.style.alignItems = '';
         profCard.style.justifyContent = '';
         profCard.style.aspectRatio = 'auto';
@@ -865,6 +869,22 @@
 
     const achCountEl = document.getElementById('profile-hero-ach-count');
     if (achCountEl) achCountEl.textContent = `${unlockedCount} / ${achievementsList.length}`;
+
+    // Bind Hero Play Button
+    const playBtn = document.getElementById('profile-hero-play-btn');
+    if (playBtn) {
+      playBtn.onclick = () => {
+        const profModal = document.getElementById('ps5-profile-modal');
+        if (profModal) {
+          profModal.classList.remove('show');
+          profModal.style.display = 'none';
+        }
+        if (typeof window.ps5LaunchGame === 'function') {
+          const gameMap = { cricket: 'cricket', f1: 'f1', mortal: 'wwe' };
+          window.ps5LaunchGame(gameMap[gameKey] || gameKey);
+        }
+      };
+    }
 
     renderPlaySphereAchievementsGrid(gameKey);
   }

@@ -85,25 +85,35 @@
           if (btn) btn.style.color = '#a78bfa';
           const track = PS5_PLAYLIST[ps5MusicIndex];
           ps5MusicSetTitle(track.title);
-          e.target.setVolume(50);
-          e.target.loadVideoById(track.id);
-          
+
           // DO NOT play if a game is launching or already active!
-          if (window.ps5ActiveGame || document.getElementById('game-session-iframe')) {
+          if (isAnyGameActive()) {
             console.log('[Music] Game session active during onReady — keeping paused and muted');
-            try { e.target.pauseVideo(); e.target.mute(); } catch (err) {}
+            try { 
+              if (typeof e.target.mute === 'function') e.target.mute();
+              if (typeof e.target.setVolume === 'function') e.target.setVolume(0);
+              if (typeof e.target.cueVideoById === 'function') e.target.cueVideoById(track.id);
+              if (typeof e.target.pauseVideo === 'function') e.target.pauseVideo();
+            } catch (err) {}
             ps5SetVinylSpin(false);
             ps5SetPlayIcon(false);
             return;
           }
 
+          e.target.setVolume(50);
+          e.target.loadVideoById(track.id);
           e.target.playVideo();
         },
         onStateChange: (e) => {
           console.log('[Music] YT.Player State:', e.data);
           // If a game is active, ensure video stays paused and muted
-          if ((window.ps5ActiveGame || document.getElementById('game-session-iframe')) && e.data === 1) {
-            try { e.target.pauseVideo(); e.target.mute(); } catch (err) {}
+          if (isAnyGameActive() && (e.data === 1 || e.data === 3)) {
+            try { 
+              e.target.pauseVideo(); 
+              if (typeof e.target.stopVideo === 'function') e.target.stopVideo();
+              e.target.mute(); 
+              e.target.setVolume(0);
+            } catch (err) {}
             ps5SetVinylSpin(false);
             ps5SetPlayIcon(false);
             return;
@@ -127,15 +137,21 @@
   }
 
   function isAnyGameActive() {
-    return !!(window.ps5ActiveGame || document.getElementById('game-session-iframe'));
+    return !!(window.ps5ActiveGame || document.getElementById('game-session-iframe') || (window.parent && window.parent !== window));
   }
+  window.isAnyGameActive = isAnyGameActive;
 
   // Universal message listener to mute/pause from any iframe game
   window.addEventListener('message', (e) => {
     if (e.data && (e.data.type === 'PAUSE_BG_MUSIC' || e.data.type === 'STOP_BG_MUSIC' || e.data === 'PAUSE_BG_MUSIC')) {
       if (typeof window.ps5MusicPause === 'function') window.ps5MusicPause();
       if (window.ps5YtPlayer) {
-        try { window.ps5YtPlayer.pauseVideo(); window.ps5YtPlayer.mute(); } catch(err){}
+        try { 
+          window.ps5YtPlayer.pauseVideo(); 
+          if (typeof window.ps5YtPlayer.stopVideo === 'function') window.ps5YtPlayer.stopVideo();
+          window.ps5YtPlayer.mute(); 
+          window.ps5YtPlayer.setVolume(0);
+        } catch(err){}
       }
       document.querySelectorAll('audio, video').forEach(a => { try { a.pause(); a.muted = true; } catch(err){} });
     }
@@ -146,10 +162,12 @@
     if (isAnyGameActive()) {
       if (ps5YtPlayer && ps5YtReady) {
         try {
-          const st = ps5YtPlayer.getPlayerState();
+          const st = typeof ps5YtPlayer.getPlayerState === 'function' ? ps5YtPlayer.getPlayerState() : -1;
           if (st === 1 || st === 3) {
             ps5YtPlayer.pauseVideo();
+            if (typeof ps5YtPlayer.stopVideo === 'function') ps5YtPlayer.stopVideo();
             ps5YtPlayer.mute();
+            ps5YtPlayer.setVolume(0);
             ps5SetVinylSpin(false);
             ps5SetPlayIcon(false);
           }
@@ -159,13 +177,15 @@
         try { if (!a.paused) a.pause(); } catch(e){}
       });
     }
-  }, 800);
+  }, 250);
 
   window.ps5MusicPause = function() {
     try {
       if (ps5YtPlayer) {
         if (typeof ps5YtPlayer.pauseVideo === 'function') ps5YtPlayer.pauseVideo();
+        if (typeof ps5YtPlayer.stopVideo === 'function') ps5YtPlayer.stopVideo();
         if (typeof ps5YtPlayer.mute === 'function') ps5YtPlayer.mute();
+        if (typeof ps5YtPlayer.setVolume === 'function') ps5YtPlayer.setVolume(0);
       }
       ps5SetVinylSpin(false);
       ps5SetPlayIcon(false);

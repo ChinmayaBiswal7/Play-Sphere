@@ -2845,7 +2845,7 @@
     const contBtn = document.getElementById('gp-btn-continue');
     if (contBtn) {
       if (step === 4) {
-        contBtn.innerText = "START GRAND PRIX RACE ➔";
+        contBtn.innerText = "START PRACTICE SESSION ➔";
       } else {
         contBtn.innerText = "CONTINUE ➔";
       }
@@ -2857,7 +2857,7 @@
     if (window.gpCurrentStep < 4) {
       window.gpRenderStep(window.gpCurrentStep + 1);
     } else {
-      window.startDirectGrandPrixRace();
+      window.startGrandPrixWeekend();
     }
   };
 
@@ -2961,8 +2961,9 @@
     // Hide GP setup screen
     document.getElementById('grandPrixSetupScreen').style.display = 'none';
 
-    window.triggerLoadingScreen("GRAND PRIX WEEKEND", "Entering Base Workstation...", () => {
-      showCareerWorkstation(false); // fresh GP entry
+    const trackNames = ["Sunset Coast Circuit", "Alpine Heights"];
+    window.triggerLoadingScreen("PRACTICE SESSION", trackNames[activeTrack] + " — Pit Lane", () => {
+      setupGame();
     });
   };
 

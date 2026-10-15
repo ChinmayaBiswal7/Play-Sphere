@@ -5,12 +5,25 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Apex Stars: Chibi F1</title>
   <script>
-    try {
-      if (window.parent && window.parent !== window) {
-        window.parent.postMessage({ type: 'PAUSE_BG_MUSIC' }, '*');
-        if (typeof window.parent.ps5MusicPause === 'function') window.parent.ps5MusicPause();
-      }
-    } catch(e) {}
+    function silenceParentDashboardMusic() {
+      try {
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({ type: 'PAUSE_BG_MUSIC' }, '*');
+          if (typeof window.parent.ps5MusicPause === 'function') window.parent.ps5MusicPause();
+          if (window.parent.ps5YtPlayer) {
+            try {
+              window.parent.ps5YtPlayer.pauseVideo();
+              if (typeof window.parent.ps5YtPlayer.stopVideo === 'function') window.parent.ps5YtPlayer.stopVideo();
+              window.parent.ps5YtPlayer.mute();
+              window.parent.ps5YtPlayer.setVolume(0);
+            } catch(e) {}
+          }
+        }
+      } catch(e) {}
+    }
+    silenceParentDashboardMusic();
+    const _silenceInterval = setInterval(silenceParentDashboardMusic, 400);
+    setTimeout(() => clearInterval(_silenceInterval), 5000);
   </script>
   
   <!-- Fonts -->

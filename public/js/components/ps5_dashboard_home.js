@@ -588,6 +588,8 @@
 
     // Music starts on first user click only (removed keydown to avoid nav interference)
     const startMusic = () => {
+      if (typeof window.isAnyGameActive === 'function' && window.isAnyGameActive()) return;
+      if (window.ps5ActiveGame || document.getElementById('game-session-iframe')) return;
       if (typeof window.ps5LoadYouTubeAPI === 'function') window.ps5LoadYouTubeAPI();
       window.removeEventListener('click', startMusic);
     };
