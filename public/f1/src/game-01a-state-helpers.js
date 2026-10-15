@@ -1132,7 +1132,7 @@
       window.triggerGamepadRumble(60, 0.45, 0.05);
     }
     if (typeof window.triggerPhoneVibration === 'function') {
-      window.triggerPhoneVibration(40);
+      window.triggerPhoneVibration([35, 20, 45]);
     }
     
     // Tiny exhaust backfire flame if upshifting at high RPM!
@@ -2677,6 +2677,9 @@
     const modal = document.getElementById('f1-controller-modal');
     if (!modal) return;
     modal.style.display = 'flex';
+    if (!window.roomCode && window.socket && window.socket.connected) {
+      window.socket.emit('join-room-pc', {});
+    }
     updateF1ControllerModalUI();
   };
 
@@ -2693,8 +2696,8 @@
     const dot = document.getElementById('f1-ctrl-status-dot');
     const txt = document.getElementById('f1-ctrl-status-text');
 
-    if (roomEl && code) {
-      roomEl.innerText = code;
+    if (roomEl) {
+      roomEl.innerText = code || 'GENERATING...';
     }
 
     if (code && qrImg) {
@@ -2704,6 +2707,9 @@
         if (qrSpinner) qrSpinner.style.display = 'none';
         qrImg.style.display = 'block';
       };
+    } else if (!code && qrSpinner) {
+      qrSpinner.style.display = 'block';
+      if (qrImg) qrImg.style.display = 'none';
     }
 
     if (window.controllerConnected) {

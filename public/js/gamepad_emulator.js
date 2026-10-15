@@ -228,10 +228,16 @@
     window.socket.on('room-created', ({ roomCode }) => {
       window.roomCode = roomCode;
       try { localStorage.setItem('play_sphere_room', roomCode); } catch(e) {}
+      if (typeof window.updateF1ControllerModalUI === 'function') {
+        window.updateF1ControllerModalUI();
+      }
     });
     window.socket.on('phone-connected', ({ phoneSlot }) => {
       window.controllerConnected = true;
       console.log(`[Gamepad Emulator] Phone ${phoneSlot} connected as wireless controller.`);
+      if (typeof window.updateF1ControllerModalUI === 'function') {
+        window.updateF1ControllerModalUI();
+      }
       // If playing racing/f1 game, ask phone to adopt racing layout
       if (window.location.pathname.includes('/f1') || window.location.pathname.includes('/racing')) {
         window.socket.emit('layout-change', { layout: 'racing' });
@@ -239,6 +245,9 @@
     });
     window.socket.on('phone-disconnected', () => {
       window.controllerConnected = false;
+      if (typeof window.updateF1ControllerModalUI === 'function') {
+        window.updateF1ControllerModalUI();
+      }
     });
   }
 

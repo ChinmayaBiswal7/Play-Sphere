@@ -1,7 +1,7 @@
 // PlaySphere Virtual DualSense Controller Script
 let socket = null;
 let roomCode = '';
-let currentLayout = 'dashboard'; // 'dashboard', 'bowling', 'batting'
+let currentLayout = 'racing'; // Default to racing for F1
 
 const ui = {
   loader: document.getElementById('loader-screen'),
@@ -14,53 +14,93 @@ const ui = {
   roleText: document.getElementById('role-text')
 };
 
-// ── VIBRATION HAPTICS ──────────────────────────────────────────
-function triggerHaptic(duration = 20) {
-  if (navigator.vibrate) {
-    try {
-      navigator.vibrate(duration);
-    } catch (e) {
-      console.warn("Haptic vibrate blocked/failed:", e);
-    }
+// ── 1. DUALSENSE ACOUSTIC & PHYSICAL HAPTICS ──────────────────────────
+let audioCtx = null;
+function getAudioContext() {
+  if (!audioCtx) {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (AudioContextClass) audioCtx = new AudioContextClass();
   }
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume().catch(() => {});
+  }
+  return audioCtx;
 }
 
-// ── REQUEST FULLSCREEN ─────────────────────────────────────────
+// Crisp mechanical controller click sound (plays on all mobile devices including iOS)
+function playControllerClickSound(freq = 140, duration = 0.025, vol = 0.14) {
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(freq, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(30, ctx.currentTime + duration);
+    gain.gain.setValueAtTime(vol, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + duration);
+  } catch (e) {}
+}
+
+// Full controller vibration with hardware rumble + acoustic transient
+function triggerControllerVibe(pattern = 20) {
+  // 1. Hardware vibration (Android / Chrome / Firefox)
+  if (navigator.vibrate) {
+    try {
+      navigator.vibrate(pattern);
+    } catch (e) {}
+  }
+  // 2. Synthetic haptic click
+  playControllerClickSound(160, 0.025, 0.12);
+}
+
+// Legacy alias
+function triggerHaptic(duration = 20) {
+  triggerControllerVibe(duration);
+}
+
+// ── 2. FULLSCREEN HELPER ──────────────────────────────────────────────
 function enterFullscreen() {
   try {
     if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-      const req = document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen;
+      const docEl = document.documentElement;
+      const req = docEl.requestFullscreen || docEl.webkitRequestFullscreen || docEl.mozRequestFullScreen || docEl.msRequestFullscreen;
       if (req) {
-        req.call(document.documentElement).catch((err) => {
-          console.warn("Fullscreen request rejected:", err);
-        });
+        req.call(docEl).catch(() => {});
       }
     }
   } catch (e) {}
 }
 
-// ── GET ROOM CODE FROM URL ──────────────────────────────────────
+// ── 3. URL PARAMETER PARSER ───────────────────────────────────────────
 function getUrlParam(name) {
   const params = new URLSearchParams(window.location.search);
   return params.get(name);
 }
 
-// ── SOCKET INITIALIZATION & RECONNECT ──────────────────────────
+// ── 4. WEBSOCKET CONNECTION & AUTO-SYNC ──────────────────────────────
 function initSocket() {
   socket = io();
 
   socket.on('connect', () => {
-    console.log('Controller connected to WebSocket server');
+    console.log('[Controller] Connected to server socket');
     
-    const storedRoom = sessionStorage.getItem('activeRoomCode');
-    if (storedRoom) {
-      console.log(`Rejoining Room: ${storedRoom}`);
-      socket.emit('rejoin-room-phone', { roomCode: storedRoom });
+    // 1. Always prioritize active room parameter in URL from scanned QR code!
+    const urlRoom = getUrlParam('room') || getUrlParam('roomCode');
+    if (urlRoom && urlRoom.length >= 4) {
+      const code = urlRoom.toUpperCase().trim();
+      if (ui.roomInput) ui.roomInput.value = code;
+      joinRoom(code);
     } else {
-      const urlRoom = getUrlParam('room');
-      if (urlRoom) {
-        ui.roomInput.value = urlRoom;
-        joinRoom(urlRoom);
+      // 2. Fall back to previous active session if no URL room provided
+      const storedRoom = sessionStorage.getItem('activeRoomCode');
+      if (storedRoom) {
+        console.log(`[Controller] Attempting rejoin to room: ${storedRoom}`);
+        socket.emit('rejoin-room-phone', { roomCode: storedRoom });
       }
     }
   });
@@ -74,18 +114,32 @@ function initSocket() {
   });
 
   socket.on('room-error', (msg) => {
-    if (ui.roomError) ui.roomError.innerText = msg;
-    triggerHaptic([50, 50]);
     sessionStorage.removeItem('activeRoomCode');
+    
+    // If rejoin failed but URL parameter exists, try connecting to the URL room directly!
+    const urlRoom = getUrlParam('room') || getUrlParam('roomCode');
+    if (urlRoom && urlRoom.toUpperCase().trim() !== roomCode) {
+      console.log(`[Controller] Rejoin failed, attempting fallback to URL room: ${urlRoom}`);
+      joinRoom(urlRoom.toUpperCase().trim());
+      return;
+    }
+
+    if (ui.roomError) ui.roomError.innerText = msg;
+    triggerControllerVibe([60, 40, 60]);
+    if (ui.loader) {
+      ui.loader.classList.remove('hidden');
+      ui.loader.style.display = 'flex';
+    }
   });
 
   socket.on('layout-change', ({ layout }) => {
     if (layout) updateLayout(layout);
   });
 
+  // Game telemetry rumble relay from PC (engine revs, kerbs, shifts, crashes)
   socket.on('trigger-vibration', (data) => {
-    const pattern = (data && data.pattern) ? data.pattern : 200;
-    triggerHaptic(pattern);
+    const pattern = (data && data.pattern) ? data.pattern : 60;
+    triggerControllerVibe(pattern);
   });
 
   socket.on('pc-disconnected', () => {
@@ -100,26 +154,20 @@ function initSocket() {
     updateStatus('RECONNECTING...', '#eab308');
   });
 
-  socket.on('reconnect', (attemptNumber) => {
-    console.log(`Controller reconnected after ${attemptNumber} attempts`);
+  socket.on('reconnect', () => {
     if (roomCode) {
       socket.emit('rejoin-room-phone', { roomCode });
     }
-  });
-
-  socket.on('reconnect_error', (error) => {
-    console.warn('Reconnect error:', error);
-    updateStatus('RECONNECTING...', '#eab308');
   });
 }
 
 function joinRoom(code) {
   if (!code || code.length < 4) {
-    if (ui.roomError) ui.roomError.innerText = 'Please enter a valid 4-character code.';
+    if (ui.roomError) ui.roomError.innerText = 'Enter 4-character room code.';
     return;
   }
   if (ui.roomError) ui.roomError.innerText = '';
-  socket.emit('join-room-phone', { roomCode: code });
+  socket.emit('join-room-phone', { roomCode: code.toUpperCase().trim() });
 }
 
 function onJoinSuccess(code, initialLayout) {
@@ -127,16 +175,21 @@ function onJoinSuccess(code, initialLayout) {
   sessionStorage.setItem('activeRoomCode', code);
   
   if (ui.roomDisplay) ui.roomDisplay.innerText = `ROOM: ${code}`;
-  if (ui.loader) ui.loader.classList.add('hidden');
+  
+  // Completely hide and remove loader overlay so it cannot intercept gestures
+  if (ui.loader) {
+    ui.loader.classList.add('hidden');
+    ui.loader.style.display = 'none';
+  }
+  if (ui.roomInput) ui.roomInput.blur();
+
   updateStatus('CONNECTED', '#10b981');
   
-  if (initialLayout) {
-    updateLayout(initialLayout);
-  } else {
-    updateLayout('dashboard');
-  }
+  // Set F1 Racing layout by default
+  updateLayout(initialLayout || 'racing');
   
-  triggerHaptic([60, 40, 60]); // Boot rumble feel
+  // Play authentic DualSense connection pulse
+  triggerControllerVibe([80, 50, 100]);
   enterFullscreen();
 }
 
@@ -144,116 +197,139 @@ function updateStatus(text, colorHex) {
   if (ui.statusText) ui.statusText.innerText = text;
   if (ui.statusInd) {
     ui.statusInd.style.backgroundColor = colorHex;
-    ui.statusInd.style.boxShadow = `0 0 10px ${colorHex}`;
+    ui.statusInd.style.boxShadow = `0 0 12px ${colorHex}`;
   }
 }
 
-// ── DYNAMIC ROLE LAYOUT SWITCHER ───────────────────────────────
+// ── 5. DYNAMIC ROLE & CONTROL LABELS ──────────────────────────────────
 function updateLayout(layout) {
-  if (currentLayout === layout) return;
   currentLayout = layout;
-  triggerHaptic([30, 15, 30]); // Switch layout vibration pulse
-
-  if (!ui.roleText) return;
 
   const btnR2 = document.getElementById('btn-r2');
   const btnL2 = document.getElementById('btn-l2');
   const btnR1 = document.getElementById('btn-r1');
   const btnL1 = document.getElementById('btn-l1');
+  const roleText = ui.roleText;
 
-  if (layout === 'bowling') {
-    ui.roleText.innerText = 'BOWLING MODE';
-    ui.roleText.style.color = '#facc15';
-    if (btnR2) btnR2.innerText = 'R2';
-    if (btnL2) btnL2.innerText = 'L2';
-    if (btnR1) btnR1.innerText = 'R1';
-    if (btnL1) btnL1.innerText = 'L1';
-  } else if (layout === 'batting') {
-    ui.roleText.innerText = 'BATTING MODE';
-    ui.roleText.style.color = '#10b981';
-    if (btnR2) btnR2.innerText = 'R2';
-    if (btnL2) btnL2.innerText = 'L2';
-    if (btnR1) btnR1.innerText = 'R1';
-    if (btnL1) btnL1.innerText = 'L1';
-  } else if (layout === 'racing' || layout === 'f1') {
-    ui.roleText.innerText = 'F1 RACING MODE';
-    ui.roleText.style.color = '#ef4444';
-    if (btnR2) btnR2.innerText = 'GAS';
-    if (btnL2) btnL2.innerText = 'BRAKE';
-    if (btnR1) btnR1.innerText = 'GEAR+';
-    if (btnL1) btnL1.innerText = 'GEAR-';
+  if (layout === 'racing' || layout === 'f1') {
+    if (roleText) {
+      roleText.innerText = 'F1 RACING CONTROLLER';
+      roleText.style.color = '#ef4444';
+    }
+    if (btnR2) btnR2.innerHTML = 'R2<span class="sub-label">GAS</span>';
+    if (btnL2) btnL2.innerHTML = 'L2<span class="sub-label">BRAKE</span>';
+    if (btnR1) btnR1.innerHTML = 'R1<span class="sub-label">GEAR+</span>';
+    if (btnL1) btnL1.innerHTML = 'L1<span class="sub-label">GEAR-</span>';
+    
+    // Set DualSense Lightbar color to Electric Red / Cyan
+    const lightbars = document.querySelectorAll('.ps5-lightbar');
+    lightbars.forEach(lb => {
+      lb.style.background = '#ef4444';
+      lb.style.boxShadow = '0 0 14px #ef4444';
+    });
   } else {
-    ui.roleText.innerText = 'DASHBOARD CONTROLLER';
-    ui.roleText.style.color = '#60a5fa';
-    if (btnR2) btnR2.innerText = 'R2';
-    if (btnL2) btnL2.innerText = 'L2';
-    if (btnR1) btnR1.innerText = 'R1';
-    if (btnL1) btnL1.innerText = 'L1';
+    if (roleText) {
+      roleText.innerText = 'PLAYSPHERE DUALSENSE';
+      roleText.style.color = '#60a5fa';
+    }
+    if (btnR2) btnR2.innerHTML = 'R2';
+    if (btnL2) btnL2.innerHTML = 'L2';
+    if (btnR1) btnR1.innerHTML = 'R1';
+    if (btnL1) btnL1.innerHTML = 'L1';
+
+    const lightbars = document.querySelectorAll('.ps5-lightbar');
+    lightbars.forEach(lb => {
+      lb.style.background = '#38bdf8';
+      lb.style.boxShadow = '0 0 14px #38bdf8';
+    });
   }
 }
 
-// ── VIRTUAL STICK CLASS ─────────────────────────────────────────
+// ── 6. ULTRA-RESPONSIVE DUALSENSE VIRTUAL STICK ─────────────────────────
 class VirtualStick {
-  constructor(knobId, boundaryId, type) {
+  constructor(knobId, boundaryId, zoneSelector, type) {
     this.knob = document.getElementById(knobId);
     this.boundary = document.getElementById(boundaryId);
+    this.zone = document.querySelector(zoneSelector) || this.boundary;
     this.type = type; // 'left' or 'right'
     this.activeTouchId = null;
     this.isMouseDown = false;
     this.center = { x: 0, y: 0 };
-    this.maxRadius = 38; // matching smaller size in layout
+    this.maxRadius = 45; // comfortable physical travel distance
 
     if (this.knob && this.boundary) {
       this.init();
     }
   }
 
+  updateCenter() {
+    const rect = this.boundary.getBoundingClientRect();
+    this.center.x = rect.left + rect.width / 2;
+    this.center.y = rect.top + rect.height / 2;
+  }
+
   init() {
     const passiveOpts = { passive: false };
 
-    // Touch handlers
-    this.boundary.addEventListener('touchstart', (e) => {
-      if (!e.targetTouches || e.targetTouches.length === 0) return;
+    const startTouch = (clientX, clientY, identifier) => {
+      this.activeTouchId = identifier;
+      this.updateCenter();
+      this.knob.classList.add('active');
+      this.knob.style.transition = 'none'; // Instant 60fps tracking without CSS delay
+      this.updatePosition(clientX, clientY);
+      triggerControllerVibe(16);
+    };
+
+    // Touch start on boundary OR zone OR knob
+    const touchStartHandler = (e) => {
+      if (this.activeTouchId !== null) return;
+      if (!e.changedTouches || e.changedTouches.length === 0) return;
       e.preventDefault();
-      const touch = e.targetTouches[0];
-      this.activeTouchId = touch.identifier;
+      const touch = e.changedTouches[0];
+      startTouch(touch.clientX, touch.clientY, touch.identifier);
+    };
 
-      const rect = this.boundary.getBoundingClientRect();
-      this.center.x = rect.left + rect.width / 2;
-      this.center.y = rect.top + rect.height / 2;
+    this.boundary.addEventListener('touchstart', touchStartHandler, passiveOpts);
+    if (this.zone && this.zone !== this.boundary) {
+      this.zone.addEventListener('touchstart', touchStartHandler, passiveOpts);
+    }
+    if (this.knob) {
+      this.knob.addEventListener('touchstart', touchStartHandler, passiveOpts);
+    }
 
-      this.updatePosition(touch.clientX, touch.clientY);
-    }, passiveOpts);
-
-    this.boundary.addEventListener('touchmove', (e) => {
+    // Global touchmove on window: tracks user thumb anywhere on the screen!
+    window.addEventListener('touchmove', (e) => {
       if (this.activeTouchId === null) return;
-      e.preventDefault();
       for (let i = 0; i < e.touches.length; i++) {
         if (e.touches[i].identifier === this.activeTouchId) {
+          e.preventDefault();
           this.updatePosition(e.touches[i].clientX, e.touches[i].clientY);
           break;
         }
       }
     }, passiveOpts);
 
-    const stopHandler = (e) => {
-      e.preventDefault();
-      this.reset();
+    // Global touchend / touchcancel on window: never leaves stick stuck at angle!
+    const touchEndHandler = (e) => {
+      if (this.activeTouchId === null) return;
+      if (e.changedTouches) {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          if (e.changedTouches[i].identifier === this.activeTouchId) {
+            e.preventDefault();
+            this.reset();
+            break;
+          }
+        }
+      }
     };
+    window.addEventListener('touchend', touchEndHandler, passiveOpts);
+    window.addEventListener('touchcancel', touchEndHandler, passiveOpts);
 
-    this.boundary.addEventListener('touchend', stopHandler, passiveOpts);
-    this.boundary.addEventListener('touchcancel', stopHandler, passiveOpts);
-
-    // Mouse handlers
+    // Mouse fallback for browser testing
     this.boundary.addEventListener('mousedown', (e) => {
       e.preventDefault();
       this.isMouseDown = true;
-
-      const rect = this.boundary.getBoundingClientRect();
-      this.center.x = rect.left + rect.width / 2;
-      this.center.y = rect.top + rect.height / 2;
-
-      this.updatePosition(e.clientX, e.clientY);
+      startTouch(e.clientX, e.clientY, 'mouse');
     });
 
     window.addEventListener('mousemove', (e) => {
@@ -285,7 +361,6 @@ class VirtualStick {
     const normalizedY = parseFloat((dy / this.maxRadius).toFixed(2));
 
     if (this.type === 'left') {
-      // Invert X ONLY in bowling mode (since camera faces the opposite direction of the pitch)
       const isBowling = (currentLayout === 'bowling');
       const finalX = isBowling ? -normalizedX : normalizedX;
       sendInput('joystick', { x: finalX, y: normalizedY });
@@ -296,6 +371,9 @@ class VirtualStick {
 
   reset() {
     this.activeTouchId = null;
+    this.knob.classList.remove('active');
+    // Smooth physical spring snap back to center
+    this.knob.style.transition = 'transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
     this.knob.style.transform = 'translate(0px, 0px)';
     if (this.type === 'left') {
       sendInput('joystick', { x: 0, y: 0 });
@@ -305,65 +383,81 @@ class VirtualStick {
   }
 }
 
-// ── PS5 BUTTON TOUCH HANDLERS ──────────────────────────────────
+// ── 7. DUALSENSE BUTTON TOUCH HANDLERS ─────────────────────────────────
 function setupButtons() {
   const buttonsList = [
-    { id: 'btn-triangle', key: 'triangle' },
-    { id: 'btn-circle', key: 'circle' },
-    { id: 'btn-cross', key: 'cross' },
-    { id: 'btn-square', key: 'square' },
-    { id: 'btn-l1', key: 'l1' },
-    { id: 'btn-r1', key: 'r1' },
-    { id: 'btn-l2', key: 'l2' },
-    { id: 'btn-r2', key: 'r2' },
-    { id: 'btn-create', key: 'create' },
-    { id: 'btn-options', key: 'options' },
-    { id: 'btn-dpad-up', key: 'dpadUp' },
-    { id: 'btn-dpad-down', key: 'dpadDown' },
-    { id: 'btn-dpad-left', key: 'dpadLeft' },
-    { id: 'btn-dpad-right', key: 'dpadRight' },
-    { id: 'btn-ps', key: 'ps' }
+    { id: 'btn-triangle', key: 'triangle', rumble: [24] },
+    { id: 'btn-circle', key: 'circle', rumble: [20] },
+    { id: 'btn-cross', key: 'cross', rumble: [20] },
+    { id: 'btn-square', key: 'square', rumble: [20] },
+    { id: 'btn-l1', key: 'l1', rumble: [25] },
+    { id: 'btn-r1', key: 'r1', rumble: [25] },
+    { id: 'btn-l2', key: 'l2', rumble: [35, 15, 30] },
+    { id: 'btn-r2', key: 'r2', rumble: [35, 15, 30] },
+    { id: 'btn-create', key: 'create', rumble: [15] },
+    { id: 'btn-options', key: 'options', rumble: [15] },
+    { id: 'btn-dpad-up', key: 'dpadUp', rumble: [18] },
+    { id: 'btn-dpad-down', key: 'dpadDown', rumble: [18] },
+    { id: 'btn-dpad-left', key: 'dpadLeft', rumble: [18] },
+    { id: 'btn-dpad-right', key: 'dpadRight', rumble: [18] },
+    { id: 'btn-ps', key: 'ps', rumble: [50, 30, 50] }
   ];
 
   const passiveOpts = { passive: false };
 
-  buttonsList.forEach(({ id, key }) => {
+  buttonsList.forEach(({ id, key, rumble }) => {
     const el = document.getElementById(id);
     if (!el) return;
 
-    // Touch Support
+    let touchIdentifier = null;
+
     el.addEventListener('touchstart', (e) => {
       e.preventDefault();
+      if (e.changedTouches && e.changedTouches.length > 0) {
+        touchIdentifier = e.changedTouches[0].identifier;
+      }
       el.classList.add('active');
-      triggerHaptic(18); // short tap feel
+      triggerControllerVibe(rumble || 20);
       sendInput('btnDown', { btn: key });
     }, passiveOpts);
 
-    el.addEventListener('touchend', (e) => {
-      e.preventDefault();
+    const onRelease = (e) => {
+      if (touchIdentifier !== null && e.changedTouches) {
+        let matched = false;
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          if (e.changedTouches[i].identifier === touchIdentifier) {
+            matched = true;
+            break;
+          }
+        }
+        if (!matched) return;
+      }
+      touchIdentifier = null;
       el.classList.remove('active');
       sendInput('btnUp', { btn: key });
-    }, passiveOpts);
+    };
 
-    el.addEventListener('touchcancel', (e) => {
-      e.preventDefault();
-      el.classList.remove('active');
-      sendInput('btnUp', { btn: key });
-    }, passiveOpts);
+    el.addEventListener('touchend', onRelease, passiveOpts);
+    el.addEventListener('touchcancel', onRelease, passiveOpts);
+    window.addEventListener('touchend', onRelease, passiveOpts);
+    window.addEventListener('touchcancel', onRelease, passiveOpts);
 
     // Mouse Support
     el.addEventListener('mousedown', (e) => {
       e.preventDefault();
       el.classList.add('active');
-      triggerHaptic(18);
+      triggerControllerVibe(rumble || 20);
       sendInput('btnDown', { btn: key });
     });
 
-    el.addEventListener('mouseup', (e) => {
-      e.preventDefault();
-      el.classList.remove('active');
-      sendInput('btnUp', { btn: key });
-    });
+    const onMouseUp = () => {
+      if (el.classList.contains('active')) {
+        el.classList.remove('active');
+        sendInput('btnUp', { btn: key });
+      }
+    };
+    el.addEventListener('mouseup', onMouseUp);
+    window.addEventListener('mouseup', onMouseUp);
 
     el.addEventListener('mouseleave', () => {
       if (el.classList.contains('active')) {
@@ -374,7 +468,7 @@ function setupButtons() {
   });
 }
 
-// ── TOUCHPAD AS MOUSE TRACKPAD ──────────────────────────────────
+// ── 8. DUALSENSE TOUCHPAD AS MOUSE TRACKPAD ────────────────────────────
 function setupTouchpadTrackpad() {
   const tp = document.getElementById('btn-touchpad');
   if (!tp) return;
@@ -387,7 +481,7 @@ function setupTouchpadTrackpad() {
   tp.addEventListener('touchstart', (e) => {
     e.preventDefault();
     tp.classList.add('active');
-    triggerHaptic(10);
+    triggerControllerVibe(14);
     const touch = e.touches[0];
     lastTouchX = touch.clientX;
     lastTouchY = touch.clientY;
@@ -404,7 +498,6 @@ function setupTouchpadTrackpad() {
     
     totalDist += Math.sqrt(dx * dx + dy * dy);
 
-    // Emit drag move delta coordinates to PC client
     sendInput('touchpad-move', { dx: dx, dy: dy });
 
     lastTouchX = touch.clientX;
@@ -418,8 +511,10 @@ function setupTouchpadTrackpad() {
     // Tap detection: short duration + small movement
     const duration = Date.now() - touchStartTime;
     if (duration < 250 && totalDist < 8) {
-      triggerHaptic(24);
+      triggerControllerVibe([25, 20]);
       sendInput('touchpad-click', {});
+      sendInput('btnDown', { btn: 'touchpad' });
+      setTimeout(() => sendInput('btnUp', { btn: 'touchpad' }), 100);
     }
 
     lastTouchX = null;
@@ -428,43 +523,6 @@ function setupTouchpadTrackpad() {
 
   tp.addEventListener('touchend', endHandler, { passive: false });
   tp.addEventListener('touchcancel', endHandler, { passive: false });
-
-  // Mouse fallback support for emulator / testing
-  let isMouseDown = false;
-  tp.addEventListener('mousedown', (e) => {
-    e.preventDefault();
-    tp.classList.add('active');
-    triggerHaptic(10);
-    isMouseDown = true;
-    lastTouchX = e.clientX;
-    lastTouchY = e.clientY;
-    touchStartTime = Date.now();
-    totalDist = 0;
-  });
-
-  window.addEventListener('mousemove', (e) => {
-    if (!isMouseDown) return;
-    const dx = e.clientX - lastTouchX;
-    const dy = e.clientY - lastTouchY;
-    totalDist += Math.sqrt(dx * dx + dy * dy);
-    
-    sendInput('touchpad-move', { dx: dx, dy: dy });
-    
-    lastTouchX = e.clientX;
-    lastTouchY = e.clientY;
-  });
-
-  window.addEventListener('mouseup', () => {
-    if (isMouseDown) {
-      isMouseDown = false;
-      tp.classList.remove('active');
-      const duration = Date.now() - touchStartTime;
-      if (duration < 250 && totalDist < 8) {
-        triggerHaptic(24);
-        sendInput('touchpad-click', {});
-      }
-    }
-  });
 }
 
 function sendInput(type, payload) {
@@ -474,7 +532,7 @@ function sendInput(type, payload) {
   socket.emit('controller-input', { type, ...payload });
 }
 
-// ── STARTUP ────────────────────────────────────────────────────
+// ── 9. STARTUP LIFECYCLE ──────────────────────────────────────────────
 let started = false;
 
 function start() {
@@ -482,8 +540,8 @@ function start() {
   started = true;
 
   initSocket();
-  new VirtualStick('left-stick', 'left-stick-boundary', 'left');
-  new VirtualStick('right-stick', 'right-stick-boundary', 'right');
+  new VirtualStick('left-stick', 'left-stick-boundary', '.joystick-zone-left', 'left');
+  new VirtualStick('right-stick', 'right-stick-boundary', '.joystick-zone-right', 'right');
   setupButtons();
   setupTouchpadTrackpad();
 
@@ -497,17 +555,9 @@ function start() {
     };
   }
 
-  // Connect click events anywhere to fullscreen triggers once paired
-  window.addEventListener('click', () => {
-    if (socket && socket.connected) {
-      enterFullscreen();
-    }
-  });
-  window.addEventListener('touchstart', () => {
-    if (socket && socket.connected) {
-      enterFullscreen();
-    }
-  });
+  // Auto-fullscreen trigger on first user gesture
+  window.addEventListener('click', enterFullscreen, { once: true });
+  window.addEventListener('touchstart', enterFullscreen, { once: true });
 
   if (ui.roomInput) {
     ui.roomInput.focus();

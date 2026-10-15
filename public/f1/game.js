@@ -1140,7 +1140,7 @@
       window.triggerGamepadRumble(60, 0.45, 0.05);
     }
     if (typeof window.triggerPhoneVibration === 'function') {
-      window.triggerPhoneVibration(40);
+      window.triggerPhoneVibration([35, 20, 45]);
     }
     
     // Tiny exhaust backfire flame if upshifting at high RPM!
@@ -2685,6 +2685,9 @@
     const modal = document.getElementById('f1-controller-modal');
     if (!modal) return;
     modal.style.display = 'flex';
+    if (!window.roomCode && window.socket && window.socket.connected) {
+      window.socket.emit('join-room-pc', {});
+    }
     updateF1ControllerModalUI();
   };
 
@@ -2701,8 +2704,8 @@
     const dot = document.getElementById('f1-ctrl-status-dot');
     const txt = document.getElementById('f1-ctrl-status-text');
 
-    if (roomEl && code) {
-      roomEl.innerText = code;
+    if (roomEl) {
+      roomEl.innerText = code || 'GENERATING...';
     }
 
     if (code && qrImg) {
@@ -2712,6 +2715,9 @@
         if (qrSpinner) qrSpinner.style.display = 'none';
         qrImg.style.display = 'block';
       };
+    } else if (!code && qrSpinner) {
+      qrSpinner.style.display = 'block';
+      if (qrImg) qrImg.style.display = 'none';
     }
 
     if (window.controllerConnected) {
@@ -6731,6 +6737,17 @@
       } else if (ctrl.joystickY > 0.15) {
         gamepadBrake = Math.max(gamepadBrake, Math.min(1.0, ctrl.joystickY));
       }
+      // D-Pad steering and throttle/brake overrides
+      if (ctrl.btnDpadLeft) {
+        gamepadSteer = -1.0;
+      } else if (ctrl.btnDpadRight) {
+        gamepadSteer = 1.0;
+      }
+      if (ctrl.btnDpadUp) {
+        gamepadThrottle = 1.0;
+      } else if (ctrl.btnDpadDown) {
+        gamepadBrake = 1.0;
+      }
       if (ctrl.btnR2 || ctrl.btnCross) {
         gamepadThrottle = 1.0;
       }
@@ -6762,6 +6779,9 @@
 
     // Toggle DRS on press (rising edge)
     if (gamepadDrsPressed && !window.lastGamepadDrs && isRaceActive) {
+      if (typeof window.triggerPhoneVibration === 'function') {
+        window.triggerPhoneVibration(50);
+      }
       if (window.f1RegulationEra === '2026') {
         if (drsAvailable) {
           drsActive = !drsActive;
@@ -7321,6 +7341,13 @@
       }
     }
 
+    // Redline rev limiter haptic rumble
+    if (currentRPM >= 14200 && isRaceActive) {
+      if (typeof window.triggerPhoneVibration === 'function' && Math.random() < 0.22) {
+        window.triggerPhoneVibration(16);
+      }
+    }
+
     // Update ERS, DRS, Fuel, and Tyre display texts
     const hDrs = document.getElementById('steering-hud-drs');
     if (hDrs) {
@@ -7702,7 +7729,7 @@
               window.triggerGamepadRumble(50, 0.38, 0.08);
             }
             if (typeof window.triggerPhoneVibration === 'function') {
-              window.triggerPhoneVibration(30);
+              window.triggerPhoneVibration([35, 25, 35]);
             }
           }
         } else {
@@ -7731,7 +7758,7 @@
             window.triggerGamepadRumble(350, 0.85, 0.55);
           }
           if (typeof window.triggerPhoneVibration === 'function') {
-            window.triggerPhoneVibration(250);
+            window.triggerPhoneVibration([120, 40, 180]);
           }
           
           if (impact > 45.0 && !safetyCarActive) {
