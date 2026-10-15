@@ -531,7 +531,7 @@
 
               racer.collisionEnabled = false;
 
-              if (racer.mesh) racer.mesh.visible = false;
+              if (racer.mesh) racer.mesh.visible = true;
 
             }
 

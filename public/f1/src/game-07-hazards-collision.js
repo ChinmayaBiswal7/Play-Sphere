@@ -18,7 +18,7 @@
     car.collisionEnabled = false;
     if (car.mesh) {
       window.unregisterCollider(car.mesh);
-      if (!car.isPlayer) car.mesh.visible = false; // Hide AI karts inside garages!
+      car.mesh.visible = true; // Keep visible parked in garage bay
     }
   };
 

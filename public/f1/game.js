@@ -265,9 +265,22 @@
 
     const compound = TYRE_COMPOUNDS[car.tyreCompound] || TYRE_COMPOUNDS.medium;
     
-    // Scale tyre life to selected race laps (maxLaps)
-    const targetLaps = Math.max(2, maxLaps * (car.tyreCompound === 'soft' ? 0.30 : (car.tyreCompound === 'hard' ? 0.78 : 0.55)));
-    const wearPerSecondRef = 100.0 / (targetLaps * 30.0);
+    // Authentic F1 tyre durability:
+    // Soft: 15-18 laps (aggressive grip, higher wear ~6-7% per lap)
+    // Medium: 25-30 laps (balanced race tire ~3.5-4% per lap)
+    // Hard: 35-45 laps (ultra durable ~2-2.5% per lap)
+    // Intermediate / Wet: 25-30 laps in rain
+    let stintLaps = 26;
+    if (car.tyreCompound === 'soft') stintLaps = 16;
+    else if (car.tyreCompound === 'hard') stintLaps = 38;
+    else if (car.tyreCompound === 'intermediate' || car.tyreCompound === 'wet') stintLaps = 28;
+
+    // In short race sessions (e.g. 5 or 10 laps), scale gracefully so a soft tire still lasts 65% of race distance
+    const raceScaleLaps = (typeof maxLaps === 'number' && maxLaps >= 3 && currentSessionIndex === 2)
+      ? Math.max(8, maxLaps * (car.tyreCompound === 'soft' ? 0.65 : (car.tyreCompound === 'hard' ? 1.4 : 1.0)))
+      : stintLaps;
+
+    const wearPerSecondRef = 100.0 / (raceScaleLaps * 65.0); // 65 seconds per lap
     
     const speedRatio = Math.max(0.0, Math.min(1.5, Math.abs(car.speed) / 60.0));
     let wearAmount = wearPerSecondRef * speedRatio * delta;
@@ -428,8 +441,13 @@
       window.f1ActiveGarages.forEach(g => {
         if (g.mechanics) {
           g.mechanics.forEach(m => {
-            const targetX = m.baseX > 0 ? (m.baseX + 1.8) : (m.baseX - 1.8);
-            m.position.x = targetX;
+            if (m.role === 'front_jack') {
+              m.position.x = 3.6;
+              m.rotation.y = -Math.PI / 2;
+            } else {
+              const targetX = m.baseX > 0 ? (m.baseX + 2.5) : (m.baseX - 2.5);
+              m.position.x = targetX;
+            }
           });
         }
       });
@@ -466,15 +484,31 @@
     carDamage = 0.0;
     
     const totalBoxes = F1_TEAMS.length;
-    const pBoxT = 0.30 + (selectedTeamIndex / Math.max(1, totalBoxes - 1)) * 0.40;
+    const T_START = 0.26;
+    const T_END = 0.74;
+    const TEAM_STEP = (T_END - T_START) / totalBoxes;
+    const pBoxT = T_START + (selectedTeamIndex + 0.5) * TEAM_STEP;
     pitProgress = pBoxT;
     if (pitCurve && playerKart.mesh) {
       const pt = pitCurve.getPointAt(pBoxT);
       const tang = pitCurve.getTangentAt(pBoxT).normalize();
       const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-      playerKart.mesh.position.copy(pt.clone().add(norm.multiplyScalar(17.0)));
-      playerKart.mesh.lookAt(pt);
-      playerKart.heading = Math.atan2(pt.x - playerKart.mesh.position.x, pt.z - playerKart.mesh.position.z);
+      playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(24.0)));
+      const exitDir = norm.clone().negate().normalize();
+      playerKart.heading = Math.atan2(exitDir.x, exitDir.z);
+      playerKart.mesh.rotation.set(0, playerKart.heading, 0);
+    }
+
+    if (window.f1ActiveGarages) {
+      window.f1ActiveGarages.forEach(g => {
+        if (g.mechanics) {
+          g.mechanics.forEach(m => {
+            m.position.x = m.baseX;
+            m.position.z = m.baseZ;
+            m.rotation.y = m.role === 'front_jack' ? Math.PI : (m.baseX > 0 ? -Math.PI / 2 : Math.PI / 2);
+          });
+        }
+      });
     }
     
     playerKart.qualifyingState = "GARAGE";
@@ -991,6 +1025,10 @@
       if (e.code === 'Space') {
         e.preventDefault();
       }
+      if (e.code === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+      }
       handleKey(e.code, true);
     }, true);
     window.addEventListener('keyup', (e) => {
@@ -1002,12 +1040,18 @@
       if (e.code === 'Space') {
         e.preventDefault();
       }
+      if (e.code === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+      }
       handleKey(e.code, false);
     }, true);
 
     document.addEventListener('fullscreenchange', () => {
-      if (!document.fullscreenElement && isRaceActive && !isSettingsOpen) {
-        toggleSettingsOverlay();
+      if (document.fullscreenElement) {
+        if (navigator.keyboard && navigator.keyboard.lock) {
+          navigator.keyboard.lock(['Escape']).catch(() => {});
+        }
       }
     });
 
@@ -1065,20 +1109,21 @@
       return 1500 + Math.min(1.0, Math.abs(speed) / 5.0) * 11000;
     }
     
-    const minSpeed = gearMinSpeed[gear];
-    const maxSpeed = gearMaxSpeed[gear];
-    
-    if (speed < minSpeed) {
-      // Lugging the engine
-      return Math.max(1500, 1500 + (speed / Math.max(0.1, minSpeed)) * 1500);
+    const absSpeed = Math.abs(speed);
+    if (absSpeed < 0.5) {
+      return 1500 + Math.random() * 60; // Smooth idle revs when stopped
     }
+
+    const maxSpeed = gearMaxSpeed[gear] || 90.0;
+    const ratio = Math.min(1.05, absSpeed / Math.max(1.0, maxSpeed));
+    let rpm = 3500 + ratio * 10800;
     
-    let rpmRatio = (speed - minSpeed) / (maxSpeed - minSpeed);
-    let rpm = 2500 + rpmRatio * 12000;
-    
-    if (rpm >= 14920) {
-      // Limiter bounce!
-      rpm = 14900 + Math.random() * 100;
+    if (ratio >= 0.98) {
+      // Limiter bounce at top of gear!
+      rpm = 14350 + Math.random() * 200;
+    }
+    if (rpm >= 14850) {
+      rpm = 14750 + Math.random() * 150;
     }
     return rpm;
   }
@@ -3110,7 +3155,7 @@
         } else {
           r.isTrackActive    = false;
           r.collisionEnabled = false;
-          if (r.mesh) r.mesh.visible = false;
+          if (r.mesh) r.mesh.visible = true;
         }
         r.currentOffset    = 0.0;
         
@@ -4050,17 +4095,19 @@
       bctx.textBaseline = 'middle';
       bctx.fillText(String(meters), 64, 66);
       const bTex = new THREE.CanvasTexture(bCanvas);
-      const bMat = new THREE.MeshBasicMaterial({ map: bTex, side: THREE.DoubleSide });
+      const bMat = new THREE.MeshBasicMaterial({ map: bTex, side: THREE.FrontSide });
       const bMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.6), bMat);
       bMesh.position.y = 0.85;
+      const backPlate = new THREE.Mesh(new THREE.BoxGeometry(1.65, 1.65, 0.05), new THREE.MeshStandardMaterial({ color: 0x1e293b }));
+      backPlate.position.set(0, 0.85, -0.03);
       const bPost = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.7, 8), concreteMat);
       bPost.position.y = 0.85;
       const grp = new THREE.Group();
-      grp.add(bMesh, bPost);
+      grp.add(bMesh, backPlate, bPost);
       return grp;
     };
 
-    // Place before Turn 1 (t = 0.075, 0.085, 0.095)
+    // Place before Turn 1 (t = 0.075, 0.085, 0.095) and Turn 4 (t = 0.380, 0.390, 0.400)
     [
       { t: 0.075, m: 150 },
       { t: 0.085, m: 100 },
@@ -4074,7 +4121,7 @@
       const nrm = new THREE.Vector3(-tng.z, 0, tng.x).normalize();
       const board = createBrakeBoard(item.m);
       board.position.copy(pt).add(nrm.clone().multiplyScalar(-9.5)); // sits on runoff edge
-      board.lookAt(board.position.clone().add(tng));
+      board.lookAt(board.position.clone().sub(tng)); // Faces oncoming cars!
       scene.add(board);
     });
 
@@ -4633,47 +4680,67 @@
     car.add(antenna);
 
     // ==========================
-    // 3. Front Suspension Wishbones (Dual Carbon A-Arms)
+    // 3. F1 Front & Rear Suspension (Precision Multi-Link Carbon Wishbones)
     // ==========================
-    // Upper & Lower wishbones connecting chassis nose to wheel uprights
+    // Helper to build true connecting suspension rods spanning between exact 3D coordinates
+    const createSuspensionRod = (p1, p2, radius, mat) => {
+      const v1 = new THREE.Vector3(...p1);
+      const v2 = new THREE.Vector3(...p2);
+      const len = v1.distanceTo(v2);
+      const mid = v1.clone().add(v2).multiplyScalar(0.5);
+      const rod = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, len, 8), mat);
+      rod.position.copy(mid);
+      const dir = v2.clone().sub(v1).normalize();
+      const up = new THREE.Vector3(0, 1, 0);
+      rod.quaternion.setFromUnitVectors(up, dir);
+      rod.castShadow = true;
+      return rod;
+    };
+
     [-1, 1].forEach(side => {
-      // Upper front wishbone
-      const wishboneUpper = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.018, 0.018, 0.85, 8),
-        carbon
-      );
-      wishboneUpper.position.set(side * 0.62, 0.38, 1.65);
-      wishboneUpper.rotation.z = side * 0.25;
-      wishboneUpper.rotation.x = -0.15;
-      car.add(wishboneUpper);
+      // ── FRONT SUSPENSION (Connecting nose to front upright at x = ±1.05, y = 0.36, z = 1.60) ──
+      // Front Upper A-Arm (Forward & Rearward legs)
+      car.add(createSuspensionRod([side * 0.30, 0.42, 1.76], [side * 1.05, 0.38, 1.60], 0.016, carbon));
+      car.add(createSuspensionRod([side * 0.30, 0.40, 1.42], [side * 1.05, 0.38, 1.60], 0.016, carbon));
 
-      // Upper rear wishbone
-      const wishboneUpperR = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.018, 0.018, 0.82, 8),
-        carbon
-      );
-      wishboneUpperR.position.set(side * 0.62, 0.38, 1.45);
-      wishboneUpperR.rotation.z = side * 0.25;
-      wishboneUpperR.rotation.x = 0.15;
-      car.add(wishboneUpperR);
+      // Front Lower A-Arm (Forward & Rearward legs)
+      car.add(createSuspensionRod([side * 0.28, 0.20, 1.76], [side * 1.05, 0.24, 1.60], 0.018, carbon));
+      car.add(createSuspensionRod([side * 0.28, 0.20, 1.42], [side * 1.05, 0.24, 1.60], 0.018, carbon));
 
-      // Lower wishbone
-      const wishboneLower = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.02, 0.02, 0.86, 8),
-        carbon
-      );
-      wishboneLower.position.set(side * 0.62, 0.22, 1.55);
-      wishboneLower.rotation.z = side * 0.12;
-      car.add(wishboneLower);
+      // Front Pushrod (Diagonal strut from bottom upright to top monocoque)
+      car.add(createSuspensionRod([side * 1.00, 0.22, 1.60], [side * 0.30, 0.48, 1.50], 0.015, titanium));
 
-      // Steering track rod
-      const trackRod = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.016, 0.016, 0.82, 8),
-        titanium
-      );
-      trackRod.position.set(side * 0.60, 0.30, 1.38);
-      trackRod.rotation.z = side * 0.15;
-      car.add(trackRod);
+      // Steering track tie-rod
+      car.add(createSuspensionRod([side * 0.30, 0.32, 1.46], [side * 1.04, 0.32, 1.52], 0.014, carbon));
+
+      // Front Brake Cooling Duct & Vertical Carbon Upright
+      const frontUpright = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.26, 0.22), carbon);
+      frontUpright.position.set(side * 1.02, 0.34, 1.60);
+      car.add(frontUpright);
+
+      const frontBrakeDuct = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.14, 0.16), carbon);
+      frontBrakeDuct.position.set(side * 0.98, 0.34, 1.74);
+      car.add(frontBrakeDuct);
+
+      // ── REAR SUSPENSION (Connecting engine casing to rear upright at x = ±1.05, y = 0.38, z = -1.50) ──
+      // Rear Upper A-Arm
+      car.add(createSuspensionRod([side * 0.35, 0.44, -1.35], [side * 1.05, 0.40, -1.50], 0.018, carbon));
+      car.add(createSuspensionRod([side * 0.35, 0.44, -1.65], [side * 1.05, 0.40, -1.50], 0.018, carbon));
+
+      // Rear Lower A-Arm
+      car.add(createSuspensionRod([side * 0.35, 0.22, -1.35], [side * 1.05, 0.26, -1.50], 0.020, carbon));
+      car.add(createSuspensionRod([side * 0.35, 0.22, -1.65], [side * 1.05, 0.26, -1.50], 0.020, carbon));
+
+      // Rear Pullrod (Diagonal strut)
+      car.add(createSuspensionRod([side * 1.00, 0.42, -1.50], [side * 0.35, 0.20, -1.55], 0.016, titanium));
+
+      // Rear Titanium Drive Halfshaft (Axle)
+      car.add(createSuspensionRod([side * 0.32, 0.34, -1.50], [side * 1.05, 0.34, -1.50], 0.022, titanium));
+
+      // Rear Brake Duct & Upright
+      const rearUpright = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.28, 0.24), carbon);
+      rearUpright.position.set(side * 1.02, 0.35, -1.50);
+      car.add(rearUpright);
     });
 
     // ==========================
@@ -6823,8 +6890,8 @@
     // Base top speed: matches gear 8 ceiling so full speed is reachable in G8
     // upgrades.speed adds extra above the base, but scaled down by car damage (up to 30% speed penalty)
     const dmgSpeedFactor = 1.0 - (carDamage / 100.0) * 0.30;
-    let topSpeedBase = (75.0 + upgrades.speed * 4) * dmgSpeedFactor;
-    if (playerKart.bonus === 'topSpeed') topSpeedBase += 6 * dmgSpeedFactor;
+    let topSpeedBase = (88.0 + upgrades.speed * 2) * dmgSpeedFactor;
+    if (playerKart.bonus === 'topSpeed') topSpeedBase += 4 * dmgSpeedFactor;
     
     // Speed limit for current gear: gear max speed IS the top speed
     // topSpeedBase is the ABSOLUTE car cap (upgrades + team bonus)
@@ -7442,14 +7509,10 @@
 
     // Grass / Gravel traps / Barrier collision
     isGravel = false;
-    const isEnteringPitLane = (playerKart.currentOffset >= 0.930 || playerKart.currentOffset <= 0.090) && playerKart.sideOffset > 0.0;
-    if (isEnteringPitLane && playerKart.sideOffset > 3.8 && !playerKart.inPitLane) {
-      playerKart.inPitLane = true;
-      isPitting = true;
-      playerKart.pitZone = "PIT_ENTRY";
-    }
+    const isPitStraightRight = (playerKart.currentOffset >= 0.930 || playerKart.currentOffset <= 0.090) && playerKart.sideOffset > 0.0;
     
-    if (!isEnteringPitLane && !playerKart.inPitLane) {
+    // Only apply barrier collision if NOT on the pit straight right side (where pit entrance & apron exist)
+    if (!isPitStraightRight && !playerKart.inPitLane) {
       if (Math.abs(playerKart.sideOffset) > 8.8) {
         if (Math.abs(playerKart.sideOffset) < 10.7) {
           isGravel = true;
@@ -7465,22 +7528,6 @@
             }
           }
         } else {
-          // Log barrier collision event
-          // console.error(
-          //   "[PLAYER COLLISION TARGET]",
-          //   {
-          //     objectName: "BARRIER",
-          //     objectType: "Wall",
-          //     uuid: "armco-barrier-limit",
-          //     parentName: "Track",
-          //     parentUuid: null,
-          //     userData: { colliderType: "BARRIER" },
-          //     visible: true,
-          //     worldPosition: playerKart.mesh.position.clone()
-          //   }
-          // );
-          // console.trace("[COLLISION CALL STACK]");
-
           // Push back from wall barrier (Armco)
           const correctedOffset = Math.sign(playerKart.sideOffset) * 10.65;
           playerKart.sideOffset = correctedOffset;
@@ -7519,25 +7566,25 @@
     // ── Pit lane entry world-space trigger ──
     const isPitEntryAllowed = (currentSessionIndex !== 2 || raceTimer > 5.0);
     if (!isPitting && !isStartingSequence && isPitEntryAllowed && pitCurve) {
-      const pitEntryPos = pitCurve.getPointAt(0.0);
-      const distToPitEntry = playerKart.mesh.position.distanceTo(pitEntryPos);
-      if (distToPitEntry < 3.5 && playerKart.sideOffset > 3.5) {
+      const pitProj = findNearestPitProjection(playerKart.mesh.position);
+      // When car approaches pit entrance lane (progress < 0.15, within 5.5m lateral offset)
+      if (pitProj.progress < 0.15 && Math.abs(pitProj.lateralOffset) < 5.5) {
         const forward = new THREE.Vector3(Math.sin(playerKart.heading), 0, Math.cos(playerKart.heading)).normalize();
-        const pitTangent = pitCurve.getTangentAt(0.0).normalize();
+        const pitTangent = pitCurve.getTangentAt(Math.max(0, pitProj.progress)).normalize();
         const dirDot = forward.dot(pitTangent);
         
-        // Player must deliberately steer towards the pit entrance lane
-        if (dirDot > 0.85) {
+        // Player steered into the pit entry lane
+        if (dirDot > 0.65) {
           isPitting = true;
           playerKart.qualifyingState = "IN_LAP";
-          pitProgress = 0.0;
+          pitProgress = pitProj.progress;
           hasStoppedAtPitBox = false;
           pendingPitStop = false;
           playerKart.pitZone = "PIT_ENTRY";
           playerKart.inPitLane = true;
           playerKart.pitLimiterActive = true;
           playerKart.currentPath = "PIT";
-          speakEngineerRadio("Entering pit lane. Limiter speed active.");
+          speakEngineerRadio("Entering pit lane. Pit limiter is active.", 80);
         }
       }
     }
@@ -7592,10 +7639,10 @@
         const pos = pitCurve.getPointAt(pBoxT);
         const tang = pitCurve.getTangentAt(pBoxT).normalize();
         const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-        const boxPos = pos.clone().add(norm.multiplyScalar(9.5));
+        const boxPos = pos.clone().add(norm.clone().multiplyScalar(9.5));
 
         const distToBox = playerKart.mesh.position.distanceTo(boxPos);
-        const isNearBox = (distToBox < 2.8 && Math.abs(playerKart.speed) < 12.0 && playerKart.pitZone === "PIT_LANE" && !playerKart.isExitingGarage);
+        const isNearBox = (distToBox < 4.5 && Math.abs(playerKart.speed) < 14.0 && !playerKart.isExitingGarage);
 
         if (pitProgress >= (pBoxT - 0.06) && pitProgress <= (pBoxT + 0.04) && !playerKart.isExitingGarage) {
           rdShowMessage('PULL INTO PIT BOX // BRAKE & STOP', 0.2, '#10b981');
@@ -8697,7 +8744,7 @@
 
               racer.collisionEnabled = false;
 
-              if (racer.mesh) racer.mesh.visible = false;
+              if (racer.mesh) racer.mesh.visible = true;
 
             }
 
@@ -9906,7 +9953,7 @@
     car.collisionEnabled = false;
     if (car.mesh) {
       window.unregisterCollider(car.mesh);
-      if (!car.isPlayer) car.mesh.visible = false; // Hide AI karts inside garages!
+      car.mesh.visible = true; // Keep visible parked in garage bay
     }
   };
 

@@ -471,47 +471,67 @@
     car.add(antenna);
 
     // ==========================
-    // 3. Front Suspension Wishbones (Dual Carbon A-Arms)
+    // 3. F1 Front & Rear Suspension (Precision Multi-Link Carbon Wishbones)
     // ==========================
-    // Upper & Lower wishbones connecting chassis nose to wheel uprights
+    // Helper to build true connecting suspension rods spanning between exact 3D coordinates
+    const createSuspensionRod = (p1, p2, radius, mat) => {
+      const v1 = new THREE.Vector3(...p1);
+      const v2 = new THREE.Vector3(...p2);
+      const len = v1.distanceTo(v2);
+      const mid = v1.clone().add(v2).multiplyScalar(0.5);
+      const rod = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, len, 8), mat);
+      rod.position.copy(mid);
+      const dir = v2.clone().sub(v1).normalize();
+      const up = new THREE.Vector3(0, 1, 0);
+      rod.quaternion.setFromUnitVectors(up, dir);
+      rod.castShadow = true;
+      return rod;
+    };
+
     [-1, 1].forEach(side => {
-      // Upper front wishbone
-      const wishboneUpper = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.018, 0.018, 0.85, 8),
-        carbon
-      );
-      wishboneUpper.position.set(side * 0.62, 0.38, 1.65);
-      wishboneUpper.rotation.z = side * 0.25;
-      wishboneUpper.rotation.x = -0.15;
-      car.add(wishboneUpper);
+      // ── FRONT SUSPENSION (Connecting nose to front upright at x = ±1.05, y = 0.36, z = 1.60) ──
+      // Front Upper A-Arm (Forward & Rearward legs)
+      car.add(createSuspensionRod([side * 0.30, 0.42, 1.76], [side * 1.05, 0.38, 1.60], 0.016, carbon));
+      car.add(createSuspensionRod([side * 0.30, 0.40, 1.42], [side * 1.05, 0.38, 1.60], 0.016, carbon));
 
-      // Upper rear wishbone
-      const wishboneUpperR = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.018, 0.018, 0.82, 8),
-        carbon
-      );
-      wishboneUpperR.position.set(side * 0.62, 0.38, 1.45);
-      wishboneUpperR.rotation.z = side * 0.25;
-      wishboneUpperR.rotation.x = 0.15;
-      car.add(wishboneUpperR);
+      // Front Lower A-Arm (Forward & Rearward legs)
+      car.add(createSuspensionRod([side * 0.28, 0.20, 1.76], [side * 1.05, 0.24, 1.60], 0.018, carbon));
+      car.add(createSuspensionRod([side * 0.28, 0.20, 1.42], [side * 1.05, 0.24, 1.60], 0.018, carbon));
 
-      // Lower wishbone
-      const wishboneLower = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.02, 0.02, 0.86, 8),
-        carbon
-      );
-      wishboneLower.position.set(side * 0.62, 0.22, 1.55);
-      wishboneLower.rotation.z = side * 0.12;
-      car.add(wishboneLower);
+      // Front Pushrod (Diagonal strut from bottom upright to top monocoque)
+      car.add(createSuspensionRod([side * 1.00, 0.22, 1.60], [side * 0.30, 0.48, 1.50], 0.015, titanium));
 
-      // Steering track rod
-      const trackRod = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.016, 0.016, 0.82, 8),
-        titanium
-      );
-      trackRod.position.set(side * 0.60, 0.30, 1.38);
-      trackRod.rotation.z = side * 0.15;
-      car.add(trackRod);
+      // Steering track tie-rod
+      car.add(createSuspensionRod([side * 0.30, 0.32, 1.46], [side * 1.04, 0.32, 1.52], 0.014, carbon));
+
+      // Front Brake Cooling Duct & Vertical Carbon Upright
+      const frontUpright = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.26, 0.22), carbon);
+      frontUpright.position.set(side * 1.02, 0.34, 1.60);
+      car.add(frontUpright);
+
+      const frontBrakeDuct = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.14, 0.16), carbon);
+      frontBrakeDuct.position.set(side * 0.98, 0.34, 1.74);
+      car.add(frontBrakeDuct);
+
+      // ── REAR SUSPENSION (Connecting engine casing to rear upright at x = ±1.05, y = 0.38, z = -1.50) ──
+      // Rear Upper A-Arm
+      car.add(createSuspensionRod([side * 0.35, 0.44, -1.35], [side * 1.05, 0.40, -1.50], 0.018, carbon));
+      car.add(createSuspensionRod([side * 0.35, 0.44, -1.65], [side * 1.05, 0.40, -1.50], 0.018, carbon));
+
+      // Rear Lower A-Arm
+      car.add(createSuspensionRod([side * 0.35, 0.22, -1.35], [side * 1.05, 0.26, -1.50], 0.020, carbon));
+      car.add(createSuspensionRod([side * 0.35, 0.22, -1.65], [side * 1.05, 0.26, -1.50], 0.020, carbon));
+
+      // Rear Pullrod (Diagonal strut)
+      car.add(createSuspensionRod([side * 1.00, 0.42, -1.50], [side * 0.35, 0.20, -1.55], 0.016, titanium));
+
+      // Rear Titanium Drive Halfshaft (Axle)
+      car.add(createSuspensionRod([side * 0.32, 0.34, -1.50], [side * 1.05, 0.34, -1.50], 0.022, titanium));
+
+      // Rear Brake Duct & Upright
+      const rearUpright = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.28, 0.24), carbon);
+      rearUpright.position.set(side * 1.02, 0.35, -1.50);
+      car.add(rearUpright);
     });
 
     // ==========================

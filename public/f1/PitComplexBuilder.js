@@ -353,19 +353,19 @@ class PitComplexBuilder {
 
             const garageGroup = new THREE.Group();
 
-            // Back wall (located at local +Z so front facing pit lane is completely wide open!)
+            // Back wall (located at local -Z away from track, so front facing track at +Z is completely wide open!)
             const backWall = this.box(GARAGE_WIDTH - 0.1, GARAGE_HEIGHT, 0.3, 0x1e293b);
-            backWall.position.set(0, 0, GARAGE_DEPTH / 2);
+            backWall.position.set(0, 0, -GARAGE_DEPTH / 2);
             garageGroup.add(backWall);
 
             // Structural architectural divider columns at bay boundary (No solid walls cutting across bay!)
             [-GARAGE_WIDTH / 2, GARAGE_WIDTH / 2].forEach(colX => {
                 const column = this.box(0.35, GARAGE_HEIGHT, 1.4, 0x334155);
-                column.position.set(colX, 0, -GARAGE_DEPTH / 2 + 0.7); // Front portal column
+                column.position.set(colX, 0, GARAGE_DEPTH / 2 - 0.7); // Front portal column
                 garageGroup.add(column);
 
                 const rearColumn = this.box(0.35, GARAGE_HEIGHT, 1.4, 0x334155);
-                rearColumn.position.set(colX, 0, GARAGE_DEPTH / 2 - 0.7); // Rear pillar
+                rearColumn.position.set(colX, 0, -GARAGE_DEPTH / 2 + 0.7); // Rear pillar
                 garageGroup.add(rearColumn);
             });
 
@@ -410,7 +410,7 @@ class PitComplexBuilder {
                 }
             });
 
-            // ── Mechanics inside garage positioned cleanly back against side walls ──
+            // ── Mechanics inside garage positioned cleanly around the car ──
             const crewMat = new THREE.MeshStandardMaterial({ color: team.color, roughness: 0.6 });
             const trousersMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.8 });
             const skinMat = new THREE.MeshStandardMaterial({ color: 0xd4a373, roughness: 0.5 });
@@ -469,14 +469,15 @@ class PitComplexBuilder {
                 return person;
             };
 
-            // Engineers positioned at side walls (Leaving 10m open clearance for car)
+            // Engineers positioned around the car inside the garage bay
             const mechanics = [
-                createGarageMechanic(-5.0, 2.5, Math.PI / 3, 'aero_front_l'),
-                createGarageMechanic(5.0, 2.5, -Math.PI / 3, 'aero_front_r'),
-                createGarageMechanic(-5.2, 0.0, Math.PI / 2, 'telemetry'),
-                createGarageMechanic(5.2, 0.0, -Math.PI / 2, 'mechanic_r'),
-                createGarageMechanic(-5.0, -2.5, Math.PI / 2, 'tyre_l'),
-                createGarageMechanic(5.0, -2.5, -Math.PI / 2, 'tyre_r')
+                createGarageMechanic(-2.2, 3.2, Math.PI / 2, 'aero_front_l'),
+                createGarageMechanic(2.2, 3.2, -Math.PI / 2, 'aero_front_r'),
+                createGarageMechanic(-2.5, 1.8, Math.PI / 2, 'telemetry'),
+                createGarageMechanic(2.5, 1.8, -Math.PI / 2, 'mechanic_r'),
+                createGarageMechanic(-2.2, 0.5, Math.PI / 2, 'tyre_l'),
+                createGarageMechanic(2.2, 0.5, -Math.PI / 2, 'tyre_r'),
+                createGarageMechanic(0.0, 4.8, Math.PI, 'front_jack')
             ];
 
             garageGroup.mechanics = mechanics;

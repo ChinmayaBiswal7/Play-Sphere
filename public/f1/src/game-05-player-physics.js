@@ -508,8 +508,8 @@
     // Base top speed: matches gear 8 ceiling so full speed is reachable in G8
     // upgrades.speed adds extra above the base, but scaled down by car damage (up to 30% speed penalty)
     const dmgSpeedFactor = 1.0 - (carDamage / 100.0) * 0.30;
-    let topSpeedBase = (75.0 + upgrades.speed * 4) * dmgSpeedFactor;
-    if (playerKart.bonus === 'topSpeed') topSpeedBase += 6 * dmgSpeedFactor;
+    let topSpeedBase = (88.0 + upgrades.speed * 2) * dmgSpeedFactor;
+    if (playerKart.bonus === 'topSpeed') topSpeedBase += 4 * dmgSpeedFactor;
     
     // Speed limit for current gear: gear max speed IS the top speed
     // topSpeedBase is the ABSOLUTE car cap (upgrades + team bonus)
@@ -1127,14 +1127,10 @@
 
     // Grass / Gravel traps / Barrier collision
     isGravel = false;
-    const isEnteringPitLane = (playerKart.currentOffset >= 0.930 || playerKart.currentOffset <= 0.090) && playerKart.sideOffset > 0.0;
-    if (isEnteringPitLane && playerKart.sideOffset > 3.8 && !playerKart.inPitLane) {
-      playerKart.inPitLane = true;
-      isPitting = true;
-      playerKart.pitZone = "PIT_ENTRY";
-    }
+    const isPitStraightRight = (playerKart.currentOffset >= 0.930 || playerKart.currentOffset <= 0.090) && playerKart.sideOffset > 0.0;
     
-    if (!isEnteringPitLane && !playerKart.inPitLane) {
+    // Only apply barrier collision if NOT on the pit straight right side (where pit entrance & apron exist)
+    if (!isPitStraightRight && !playerKart.inPitLane) {
       if (Math.abs(playerKart.sideOffset) > 8.8) {
         if (Math.abs(playerKart.sideOffset) < 10.7) {
           isGravel = true;
@@ -1150,22 +1146,6 @@
             }
           }
         } else {
-          // Log barrier collision event
-          // console.error(
-          //   "[PLAYER COLLISION TARGET]",
-          //   {
-          //     objectName: "BARRIER",
-          //     objectType: "Wall",
-          //     uuid: "armco-barrier-limit",
-          //     parentName: "Track",
-          //     parentUuid: null,
-          //     userData: { colliderType: "BARRIER" },
-          //     visible: true,
-          //     worldPosition: playerKart.mesh.position.clone()
-          //   }
-          // );
-          // console.trace("[COLLISION CALL STACK]");
-
           // Push back from wall barrier (Armco)
           const correctedOffset = Math.sign(playerKart.sideOffset) * 10.65;
           playerKart.sideOffset = correctedOffset;
@@ -1204,25 +1184,25 @@
     // ── Pit lane entry world-space trigger ──
     const isPitEntryAllowed = (currentSessionIndex !== 2 || raceTimer > 5.0);
     if (!isPitting && !isStartingSequence && isPitEntryAllowed && pitCurve) {
-      const pitEntryPos = pitCurve.getPointAt(0.0);
-      const distToPitEntry = playerKart.mesh.position.distanceTo(pitEntryPos);
-      if (distToPitEntry < 3.5 && playerKart.sideOffset > 3.5) {
+      const pitProj = findNearestPitProjection(playerKart.mesh.position);
+      // When car approaches pit entrance lane (progress < 0.15, within 5.5m lateral offset)
+      if (pitProj.progress < 0.15 && Math.abs(pitProj.lateralOffset) < 5.5) {
         const forward = new THREE.Vector3(Math.sin(playerKart.heading), 0, Math.cos(playerKart.heading)).normalize();
-        const pitTangent = pitCurve.getTangentAt(0.0).normalize();
+        const pitTangent = pitCurve.getTangentAt(Math.max(0, pitProj.progress)).normalize();
         const dirDot = forward.dot(pitTangent);
         
-        // Player must deliberately steer towards the pit entrance lane
-        if (dirDot > 0.85) {
+        // Player steered into the pit entry lane
+        if (dirDot > 0.65) {
           isPitting = true;
           playerKart.qualifyingState = "IN_LAP";
-          pitProgress = 0.0;
+          pitProgress = pitProj.progress;
           hasStoppedAtPitBox = false;
           pendingPitStop = false;
           playerKart.pitZone = "PIT_ENTRY";
           playerKart.inPitLane = true;
           playerKart.pitLimiterActive = true;
           playerKart.currentPath = "PIT";
-          speakEngineerRadio("Entering pit lane. Limiter speed active.");
+          speakEngineerRadio("Entering pit lane. Pit limiter is active.", 80);
         }
       }
     }
@@ -1277,10 +1257,10 @@
         const pos = pitCurve.getPointAt(pBoxT);
         const tang = pitCurve.getTangentAt(pBoxT).normalize();
         const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-        const boxPos = pos.clone().add(norm.multiplyScalar(9.5));
+        const boxPos = pos.clone().add(norm.clone().multiplyScalar(9.5));
 
         const distToBox = playerKart.mesh.position.distanceTo(boxPos);
-        const isNearBox = (distToBox < 2.8 && Math.abs(playerKart.speed) < 12.0 && playerKart.pitZone === "PIT_LANE" && !playerKart.isExitingGarage);
+        const isNearBox = (distToBox < 4.5 && Math.abs(playerKart.speed) < 14.0 && !playerKart.isExitingGarage);
 
         if (pitProgress >= (pBoxT - 0.06) && pitProgress <= (pBoxT + 0.04) && !playerKart.isExitingGarage) {
           rdShowMessage('PULL INTO PIT BOX // BRAKE & STOP', 0.2, '#10b981');

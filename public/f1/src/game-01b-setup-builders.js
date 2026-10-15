@@ -349,7 +349,7 @@
         } else {
           r.isTrackActive    = false;
           r.collisionEnabled = false;
-          if (r.mesh) r.mesh.visible = false;
+          if (r.mesh) r.mesh.visible = true;
         }
         r.currentOffset    = 0.0;
         
@@ -1289,17 +1289,19 @@
       bctx.textBaseline = 'middle';
       bctx.fillText(String(meters), 64, 66);
       const bTex = new THREE.CanvasTexture(bCanvas);
-      const bMat = new THREE.MeshBasicMaterial({ map: bTex, side: THREE.DoubleSide });
+      const bMat = new THREE.MeshBasicMaterial({ map: bTex, side: THREE.FrontSide });
       const bMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.6), bMat);
       bMesh.position.y = 0.85;
+      const backPlate = new THREE.Mesh(new THREE.BoxGeometry(1.65, 1.65, 0.05), new THREE.MeshStandardMaterial({ color: 0x1e293b }));
+      backPlate.position.set(0, 0.85, -0.03);
       const bPost = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.7, 8), concreteMat);
       bPost.position.y = 0.85;
       const grp = new THREE.Group();
-      grp.add(bMesh, bPost);
+      grp.add(bMesh, backPlate, bPost);
       return grp;
     };
 
-    // Place before Turn 1 (t = 0.075, 0.085, 0.095)
+    // Place before Turn 1 (t = 0.075, 0.085, 0.095) and Turn 4 (t = 0.380, 0.390, 0.400)
     [
       { t: 0.075, m: 150 },
       { t: 0.085, m: 100 },
@@ -1313,7 +1315,7 @@
       const nrm = new THREE.Vector3(-tng.z, 0, tng.x).normalize();
       const board = createBrakeBoard(item.m);
       board.position.copy(pt).add(nrm.clone().multiplyScalar(-9.5)); // sits on runoff edge
-      board.lookAt(board.position.clone().add(tng));
+      board.lookAt(board.position.clone().sub(tng)); // Faces oncoming cars!
       scene.add(board);
     });
 

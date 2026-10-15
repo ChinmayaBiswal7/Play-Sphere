@@ -257,9 +257,22 @@
 
     const compound = TYRE_COMPOUNDS[car.tyreCompound] || TYRE_COMPOUNDS.medium;
     
-    // Scale tyre life to selected race laps (maxLaps)
-    const targetLaps = Math.max(2, maxLaps * (car.tyreCompound === 'soft' ? 0.30 : (car.tyreCompound === 'hard' ? 0.78 : 0.55)));
-    const wearPerSecondRef = 100.0 / (targetLaps * 30.0);
+    // Authentic F1 tyre durability:
+    // Soft: 15-18 laps (aggressive grip, higher wear ~6-7% per lap)
+    // Medium: 25-30 laps (balanced race tire ~3.5-4% per lap)
+    // Hard: 35-45 laps (ultra durable ~2-2.5% per lap)
+    // Intermediate / Wet: 25-30 laps in rain
+    let stintLaps = 26;
+    if (car.tyreCompound === 'soft') stintLaps = 16;
+    else if (car.tyreCompound === 'hard') stintLaps = 38;
+    else if (car.tyreCompound === 'intermediate' || car.tyreCompound === 'wet') stintLaps = 28;
+
+    // In short race sessions (e.g. 5 or 10 laps), scale gracefully so a soft tire still lasts 65% of race distance
+    const raceScaleLaps = (typeof maxLaps === 'number' && maxLaps >= 3 && currentSessionIndex === 2)
+      ? Math.max(8, maxLaps * (car.tyreCompound === 'soft' ? 0.65 : (car.tyreCompound === 'hard' ? 1.4 : 1.0)))
+      : stintLaps;
+
+    const wearPerSecondRef = 100.0 / (raceScaleLaps * 65.0); // 65 seconds per lap
     
     const speedRatio = Math.max(0.0, Math.min(1.5, Math.abs(car.speed) / 60.0));
     let wearAmount = wearPerSecondRef * speedRatio * delta;
@@ -420,8 +433,13 @@
       window.f1ActiveGarages.forEach(g => {
         if (g.mechanics) {
           g.mechanics.forEach(m => {
-            const targetX = m.baseX > 0 ? (m.baseX + 1.8) : (m.baseX - 1.8);
-            m.position.x = targetX;
+            if (m.role === 'front_jack') {
+              m.position.x = 3.6;
+              m.rotation.y = -Math.PI / 2;
+            } else {
+              const targetX = m.baseX > 0 ? (m.baseX + 2.5) : (m.baseX - 2.5);
+              m.position.x = targetX;
+            }
           });
         }
       });
@@ -458,15 +476,31 @@
     carDamage = 0.0;
     
     const totalBoxes = F1_TEAMS.length;
-    const pBoxT = 0.30 + (selectedTeamIndex / Math.max(1, totalBoxes - 1)) * 0.40;
+    const T_START = 0.26;
+    const T_END = 0.74;
+    const TEAM_STEP = (T_END - T_START) / totalBoxes;
+    const pBoxT = T_START + (selectedTeamIndex + 0.5) * TEAM_STEP;
     pitProgress = pBoxT;
     if (pitCurve && playerKart.mesh) {
       const pt = pitCurve.getPointAt(pBoxT);
       const tang = pitCurve.getTangentAt(pBoxT).normalize();
       const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-      playerKart.mesh.position.copy(pt.clone().add(norm.multiplyScalar(17.0)));
-      playerKart.mesh.lookAt(pt);
-      playerKart.heading = Math.atan2(pt.x - playerKart.mesh.position.x, pt.z - playerKart.mesh.position.z);
+      playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(24.0)));
+      const exitDir = norm.clone().negate().normalize();
+      playerKart.heading = Math.atan2(exitDir.x, exitDir.z);
+      playerKart.mesh.rotation.set(0, playerKart.heading, 0);
+    }
+
+    if (window.f1ActiveGarages) {
+      window.f1ActiveGarages.forEach(g => {
+        if (g.mechanics) {
+          g.mechanics.forEach(m => {
+            m.position.x = m.baseX;
+            m.position.z = m.baseZ;
+            m.rotation.y = m.role === 'front_jack' ? Math.PI : (m.baseX > 0 ? -Math.PI / 2 : Math.PI / 2);
+          });
+        }
+      });
     }
     
     playerKart.qualifyingState = "GARAGE";
@@ -983,6 +1017,10 @@
       if (e.code === 'Space') {
         e.preventDefault();
       }
+      if (e.code === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+      }
       handleKey(e.code, true);
     }, true);
     window.addEventListener('keyup', (e) => {
@@ -994,12 +1032,18 @@
       if (e.code === 'Space') {
         e.preventDefault();
       }
+      if (e.code === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+      }
       handleKey(e.code, false);
     }, true);
 
     document.addEventListener('fullscreenchange', () => {
-      if (!document.fullscreenElement && isRaceActive && !isSettingsOpen) {
-        toggleSettingsOverlay();
+      if (document.fullscreenElement) {
+        if (navigator.keyboard && navigator.keyboard.lock) {
+          navigator.keyboard.lock(['Escape']).catch(() => {});
+        }
       }
     });
 
@@ -1057,20 +1101,21 @@
       return 1500 + Math.min(1.0, Math.abs(speed) / 5.0) * 11000;
     }
     
-    const minSpeed = gearMinSpeed[gear];
-    const maxSpeed = gearMaxSpeed[gear];
-    
-    if (speed < minSpeed) {
-      // Lugging the engine
-      return Math.max(1500, 1500 + (speed / Math.max(0.1, minSpeed)) * 1500);
+    const absSpeed = Math.abs(speed);
+    if (absSpeed < 0.5) {
+      return 1500 + Math.random() * 60; // Smooth idle revs when stopped
     }
+
+    const maxSpeed = gearMaxSpeed[gear] || 90.0;
+    const ratio = Math.min(1.05, absSpeed / Math.max(1.0, maxSpeed));
+    let rpm = 3500 + ratio * 10800;
     
-    let rpmRatio = (speed - minSpeed) / (maxSpeed - minSpeed);
-    let rpm = 2500 + rpmRatio * 12000;
-    
-    if (rpm >= 14920) {
-      // Limiter bounce!
-      rpm = 14900 + Math.random() * 100;
+    if (ratio >= 0.98) {
+      // Limiter bounce at top of gear!
+      rpm = 14350 + Math.random() * 200;
+    }
+    if (rpm >= 14850) {
+      rpm = 14750 + Math.random() * 150;
     }
     return rpm;
   }
