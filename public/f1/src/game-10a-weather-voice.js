@@ -36,15 +36,28 @@
         isSpeechListening = true;
         const btn = document.getElementById('hud-mic-btn');
         if (btn) btn.classList.add('listening');
+        const term = document.getElementById('hud-voice-terminal');
+        if (term) { term.classList.remove('hidden'); term.style.display = 'block'; }
+        const statusEl = document.getElementById('voice-terminal-status-text');
+        if (statusEl) statusEl.textContent = "LISTENING... SPEAK YOUR COMMAND";
+        const dot = document.getElementById('voice-terminal-status-dot');
+        if (dot) { dot.style.background = '#22c55e'; dot.style.boxShadow = '0 0 10px #22c55e'; }
       };
 
       recognition.onend = () => {
         isSpeechListening = false;
         const btn = document.getElementById('hud-mic-btn');
         if (btn) btn.classList.remove('listening');
+        const statusEl = document.getElementById('voice-terminal-status-text');
+        if (statusEl && !window.keepListeningForVoice) {
+          statusEl.textContent = "RADIO STANDBY [PRESS V]";
+          const dot = document.getElementById('voice-terminal-status-dot');
+          if (dot) { dot.style.background = '#eab308'; dot.style.boxShadow = '0 0 10px #eab308'; }
+        }
         
         // Auto-restart recognition if temporary listening window is active!
         if (window.keepListeningForVoice) {
+          if (statusEl) statusEl.textContent = "WAITING FOR RESPONSE...";
           setTimeout(() => {
             try {
               if (window.keepListeningForVoice && !isSpeechListening) {
@@ -60,14 +73,22 @@
         isSpeechListening = false;
         const btn = document.getElementById('hud-mic-btn');
         if (btn) btn.classList.remove('listening');
+        const statusEl = document.getElementById('voice-terminal-status-text');
+        const dot = document.getElementById('voice-terminal-status-dot');
+        if (dot) { dot.style.background = '#ef4444'; dot.style.boxShadow = '0 0 10px #ef4444'; }
         if (event.error === 'not-allowed') {
-          speakEngineerRadio("Microphone permission denied. Allow mic access in browser.", 50, true);
+          if (statusEl) statusEl.textContent = "MIC DENIED — CLICK BUTTONS BELOW";
+          speakEngineerRadio("Microphone permission denied. Allow mic access in browser or use quick command buttons.", 50, true);
+        } else if (event.error === 'no-speech') {
+          if (statusEl) statusEl.textContent = "NO SPEECH DETECTED [PRESS V]";
         }
       };
 
       recognition.onresult = (event) => {
         if (!event.results || !event.results[0] || !event.results[0][0]) return;
         const text = event.results[0][0].transcript.toLowerCase();
+        const drvVal = document.getElementById('voice-driver-val');
+        if (drvVal) drvVal.textContent = `"${text}"`;
         parseVoiceCommand(text);
       };
     } catch(e) {
@@ -75,11 +96,41 @@
     }
   }
 
+  window.sendVoiceCommand = (cmd) => {
+    const drvVal = document.getElementById('voice-driver-val');
+    if (drvVal) drvVal.textContent = `"${cmd}"`;
+    const term = document.getElementById('hud-voice-terminal');
+    if (term) { term.classList.remove('hidden'); term.style.display = 'block'; }
+    if (typeof parseVoiceCommand === 'function') {
+      parseVoiceCommand(cmd.toLowerCase());
+    }
+  };
+
   window.toggleVoiceListening = () => {
-    if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-      speakEngineerRadio("Speech recognition is not supported on this browser.", 50, true);
+    const term = document.getElementById('hud-voice-terminal');
+    const isTermOpen = term && !term.classList.contains('hidden') && term.style.display !== 'none';
+
+    // If terminal is open and currently listening, close/toggle it
+    if (isTermOpen && isSpeechListening) {
+      window.keepListeningForVoice = false;
+      try { if (recognition) recognition.stop(); } catch(e) {}
+      if (term) { term.classList.add('hidden'); term.style.display = 'none'; }
       return;
     }
+
+    // Otherwise, ensure terminal is opened and visible!
+    if (term) {
+      term.classList.remove('hidden');
+      term.style.display = 'block';
+    }
+
+    if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+      const statusEl = document.getElementById('voice-terminal-status-text');
+      if (statusEl) statusEl.textContent = "VOICE NOT SUPPORTED (USE CHIPS BELOW)";
+      speakEngineerRadio("Speech recognition is not supported on this browser. Use the clickable radio options.", 50, true);
+      return;
+    }
+
     if (!recognition) {
       setupVoiceRecognition();
     }
@@ -226,6 +277,10 @@
     const subEl = document.getElementById('hud-radio-subtitles');
     if (subEl) {
       subEl.innerText = `"${msg}"`;
+    }
+    const engVal = document.getElementById('voice-engineer-val');
+    if (engVal) {
+      engVal.textContent = msg;
     }
     const radioBanner = document.getElementById('hud-radio-banner');
     if (radioBanner) {

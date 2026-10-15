@@ -812,9 +812,10 @@
     const rightWhiteLine = new THREE.Mesh(createTrackStripeGeometry(trackCurve, 7.88, 0.22), lineMat);
     scene.add(leftWhiteLine, rightWhiteLine);
 
-    // 5. Dashed white center road lines
+    // 5. Dashed white center road lines (skip grid area to keep starting boxes clean)
     for (let i = 0; i < 150; i++) {
       const t = i / 150;
+      if (t > 0.88 || t < 0.015) continue; // Keep starting grid clean and authentic
       const p = trackCurve.getPointAt(t);
       const tang = trackCurve.getTangentAt(t);
       const dashGeo = new THREE.PlaneGeometry(0.18, 1.8);
@@ -824,6 +825,113 @@
       dash.lookAt(p.clone().add(tang));
       dash.rotateX(Math.PI / 2);
       scene.add(dash);
+    }
+
+    // 6. Official F1 Start / Finish Line (Checkered FIA Timing Stripe across full 15.6m track asphalt at t = 0.0)
+    const sfcCanvas = document.createElement('canvas');
+    sfcCanvas.width = 128; sfcCanvas.height = 32;
+    const sctx = sfcCanvas.getContext('2d');
+    sctx.fillStyle = '#ffffff'; sctx.fillRect(0, 0, 128, 32);
+    sctx.fillStyle = '#090d16';
+    for (let r = 0; r < 2; r++) {
+      for (let c = 0; c < 8; c++) {
+        if ((r + c) % 2 === 1) sctx.fillRect(c * 16, r * 16, 16, 16);
+      }
+    }
+    const sfTex = new THREE.CanvasTexture(sfcCanvas);
+    sfTex.wrapS = THREE.RepeatWrapping; sfTex.wrapT = THREE.ClampToEdgeWrapping;
+    sfTex.repeat.set(10, 1);
+    const sfMat = new THREE.MeshBasicMaterial({ map: sfTex, side: THREE.DoubleSide });
+    const sfGeo = new THREE.PlaneGeometry(15.6, 1.4);
+    const sfLine = new THREE.Mesh(sfGeo, sfMat);
+    const sfP = trackCurve.getPointAt(0.0);
+    const sfTang = trackCurve.getTangentAt(0.0);
+    sfLine.position.copy(sfP);
+    sfLine.position.y = 0.018;
+    sfLine.lookAt(sfP.clone().add(sfTang));
+    sfLine.rotateX(Math.PI / 2);
+    sfLine.rotateZ(Math.PI / 2);
+    scene.add(sfLine);
+
+    // 7. Official 20 FIA Staggered Starting Grid Boxes (P1 - P20) across all race modes
+    const gridWhiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+    const gridYellowMat = new THREE.MeshBasicMaterial({ color: 0xfacc15, side: THREE.DoubleSide });
+
+    for (let slot = 0; slot < 20; slot++) {
+      const slotOffset = (1.0 - 0.003 - (slot * 0.0045) + 1.0) % 1.0;
+      const side = (slot % 2 === 0) ? -2.0 : 2.0;
+
+      const p = trackCurve.getPointAt(slotOffset);
+      const tang = trackCurve.getTangentAt(slotOffset).normalize();
+      const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
+      const center = p.clone().add(norm.clone().multiplyScalar(side));
+
+      // Front stop bar (white line 2.2m wide x 0.24m thick)
+      const frontCenter = center.clone().add(tang.clone().multiplyScalar(2.3));
+      const stopBarGeo = new THREE.PlaneGeometry(2.2, 0.24);
+      const stopBar = new THREE.Mesh(stopBarGeo, gridWhiteMat);
+      stopBar.position.copy(frontCenter);
+      stopBar.position.y = 0.018;
+      stopBar.lookAt(frontCenter.clone().add(tang));
+      stopBar.rotateX(Math.PI / 2);
+      stopBar.rotateZ(Math.PI / 2);
+      scene.add(stopBar);
+
+      // Yellow center alignment notch on front stop line
+      const yellowNotchGeo = new THREE.PlaneGeometry(0.12, 0.46);
+      const yellowNotch = new THREE.Mesh(yellowNotchGeo, gridYellowMat);
+      yellowNotch.position.copy(frontCenter);
+      yellowNotch.position.y = 0.020;
+      yellowNotch.lookAt(frontCenter.clone().add(tang));
+      yellowNotch.rotateX(Math.PI / 2);
+      scene.add(yellowNotch);
+
+      // Left wheel guide stripe (4.6m length)
+      const leftGuideGeo = new THREE.PlaneGeometry(0.14, 4.6);
+      const leftGuide = new THREE.Mesh(leftGuideGeo, gridWhiteMat);
+      const leftCenter = center.clone().add(norm.clone().multiplyScalar(-1.1));
+      leftGuide.position.copy(leftCenter);
+      leftGuide.position.y = 0.018;
+      leftGuide.lookAt(leftCenter.clone().add(tang));
+      leftGuide.rotateX(Math.PI / 2);
+      scene.add(leftGuide);
+
+      // Right wheel guide stripe (4.6m length)
+      const rightGuideGeo = new THREE.PlaneGeometry(0.14, 4.6);
+      const rightGuide = new THREE.Mesh(rightGuideGeo, gridWhiteMat);
+      const rightCenter = center.clone().add(norm.clone().multiplyScalar(1.1));
+      rightGuide.position.copy(rightCenter);
+      rightGuide.position.y = 0.018;
+      rightGuide.lookAt(rightCenter.clone().add(tang));
+      rightGuide.rotateX(Math.PI / 2);
+      scene.add(rightGuide);
+
+      // Position Number Plate Painted on Track (P1 - P20)
+      const numCanvas = document.createElement('canvas');
+      numCanvas.width = 64; numCanvas.height = 64;
+      const nctx = numCanvas.getContext('2d');
+      nctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+      nctx.fillRect(4, 4, 56, 56);
+      nctx.strokeStyle = '#ffffff';
+      nctx.lineWidth = 3;
+      nctx.strokeRect(4, 4, 56, 56);
+      nctx.fillStyle = '#ffffff';
+      nctx.font = 'bold 30px sans-serif';
+      nctx.textAlign = 'center';
+      nctx.textBaseline = 'middle';
+      nctx.fillText(String(slot + 1), 32, 34);
+
+      const numTex = new THREE.CanvasTexture(numCanvas);
+      const numMat = new THREE.MeshBasicMaterial({ map: numTex, transparent: true, side: THREE.DoubleSide });
+      const numGeo = new THREE.PlaneGeometry(1.0, 1.0);
+      const numMesh = new THREE.Mesh(numGeo, numMat);
+      const numPos = center.clone().add(tang.clone().multiplyScalar(1.3));
+      numMesh.position.copy(numPos);
+      numMesh.position.y = 0.019;
+      numMesh.lookAt(numPos.clone().add(tang));
+      numMesh.rotateX(Math.PI / 2);
+      numMesh.rotateZ(Math.PI);
+      scene.add(numMesh);
     }
   }
 

@@ -985,6 +985,17 @@
     }
     pendingRadioQuestion = null;
     window.keepListeningForVoice = false;
+
+    // Immediately hide the pit strategy compound selector card so it doesn't stay on screen or overlap
+    const stratCard = document.getElementById('hud-pit-strategy-card');
+    if (stratCard) {
+      stratCard.classList.add('hidden');
+      stratCard.style.display = 'none';
+    }
+    const titleEl = document.getElementById('pit-select-compound-title');
+    const containerEl = document.getElementById('pit-compound-selector-container');
+    if (titleEl) titleEl.style.display = 'none';
+    if (containerEl) containerEl.style.display = 'none';
   };
 
   // Number key shortcuts 1-5 for quick strategy selection
@@ -996,6 +1007,16 @@
     else if (e.key === '3') window.choosePitCompound('hard');
     else if (e.key === '4') window.choosePitCompound('intermediate');
     else if (e.key === '5') window.choosePitCompound('wet');
+  });
+
+  // Global window shortcut for Team Radio Voice Terminal ('V' key)
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'KeyV' || e.key === 'v' || e.key === 'V') {
+      if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) return;
+      if (typeof window.toggleVoiceListening === 'function') {
+        window.toggleVoiceListening();
+      }
+    }
   });
 
   // ════ TERMINAL DAMAGE OVERLAY & REPAIR HANDLERS ════
@@ -1198,6 +1219,17 @@
           window.updateCarTyreColor(playerKart);
         }
       }
+
+      // Hide tyre compound options once selected
+      const stratCard = document.getElementById('hud-pit-strategy-card');
+      if (stratCard) {
+        stratCard.classList.add('hidden');
+        stratCard.style.display = 'none';
+      }
+      const titleEl = document.getElementById('pit-select-compound-title');
+      const containerEl = document.getElementById('pit-compound-selector-container');
+      if (titleEl) titleEl.style.display = 'none';
+      if (containerEl) containerEl.style.display = 'none';
       
       // Update HUD steering display text
       const hTyre = document.getElementById('steering-hud-tyre');
@@ -1388,8 +1420,10 @@
       speakEngineerRadio("Copy box this lap, pit limiter on.", 70);
     }
 
-    if (isKeyBoundTo(code, 'radio') && isPressed && isRaceActive) {
-      toggleVoiceListening();
+    if ((isKeyBoundTo(code, 'radio') || code === 'KeyV') && isPressed) {
+      if (typeof window.toggleVoiceListening === 'function') {
+        window.toggleVoiceListening();
+      }
     }
 
     // Toggle/cycle AI Debug HUD with 'KeyK' key

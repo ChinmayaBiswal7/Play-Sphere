@@ -482,6 +482,12 @@
     if (mic) mic.classList.add('hidden');
     const minimap = document.getElementById('hud-minimap-container');
     if (minimap) minimap.classList.add('hidden');
+
+    const stratCard = document.getElementById('hud-pit-strategy-card');
+    if (stratCard) {
+      stratCard.classList.add('hidden');
+      stratCard.style.display = 'none';
+    }
   }
 
   function tapPitStopQTE() {
@@ -499,6 +505,10 @@
       pitStopPhase = "LOWERING";
       window.pitLowerTimer = 0.0;
       document.getElementById('pit-prompt-text').innerText = "LOWERING CAR ON JACKS...";
+      const titleEl = document.getElementById('pit-select-compound-title');
+      const containerEl = document.getElementById('pit-compound-selector-container');
+      if (titleEl) titleEl.style.display = 'none';
+      if (containerEl) containerEl.style.display = 'none';
     }
     document.getElementById('pit-progress-fill').style.width = `${window.pitQTEProgress}%`;
   }
@@ -507,6 +517,17 @@
     isPitStopActive = false;
     tyreWear = 0.0;
     carDamage = 0.0;
+
+    const titleEl = document.getElementById('pit-select-compound-title');
+    const containerEl = document.getElementById('pit-compound-selector-container');
+    if (titleEl) titleEl.style.display = 'none';
+    if (containerEl) containerEl.style.display = 'none';
+    const stratCard = document.getElementById('hud-pit-strategy-card');
+    if (stratCard) {
+      stratCard.classList.add('hidden');
+      stratCard.style.display = 'none';
+    }
+
     if (playerKart) {
       playerKart.frontWingAttached = true;
       playerKart.rearWingAttached = true;

@@ -993,6 +993,17 @@
     }
     pendingRadioQuestion = null;
     window.keepListeningForVoice = false;
+
+    // Immediately hide the pit strategy compound selector card so it doesn't stay on screen or overlap
+    const stratCard = document.getElementById('hud-pit-strategy-card');
+    if (stratCard) {
+      stratCard.classList.add('hidden');
+      stratCard.style.display = 'none';
+    }
+    const titleEl = document.getElementById('pit-select-compound-title');
+    const containerEl = document.getElementById('pit-compound-selector-container');
+    if (titleEl) titleEl.style.display = 'none';
+    if (containerEl) containerEl.style.display = 'none';
   };
 
   // Number key shortcuts 1-5 for quick strategy selection
@@ -1004,6 +1015,16 @@
     else if (e.key === '3') window.choosePitCompound('hard');
     else if (e.key === '4') window.choosePitCompound('intermediate');
     else if (e.key === '5') window.choosePitCompound('wet');
+  });
+
+  // Global window shortcut for Team Radio Voice Terminal ('V' key)
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'KeyV' || e.key === 'v' || e.key === 'V') {
+      if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) return;
+      if (typeof window.toggleVoiceListening === 'function') {
+        window.toggleVoiceListening();
+      }
+    }
   });
 
   // ════ TERMINAL DAMAGE OVERLAY & REPAIR HANDLERS ════
@@ -1206,6 +1227,17 @@
           window.updateCarTyreColor(playerKart);
         }
       }
+
+      // Hide tyre compound options once selected
+      const stratCard = document.getElementById('hud-pit-strategy-card');
+      if (stratCard) {
+        stratCard.classList.add('hidden');
+        stratCard.style.display = 'none';
+      }
+      const titleEl = document.getElementById('pit-select-compound-title');
+      const containerEl = document.getElementById('pit-compound-selector-container');
+      if (titleEl) titleEl.style.display = 'none';
+      if (containerEl) containerEl.style.display = 'none';
       
       // Update HUD steering display text
       const hTyre = document.getElementById('steering-hud-tyre');
@@ -1396,8 +1428,10 @@
       speakEngineerRadio("Copy box this lap, pit limiter on.", 70);
     }
 
-    if (isKeyBoundTo(code, 'radio') && isPressed && isRaceActive) {
-      toggleVoiceListening();
+    if ((isKeyBoundTo(code, 'radio') || code === 'KeyV') && isPressed) {
+      if (typeof window.toggleVoiceListening === 'function') {
+        window.toggleVoiceListening();
+      }
     }
 
     // Toggle/cycle AI Debug HUD with 'KeyK' key
@@ -3754,9 +3788,10 @@
     const rightWhiteLine = new THREE.Mesh(createTrackStripeGeometry(trackCurve, 7.88, 0.22), lineMat);
     scene.add(leftWhiteLine, rightWhiteLine);
 
-    // 5. Dashed white center road lines
+    // 5. Dashed white center road lines (skip grid area to keep starting boxes clean)
     for (let i = 0; i < 150; i++) {
       const t = i / 150;
+      if (t > 0.88 || t < 0.015) continue; // Keep starting grid clean and authentic
       const p = trackCurve.getPointAt(t);
       const tang = trackCurve.getTangentAt(t);
       const dashGeo = new THREE.PlaneGeometry(0.18, 1.8);
@@ -3766,6 +3801,113 @@
       dash.lookAt(p.clone().add(tang));
       dash.rotateX(Math.PI / 2);
       scene.add(dash);
+    }
+
+    // 6. Official F1 Start / Finish Line (Checkered FIA Timing Stripe across full 15.6m track asphalt at t = 0.0)
+    const sfcCanvas = document.createElement('canvas');
+    sfcCanvas.width = 128; sfcCanvas.height = 32;
+    const sctx = sfcCanvas.getContext('2d');
+    sctx.fillStyle = '#ffffff'; sctx.fillRect(0, 0, 128, 32);
+    sctx.fillStyle = '#090d16';
+    for (let r = 0; r < 2; r++) {
+      for (let c = 0; c < 8; c++) {
+        if ((r + c) % 2 === 1) sctx.fillRect(c * 16, r * 16, 16, 16);
+      }
+    }
+    const sfTex = new THREE.CanvasTexture(sfcCanvas);
+    sfTex.wrapS = THREE.RepeatWrapping; sfTex.wrapT = THREE.ClampToEdgeWrapping;
+    sfTex.repeat.set(10, 1);
+    const sfMat = new THREE.MeshBasicMaterial({ map: sfTex, side: THREE.DoubleSide });
+    const sfGeo = new THREE.PlaneGeometry(15.6, 1.4);
+    const sfLine = new THREE.Mesh(sfGeo, sfMat);
+    const sfP = trackCurve.getPointAt(0.0);
+    const sfTang = trackCurve.getTangentAt(0.0);
+    sfLine.position.copy(sfP);
+    sfLine.position.y = 0.018;
+    sfLine.lookAt(sfP.clone().add(sfTang));
+    sfLine.rotateX(Math.PI / 2);
+    sfLine.rotateZ(Math.PI / 2);
+    scene.add(sfLine);
+
+    // 7. Official 20 FIA Staggered Starting Grid Boxes (P1 - P20) across all race modes
+    const gridWhiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+    const gridYellowMat = new THREE.MeshBasicMaterial({ color: 0xfacc15, side: THREE.DoubleSide });
+
+    for (let slot = 0; slot < 20; slot++) {
+      const slotOffset = (1.0 - 0.003 - (slot * 0.0045) + 1.0) % 1.0;
+      const side = (slot % 2 === 0) ? -2.0 : 2.0;
+
+      const p = trackCurve.getPointAt(slotOffset);
+      const tang = trackCurve.getTangentAt(slotOffset).normalize();
+      const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
+      const center = p.clone().add(norm.clone().multiplyScalar(side));
+
+      // Front stop bar (white line 2.2m wide x 0.24m thick)
+      const frontCenter = center.clone().add(tang.clone().multiplyScalar(2.3));
+      const stopBarGeo = new THREE.PlaneGeometry(2.2, 0.24);
+      const stopBar = new THREE.Mesh(stopBarGeo, gridWhiteMat);
+      stopBar.position.copy(frontCenter);
+      stopBar.position.y = 0.018;
+      stopBar.lookAt(frontCenter.clone().add(tang));
+      stopBar.rotateX(Math.PI / 2);
+      stopBar.rotateZ(Math.PI / 2);
+      scene.add(stopBar);
+
+      // Yellow center alignment notch on front stop line
+      const yellowNotchGeo = new THREE.PlaneGeometry(0.12, 0.46);
+      const yellowNotch = new THREE.Mesh(yellowNotchGeo, gridYellowMat);
+      yellowNotch.position.copy(frontCenter);
+      yellowNotch.position.y = 0.020;
+      yellowNotch.lookAt(frontCenter.clone().add(tang));
+      yellowNotch.rotateX(Math.PI / 2);
+      scene.add(yellowNotch);
+
+      // Left wheel guide stripe (4.6m length)
+      const leftGuideGeo = new THREE.PlaneGeometry(0.14, 4.6);
+      const leftGuide = new THREE.Mesh(leftGuideGeo, gridWhiteMat);
+      const leftCenter = center.clone().add(norm.clone().multiplyScalar(-1.1));
+      leftGuide.position.copy(leftCenter);
+      leftGuide.position.y = 0.018;
+      leftGuide.lookAt(leftCenter.clone().add(tang));
+      leftGuide.rotateX(Math.PI / 2);
+      scene.add(leftGuide);
+
+      // Right wheel guide stripe (4.6m length)
+      const rightGuideGeo = new THREE.PlaneGeometry(0.14, 4.6);
+      const rightGuide = new THREE.Mesh(rightGuideGeo, gridWhiteMat);
+      const rightCenter = center.clone().add(norm.clone().multiplyScalar(1.1));
+      rightGuide.position.copy(rightCenter);
+      rightGuide.position.y = 0.018;
+      rightGuide.lookAt(rightCenter.clone().add(tang));
+      rightGuide.rotateX(Math.PI / 2);
+      scene.add(rightGuide);
+
+      // Position Number Plate Painted on Track (P1 - P20)
+      const numCanvas = document.createElement('canvas');
+      numCanvas.width = 64; numCanvas.height = 64;
+      const nctx = numCanvas.getContext('2d');
+      nctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+      nctx.fillRect(4, 4, 56, 56);
+      nctx.strokeStyle = '#ffffff';
+      nctx.lineWidth = 3;
+      nctx.strokeRect(4, 4, 56, 56);
+      nctx.fillStyle = '#ffffff';
+      nctx.font = 'bold 30px sans-serif';
+      nctx.textAlign = 'center';
+      nctx.textBaseline = 'middle';
+      nctx.fillText(String(slot + 1), 32, 34);
+
+      const numTex = new THREE.CanvasTexture(numCanvas);
+      const numMat = new THREE.MeshBasicMaterial({ map: numTex, transparent: true, side: THREE.DoubleSide });
+      const numGeo = new THREE.PlaneGeometry(1.0, 1.0);
+      const numMesh = new THREE.Mesh(numGeo, numMat);
+      const numPos = center.clone().add(tang.clone().multiplyScalar(1.3));
+      numMesh.position.copy(numPos);
+      numMesh.position.y = 0.019;
+      numMesh.lookAt(numPos.clone().add(tang));
+      numMesh.rotateX(Math.PI / 2);
+      numMesh.rotateZ(Math.PI);
+      scene.add(numMesh);
     }
   }
 
@@ -4643,8 +4785,8 @@
       bonus: activeDriver === 0 ? "acceleration" : "topSpeed",
       mesh: pKartSetup.mesh,
       wheels: pKartSetup.wheels,
-      currentOffset: 0.0,
-      sideOffset: -1.8, // Left side P1 grid position
+      currentOffset: 1.0 - 0.003,
+      sideOffset: -2.0, // Left side P1 grid box position
       speed: 0.0,
       targetSpeed: 0.0,
       rotationY: 0.0,
@@ -4658,7 +4800,7 @@
       posRank: 1,
       teamIndex: selectedTeamIndex,
       completedLaps: 0,
-      previousTrackProgress: 0.0,
+      previousTrackProgress: 1.0 - 0.003,
       isPitting: false,
       pitProgress: 0.0,
       finished: false,
@@ -4757,8 +4899,8 @@
       bonus: "handling",
       mesh: mateKartSetup.mesh,
       wheels: mateKartSetup.wheels,
-      currentOffset: 1.0 - 0.007, // Staggered behind
-      sideOffset: 1.8, // Right side grid position
+      currentOffset: 1.0 - 0.003 - (1 * 0.0045), // P2 Grid slot
+      sideOffset: 2.0, // Right side P2 grid position
       speed: 0.0,
       boostTime: 0.0,
       shieldActive: false,
@@ -4766,7 +4908,7 @@
       posRank: 2,
       teamIndex: selectedTeamIndex,
       completedLaps: 0,
-      previousTrackProgress: 1.0 - 0.007,
+      previousTrackProgress: 1.0 - 0.003 - (1 * 0.0045),
       isPitting: false,
       pitProgress: 0.0,
       finished: false,
@@ -4799,9 +4941,8 @@
           if (gridSlot >= 16) return;
           
           const aiKartSetup = createProceduralKart(parseInt(team.color.replace('#', ''), 16), false);
-          const row = Math.floor(gridSlot / 2);
-          const sideOffset = gridSlot % 2 === 0 ? -1.8 : 1.8;
-          const currentOffset = 1.0 - row * 0.009; // Wider gap so AI start further behind — prevents T1 rear collision
+          const sideOffset = gridSlot % 2 === 0 ? -2.0 : 2.0;
+          const currentOffset = 1.0 - 0.003 - (gridSlot * 0.0045);
 
           const aiRacer = {
             isPlayer: false,
@@ -4871,9 +5012,8 @@
         else if (index === 1) gridIndex = 0;
       }
 
-      const row = Math.floor(gridIndex / 2);
-      const sideOffset = gridIndex % 2 === 0 ? -1.8 : 1.8;
-      const currentOffset = 1.0 - row * 0.009;
+      const sideOffset = gridIndex % 2 === 0 ? -2.0 : 2.0;
+      const currentOffset = (1.0 - 0.003 - (gridIndex * 0.0045) + 1.0) % 1.0;
 
       r.currentOffset = currentOffset;
       r.previousTrackProgress = currentOffset;
@@ -12514,6 +12654,12 @@
     if (mic) mic.classList.add('hidden');
     const minimap = document.getElementById('hud-minimap-container');
     if (minimap) minimap.classList.add('hidden');
+
+    const stratCard = document.getElementById('hud-pit-strategy-card');
+    if (stratCard) {
+      stratCard.classList.add('hidden');
+      stratCard.style.display = 'none';
+    }
   }
 
   function tapPitStopQTE() {
@@ -12531,6 +12677,10 @@
       pitStopPhase = "LOWERING";
       window.pitLowerTimer = 0.0;
       document.getElementById('pit-prompt-text').innerText = "LOWERING CAR ON JACKS...";
+      const titleEl = document.getElementById('pit-select-compound-title');
+      const containerEl = document.getElementById('pit-compound-selector-container');
+      if (titleEl) titleEl.style.display = 'none';
+      if (containerEl) containerEl.style.display = 'none';
     }
     document.getElementById('pit-progress-fill').style.width = `${window.pitQTEProgress}%`;
   }
@@ -12539,6 +12689,17 @@
     isPitStopActive = false;
     tyreWear = 0.0;
     carDamage = 0.0;
+
+    const titleEl = document.getElementById('pit-select-compound-title');
+    const containerEl = document.getElementById('pit-compound-selector-container');
+    if (titleEl) titleEl.style.display = 'none';
+    if (containerEl) containerEl.style.display = 'none';
+    const stratCard = document.getElementById('hud-pit-strategy-card');
+    if (stratCard) {
+      stratCard.classList.add('hidden');
+      stratCard.style.display = 'none';
+    }
+
     if (playerKart) {
       playerKart.frontWingAttached = true;
       playerKart.rearWingAttached = true;
@@ -12679,15 +12840,28 @@
         isSpeechListening = true;
         const btn = document.getElementById('hud-mic-btn');
         if (btn) btn.classList.add('listening');
+        const term = document.getElementById('hud-voice-terminal');
+        if (term) { term.classList.remove('hidden'); term.style.display = 'block'; }
+        const statusEl = document.getElementById('voice-terminal-status-text');
+        if (statusEl) statusEl.textContent = "LISTENING... SPEAK YOUR COMMAND";
+        const dot = document.getElementById('voice-terminal-status-dot');
+        if (dot) { dot.style.background = '#22c55e'; dot.style.boxShadow = '0 0 10px #22c55e'; }
       };
 
       recognition.onend = () => {
         isSpeechListening = false;
         const btn = document.getElementById('hud-mic-btn');
         if (btn) btn.classList.remove('listening');
+        const statusEl = document.getElementById('voice-terminal-status-text');
+        if (statusEl && !window.keepListeningForVoice) {
+          statusEl.textContent = "RADIO STANDBY [PRESS V]";
+          const dot = document.getElementById('voice-terminal-status-dot');
+          if (dot) { dot.style.background = '#eab308'; dot.style.boxShadow = '0 0 10px #eab308'; }
+        }
         
         // Auto-restart recognition if temporary listening window is active!
         if (window.keepListeningForVoice) {
+          if (statusEl) statusEl.textContent = "WAITING FOR RESPONSE...";
           setTimeout(() => {
             try {
               if (window.keepListeningForVoice && !isSpeechListening) {
@@ -12703,14 +12877,22 @@
         isSpeechListening = false;
         const btn = document.getElementById('hud-mic-btn');
         if (btn) btn.classList.remove('listening');
+        const statusEl = document.getElementById('voice-terminal-status-text');
+        const dot = document.getElementById('voice-terminal-status-dot');
+        if (dot) { dot.style.background = '#ef4444'; dot.style.boxShadow = '0 0 10px #ef4444'; }
         if (event.error === 'not-allowed') {
-          speakEngineerRadio("Microphone permission denied. Allow mic access in browser.", 50, true);
+          if (statusEl) statusEl.textContent = "MIC DENIED — CLICK BUTTONS BELOW";
+          speakEngineerRadio("Microphone permission denied. Allow mic access in browser or use quick command buttons.", 50, true);
+        } else if (event.error === 'no-speech') {
+          if (statusEl) statusEl.textContent = "NO SPEECH DETECTED [PRESS V]";
         }
       };
 
       recognition.onresult = (event) => {
         if (!event.results || !event.results[0] || !event.results[0][0]) return;
         const text = event.results[0][0].transcript.toLowerCase();
+        const drvVal = document.getElementById('voice-driver-val');
+        if (drvVal) drvVal.textContent = `"${text}"`;
         parseVoiceCommand(text);
       };
     } catch(e) {
@@ -12718,11 +12900,41 @@
     }
   }
 
+  window.sendVoiceCommand = (cmd) => {
+    const drvVal = document.getElementById('voice-driver-val');
+    if (drvVal) drvVal.textContent = `"${cmd}"`;
+    const term = document.getElementById('hud-voice-terminal');
+    if (term) { term.classList.remove('hidden'); term.style.display = 'block'; }
+    if (typeof parseVoiceCommand === 'function') {
+      parseVoiceCommand(cmd.toLowerCase());
+    }
+  };
+
   window.toggleVoiceListening = () => {
-    if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-      speakEngineerRadio("Speech recognition is not supported on this browser.", 50, true);
+    const term = document.getElementById('hud-voice-terminal');
+    const isTermOpen = term && !term.classList.contains('hidden') && term.style.display !== 'none';
+
+    // If terminal is open and currently listening, close/toggle it
+    if (isTermOpen && isSpeechListening) {
+      window.keepListeningForVoice = false;
+      try { if (recognition) recognition.stop(); } catch(e) {}
+      if (term) { term.classList.add('hidden'); term.style.display = 'none'; }
       return;
     }
+
+    // Otherwise, ensure terminal is opened and visible!
+    if (term) {
+      term.classList.remove('hidden');
+      term.style.display = 'block';
+    }
+
+    if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+      const statusEl = document.getElementById('voice-terminal-status-text');
+      if (statusEl) statusEl.textContent = "VOICE NOT SUPPORTED (USE CHIPS BELOW)";
+      speakEngineerRadio("Speech recognition is not supported on this browser. Use the clickable radio options.", 50, true);
+      return;
+    }
+
     if (!recognition) {
       setupVoiceRecognition();
     }
@@ -12869,6 +13081,10 @@
     const subEl = document.getElementById('hud-radio-subtitles');
     if (subEl) {
       subEl.innerText = `"${msg}"`;
+    }
+    const engVal = document.getElementById('voice-engineer-val');
+    if (engVal) {
+      engVal.textContent = msg;
     }
     const radioBanner = document.getElementById('hud-radio-banner');
     if (radioBanner) {

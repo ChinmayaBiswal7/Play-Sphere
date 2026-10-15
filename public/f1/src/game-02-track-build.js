@@ -121,8 +121,8 @@
       bonus: activeDriver === 0 ? "acceleration" : "topSpeed",
       mesh: pKartSetup.mesh,
       wheels: pKartSetup.wheels,
-      currentOffset: 0.0,
-      sideOffset: -1.8, // Left side P1 grid position
+      currentOffset: 1.0 - 0.003,
+      sideOffset: -2.0, // Left side P1 grid box position
       speed: 0.0,
       targetSpeed: 0.0,
       rotationY: 0.0,
@@ -136,7 +136,7 @@
       posRank: 1,
       teamIndex: selectedTeamIndex,
       completedLaps: 0,
-      previousTrackProgress: 0.0,
+      previousTrackProgress: 1.0 - 0.003,
       isPitting: false,
       pitProgress: 0.0,
       finished: false,
@@ -235,8 +235,8 @@
       bonus: "handling",
       mesh: mateKartSetup.mesh,
       wheels: mateKartSetup.wheels,
-      currentOffset: 1.0 - 0.007, // Staggered behind
-      sideOffset: 1.8, // Right side grid position
+      currentOffset: 1.0 - 0.003 - (1 * 0.0045), // P2 Grid slot
+      sideOffset: 2.0, // Right side P2 grid position
       speed: 0.0,
       boostTime: 0.0,
       shieldActive: false,
@@ -244,7 +244,7 @@
       posRank: 2,
       teamIndex: selectedTeamIndex,
       completedLaps: 0,
-      previousTrackProgress: 1.0 - 0.007,
+      previousTrackProgress: 1.0 - 0.003 - (1 * 0.0045),
       isPitting: false,
       pitProgress: 0.0,
       finished: false,
@@ -277,9 +277,8 @@
           if (gridSlot >= 16) return;
           
           const aiKartSetup = createProceduralKart(parseInt(team.color.replace('#', ''), 16), false);
-          const row = Math.floor(gridSlot / 2);
-          const sideOffset = gridSlot % 2 === 0 ? -1.8 : 1.8;
-          const currentOffset = 1.0 - row * 0.009; // Wider gap so AI start further behind — prevents T1 rear collision
+          const sideOffset = gridSlot % 2 === 0 ? -2.0 : 2.0;
+          const currentOffset = 1.0 - 0.003 - (gridSlot * 0.0045);
 
           const aiRacer = {
             isPlayer: false,
@@ -349,9 +348,8 @@
         else if (index === 1) gridIndex = 0;
       }
 
-      const row = Math.floor(gridIndex / 2);
-      const sideOffset = gridIndex % 2 === 0 ? -1.8 : 1.8;
-      const currentOffset = 1.0 - row * 0.009;
+      const sideOffset = gridIndex % 2 === 0 ? -2.0 : 2.0;
+      const currentOffset = (1.0 - 0.003 - (gridIndex * 0.0045) + 1.0) % 1.0;
 
       r.currentOffset = currentOffset;
       r.previousTrackProgress = currentOffset;

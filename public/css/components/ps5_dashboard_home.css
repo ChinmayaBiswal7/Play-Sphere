@@ -552,3 +552,26 @@
   font-size: 0.95rem;
 }
 
+/* Settings Screen Overlay when opened from Console Dashboard */
+#settings-screen {
+  z-index: 2000000 !important;
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+}
+
+#settings-screen.hidden {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+#ps5-search-modal {
+  z-index: 2000000 !important;
+  position: fixed !important;
+  inset: 0 !important;
+}
+
+

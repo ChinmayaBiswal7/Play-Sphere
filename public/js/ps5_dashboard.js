@@ -30,7 +30,7 @@
     });
 
     // Ensure modals are kept as direct children of document.body for correct z-index rendering over iframes
-    ['ps5-friends-modal', 'ps5-profile-modal', 'ps5-controller-modal'].forEach(id => {
+    ['ps5-friends-modal', 'ps5-profile-modal', 'ps5-controller-modal', 'ps5-search-modal', 'settings-screen'].forEach(id => {
       const el = document.getElementById(id);
       if (el) {
         document.body.appendChild(el);
@@ -72,6 +72,27 @@
             delete profileModal.dataset.userOpened;
             profileModal.classList.remove('show');
           }
+        }
+      };
+    }
+
+    const profileCloseBtn = document.getElementById('ps5-profile-close-btn');
+    if (profileCloseBtn) {
+      profileCloseBtn.onclick = () => {
+        const pM = document.getElementById('ps5-profile-modal');
+        if (pM) {
+          delete pM.dataset.userOpened;
+          pM.classList.remove('show');
+        }
+      };
+    }
+
+    const searchModal = document.getElementById('ps5-search-modal');
+    if (searchModal) {
+      searchModal.onclick = (e) => {
+        if (e.target === searchModal) {
+          searchModal.classList.remove('show');
+          searchModal.style.display = 'none';
         }
       };
     }

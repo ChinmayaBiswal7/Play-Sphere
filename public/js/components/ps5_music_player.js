@@ -87,10 +87,27 @@
           ps5MusicSetTitle(track.title);
           e.target.setVolume(50);
           e.target.loadVideoById(track.id);
+          
+          // DO NOT play if a game is launching or already active!
+          if (window.ps5ActiveGame || document.getElementById('game-session-iframe')) {
+            console.log('[Music] Game session active during onReady — keeping paused and muted');
+            try { e.target.pauseVideo(); e.target.mute(); } catch (err) {}
+            ps5SetVinylSpin(false);
+            ps5SetPlayIcon(false);
+            return;
+          }
+
           e.target.playVideo();
         },
         onStateChange: (e) => {
           console.log('[Music] YT.Player State:', e.data);
+          // If a game is active, ensure video stays paused and muted
+          if ((window.ps5ActiveGame || document.getElementById('game-session-iframe')) && e.data === 1) {
+            try { e.target.pauseVideo(); e.target.mute(); } catch (err) {}
+            ps5SetVinylSpin(false);
+            ps5SetPlayIcon(false);
+            return;
+          }
           // YT.PlayerState.ENDED = 0
           if (e.data === 0) { ps5MusicNext(); }
           // YT.PlayerState.PLAYING = 1
@@ -108,6 +125,17 @@
     window.ps5YtPlayer = ps5YtPlayer;
     window.ps5YtReady = true;
   }
+
+  window.ps5MusicPause = function() {
+    try {
+      if (ps5YtPlayer) {
+        if (typeof ps5YtPlayer.pauseVideo === 'function') ps5YtPlayer.pauseVideo();
+        if (typeof ps5YtPlayer.mute === 'function') ps5YtPlayer.mute();
+      }
+      ps5SetVinylSpin(false);
+      ps5SetPlayIcon(false);
+    } catch(e) {}
+  };
 
   function ps5MusicSetTitle(title) {
     const el = document.getElementById('ps5-music-title');

@@ -92,7 +92,7 @@
   /* ── OPEN MODAL ── */
   function openModal(id) {
     const el = document.getElementById(id);
-    if (el) { el.style.display = ''; el.classList.add('show'); }
+    if (el) { el.style.display = 'flex'; el.classList.add('show'); }
   }
 
   /* ── SELECT GAME ── */
@@ -187,21 +187,36 @@
     if (iframe) iframe.remove();
     window.ps5ActiveGame = null;
     if (window.ps5YtPlayer && window.ps5YtReady) {
-      try { window.ps5YtPlayer.playVideo(); } catch (e) {}
+      try {
+        window.ps5YtPlayer.unMute();
+        window.ps5YtPlayer.playVideo();
+      } catch (e) {}
     }
   };
 
   /* ── LAUNCH GAME ── */
   window.ps5LaunchGame = function (gameId, roomCode) {
     window.ps5ActiveGame = gameId;
-    if (window.ps5YtPlayer && window.ps5YtReady) {
-      try { window.ps5YtPlayer.pauseVideo(); } catch (e) {}
+    if (typeof window.ps5MusicPause === 'function') {
+      window.ps5MusicPause();
+    } else if (window.ps5YtPlayer) {
+      try {
+        window.ps5YtPlayer.pauseVideo();
+        window.ps5YtPlayer.mute();
+      } catch (e) {}
     }
+    document.querySelectorAll('audio').forEach(a => { try { a.pause(); } catch(e){} });
+
     const overlay = document.getElementById('ps5-launch');
     if (overlay) overlay.classList.add('active');
     if (window.sounds && typeof window.sounds.playLaunch === 'function') window.sounds.playLaunch();
 
     setTimeout(() => {
+      if (typeof window.ps5MusicPause === 'function') {
+        window.ps5MusicPause();
+      } else if (window.ps5YtPlayer) {
+        try { window.ps5YtPlayer.pauseVideo(); window.ps5YtPlayer.mute(); } catch (e) {}
+      }
       const root = document.getElementById('ps5-console-root');
       if (gameId === 'cricket') {
         if (typeof window.animationFrameId !== 'undefined') cancelAnimationFrame(window.animationFrameId);
@@ -357,9 +372,58 @@
     // Profile button
     const profBtn = document.getElementById('btn-profile');
     if (profBtn) profBtn.addEventListener('click', () => {
+      const pM = document.getElementById('ps5-profile-modal');
+      if (pM) pM.dataset.userOpened = 'true';
       openModal('ps5-profile-modal');
       if (typeof window.syncPlaySphereProfileDisplay === 'function') window.syncPlaySphereProfileDisplay();
+      if (window.sounds && typeof window.sounds.play === 'function') window.sounds.play('click');
     });
+
+    // Settings button & full overlay integration
+    const settingsBtn = document.getElementById('btn-settings');
+    if (settingsBtn) {
+      settingsBtn.addEventListener('click', () => {
+        const sScreen = document.getElementById('settings-screen');
+        if (sScreen) {
+          sScreen.classList.remove('hidden');
+          sScreen.style.display = 'flex';
+          const savedVol = localStorage.getItem('playsphere_master_vol');
+          if (savedVol !== null) {
+            const volSlider = document.getElementById('menu-setting-vol-master');
+            const volVal = document.getElementById('menu-setting-vol-master-val');
+            if (volSlider) volSlider.value = savedVol;
+            if (volVal) volVal.textContent = Math.round(parseFloat(savedVol) * 100) + '%';
+          }
+          if (window.sounds && typeof window.sounds.play === 'function') window.sounds.play('click');
+        }
+      });
+    }
+
+    const sBackBtn = document.getElementById('settings-back-btn');
+    if (sBackBtn) {
+      sBackBtn.addEventListener('click', () => {
+        const sScreen = document.getElementById('settings-screen');
+        if (sScreen) {
+          sScreen.classList.add('hidden');
+          sScreen.style.display = 'none';
+          if (window.sounds && typeof window.sounds.play === 'function') window.sounds.play('back');
+        }
+      });
+    }
+
+    const sSaveBtn = document.getElementById('menu-btn-save-settings');
+    if (sSaveBtn) {
+      sSaveBtn.addEventListener('click', () => {
+        const volSlider = document.getElementById('menu-setting-vol-master');
+        if (volSlider) localStorage.setItem('playsphere_master_vol', volSlider.value);
+        const sScreen = document.getElementById('settings-screen');
+        if (sScreen) {
+          sScreen.classList.add('hidden');
+          sScreen.style.display = 'none';
+          if (window.sounds && typeof window.sounds.play === 'function') window.sounds.play('click');
+        }
+      });
+    }
 
     // Friends button
     const friendsBtn = document.getElementById('btn-friends');
@@ -487,42 +551,6 @@
         renderSearchResults(searchInput ? searchInput.value : '', currentSearchGenre);
       });
     });
-
-    // Settings button & overlay logic
-    const settingsBtn = document.getElementById('btn-settings');
-    const settingsScreen = document.getElementById('settings-screen');
-    const settingsBackBtn = document.getElementById('settings-back-btn');
-    const settingsSaveBtn = document.getElementById('menu-btn-save-settings');
-
-    if (settingsBtn) {
-      settingsBtn.addEventListener('click', () => {
-        if (settingsScreen) {
-          settingsScreen.classList.remove('hidden');
-          // Load settings values from localStorage if available
-          const savedVol = localStorage.getItem('playsphere_master_vol');
-          if (savedVol !== null) {
-            const volSlider = document.getElementById('menu-setting-vol-master');
-            const volVal = document.getElementById('menu-setting-vol-master-val');
-            if (volSlider) volSlider.value = savedVol;
-            if (volVal) volVal.textContent = Math.round(parseFloat(savedVol) * 100) + '%';
-          }
-        }
-      });
-    }
-
-    if (settingsBackBtn) {
-      settingsBackBtn.addEventListener('click', () => {
-        if (settingsScreen) settingsScreen.classList.add('hidden');
-      });
-    }
-
-    if (settingsSaveBtn) {
-      settingsSaveBtn.addEventListener('click', () => {
-        const volSlider = document.getElementById('menu-setting-vol-master');
-        if (volSlider) localStorage.setItem('playsphere_master_vol', volSlider.value);
-        if (settingsScreen) settingsScreen.classList.add('hidden');
-      });
-    }
 
     // Tabs
     document.querySelectorAll('.psd-tab').forEach(btn => {
