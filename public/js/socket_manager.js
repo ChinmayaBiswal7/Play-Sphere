@@ -185,7 +185,7 @@ function initSocket() {
       // Only perform dashboard console navigation if the game hasn't launched (dashboard root exists)
       const consoleRoot = document.getElementById('ps5-console-root');
       const isLobbyActive = window.ui && window.ui.lobby && !window.ui.lobby.classList.contains('hidden');
-      const isDashboardActive = consoleRoot && !isLobbyActive && !document.getElementById('game-session-iframe') && !window.ps5ActiveGame && (typeof window.gameState === 'undefined' || window.gameState === null);
+      const isDashboardActive = !!consoleRoot && !isLobbyActive && !document.getElementById('game-session-iframe') && !window.ps5ActiveGame;
       
       if (isDashboardActive) {
         // Horizontal left-right game shelf navigation
@@ -260,7 +260,7 @@ function initSocket() {
       // Dashboard overlay navigation buttons mapping
       const consoleRoot = document.getElementById('ps5-console-root');
       const isLobbyActive = window.ui && window.ui.lobby && !window.ui.lobby.classList.contains('hidden');
-      const isDashboardActive = consoleRoot && !isLobbyActive && !document.getElementById('game-session-iframe') && !window.ps5ActiveGame && (typeof window.gameState === 'undefined' || window.gameState === null);
+      const isDashboardActive = !!consoleRoot && !isLobbyActive && !document.getElementById('game-session-iframe') && !window.ps5ActiveGame;
 
       if (isDashboardActive) {
         if (data.btn === 'cross') {

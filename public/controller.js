@@ -489,6 +489,31 @@ function start() {
     };
   }
 
+  // Controls Guide modal
+  const guideBtn = document.getElementById('btn-guide');
+  const guideModal = document.getElementById('controls-guide-modal');
+  const guideCloseBtn = document.getElementById('cgm-close-btn');
+
+  if (guideBtn && guideModal) {
+    guideBtn.onclick = () => {
+      guideModal.style.display = 'flex';
+      triggerControllerVibe(25);
+    };
+  }
+
+  if (guideCloseBtn && guideModal) {
+    guideCloseBtn.onclick = () => {
+      guideModal.style.display = 'none';
+      triggerControllerVibe(15);
+    };
+  }
+
+  if (guideModal) {
+    guideModal.onclick = (e) => {
+      if (e.target === guideModal) guideModal.style.display = 'none';
+    };
+  }
+
   // Skip / Close room dialog
   if (ui.skipBtn) {
     ui.skipBtn.onclick = () => {

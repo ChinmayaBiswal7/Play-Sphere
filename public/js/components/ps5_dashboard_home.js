@@ -139,6 +139,16 @@
 
   /* ── INPUT & GAME NAVIGATION ── */
   window.handleInputNavigation = function (dir) {
+    // If a modal was open, close it on joystick movement so the user is never blocked
+    ['ps5-controller-modal', 'ps5-profile-modal', 'ps5-friends-modal', 'ps5-search-modal'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && el.classList.contains('show')) {
+        el.classList.remove('show');
+        el.style.display = 'none';
+      }
+    });
+
+    if (!cards || cards.length === 0) cards = Array.from(document.querySelectorAll('.psd-card'));
     if (!cards || cards.length === 0) return;
     if (dir > 0 && selectedIndex < cards.length - 1) {
       selectGame(selectedIndex + 1);
@@ -148,6 +158,20 @@
   };
 
   window.launchActiveGame = function () {
+    const ctrlModal = document.getElementById('ps5-controller-modal');
+    if (ctrlModal && (ctrlModal.classList.contains('show') || ctrlModal.style.display === 'block')) {
+      ctrlModal.classList.remove('show');
+      ctrlModal.style.display = 'none';
+      return;
+    }
+    const profModal = document.getElementById('ps5-profile-modal');
+    if (profModal && (profModal.classList.contains('show') || profModal.style.display === 'block')) {
+      profModal.classList.remove('show');
+      profModal.style.display = 'none';
+      return;
+    }
+
+    if (!cards || cards.length === 0) cards = Array.from(document.querySelectorAll('.psd-card'));
     if (!cards || !cards[selectedIndex]) return;
     const card = cards[selectedIndex];
     if (card && card.dataset.game) {
@@ -297,10 +321,9 @@
       // Never intercept keyboard events if the dashboard is inactive, if Cricket is running, or if an iframe game is active
       const root = document.getElementById('ps5-console-root');
       if (!root || document.getElementById('game-session-iframe') || window.ps5ActiveGame) return;
-      if (typeof window.gameState !== 'undefined' && window.gameState !== null) return;
 
       if (e.key === 'f' || e.key === 'F') { toggleFullscreen(); return; }
-      if (document.querySelector('.ps5-profile-modal.show') || document.activeElement.tagName === 'INPUT') return;
+      if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
 
       if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'ArrowLeft' || e.key === 'a') {
         if (navLocked) return; // block rapid repeats

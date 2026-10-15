@@ -112,6 +112,22 @@
       view: window
     });
     window.dispatchEvent(event);
+
+    // Forward synthetic keyboard event to active game iframe
+    const iframe = document.getElementById('game-session-iframe');
+    if (iframe && iframe.contentWindow) {
+      try {
+        const IframeKeyboardEvent = iframe.contentWindow.KeyboardEvent || KeyboardEvent;
+        const ifrEvent = new IframeKeyboardEvent(isDown ? 'keydown' : 'keyup', {
+          key: key,
+          code: code,
+          bubbles: true,
+          cancelable: true,
+          view: iframe.contentWindow
+        });
+        iframe.contentWindow.dispatchEvent(ifrEvent);
+      } catch (e) {}
+    }
   }
 
   // Ensure window.controllerInput exists
@@ -177,14 +193,33 @@
     cursor.style.transform = 'translate(-50%, -50%) scale(1)';
 
     // Trigger synthetic mousemove at target coordinates
-    const target = document.elementFromPoint(cursorX, cursorY);
-    if (target) {
-      target.dispatchEvent(new MouseEvent('mousemove', {
-        clientX: cursorX,
-        clientY: cursorY,
-        bubbles: true,
-        cancelable: true
-      }));
+    const iframe = document.getElementById('game-session-iframe');
+    if (iframe && iframe.contentDocument) {
+      try {
+        const iframeRect = iframe.getBoundingClientRect();
+        const ifrX = cursorX - iframeRect.left;
+        const ifrY = cursorY - iframeRect.top;
+        const innerTarget = iframe.contentDocument.elementFromPoint(ifrX, ifrY);
+        if (innerTarget) {
+          innerTarget.dispatchEvent(new MouseEvent('mousemove', {
+            clientX: ifrX,
+            clientY: ifrY,
+            bubbles: true,
+            cancelable: true,
+            view: iframe.contentWindow
+          }));
+        }
+      } catch (e) {}
+    } else {
+      const target = document.elementFromPoint(cursorX, cursorY);
+      if (target) {
+        target.dispatchEvent(new MouseEvent('mousemove', {
+          clientX: cursorX,
+          clientY: cursorY,
+          bubbles: true,
+          cancelable: true
+        }));
+      }
     }
 
     clearTimeout(cursorTimeout);
@@ -199,6 +234,24 @@
     setTimeout(() => {
       cursor.style.transform = 'translate(-50%, -50%) scale(1)';
     }, 100);
+
+    const iframe = document.getElementById('game-session-iframe');
+    if (iframe && iframe.contentDocument) {
+      try {
+        const iframeRect = iframe.getBoundingClientRect();
+        const ifrX = cursorX - iframeRect.left;
+        const ifrY = cursorY - iframeRect.top;
+        const innerTarget = iframe.contentDocument.elementFromPoint(ifrX, ifrY);
+        if (innerTarget) {
+          if (window.sounds && typeof window.sounds.playHover === 'function') window.sounds.playHover();
+          innerTarget.dispatchEvent(new MouseEvent('mousedown', { clientX: ifrX, clientY: ifrY, bubbles: true, view: iframe.contentWindow }));
+          innerTarget.dispatchEvent(new MouseEvent('mouseup', { clientX: ifrX, clientY: ifrY, bubbles: true, view: iframe.contentWindow }));
+          innerTarget.click();
+          if (typeof innerTarget.focus === 'function') innerTarget.focus();
+          return;
+        }
+      } catch (e) {}
+    }
 
     const target = document.elementFromPoint(cursorX, cursorY);
     if (target) {
@@ -265,14 +318,14 @@
 
         // Dashboard shelf navigation
         const consoleRoot = document.getElementById('ps5-console-root');
-        const isDashboardActive = consoleRoot && !document.getElementById('game-session-iframe') && !window.ps5ActiveGame && (typeof window.gameState === 'undefined' || window.gameState === null);
+        const isDashboardActive = !!consoleRoot && !document.getElementById('game-session-iframe') && !window.ps5ActiveGame;
         if (isDashboardActive) {
-          if (data.x < -0.45) {
+          if (data.x < -0.35) {
             if (window.lastEmuJoyX !== -1) {
               window.lastEmuJoyX = -1;
               if (typeof window.handleInputNavigation === 'function') window.handleInputNavigation(-1);
             }
-          } else if (data.x > 0.45) {
+          } else if (data.x > 0.35) {
             if (window.lastEmuJoyX !== 1) {
               window.lastEmuJoyX = 1;
               if (typeof window.handleInputNavigation === 'function') window.handleInputNavigation(1);
@@ -280,6 +333,12 @@
           } else if (Math.abs(data.x) < 0.2) {
             window.lastEmuJoyX = 0;
           }
+        }
+
+        // Sync to active game iframe
+        const iframe = document.getElementById('game-session-iframe');
+        if (iframe && iframe.contentWindow) {
+          try { iframe.contentWindow.controllerInput = window.controllerInput; } catch(e) {}
         }
 
         // Dispatch analog steering & throttle keys for all games
@@ -328,7 +387,7 @@
         // Dashboard specific button handling
         if (isPressed) {
           const consoleRoot = document.getElementById('ps5-console-root');
-          const isDashboardActive = consoleRoot && !document.getElementById('game-session-iframe') && !window.ps5ActiveGame && (typeof window.gameState === 'undefined' || window.gameState === null);
+          const isDashboardActive = !!consoleRoot && !document.getElementById('game-session-iframe') && !window.ps5ActiveGame;
 
           if (isDashboardActive) {
             if (data.btn === 'cross') {

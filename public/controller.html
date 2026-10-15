@@ -62,15 +62,15 @@
   <div class="gamepad-container">
     <!-- Left Top Controls -->
     <div class="top-bar-left">
-      <div class="btn trigger" id="btn-l2">L2</div>
-      <div class="btn trigger" id="btn-l1">L1</div>
+      <div class="btn trigger" id="btn-l2">L2 <span class="sublabel">BRAKE</span></div>
+      <div class="btn trigger" id="btn-l1">L1 <span class="sublabel">GEAR-</span></div>
       <div class="btn utility-btn" id="btn-create">Create</div>
     </div>
 
     <!-- Right Top Controls -->
     <div class="top-bar-right">
-      <div class="btn trigger" id="btn-r2">R2</div>
-      <div class="btn trigger" id="btn-r1">R1</div>
+      <div class="btn trigger" id="btn-r2">R2 <span class="sublabel">GAS/SPRINT</span></div>
+      <div class="btn trigger" id="btn-r1">R1 <span class="sublabel">GEAR+</span></div>
       <div class="btn utility-btn" id="btn-options">Options</div>
     </div>
 
@@ -86,7 +86,7 @@
       <div class="joystick-zone-left">
         <div class="thumbstick-base" id="left-stick-boundary">
           <div class="thumbstick-knob" id="left-stick">
-            <span class="stick-label">L3</span>
+            <span class="stick-label">L3<br><span class="stick-sub">MOVE / NAV</span></span>
           </div>
         </div>
       </div>
@@ -97,10 +97,15 @@
       <div class="touchpad-wrapper">
         <div class="ps5-lightbar ps5-lightbar-left"></div>
         <div class="btn touchpad-stub" id="btn-touchpad">
-          <div style="font-size: 8px; color: #94a3b8; letter-spacing: 0.14em; font-weight: 700; margin-bottom: 2px;">TOUCHPAD</div>
+          <div style="font-size: 8px; color: #94a3b8; letter-spacing: 0.14em; font-weight: 700; margin-bottom: 2px;">TOUCHPAD (TRACKPAD)</div>
           <div style="font-size: 11px; font-weight: 800; color: #38bdf8;" id="room-display-code">ROOM: ----</div>
+          <div style="font-size: 7.5px; color: #64748b; font-weight: 700; margin-top: 1px;">SLIDE TO MOVE PC CURSOR • TAP TO CLICK</div>
         </div>
         <div class="ps5-lightbar ps5-lightbar-right"></div>
+      </div>
+
+      <div style="margin-top: 4px;">
+        <button id="btn-guide" class="btn-guide-pill">🎮 CONTROLS GUIDE</button>
       </div>
       
       <div class="btn ps-btn" id="btn-ps">PS</div>
@@ -114,16 +119,66 @@
     <!-- Right Side Controls (Action Buttons & R3 Stick Zone) -->
     <div class="right-grip">
       <div class="action-group">
-        <div class="btn action-btn act-triangle" id="btn-triangle">▲</div>
-        <div class="btn action-btn act-square" id="btn-square">■</div>
-        <div class="btn action-btn act-circle" id="btn-circle">●</div>
-        <div class="btn action-btn act-cross" id="btn-cross">✖</div>
+        <div class="btn action-btn act-triangle" id="btn-triangle">
+          ▲<span class="sublabel">SPECIAL</span>
+        </div>
+        <div class="btn action-btn act-square" id="btn-square">
+          ■<span class="sublabel">SHOOT</span>
+        </div>
+        <div class="btn action-btn act-circle" id="btn-circle">
+          ●<span class="sublabel">BACK</span>
+        </div>
+        <div class="btn action-btn act-cross" id="btn-cross">
+          ✖<span class="sublabel">SELECT</span>
+        </div>
       </div>
 
       <div class="joystick-zone-right">
         <div class="thumbstick-base" id="right-stick-boundary">
           <div class="thumbstick-knob" id="right-stick">
-            <span class="stick-label">R3</span>
+            <span class="stick-label">R3<br><span class="stick-sub">AIM / LOOK</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Controls Mapping Guide Modal -->
+  <div id="controls-guide-modal" class="controls-guide-modal" style="display:none;">
+    <div class="cgm-content">
+      <div class="cgm-header">
+        <h3>🎮 PLAYSPHERE CONTROLS GUIDE</h3>
+        <button id="cgm-close-btn">✕ CLOSE</button>
+      </div>
+      <div class="cgm-body">
+        <div class="cgm-section">
+          <h4>🏠 PS5 CONSOLE DASHBOARD</h4>
+          <div class="cgm-grid">
+            <div><b>🕹️ Left Stick Left/Right:</b> Browse Game Cards</div>
+            <div><b>◀ ▶ D-Pad Left/Right:</b> Browse Game Cards</div>
+            <div><b>▲ ▼ D-Pad Up/Down:</b> Games / Store Tabs</div>
+            <div><b>✖ CROSS:</b> Launch Selected Game</div>
+            <div><b>● CIRCLE:</b> Back / Close Modal</div>
+            <div><b>▲ TRIANGLE:</b> Open Search</div>
+            <div><b>■ SQUARE:</b> Open Profile</div>
+            <div><b>⚙️ OPTIONS:</b> Settings</div>
+            <div><b>📱 TOUCHPAD:</b> Move laptop-style mouse arrow on PC screen, tap to click!</div>
+          </div>
+        </div>
+        <div class="cgm-section">
+          <h4>⚽ 🏎️ 🏏 IN-GAME (FOOTBALL, F1, CRICKET, TENNIS, WWE)</h4>
+          <div class="cgm-grid">
+            <div><b>🕹️ Left Stick:</b> Move / Steer / Run (WASD / Arrows)</div>
+            <div><b>🕹️ Right Stick:</b> Camera Look / Aiming</div>
+            <div><b>✖ CROSS:</b> Pass / Bat Swing / Accelerate / Select / Jump</div>
+            <div><b>■ SQUARE:</b> Shoot / Tackle / Loft Shot / Handbrake Drift</div>
+            <div><b>● CIRCLE:</b> Slide Tackle / Defensive Shot / Cancel / Brake</div>
+            <div><b>▲ TRIANGLE:</b> Through Ball / DRS Overtake / Special Move</div>
+            <div><b>R2 Trigger:</b> Sprint / Full Throttle / Power Shot Charge</div>
+            <div><b>L2 Trigger:</b> Brake / Reverse / Shield Ball</div>
+            <div><b>R1 / L1:</b> Shift Gear Up/Down, Switch Player</div>
+            <div><b>📱 TOUCHPAD:</b> Full mouse trackpad & click anywhere in menus!</div>
+            <div><b>⚙️ OPTIONS:</b> Pause / In-Game Menu</div>
           </div>
         </div>
       </div>
