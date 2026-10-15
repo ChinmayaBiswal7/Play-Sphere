@@ -1085,6 +1085,18 @@
       window.turnInHologram = gateGroup;
     };
 
+    // Pre-build holographic turn-in wall and spawn pit crew for active team
+    try {
+      if (typeof window.buildTurnInHologram === 'function') {
+        window.buildTurnInHologram(selectedTeamIndex);
+      }
+      if (typeof spawnPitCrewBoxes === 'function') {
+        spawnPitCrewBoxes();
+      }
+    } catch (e) {
+      console.warn("Initial pit turn-in hologram spawn deferred:", e);
+    }
+
     // ── PitComplexBuilder — garages + buildings
     const pitBuilder = new PitComplexBuilder(F1_TEAMS);
     pitBuilder.buildAlongCurve(pitCurve, scene);

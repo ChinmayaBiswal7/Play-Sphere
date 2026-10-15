@@ -416,22 +416,23 @@
     isPitStopActive = false;
     const pitOverlay = document.getElementById('pit-stop-overlay');
     if (pitOverlay) pitOverlay.classList.add('hidden');
-    if (typeof pitCrewBoxes !== 'undefined' && pitCrewBoxes && pitCrewBoxes.length > 0) {
-      pitCrewBoxes.forEach(c => scene.remove(c));
-      pitCrewBoxes = [];
-      pitCrew = [];
-    }
     playerKart.pitZone = "PIT_LANE";
     playerKart.pitLimiterActive = true;
     playerKart.speed = 0.0;
     currentGear = 1;
+
+    // Ensure pit crew is ready outside at the pit box on apron
+    if (typeof spawnPitCrewBoxes === 'function' && (!pitCrewBoxes || pitCrewBoxes.length === 0)) {
+      spawnPitCrewBoxes();
+    }
 
     if (pitCurve) {
       const totalBoxes = F1_TEAMS.length;
       const pBoxT = 0.26 + (selectedTeamIndex + 0.5) * (0.74 - 0.26) / totalBoxes;
       const tang = pitCurve.getTangentAt(pBoxT).normalize();
       const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-      const exitDir = norm.clone().negate().normalize(); // straight out through the wide open garage doors
+      // Angle the car 45° towards pit exit direction so driving out into the fast lane is smooth and avoids opposite barrier
+      const exitDir = norm.clone().negate().add(tang.clone().multiplyScalar(0.95)).normalize();
       playerKart.heading = Math.atan2(exitDir.x, exitDir.z);
       playerKart.mesh.rotation.y = playerKart.heading;
     }
@@ -3896,6 +3897,18 @@
       window.turnInHologram = gateGroup;
     };
 
+    // Pre-build holographic turn-in wall and spawn pit crew for active team
+    try {
+      if (typeof window.buildTurnInHologram === 'function') {
+        window.buildTurnInHologram(selectedTeamIndex);
+      }
+      if (typeof spawnPitCrewBoxes === 'function') {
+        spawnPitCrewBoxes();
+      }
+    } catch (e) {
+      console.warn("Initial pit turn-in hologram spawn deferred:", e);
+    }
+
     // ── PitComplexBuilder — garages + buildings
     const pitBuilder = new PitComplexBuilder(F1_TEAMS);
     pitBuilder.buildAlongCurve(pitCurve, scene);
@@ -7217,6 +7230,11 @@
       target = 0.0; // Neutral: no forward/backward throttle
     }
 
+    // Authentic F1 80 km/h pit speed limiter (22.2 m/s)
+    if (playerKart.pitLimiterActive) {
+      target = Math.min(target, 22.2);
+    }
+
     // Safety Car speed limit
     if (safetyCarActive) {
       target = Math.min(target, 14.2);
@@ -7338,16 +7356,39 @@
       }
     }
 
-    // Update 15 LEDs above the steering HUD based on RPM (range: 9000 to 14000)
+    // Update 15 LEDs above the steering HUD: authentic F1 per-gear shift window calibration
+    // In every gear (1 to 8), rev LEDs reset to 0th light upon upshift and climb smoothly to redline
+    const gearShiftMinRPM = [
+      0,      // N/R
+      8500,   // G1
+      10400,  // G2
+      11650,  // G3
+      12150,  // G4
+      12300,  // G5
+      12300,  // G6
+      12600,  // G7
+      12950   // G8
+    ];
+    const shiftMinRPM = (currentGear >= 1 && currentGear <= 8) ? gearShiftMinRPM[currentGear] : 9000;
+    const shiftMaxRPM = 14000;
+    const isRevLimiter = currentRPM >= 14200;
+    const isFlashing = Math.floor(clock.getElapsedTime() * 14.0) % 2 === 0;
+
+    let activeLedCount = 0;
+    if (currentRPM >= shiftMinRPM) {
+      const frac = THREE.MathUtils.clamp((currentRPM - shiftMinRPM) / (shiftMaxRPM - shiftMinRPM), 0.0, 1.0);
+      activeLedCount = Math.floor(frac * 15);
+      if (frac >= 0.98) activeLedCount = 15;
+    }
+
     for (let i = 0; i < 15; i++) {
       const led = document.getElementById(`led-${i}`);
       if (led) {
-        const threshold = 9000 + i * 340;
         const ledCol = i < 5 ? '#22c55e' : (i < 10 ? '#ef4444' : '#a855f7');
-        if (currentRPM >= 14200) {
-          // Flash ALL shift lights on rev limiter!
-          led.style.backgroundColor = Math.floor(clock.getElapsedTime() * 14.0) % 2 === 0 ? ledCol : '#111827';
-        } else if (currentRPM >= threshold) {
+        if (isRevLimiter) {
+          // Flash ALL shift lights in unison on rev limiter!
+          led.style.backgroundColor = isFlashing ? ledCol : '#111827';
+        } else if (i < activeLedCount) {
           led.style.backgroundColor = ledCol;
         } else {
           led.style.backgroundColor = '#1e293b'; // Off
@@ -7556,6 +7597,7 @@
     }
     const hConfig = playerKart.handling;
     const steerSpeedRatio = THREE.MathUtils.clamp(Math.abs(playerKart.speed) / 50.0, 0.0, 1.0);
+    const isLowSpeedManoeuvre = Math.abs(playerKart.speed) < 16.0 || playerKart.inPitLane || playerKart.isExitingGarage;
 
     // Steering authority decreases non-linearly as speed increases
     // Adjusted floor from 0.22 to 0.32 and exponent from 0.7 to 0.85 to improve high-speed turn-in
@@ -7585,9 +7627,9 @@
     let rawSteeringInput = THREE.MathUtils.clamp(combinedSteer, -1.0, 1.0);
     playerKart.rawSteeringInput = rawSteeringInput;
 
-    // Filter steering input with speed-dependent build rate (heavier steering at high speeds)
+    // Filter steering input with speed-dependent build rate (heavier steering at high speeds, crisp & quick at low speed)
     if (playerKart.filteredSteeringInput === undefined) playerKart.filteredSteeringInput = 0.0;
-    const effectiveBuildRate = THREE.MathUtils.lerp(hConfig.steeringBuildRate, 1.6, steerSpeedRatio);
+    const effectiveBuildRate = isLowSpeedManoeuvre ? 4.5 : THREE.MathUtils.lerp(hConfig.steeringBuildRate, 1.6, steerSpeedRatio);
     const steerRate = (rawSteeringInput === 0.0) ? hConfig.steeringReturnRate : effectiveBuildRate;
 
     playerKart.filteredSteeringInput = THREE.MathUtils.lerp(
@@ -7601,11 +7643,12 @@
     const steeringMagnitude = Math.abs(playerKart.filteredSteeringInput);
     const curvedSteeringInput = steeringSign * Math.pow(steeringMagnitude, hConfig.steeringCurveExponent);
 
-    // Calculate target steering angle
-    const targetSteeringAngle = curvedSteeringInput * hConfig.physicsMaxSteer * steeringAuthority;
+    // Calculate target steering angle (up to 30° at low speed / garage manoeuvres for easy tight turns)
+    const currentMaxSteer = isLowSpeedManoeuvre ? THREE.MathUtils.degToRad(30) : hConfig.physicsMaxSteer;
+    const targetSteeringAngle = curvedSteeringInput * currentMaxSteer * steeringAuthority;
 
     // Smooth steering rack movement
-    const steeringRackSpeed = THREE.MathUtils.lerp(7.0, 3.0, steerSpeedRatio);
+    const steeringRackSpeed = isLowSpeedManoeuvre ? 10.0 : THREE.MathUtils.lerp(7.0, 3.0, steerSpeedRatio);
     if (playerKart.steeringAngle === undefined) playerKart.steeringAngle = 0.0;
     playerKart.steeringAngle = THREE.MathUtils.lerp(
       playerKart.steeringAngle,
@@ -7635,9 +7678,11 @@
     // Rotational Inertia: calculate desired yaw and smooth yawVelocity (chassis weight)
     if (playerKart.yawVelocity === undefined) playerKart.yawVelocity = 0.0;
     const directionFactor = (currentGear === -1) ? -1 : 1;
-    const desiredYawRate = (Math.abs(playerKart.speed) / hConfig.wheelBase) * Math.tan(playerKart.steeringAngle) * directionFactor;
+    // Boost low-speed yaw authority so car turns effortlessly out of garage and hairpin bends
+    const effectiveYawSpeed = isLowSpeedManoeuvre ? Math.max(4.0, Math.abs(playerKart.speed)) : Math.abs(playerKart.speed);
+    const desiredYawRate = (effectiveYawSpeed / hConfig.wheelBase) * Math.tan(playerKart.steeringAngle) * directionFactor;
 
-    const yawResponse = THREE.MathUtils.lerp(hConfig.yawResponseLowSpeed, hConfig.yawResponseHighSpeed, steerSpeedRatio);
+    const yawResponse = isLowSpeedManoeuvre ? 4.5 : THREE.MathUtils.lerp(hConfig.yawResponseLowSpeed, hConfig.yawResponseHighSpeed, steerSpeedRatio);
     playerKart.yawVelocity = THREE.MathUtils.lerp(
       playerKart.yawVelocity,
       desiredYawRate,
@@ -7650,15 +7695,15 @@
     }
 
     // Clamp maximum yaw rate to prevent toy-car instant spinning
-    // Increased high-speed yaw ceiling from 0.48 to 0.58 rad/s for sharper rotation
-    const maxYawRate = THREE.MathUtils.lerp(1.15, 0.58, steerSpeedRatio);
+    const maxYawRate = isLowSpeedManoeuvre ? 1.8 : THREE.MathUtils.lerp(1.15, 0.58, steerSpeedRatio);
     playerKart.yawVelocity = THREE.MathUtils.clamp(playerKart.yawVelocity, -maxYawRate, maxYawRate);
 
     // Apply yaw velocity to heading
     playerKart.heading += playerKart.yawVelocity * delta;
 
     // Apply visual front wheel steering pivots rotation
-    const visualSteer = curvedSteeringInput * hConfig.visualMaxSteer;
+    const currentVisualMaxSteer = isLowSpeedManoeuvre ? THREE.MathUtils.degToRad(30) : hConfig.visualMaxSteer;
+    const visualSteer = curvedSteeringInput * currentVisualMaxSteer;
     if (playerKart.visualSteeringAngle === undefined) playerKart.visualSteeringAngle = 0.0;
     playerKart.visualSteeringAngle = THREE.MathUtils.lerp(
       playerKart.visualSteeringAngle,
@@ -7710,17 +7755,22 @@
     } else {
       playerKart.inPitLane = true;
       playerKart.currentPath = "PIT";
-      const totalBoxes = F1_TEAMS.length;
-      const stopT = 0.30 + (selectedTeamIndex / Math.max(1, totalBoxes - 1)) * 0.40;
+      // Pit zones:
+      // 0.00 - 0.15: PIT_ENTRY (speed limiter active)
+      // 0.15 - 0.76: PIT_LANE (fast lane alongside garages, speed limiter active, 80 km/h)
+      // 0.76 - 1.00: PIT_EXIT (past all garage boxes / pit exit line, pit limiter deactivated, full acceleration!)
       if (pitProgress < 0.15) {
         playerKart.pitZone = "PIT_ENTRY";
         playerKart.pitLimiterActive = true;
-      } else if (pitProgress <= stopT || isPitStopActive) {
+      } else if (pitProgress < 0.76 || isPitStopActive) {
         playerKart.pitZone = "PIT_LANE";
         playerKart.pitLimiterActive = true;
       } else {
+        if (playerKart.pitZone !== "PIT_EXIT") {
+          speakEngineerRadio("Pit limiter OFF. Green light, push on exit!", 50);
+        }
         playerKart.pitZone = "PIT_EXIT";
-        playerKart.pitLimiterActive = false; // exit speed limiter deactivates!
+        playerKart.pitLimiterActive = false; // exit speed limiter deactivates at pit exit line!
       }
     }
 
@@ -7806,11 +7856,20 @@
           pitProgress = pitProj.progress;
           hasStoppedAtPitBox = false;
           pendingPitStop = false;
+          playerKart.isExitingGarage = false; // Reset explicitly
           playerKart.pitZone = "PIT_ENTRY";
           playerKart.inPitLane = true;
           playerKart.pitLimiterActive = true;
           playerKart.currentPath = "PIT";
           speakEngineerRadio("Entering pit lane. Pit limiter is active.", 80);
+
+          // Pre-spawn pit crew standing ready at pit box immediately on entry
+          if (typeof spawnPitCrewBoxes === 'function') {
+            spawnPitCrewBoxes();
+          }
+          if (typeof window.buildTurnInHologram === 'function') {
+            window.buildTurnInHologram(selectedTeamIndex);
+          }
         }
       }
     }
@@ -7821,6 +7880,13 @@
       pitProgress = pitProj.progress;
       playerKart.currentOffset = pitProj.progress; // keep synced for timing tower
       playerKart.sideOffset = pitProj.lateralOffset; // keep synced
+
+      // Clear garage exit flag once the car merges into the pit fast lane or gets up to speed
+      if (playerKart.isExitingGarage) {
+        if (Math.abs(pitProj.lateralOffset) < 5.5 || playerKart.speed > 4.0) {
+          playerKart.isExitingGarage = false;
+        }
+      }
 
       // Pit lane boundaries: Left pit wall at -6.8m, Right garage wall up to +32.0m (Ultra-spacious 38m corridor!)
       if (!playerKart.isExitingGarage && playerKart.qualifyingState !== "GARAGE") {
@@ -7834,7 +7900,7 @@
       // Proximity braking inside pit lane to avoid hitting moving karts in front
       const totalBoxes = F1_TEAMS.length;
       const stopT = 0.26 + (selectedTeamIndex + 0.5) * (0.74 - 0.26) / totalBoxes;
-      let collisionSpeedLimit = (playerKart.pitZone === "PIT_ENTRY" || playerKart.pitZone === "PIT_LANE") ? 11.0 : 28.0;
+      let collisionSpeedLimit = Infinity;
       
       if (!isPitStopActive && playerKart.speed > 0.0) {
         racers.forEach(other => {
@@ -7857,7 +7923,9 @@
           }
         });
       }
-      playerKart.speed = Math.min(playerKart.speed, collisionSpeedLimit);
+      if (collisionSpeedLimit < Infinity) {
+        playerKart.speed = Math.min(playerKart.speed, collisionSpeedLimit);
+      }
 
       // ── F1 Broadcast PIT LANE Tracker HUD & Ahead-of-Time Crew Spawn (Images 1, 2, 3) ──
       const pitLaneCard = document.getElementById('hud-pit-lane-card');
@@ -7878,7 +7946,7 @@
       }
 
       // Pre-spawn pit crew standing ready at pit box as soon as car enters pit lane
-      if (!isPitStopActive && !hasStoppedAtPitBox && !playerKart.isExitingGarage) {
+      if (!isPitStopActive && !hasStoppedAtPitBox) {
         if ((typeof pitCrew === 'undefined' || pitCrew.length === 0) && typeof spawnPitCrewBoxes === 'function') {
           spawnPitCrewBoxes();
         }
@@ -7989,24 +8057,26 @@
         // Increment stop time counter during active tyre change (matching Image 2 & 3)
         window.pitStopTime = (window.pitStopTime || 0.0) + delta;
         if (pitStopVal) pitStopVal.innerText = `${window.pitStopTime.toFixed(1)}`;
-      } else if (!isPitStopActive && hasStoppedAtPitBox) {
-        // Post-pit stop exit logic (STOP TIME remains displayed on broadcast HUD card as in Image 3)
+      } else if (!isPitStopActive) {
+        // Pit exit & track merge logic (STOP TIME remains displayed on broadcast HUD card as in Image 3)
         if (turnInPrompt) {
           turnInPrompt.classList.add('hidden');
           turnInPrompt.style.display = 'none';
         }
 
-        if (pitProgress >= 0.98) {
+        // Pit exit completion: triggered when car reaches pit exit line (pitProgress >= 0.85) or merges into main track corridor
+        const isMergingToTrack = (pitProgress >= 0.85) || (proj.progress >= 0.02 && proj.progress <= 0.16 && Math.abs(proj.lateralOffset) < 7.0);
+        if (isMergingToTrack && (hasStoppedAtPitBox || pitProgress >= 0.85)) {
           playerKart.inPitLane = false;
           isPitting = false;
           hasStoppedAtPitBox = false; // Reset to allow future pit stops!
+          playerKart.isExitingGarage = false;
           playerKart.pitZone = "MAIN_TRACK";
           playerKart.currentPath = "TRACK";
           playerKart.pitLimiterActive = false;
           
-          playerKart.currentOffset = 0.060;
-          playerKart.previousTrackProgress = 0.060; // prevent lap-crossing jumps
-          playerKart.sideOffset = 6.0; // exit lane side offset
+          playerKart.currentOffset = Math.max(0.045, proj.progress);
+          playerKart.previousTrackProgress = playerKart.currentOffset;
           
           playerKart.driveOutAutopilot = false;
           playerKart.driveOutState = "NONE";

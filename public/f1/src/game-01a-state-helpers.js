@@ -408,22 +408,23 @@
     isPitStopActive = false;
     const pitOverlay = document.getElementById('pit-stop-overlay');
     if (pitOverlay) pitOverlay.classList.add('hidden');
-    if (typeof pitCrewBoxes !== 'undefined' && pitCrewBoxes && pitCrewBoxes.length > 0) {
-      pitCrewBoxes.forEach(c => scene.remove(c));
-      pitCrewBoxes = [];
-      pitCrew = [];
-    }
     playerKart.pitZone = "PIT_LANE";
     playerKart.pitLimiterActive = true;
     playerKart.speed = 0.0;
     currentGear = 1;
+
+    // Ensure pit crew is ready outside at the pit box on apron
+    if (typeof spawnPitCrewBoxes === 'function' && (!pitCrewBoxes || pitCrewBoxes.length === 0)) {
+      spawnPitCrewBoxes();
+    }
 
     if (pitCurve) {
       const totalBoxes = F1_TEAMS.length;
       const pBoxT = 0.26 + (selectedTeamIndex + 0.5) * (0.74 - 0.26) / totalBoxes;
       const tang = pitCurve.getTangentAt(pBoxT).normalize();
       const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-      const exitDir = norm.clone().negate().normalize(); // straight out through the wide open garage doors
+      // Angle the car 45° towards pit exit direction so driving out into the fast lane is smooth and avoids opposite barrier
+      const exitDir = norm.clone().negate().add(tang.clone().multiplyScalar(0.95)).normalize();
       playerKart.heading = Math.atan2(exitDir.x, exitDir.z);
       playerKart.mesh.rotation.y = playerKart.heading;
     }
