@@ -388,9 +388,9 @@
 
     }
 
-    // Boosted AI top speeds to match player top speed potential (player base = 88 m/s)
-    // Realistic modern F1 AI speeds: Easy: ~315 km/h, Normal: ~342 km/h, Hard: ~360 km/h, Expert: ~380 km/h
-    const baseSpeed = [88.0, 95.0, 100.0, 106.0][activeDifficulty] || 95.0;
+    // Boosted AI top speeds to match player top speed potential (player base = 88-96 m/s)
+    // Competitive realistic modern F1 AI speeds: Easy: ~330 km/h, Normal: ~355 km/h, Hard: ~372 km/h, Expert: ~390 km/h
+    const baseSpeed = [94.0, 101.0, 107.0, 114.0][activeDifficulty] || 101.0;
 
     // Per-racer pace calculation using driver + car performance profiles
     function calculateAIPace(racer, base) {
@@ -1585,7 +1585,10 @@
 
             if (chosenSide !== 0) {
               racer.aiMoveSide = chosenSide;
-              racer.aiMoveUntil = now + 0.7 + aggression * 0.5; // Short overtake commitment (B6)
+              racer.aiMoveUntil = now + 1.2 + aggression * 0.8;
+              // Deploy ERS Overtake mode during active pass attempts
+              racer.overtakeModeActive = true;
+              racer.ersPower = 1.0;
             } else {
               racer.aiMoveSide = 0;
               racer.aiMoveUntil = now + 0.3;
@@ -1593,11 +1596,12 @@
           }
 
           if (racer.aiMoveSide !== 0) {
-            overtakeOffset = racer.aiMoveSide * 2.8;
+            // Bold, decisive lateral pull-out (4.2m) into clean air
+            overtakeOffset = racer.aiMoveSide * 4.2;
           }
         }
 
-        // B7: Simple Defence
+        // B7: Authentic FIA Article 33.4 Defensive Racecraft
         let carBehind = null;
         let gapBehind = Infinity;
 
@@ -1621,57 +1625,69 @@
         });
 
         const gapBehindMeters = gapBehind * 1800;
-        const defenceRange = 25.0;
+        const defenceRange = 36.0; // Defend when opponent closes within 36 meters
+
+        function getUpcomingTrackCurvature(offset) {
+          if (!trackCurve) return 0.0;
+          const t1 = trackCurve.getTangentAt(offset % 1.0).normalize();
+          const t2 = trackCurve.getTangentAt((offset + 0.016) % 1.0).normalize();
+          return (t1.x * t2.z - t1.z * t2.x);
+        }
+        const upcomingCurvature = getUpcomingTrackCurvature(racer.currentOffset);
 
         if (carBehind && gapBehindMeters < defenceRange && overtakeOffset === 0.0) {
           const now = clock.getElapsedTime();
           if (racer.aiDefendUntil === undefined) racer.aiDefendUntil = 0.0;
           if (racer.aiDefendSide === undefined) racer.aiDefendSide = 0;
 
+          // AI Defending: Deploy ERS to defend on straights & protect track position!
+          if (gapBehindMeters < 28.0) {
+            racer.overtakeModeActive = true;
+            racer.ersPower = 1.0;
+          }
+
           if (now > racer.aiDefendUntil) {
-            if (Math.random() < defenceSkill * 0.6) {
-              const sideDiff = carBehind.sideOffset - racer.sideOffset;
-              racer.aiDefendSide = sideDiff >= 0.0 ? 1 : -1;
-              racer.aiDefendUntil = now + 0.8 + Math.random() * 0.5; // 0.8 to 1.3 seconds commitment
+            // Approaching a corner: defend the inside apex under FIA rules
+            if (Math.abs(upcomingCurvature) > 0.004) {
+              const insideApexSide = (upcomingCurvature > 0) ? -1 : 1;
+              racer.aiDefendSide = insideApexSide;
+              racer.aiDefendUntil = now + 1.2;
             } else {
-              racer.aiDefendSide = 0;
-              racer.aiDefendUntil = now + 0.4;
+              // On straights: cover the attacker's line to break tow / block pass
+              const sideDiff = carBehind.sideOffset - racer.sideOffset;
+              racer.aiDefendSide = (sideDiff >= 0.0) ? 1 : -1;
+              racer.aiDefendUntil = now + 1.0 + Math.random() * 0.6;
             }
           }
 
           if (racer.aiDefendSide !== 0) {
-            const DEFENCE_OFFSET_AMOUNT = 1.4;
+            // Authentic 3.6m defensive positioning
+            const DEFENCE_OFFSET_AMOUNT = 3.6;
             defenceOffset = racer.aiDefendSide * DEFENCE_OFFSET_AMOUNT;
           }
         }
 
       }
 
-      // B9: Final target offset must be built once
-      let normalTargetOffset = 0.0;
-
-      function getUpcomingTrackCurvature(offset) {
-        if (!trackCurve) return 0.0;
-        const t1 = trackCurve.getTangentAt(offset % 1.0).normalize();
-        const t2 = trackCurve.getTangentAt((offset + 0.016) % 1.0).normalize();
-        return (t1.x * t2.z - t1.z * t2.x);
-      }
-      const upcomingCurvature = getUpcomingTrackCurvature(racer.currentOffset);
+      // B9: Unique Driver Racing Lines (Prevents single-file train effect across grid)
       let optimalLineOffset = -upcomingCurvature * 140.0;
-      optimalLineOffset = THREE.MathUtils.clamp(optimalLineOffset, -5.2, 5.2);
+      optimalLineOffset = THREE.MathUtils.clamp(optimalLineOffset, -5.4, 5.4);
 
-      normalTargetOffset = optimalLineOffset;
+      // Personalized driver line bias (-2.0m to +2.0m per driver)
+      const driverHash = ((racer.name.charCodeAt(0) * 7 + (racer.teamIndex || 0) * 11) % 11) - 5;
+      const driverBias = (driverHash / 5.0) * 1.8;
+      // Dynamic breathing room to seek clean air
+      const cleanAirHunt = Math.sin(clock.getElapsedTime() * 0.5 + (racer.teamIndex || 0)) * 0.7;
 
-      const driverSeed = (racer.name.charCodeAt(0) % 5) - 2;
-      normalTargetOffset += driverSeed * 0.35 * racer.swayFadeFactor;
+      let normalTargetOffset = optimalLineOffset + (driverBias + cleanAirHunt) * (racer.swayFadeFactor || 1.0);
 
       if (!racer.pitExitMergeHold) {
         let finalTargetOffset = normalTargetOffset + overtakeOffset + defenceOffset + avoidanceOffset;
-        racer.targetSideOffset = THREE.MathUtils.clamp(finalTargetOffset, -7.6, 7.6);
+        racer.targetSideOffset = THREE.MathUtils.clamp(finalTargetOffset, -7.4, 7.4);
       }
 
       if (racer.sideOffset === undefined) racer.sideOffset = 0.0;
-      const steerRate = (avoidanceOffset !== 0.0) ? 9.5 : 3.8;
+      const steerRate = (avoidanceOffset !== 0.0 || defenceOffset !== 0.0) ? 8.5 : 4.2;
       racer.sideOffset = THREE.MathUtils.lerp(racer.sideOffset, racer.targetSideOffset, delta * steerRate);
 
       point.add(normal.multiplyScalar(racer.sideOffset));

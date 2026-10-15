@@ -6619,37 +6619,46 @@
     // Cinematic state-driven pit stop animation sequence!
     if (isPitStopActive) {
       const pPos = playerKart.mesh.position;
+      if (playerKart.basePitY === undefined) {
+        playerKart.basePitY = pPos.y;
+      }
       
       if (pitStopPhase === "CREW_RUNNING") {
         let allArrived = true;
+        window.crewRunningTimer = (window.crewRunningTimer || 0.0) + delta;
         pitCrew.forEach(c => {
-          c.group.position.lerp(c.target, delta * 7.5);
+          c.group.position.lerp(c.target, delta * 8.5);
           c.group.lookAt(pPos);
-          if (c.group.position.distanceTo(c.target) > 0.08) {
+          if (c.group.position.distanceTo(c.target) > 0.20) {
             allArrived = false;
           }
         });
-        if (allArrived) {
+        if (allArrived || window.crewRunningTimer > 0.6) {
           pitStopPhase = "LIFTING";
+          window.crewRunningTimer = 0.0;
           window.pitLiftTimer = 0.0;
-          document.getElementById('pit-prompt-text').innerText = "LIFTING CAR ON JACKS...";
+          const pPrompt = document.getElementById('pit-prompt-text');
+          if (pPrompt) pPrompt.innerText = "LIFTING CAR ON JACKS...";
         }
       } 
       else if (pitStopPhase === "LIFTING") {
-        window.pitLiftTimer = (window.pitLiftTimer || 0.0) + delta * 2.8;
-        playerKart.mesh.position.y = THREE.MathUtils.lerp(0.1, 0.42, Math.min(1.0, window.pitLiftTimer));
+        window.pitLiftTimer = (window.pitLiftTimer || 0.0) + delta * 3.2;
+        const baseY = playerKart.basePitY || 0.1;
+        playerKart.mesh.position.y = baseY + THREE.MathUtils.lerp(0.0, 0.32, Math.min(1.0, window.pitLiftTimer));
         if (window.pitLiftTimer >= 1.0) {
           pitStopPhase = "CHANGING_TYRES";
-          document.getElementById('pit-prompt-text').innerText = "WHEEL GUNS AT WORK // TYRE CHANGE IN PROGRESS...";
+          const pPrompt = document.getElementById('pit-prompt-text');
+          if (pPrompt) pPrompt.innerText = "WHEEL GUNS AT WORK // TYRE CHANGE IN PROGRESS...";
           if (window.ApexAudio && typeof window.ApexAudio.playWheelGun === 'function') {
             window.ApexAudio.playWheelGun();
           }
         }
       }
       else if (pitStopPhase === "CHANGING_TYRES") {
-        // Smooth automatic progression (2.6s pitstop) + tap boost
-        window.pitQTEProgress = (window.pitQTEProgress || 0.0) + delta * 38.0;
-        document.getElementById('pit-progress-fill').style.width = `${Math.min(100, window.pitQTEProgress)}%`;
+        // Smooth automatic progression (2.2s pitstop) + tap boost
+        window.pitQTEProgress = (window.pitQTEProgress || 0.0) + delta * 45.0;
+        const pFill = document.getElementById('pit-progress-fill');
+        if (pFill) pFill.style.width = `${Math.min(100, window.pitQTEProgress)}%`;
 
         if (window.pitQTEProgress > 45 && !window.pitGunSecondBurstPlayed) {
           window.pitGunSecondBurstPlayed = true;
@@ -6690,15 +6699,17 @@
           window.pitGunSecondBurstPlayed = false;
           pitStopPhase = "LOWERING";
           window.pitLowerTimer = 0.0;
-          document.getElementById('pit-prompt-text').innerText = "LOWERING CAR ON JACKS...";
+          const pPrompt = document.getElementById('pit-prompt-text');
+          if (pPrompt) pPrompt.innerText = "LOWERING CAR ON JACKS...";
           if (window.ApexAudio && typeof window.ApexAudio.playJackDrop === 'function') {
             window.ApexAudio.playJackDrop();
           }
         }
       }
       else if (pitStopPhase === "LOWERING") {
-        window.pitLowerTimer = (window.pitLowerTimer || 0.0) + delta * 3.8;
-        playerKart.mesh.position.y = THREE.MathUtils.lerp(0.42, 0.1, Math.min(1.0, window.pitLowerTimer));
+        window.pitLowerTimer = (window.pitLowerTimer || 0.0) + delta * 4.2;
+        const baseY = playerKart.basePitY || 0.1;
+        playerKart.mesh.position.y = baseY + THREE.MathUtils.lerp(0.32, 0.0, Math.min(1.0, window.pitLowerTimer));
         
         if (playerKart.mesh.wheels) {
           playerKart.mesh.wheels.forEach(w => w.position.x = w.originalX);
@@ -6706,12 +6717,13 @@
 
         // Crew starts jogging back to standby positions
         pitCrew.forEach(c => {
-          c.group.position.lerp(c.standby, delta * 4.5);
+          c.group.position.lerp(c.standby, delta * 5.5);
           c.group.lookAt(c.standby);
         });
 
         if (window.pitLowerTimer >= 1.0) {
           pitStopPhase = "RELEASED";
+          playerKart.basePitY = undefined;
           completePitStop();
         }
       }
@@ -8469,7 +8481,7 @@
         }
 
         // 🟢 Touching or entering the transparent green wall activates Autopilot into pit box!
-        const touchedGreenWall = (distToGate <= 4.6) || (turnInDist <= 1.8 && turnInDist >= -8.0) || ((keys.d || playerKart.filteredSteeringInput > 0.08) && turnInDist <= 8.0);
+        const touchedGreenWall = (distToGate <= 6.5) || (turnInDist <= 3.5 && turnInDist >= -12.0) || ((keys.d || playerKart.filteredSteeringInput > 0.08) && turnInDist <= 14.0 && turnInDist >= -6.0);
 
         if (touchedGreenWall && !playerKart.isExitingGarage) {
           if (!window.turnInRated) {
@@ -8477,15 +8489,15 @@
             let rating = "OPTIMAL";
             let ratingColor = "#c084fc"; // Purple glow (matching Image 2)
             let estTime = 2.4;
-            if (Math.abs(turnInDist) <= 3.5 || distToGate <= 2.8) {
+            if (Math.abs(turnInDist) <= 4.0 || distToGate <= 3.5) {
               rating = "OPTIMAL";
               ratingColor = "#c084fc";
               estTime = 2.2;
-            } else if (Math.abs(turnInDist) <= 8.0 || distToGate <= 5.0) {
+            } else if (Math.abs(turnInDist) <= 9.0 || distToGate <= 6.0) {
               rating = "GOOD";
               ratingColor = "#22c55e";
               estTime = 2.6;
-            } else if (turnInDist > 8.0) {
+            } else if (turnInDist > 9.0) {
               rating = "EARLY";
               ratingColor = "#fbbf24";
               estTime = 3.4;
@@ -8507,7 +8519,8 @@
         }
 
         const distToBox = playerKart.mesh.position.distanceTo(boxPos);
-        const isNearBox = (distToBox < 4.5 && Math.abs(playerKart.speed) < 14.0 && !playerKart.isExitingGarage);
+        const isAlongPitBox = Math.abs(pitProgress - pBoxT) < 0.045;
+        const isNearBox = (distToBox < 5.5 || (isAlongPitBox && distToBox < 14.0 && Math.abs(playerKart.speed) < 18.0)) && !playerKart.isExitingGarage;
 
         if (pitProgress >= (pBoxT - 0.06) && pitProgress <= (pBoxT + 0.04) && !playerKart.isExitingGarage) {
           rdShowMessage('PULL INTO PIT BOX // BRAKE & STOP', 0.2, '#10b981');
@@ -9718,9 +9731,9 @@
 
     }
 
-    // Boosted AI top speeds to match player top speed potential (player base = 88 m/s)
-    // Realistic modern F1 AI speeds: Easy: ~315 km/h, Normal: ~342 km/h, Hard: ~360 km/h, Expert: ~380 km/h
-    const baseSpeed = [88.0, 95.0, 100.0, 106.0][activeDifficulty] || 95.0;
+    // Boosted AI top speeds to match player top speed potential (player base = 88-96 m/s)
+    // Competitive realistic modern F1 AI speeds: Easy: ~330 km/h, Normal: ~355 km/h, Hard: ~372 km/h, Expert: ~390 km/h
+    const baseSpeed = [94.0, 101.0, 107.0, 114.0][activeDifficulty] || 101.0;
 
     // Per-racer pace calculation using driver + car performance profiles
     function calculateAIPace(racer, base) {
@@ -10915,7 +10928,10 @@
 
             if (chosenSide !== 0) {
               racer.aiMoveSide = chosenSide;
-              racer.aiMoveUntil = now + 0.7 + aggression * 0.5; // Short overtake commitment (B6)
+              racer.aiMoveUntil = now + 1.2 + aggression * 0.8;
+              // Deploy ERS Overtake mode during active pass attempts
+              racer.overtakeModeActive = true;
+              racer.ersPower = 1.0;
             } else {
               racer.aiMoveSide = 0;
               racer.aiMoveUntil = now + 0.3;
@@ -10923,11 +10939,12 @@
           }
 
           if (racer.aiMoveSide !== 0) {
-            overtakeOffset = racer.aiMoveSide * 2.8;
+            // Bold, decisive lateral pull-out (4.2m) into clean air
+            overtakeOffset = racer.aiMoveSide * 4.2;
           }
         }
 
-        // B7: Simple Defence
+        // B7: Authentic FIA Article 33.4 Defensive Racecraft
         let carBehind = null;
         let gapBehind = Infinity;
 
@@ -10951,57 +10968,69 @@
         });
 
         const gapBehindMeters = gapBehind * 1800;
-        const defenceRange = 25.0;
+        const defenceRange = 36.0; // Defend when opponent closes within 36 meters
+
+        function getUpcomingTrackCurvature(offset) {
+          if (!trackCurve) return 0.0;
+          const t1 = trackCurve.getTangentAt(offset % 1.0).normalize();
+          const t2 = trackCurve.getTangentAt((offset + 0.016) % 1.0).normalize();
+          return (t1.x * t2.z - t1.z * t2.x);
+        }
+        const upcomingCurvature = getUpcomingTrackCurvature(racer.currentOffset);
 
         if (carBehind && gapBehindMeters < defenceRange && overtakeOffset === 0.0) {
           const now = clock.getElapsedTime();
           if (racer.aiDefendUntil === undefined) racer.aiDefendUntil = 0.0;
           if (racer.aiDefendSide === undefined) racer.aiDefendSide = 0;
 
+          // AI Defending: Deploy ERS to defend on straights & protect track position!
+          if (gapBehindMeters < 28.0) {
+            racer.overtakeModeActive = true;
+            racer.ersPower = 1.0;
+          }
+
           if (now > racer.aiDefendUntil) {
-            if (Math.random() < defenceSkill * 0.6) {
-              const sideDiff = carBehind.sideOffset - racer.sideOffset;
-              racer.aiDefendSide = sideDiff >= 0.0 ? 1 : -1;
-              racer.aiDefendUntil = now + 0.8 + Math.random() * 0.5; // 0.8 to 1.3 seconds commitment
+            // Approaching a corner: defend the inside apex under FIA rules
+            if (Math.abs(upcomingCurvature) > 0.004) {
+              const insideApexSide = (upcomingCurvature > 0) ? -1 : 1;
+              racer.aiDefendSide = insideApexSide;
+              racer.aiDefendUntil = now + 1.2;
             } else {
-              racer.aiDefendSide = 0;
-              racer.aiDefendUntil = now + 0.4;
+              // On straights: cover the attacker's line to break tow / block pass
+              const sideDiff = carBehind.sideOffset - racer.sideOffset;
+              racer.aiDefendSide = (sideDiff >= 0.0) ? 1 : -1;
+              racer.aiDefendUntil = now + 1.0 + Math.random() * 0.6;
             }
           }
 
           if (racer.aiDefendSide !== 0) {
-            const DEFENCE_OFFSET_AMOUNT = 1.4;
+            // Authentic 3.6m defensive positioning
+            const DEFENCE_OFFSET_AMOUNT = 3.6;
             defenceOffset = racer.aiDefendSide * DEFENCE_OFFSET_AMOUNT;
           }
         }
 
       }
 
-      // B9: Final target offset must be built once
-      let normalTargetOffset = 0.0;
-
-      function getUpcomingTrackCurvature(offset) {
-        if (!trackCurve) return 0.0;
-        const t1 = trackCurve.getTangentAt(offset % 1.0).normalize();
-        const t2 = trackCurve.getTangentAt((offset + 0.016) % 1.0).normalize();
-        return (t1.x * t2.z - t1.z * t2.x);
-      }
-      const upcomingCurvature = getUpcomingTrackCurvature(racer.currentOffset);
+      // B9: Unique Driver Racing Lines (Prevents single-file train effect across grid)
       let optimalLineOffset = -upcomingCurvature * 140.0;
-      optimalLineOffset = THREE.MathUtils.clamp(optimalLineOffset, -5.2, 5.2);
+      optimalLineOffset = THREE.MathUtils.clamp(optimalLineOffset, -5.4, 5.4);
 
-      normalTargetOffset = optimalLineOffset;
+      // Personalized driver line bias (-2.0m to +2.0m per driver)
+      const driverHash = ((racer.name.charCodeAt(0) * 7 + (racer.teamIndex || 0) * 11) % 11) - 5;
+      const driverBias = (driverHash / 5.0) * 1.8;
+      // Dynamic breathing room to seek clean air
+      const cleanAirHunt = Math.sin(clock.getElapsedTime() * 0.5 + (racer.teamIndex || 0)) * 0.7;
 
-      const driverSeed = (racer.name.charCodeAt(0) % 5) - 2;
-      normalTargetOffset += driverSeed * 0.35 * racer.swayFadeFactor;
+      let normalTargetOffset = optimalLineOffset + (driverBias + cleanAirHunt) * (racer.swayFadeFactor || 1.0);
 
       if (!racer.pitExitMergeHold) {
         let finalTargetOffset = normalTargetOffset + overtakeOffset + defenceOffset + avoidanceOffset;
-        racer.targetSideOffset = THREE.MathUtils.clamp(finalTargetOffset, -7.6, 7.6);
+        racer.targetSideOffset = THREE.MathUtils.clamp(finalTargetOffset, -7.4, 7.4);
       }
 
       if (racer.sideOffset === undefined) racer.sideOffset = 0.0;
-      const steerRate = (avoidanceOffset !== 0.0) ? 9.5 : 3.8;
+      const steerRate = (avoidanceOffset !== 0.0 || defenceOffset !== 0.0) ? 8.5 : 4.2;
       racer.sideOffset = THREE.MathUtils.lerp(racer.sideOffset, racer.targetSideOffset, delta * steerRate);
 
       point.add(normal.multiplyScalar(racer.sideOffset));

@@ -1475,7 +1475,7 @@
         }
 
         // 🟢 Touching or entering the transparent green wall activates Autopilot into pit box!
-        const touchedGreenWall = (distToGate <= 4.6) || (turnInDist <= 1.8 && turnInDist >= -8.0) || ((keys.d || playerKart.filteredSteeringInput > 0.08) && turnInDist <= 8.0);
+        const touchedGreenWall = (distToGate <= 6.5) || (turnInDist <= 3.5 && turnInDist >= -12.0) || ((keys.d || playerKart.filteredSteeringInput > 0.08) && turnInDist <= 14.0 && turnInDist >= -6.0);
 
         if (touchedGreenWall && !playerKart.isExitingGarage) {
           if (!window.turnInRated) {
@@ -1483,15 +1483,15 @@
             let rating = "OPTIMAL";
             let ratingColor = "#c084fc"; // Purple glow (matching Image 2)
             let estTime = 2.4;
-            if (Math.abs(turnInDist) <= 3.5 || distToGate <= 2.8) {
+            if (Math.abs(turnInDist) <= 4.0 || distToGate <= 3.5) {
               rating = "OPTIMAL";
               ratingColor = "#c084fc";
               estTime = 2.2;
-            } else if (Math.abs(turnInDist) <= 8.0 || distToGate <= 5.0) {
+            } else if (Math.abs(turnInDist) <= 9.0 || distToGate <= 6.0) {
               rating = "GOOD";
               ratingColor = "#22c55e";
               estTime = 2.6;
-            } else if (turnInDist > 8.0) {
+            } else if (turnInDist > 9.0) {
               rating = "EARLY";
               ratingColor = "#fbbf24";
               estTime = 3.4;
@@ -1513,7 +1513,8 @@
         }
 
         const distToBox = playerKart.mesh.position.distanceTo(boxPos);
-        const isNearBox = (distToBox < 4.5 && Math.abs(playerKart.speed) < 14.0 && !playerKart.isExitingGarage);
+        const isAlongPitBox = Math.abs(pitProgress - pBoxT) < 0.045;
+        const isNearBox = (distToBox < 5.5 || (isAlongPitBox && distToBox < 14.0 && Math.abs(playerKart.speed) < 18.0)) && !playerKart.isExitingGarage;
 
         if (pitProgress >= (pBoxT - 0.06) && pitProgress <= (pBoxT + 0.04) && !playerKart.isExitingGarage) {
           rdShowMessage('PULL INTO PIT BOX // BRAKE & STOP', 0.2, '#10b981');

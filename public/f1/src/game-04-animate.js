@@ -45,37 +45,46 @@
     // Cinematic state-driven pit stop animation sequence!
     if (isPitStopActive) {
       const pPos = playerKart.mesh.position;
+      if (playerKart.basePitY === undefined) {
+        playerKart.basePitY = pPos.y;
+      }
       
       if (pitStopPhase === "CREW_RUNNING") {
         let allArrived = true;
+        window.crewRunningTimer = (window.crewRunningTimer || 0.0) + delta;
         pitCrew.forEach(c => {
-          c.group.position.lerp(c.target, delta * 7.5);
+          c.group.position.lerp(c.target, delta * 8.5);
           c.group.lookAt(pPos);
-          if (c.group.position.distanceTo(c.target) > 0.08) {
+          if (c.group.position.distanceTo(c.target) > 0.20) {
             allArrived = false;
           }
         });
-        if (allArrived) {
+        if (allArrived || window.crewRunningTimer > 0.6) {
           pitStopPhase = "LIFTING";
+          window.crewRunningTimer = 0.0;
           window.pitLiftTimer = 0.0;
-          document.getElementById('pit-prompt-text').innerText = "LIFTING CAR ON JACKS...";
+          const pPrompt = document.getElementById('pit-prompt-text');
+          if (pPrompt) pPrompt.innerText = "LIFTING CAR ON JACKS...";
         }
       } 
       else if (pitStopPhase === "LIFTING") {
-        window.pitLiftTimer = (window.pitLiftTimer || 0.0) + delta * 2.8;
-        playerKart.mesh.position.y = THREE.MathUtils.lerp(0.1, 0.42, Math.min(1.0, window.pitLiftTimer));
+        window.pitLiftTimer = (window.pitLiftTimer || 0.0) + delta * 3.2;
+        const baseY = playerKart.basePitY || 0.1;
+        playerKart.mesh.position.y = baseY + THREE.MathUtils.lerp(0.0, 0.32, Math.min(1.0, window.pitLiftTimer));
         if (window.pitLiftTimer >= 1.0) {
           pitStopPhase = "CHANGING_TYRES";
-          document.getElementById('pit-prompt-text').innerText = "WHEEL GUNS AT WORK // TYRE CHANGE IN PROGRESS...";
+          const pPrompt = document.getElementById('pit-prompt-text');
+          if (pPrompt) pPrompt.innerText = "WHEEL GUNS AT WORK // TYRE CHANGE IN PROGRESS...";
           if (window.ApexAudio && typeof window.ApexAudio.playWheelGun === 'function') {
             window.ApexAudio.playWheelGun();
           }
         }
       }
       else if (pitStopPhase === "CHANGING_TYRES") {
-        // Smooth automatic progression (2.6s pitstop) + tap boost
-        window.pitQTEProgress = (window.pitQTEProgress || 0.0) + delta * 38.0;
-        document.getElementById('pit-progress-fill').style.width = `${Math.min(100, window.pitQTEProgress)}%`;
+        // Smooth automatic progression (2.2s pitstop) + tap boost
+        window.pitQTEProgress = (window.pitQTEProgress || 0.0) + delta * 45.0;
+        const pFill = document.getElementById('pit-progress-fill');
+        if (pFill) pFill.style.width = `${Math.min(100, window.pitQTEProgress)}%`;
 
         if (window.pitQTEProgress > 45 && !window.pitGunSecondBurstPlayed) {
           window.pitGunSecondBurstPlayed = true;
@@ -116,15 +125,17 @@
           window.pitGunSecondBurstPlayed = false;
           pitStopPhase = "LOWERING";
           window.pitLowerTimer = 0.0;
-          document.getElementById('pit-prompt-text').innerText = "LOWERING CAR ON JACKS...";
+          const pPrompt = document.getElementById('pit-prompt-text');
+          if (pPrompt) pPrompt.innerText = "LOWERING CAR ON JACKS...";
           if (window.ApexAudio && typeof window.ApexAudio.playJackDrop === 'function') {
             window.ApexAudio.playJackDrop();
           }
         }
       }
       else if (pitStopPhase === "LOWERING") {
-        window.pitLowerTimer = (window.pitLowerTimer || 0.0) + delta * 3.8;
-        playerKart.mesh.position.y = THREE.MathUtils.lerp(0.42, 0.1, Math.min(1.0, window.pitLowerTimer));
+        window.pitLowerTimer = (window.pitLowerTimer || 0.0) + delta * 4.2;
+        const baseY = playerKart.basePitY || 0.1;
+        playerKart.mesh.position.y = baseY + THREE.MathUtils.lerp(0.32, 0.0, Math.min(1.0, window.pitLowerTimer));
         
         if (playerKart.mesh.wheels) {
           playerKart.mesh.wheels.forEach(w => w.position.x = w.originalX);
@@ -132,12 +143,13 @@
 
         // Crew starts jogging back to standby positions
         pitCrew.forEach(c => {
-          c.group.position.lerp(c.standby, delta * 4.5);
+          c.group.position.lerp(c.standby, delta * 5.5);
           c.group.lookAt(c.standby);
         });
 
         if (window.pitLowerTimer >= 1.0) {
           pitStopPhase = "RELEASED";
+          playerKart.basePitY = undefined;
           completePitStop();
         }
       }
