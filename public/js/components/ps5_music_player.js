@@ -126,6 +126,41 @@
     window.ps5YtReady = true;
   }
 
+  function isAnyGameActive() {
+    return !!(window.ps5ActiveGame || document.getElementById('game-session-iframe'));
+  }
+
+  // Universal message listener to mute/pause from any iframe game
+  window.addEventListener('message', (e) => {
+    if (e.data && (e.data.type === 'PAUSE_BG_MUSIC' || e.data.type === 'STOP_BG_MUSIC' || e.data === 'PAUSE_BG_MUSIC')) {
+      if (typeof window.ps5MusicPause === 'function') window.ps5MusicPause();
+      if (window.ps5YtPlayer) {
+        try { window.ps5YtPlayer.pauseVideo(); window.ps5YtPlayer.mute(); } catch(err){}
+      }
+      document.querySelectorAll('audio, video').forEach(a => { try { a.pause(); a.muted = true; } catch(err){} });
+    }
+  });
+
+  // Background guard: while a game is active, ensure YouTube audio never plays
+  setInterval(() => {
+    if (isAnyGameActive()) {
+      if (ps5YtPlayer && ps5YtReady) {
+        try {
+          const st = ps5YtPlayer.getPlayerState();
+          if (st === 1 || st === 3) {
+            ps5YtPlayer.pauseVideo();
+            ps5YtPlayer.mute();
+            ps5SetVinylSpin(false);
+            ps5SetPlayIcon(false);
+          }
+        } catch(e) {}
+      }
+      document.querySelectorAll('audio').forEach(a => {
+        try { if (!a.paused) a.pause(); } catch(e){}
+      });
+    }
+  }, 800);
+
   window.ps5MusicPause = function() {
     try {
       if (ps5YtPlayer) {
@@ -162,6 +197,17 @@
     const track = PS5_PLAYLIST[ps5MusicIndex];
     console.log('[Music] Loading track index:', ps5MusicIndex, track.title);
     ps5MusicSetTitle(track.title);
+    if (isAnyGameActive()) {
+      try {
+        if (typeof ps5YtPlayer.cueVideoById === 'function') ps5YtPlayer.cueVideoById(track.id);
+        else ps5YtPlayer.loadVideoById(track.id);
+        ps5YtPlayer.pauseVideo();
+        ps5YtPlayer.mute();
+      } catch(e) {}
+      ps5SetVinylSpin(false);
+      ps5SetPlayIcon(false);
+      return;
+    }
     ps5YtPlayer.loadVideoById(track.id);
     ps5YtPlayer.playVideo();
   }

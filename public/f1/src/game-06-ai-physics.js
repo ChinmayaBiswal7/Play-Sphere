@@ -33,9 +33,8 @@
   }
 
   window.getGridSlotTransform = (gridIndex) => {
-    const row = Math.floor(gridIndex / 2);
-    const side = gridIndex % 2 === 0 ? -1.8 : 1.8;
-    const progress = (1.0 - row * 0.009 + 1.0) % 1.0;
+    const side = gridIndex % 2 === 0 ? -2.0 : 2.0;
+    const progress = (1.0 - 0.003 - (gridIndex * 0.0045) + 1.0) % 1.0;
     
     const pt = trackCurve.getPointAt(progress);
     const tang = trackCurve.getTangentAt(progress).normalize();
@@ -52,6 +51,10 @@
   };
 
   window.startRaceFormationLap = () => {
+    if (currentSessionIndex !== 2) {
+      window.formationLapActive = false;
+      return;
+    }
     window.raceState = "RACE_FORMATION";
     window.formationLapActive = true;
     
@@ -178,7 +181,11 @@
   function updateAIPysics(delta) {
     const trackLen = trackCurve ? trackCurve.getLength() : 1800.0;
 
-    if (window.formationLapActive) {
+    if (currentSessionIndex !== 2) {
+      window.formationLapActive = false;
+    }
+
+    if (window.formationLapActive && currentSessionIndex === 2) {
       if (window.raceState === "RACE_FORMATION" || window.raceState === "RACE_GRID_WAIT") {
         racers.forEach((racer) => {
           if (racer.isPlayer) return;
@@ -257,11 +264,11 @@
           }
         });
         
-        if (allReady) {
+        if (allReady && currentSessionIndex === 2) {
           window.formationLapActive = false;
           window.raceState = "RACE_LIGHTS";
           isStartingSequence = true;
-          startingSequenceTime = 4.0; // skip flyby, focus on lights gantry
+          startingSequenceTime = 0.0; // Clean 0s start for full 5 red lights sequence!
           lastLightSoundIndex = -1;
           
           // Clear player grid marker
@@ -381,16 +388,14 @@
 
     }
 
-    // Boosted AI top speeds to match player top speed potential (player base = 75 m/s)
-
-    // Realistic modern F1 AI speeds: player max ~88-92 m/s (~315-330 km/h) on straights
-    // Easy: 82 m/s (~295 km/h), Normal: 89 m/s (~320 km/h), Hard: 93 m/s (~335 km/h), Expert: 97 m/s (~350 km/h)
-    const baseSpeed = [82.0, 89.0, 93.0, 97.0][activeDifficulty] || 89.0;
+    // Boosted AI top speeds to match player top speed potential (player base = 88 m/s)
+    // Realistic modern F1 AI speeds: Easy: ~315 km/h, Normal: ~342 km/h, Hard: ~360 km/h, Expert: ~380 km/h
+    const baseSpeed = [88.0, 95.0, 100.0, 106.0][activeDifficulty] || 95.0;
 
     // Per-racer pace calculation using driver + car performance profiles
     function calculateAIPace(racer, base) {
-      const p = racer.aiProfile || { pace: 0.85, brakingSkill: 0.85, corneringSkill: 0.85, consistency: 0.85 };
-      const c = racer.carPerformance || { topSpeed: 80, cornering: 80 };
+      const p = racer.aiProfile || { pace: 0.90, brakingSkill: 0.90, corneringSkill: 0.90, consistency: 0.90 };
+      const c = racer.carPerformance || { topSpeed: 85, cornering: 85 };
 
       // Normalize car stats to 0-1
       const carFactor = ((c.topSpeed / 100) * 0.5 + (c.cornering / 100) * 0.5);
@@ -399,13 +404,13 @@
       // Combined potential: car 45%, driver 55%
       const combined = carFactor * 0.45 + driverFactor * 0.55;
 
-      // Difficulty utilisation: Easy 94-98%, Normal 98-102%, Hard 101-106%, Expert 104-110%
+      // Difficulty utilisation: Easy 96-101%, Normal 100-105%, Hard 103-108%, Expert 106-112%
       const utilRange = [
-        [0.94, 0.98],  // Easy (~280-295 km/h)
-        [0.98, 1.02],  // Normal (~315-325 km/h)
-        [1.01, 1.06],  // Hard (~330-345 km/h)
-        [1.04, 1.10]   // Expert (~345-360 km/h)
-      ][activeDifficulty] || [0.98, 1.02];
+        [0.96, 1.01],  // Easy (~305-325 km/h)
+        [1.00, 1.05],  // Normal (~340-355 km/h)
+        [1.03, 1.08],  // Hard (~355-370 km/h)
+        [1.06, 1.12]   // Expert (~365-385 km/h)
+      ][activeDifficulty] || [1.00, 1.05];
 
       const utilFactor = THREE.MathUtils.lerp(utilRange[0], utilRange[1], combined);
       return base * utilFactor;
@@ -911,15 +916,25 @@
 
         target *= dmgSpeedFactor;
 
-        // Calculate non-linear acceleration factor
+        // 🚀 AI Straightaway DRS Boost (matches player DRS straight advantage)
+        const isAIStraightZone = (racer.currentOffset >= 0.90 || racer.currentOffset <= 0.05) || (racer.currentOffset >= 0.35 && racer.currentOffset <= 0.44);
+        if (isAIStraightZone && !safetyCarActive && !redFlagActive && racer.qualifyingState !== "GARAGE") {
+          target += 9.0; // Straightaway DRS boost
+          if (racer.mesh && racer.mesh.drsFlap) {
+            racer.mesh.drsFlap.rotation.x = THREE.MathUtils.lerp(racer.mesh.drsFlap.rotation.x, -0.45, delta * 8.0);
+          }
+        } else {
+          if (racer.mesh && racer.mesh.drsFlap) {
+            racer.mesh.drsFlap.rotation.x = THREE.MathUtils.lerp(racer.mesh.drsFlap.rotation.x, 0.0, delta * 8.0);
+          }
+        }
 
+        // Calculate non-linear acceleration factor (retains strong pull even at 85-95% top speed)
         const speedRatio = Math.max(0.0, Math.min(1.0, Math.abs(racer.speed) / Math.max(1.0, target)));
+        const accelerationFactor = Math.max(0.35, 1.0 - Math.pow(speedRatio, 2.6));
 
-        const accelerationFactor = 1.0 - Math.pow(speedRatio, 1.7);
-
-        // Base AI acceleration — matched to player's gear-scaled accel potential
-
-        let aiAccel = 42.0;
+        // Base AI acceleration — intense competitive corner exit pull
+        let aiAccel = 68.0;
 
         // ERS boost acceleration based on battery energy state
 

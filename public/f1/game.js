@@ -3527,45 +3527,32 @@
   // F1 Cinematic Gantry Starting Lights & Grid Formations
   function updateStartingSequence(delta) {
     if (currentSessionIndex !== 2) {
-      console.error("[BLOCKED STARTING SEQUENCE OUTSIDE RACE]", currentSessionIndex);
-      console.trace("[STARTING SEQUENCE CALL STACK]");
       isStartingSequence = false;
+      const overlay = document.getElementById('f1-starting-lights-overlay');
+      if (overlay) {
+        overlay.classList.add('hidden');
+        overlay.style.display = 'none';
+      }
       return;
     }
     startingSequenceTime += delta;
 
-    const startPt = trackCurve.getPointAt(0);
-
-    // Positions karts into grid positions at start
+    // Position karts into exact grid positions at start
     racers.forEach((racer, idx) => {
       if (racer.isPlayer) {
-        const currentSession = ["PRACTICE", "QUALIFYING", "RACE"][currentSessionIndex] || "PRACTICE";
-        if (currentSession !== "RACE") return;
         if (racer.inPitLane || racer.pitAutopilot || racer.driveOutAutopilot) return;
       }
-      const tPos = 0.0 - idx * 0.012; // Spaced staggered rows (matches launch hold spacing!)
-      const rPoint = trackCurve.getPointAt((tPos + 1.0) % 1.0);
-      const rTangent = trackCurve.getTangentAt((tPos + 1.0) % 1.0);
-      const rNormal = new THREE.Vector3(-rTangent.z, 0, rTangent.x);
-      if (rNormal.lengthSq() > 0.000001) {
-        rNormal.normalize();
-      } else {
-        rNormal.set(1, 0, 0);
+      const myGridIdx = window.startingGrid ? window.startingGrid.findIndex(g => g.name === racer.name) : idx;
+      const slotIdx = myGridIdx !== -1 ? myGridIdx : idx;
+      const slot = window.getGridSlotTransform(slotIdx);
+
+      if (racer.mesh) {
+        racer.mesh.position.copy(slot.position);
+        racer.mesh.rotation.y = slot.heading;
       }
-      
-      const side = idx % 2 === 0 ? 1.8 : -1.8;
-      rPoint.add(rNormal.multiplyScalar(side));
-      
-      if (racer.isPlayer && typeof window.debugSetPlayerPosition === 'function') {
-        window.debugSetPlayerPosition("updateStartingSequence_GRID", rPoint);
-      } else {
-        racer.mesh.position.copy(rPoint);
-      }
-      racer.mesh.lookAt(rPoint.clone().add(rTangent));
-      
       racer.speed = 0.0;
-      racer.currentOffset = (tPos + 1.0) % 1.0;
-      racer.sideOffset = side; // Set for BOTH player and AI to prevent launch snaps!
+      racer.currentOffset = slot.progress;
+      racer.sideOffset = slot.sideOffset;
     });
 
     const currentSession = ["PRACTICE", "QUALIFYING", "RACE"][currentSessionIndex] || "PRACTICE";
@@ -3985,7 +3972,7 @@
     sfLine.rotateZ(Math.PI / 2);
     scene.add(sfLine);
 
-    // 7. Official 20 FIA Staggered Starting Grid Boxes (P1 - P20) across all race modes
+    // 7. Official FIA Staggered Starting Grid Boxes (Matching real Grand Prix photos)
     const gridWhiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
     const gridYellowMat = new THREE.MeshBasicMaterial({ color: 0xfacc15, side: THREE.DoubleSide });
 
@@ -3998,72 +3985,58 @@
       const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
       const center = p.clone().add(norm.clone().multiplyScalar(side));
 
-      // Front stop bar (white line 2.2m wide x 0.24m thick)
-      const frontCenter = center.clone().add(tang.clone().multiplyScalar(2.3));
-      const stopBarGeo = new THREE.PlaneGeometry(2.2, 0.24);
-      const stopBar = new THREE.Mesh(stopBarGeo, gridWhiteMat);
-      stopBar.position.copy(frontCenter);
-      stopBar.position.y = 0.018;
-      stopBar.lookAt(frontCenter.clone().add(tang));
-      stopBar.rotateX(Math.PI / 2);
-      stopBar.rotateZ(Math.PI / 2);
-      scene.add(stopBar);
+      const slotGroup = new THREE.Group();
+      slotGroup.position.copy(center);
+      slotGroup.position.y = 0.022;
 
-      // Yellow center alignment notch on front stop line
-      const yellowNotchGeo = new THREE.PlaneGeometry(0.12, 0.46);
-      const yellowNotch = new THREE.Mesh(yellowNotchGeo, gridYellowMat);
-      yellowNotch.position.copy(frontCenter);
-      yellowNotch.position.y = 0.020;
-      yellowNotch.lookAt(frontCenter.clone().add(tang));
-      yellowNotch.rotateX(Math.PI / 2);
-      scene.add(yellowNotch);
+      // Basis matrix: X = norm (right), Y = up, Z = tang (forward)
+      const rotMatrix = new THREE.Matrix4().makeBasis(norm, new THREE.Vector3(0, 1, 0), tang);
+      slotGroup.setRotationFromMatrix(rotMatrix);
 
-      // Left wheel guide stripe (4.6m length)
-      const leftGuideGeo = new THREE.PlaneGeometry(0.14, 4.6);
-      const leftGuide = new THREE.Mesh(leftGuideGeo, gridWhiteMat);
-      const leftCenter = center.clone().add(norm.clone().multiplyScalar(-1.1));
-      leftGuide.position.copy(leftCenter);
-      leftGuide.position.y = 0.018;
-      leftGuide.lookAt(leftCenter.clone().add(tang));
-      leftGuide.rotateX(Math.PI / 2);
-      scene.add(leftGuide);
+      // 1. Solid White Front Stop Bar (2.8m wide, 0.22m thick)
+      const stopBar = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.004, 0.22), gridWhiteMat);
+      stopBar.position.set(0, 0, 2.5);
+      slotGroup.add(stopBar);
 
-      // Right wheel guide stripe (4.6m length)
-      const rightGuideGeo = new THREE.PlaneGeometry(0.14, 4.6);
-      const rightGuide = new THREE.Mesh(rightGuideGeo, gridWhiteMat);
-      const rightCenter = center.clone().add(norm.clone().multiplyScalar(1.1));
-      rightGuide.position.copy(rightCenter);
-      rightGuide.position.y = 0.018;
-      rightGuide.lookAt(rightCenter.clone().add(tang));
-      rightGuide.rotateX(Math.PI / 2);
-      scene.add(rightGuide);
+      // 2. Long FIA Yellow Center Alignment Stripe (4.8m long down the middle from stop bar backwards)
+      const yellowCenterline = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.006, 4.8), gridYellowMat);
+      yellowCenterline.position.set(0, 0.001, 0.1);
+      slotGroup.add(yellowCenterline);
 
-      // Position Number Plate Painted on Track (P1 - P20)
+      // 3. Left White Bracket Rail ([)
+      const leftRail = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.004, 5.2), gridWhiteMat);
+      leftRail.position.set(-1.4, 0, 0.0);
+      const leftRearTick = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.004, 0.10), gridWhiteMat);
+      leftRearTick.position.set(-1.18, 0, -2.6);
+      slotGroup.add(leftRail, leftRearTick);
+
+      // 4. Right White Bracket Rail (])
+      const rightRail = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.004, 5.2), gridWhiteMat);
+      rightRail.position.set(1.4, 0, 0.0);
+      const rightRearTick = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.004, 0.10), gridWhiteMat);
+      rightRearTick.position.set(1.18, 0, -2.6);
+      slotGroup.add(rightRail, rightRearTick);
+
+      // 5. Position Number Painted Directly on Track Asphalt (P1 - P20)
       const numCanvas = document.createElement('canvas');
-      numCanvas.width = 64; numCanvas.height = 64;
+      numCanvas.width = 128; numCanvas.height = 128;
       const nctx = numCanvas.getContext('2d');
-      nctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
-      nctx.fillRect(4, 4, 56, 56);
-      nctx.strokeStyle = '#ffffff';
-      nctx.lineWidth = 3;
-      nctx.strokeRect(4, 4, 56, 56);
+      nctx.clearRect(0, 0, 128, 128);
       nctx.fillStyle = '#ffffff';
-      nctx.font = 'bold 30px sans-serif';
+      nctx.font = '900 68px "Orbitron", sans-serif';
       nctx.textAlign = 'center';
       nctx.textBaseline = 'middle';
-      nctx.fillText(String(slot + 1), 32, 34);
+      nctx.fillText(String(slot + 1), 64, 64);
 
       const numTex = new THREE.CanvasTexture(numCanvas);
       const numMat = new THREE.MeshBasicMaterial({ map: numTex, transparent: true, side: THREE.DoubleSide });
-      const numGeo = new THREE.PlaneGeometry(1.0, 1.0);
-      const numMesh = new THREE.Mesh(numGeo, numMat);
-      const numPos = center.clone().add(tang.clone().multiplyScalar(1.3));
-      numMesh.position.copy(numPos);
-      numMesh.position.y = 0.019;
-      numMesh.lookAt(numPos.clone().add(tang));
-      numMesh.rotateX(Math.PI / 2);
-      numMesh.rotateZ(Math.PI);
-      scene.add(numMesh);
+      const numMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.4), numMat);
+      numMesh.rotation.x = -Math.PI / 2;
+      numMesh.rotation.z = Math.PI; // Orient to be readable looking forward along track
+      numMesh.position.set(side < 0 ? -2.2 : 2.2, 0.002, 1.8);
+      slotGroup.add(numMesh);
+
+      scene.add(slotGroup);
     }
   }
 
@@ -6431,16 +6404,15 @@
     return targetSpeed;
   }
 
-  // ─── AI Braking Zones ──────────────────────────────────
-  // Authentic high-downforce F1 cornering speeds (keeps AI within competitive gap of player)
+  // Authentic high-downforce F1 cornering speeds (keeps AI competitive with player)
   const AI_BRAKING_ZONES = [
-    { from: 0.06,  to: 0.10,  maxSpeed: 62.0 }, // Turn 1-2 fast sweeper
-    { from: 0.17,  to: 0.21,  maxSpeed: 52.0 }, // Turn 3-4 chicane
-    { from: 0.29,  to: 0.33,  maxSpeed: 45.0 }, // Turn 5 hairpin
-    { from: 0.44,  to: 0.48,  maxSpeed: 64.0 }, // Turn 6-7 high-speed bend
-    { from: 0.57,  to: 0.61,  maxSpeed: 54.0 }, // Turn 8 medium curve
-    { from: 0.72,  to: 0.76,  maxSpeed: 50.0 }, // Turn 9-10 chicane
-    { from: 0.85,  to: 0.89,  maxSpeed: 60.0 }  // Turn 11-12 final sweeping bend
+    { from: 0.06,  to: 0.10,  maxSpeed: 74.0 }, // Turn 1-2 fast sweeper (~266 km/h)
+    { from: 0.17,  to: 0.21,  maxSpeed: 64.0 }, // Turn 3-4 chicane (~230 km/h)
+    { from: 0.29,  to: 0.33,  maxSpeed: 55.0 }, // Turn 5 hairpin (~198 km/h)
+    { from: 0.44,  to: 0.48,  maxSpeed: 78.0 }, // Turn 6-7 high-speed bend (~280 km/h)
+    { from: 0.57,  to: 0.61,  maxSpeed: 68.0 }, // Turn 8 medium curve (~245 km/h)
+    { from: 0.72,  to: 0.76,  maxSpeed: 62.0 }, // Turn 9-10 chicane (~223 km/h)
+    { from: 0.85,  to: 0.89,  maxSpeed: 75.0 }  // Turn 11-12 final sweeping bend (~270 km/h)
   ];
 
   // ─── Penalty Display Timer ─────────────────────────────────────
@@ -9349,9 +9321,8 @@
   }
 
   window.getGridSlotTransform = (gridIndex) => {
-    const row = Math.floor(gridIndex / 2);
-    const side = gridIndex % 2 === 0 ? -1.8 : 1.8;
-    const progress = (1.0 - row * 0.009 + 1.0) % 1.0;
+    const side = gridIndex % 2 === 0 ? -2.0 : 2.0;
+    const progress = (1.0 - 0.003 - (gridIndex * 0.0045) + 1.0) % 1.0;
     
     const pt = trackCurve.getPointAt(progress);
     const tang = trackCurve.getTangentAt(progress).normalize();
@@ -9368,6 +9339,10 @@
   };
 
   window.startRaceFormationLap = () => {
+    if (currentSessionIndex !== 2) {
+      window.formationLapActive = false;
+      return;
+    }
     window.raceState = "RACE_FORMATION";
     window.formationLapActive = true;
     
@@ -9494,7 +9469,11 @@
   function updateAIPysics(delta) {
     const trackLen = trackCurve ? trackCurve.getLength() : 1800.0;
 
-    if (window.formationLapActive) {
+    if (currentSessionIndex !== 2) {
+      window.formationLapActive = false;
+    }
+
+    if (window.formationLapActive && currentSessionIndex === 2) {
       if (window.raceState === "RACE_FORMATION" || window.raceState === "RACE_GRID_WAIT") {
         racers.forEach((racer) => {
           if (racer.isPlayer) return;
@@ -9573,11 +9552,11 @@
           }
         });
         
-        if (allReady) {
+        if (allReady && currentSessionIndex === 2) {
           window.formationLapActive = false;
           window.raceState = "RACE_LIGHTS";
           isStartingSequence = true;
-          startingSequenceTime = 4.0; // skip flyby, focus on lights gantry
+          startingSequenceTime = 0.0; // Clean 0s start for full 5 red lights sequence!
           lastLightSoundIndex = -1;
           
           // Clear player grid marker
@@ -9697,16 +9676,14 @@
 
     }
 
-    // Boosted AI top speeds to match player top speed potential (player base = 75 m/s)
-
-    // Realistic modern F1 AI speeds: player max ~88-92 m/s (~315-330 km/h) on straights
-    // Easy: 82 m/s (~295 km/h), Normal: 89 m/s (~320 km/h), Hard: 93 m/s (~335 km/h), Expert: 97 m/s (~350 km/h)
-    const baseSpeed = [82.0, 89.0, 93.0, 97.0][activeDifficulty] || 89.0;
+    // Boosted AI top speeds to match player top speed potential (player base = 88 m/s)
+    // Realistic modern F1 AI speeds: Easy: ~315 km/h, Normal: ~342 km/h, Hard: ~360 km/h, Expert: ~380 km/h
+    const baseSpeed = [88.0, 95.0, 100.0, 106.0][activeDifficulty] || 95.0;
 
     // Per-racer pace calculation using driver + car performance profiles
     function calculateAIPace(racer, base) {
-      const p = racer.aiProfile || { pace: 0.85, brakingSkill: 0.85, corneringSkill: 0.85, consistency: 0.85 };
-      const c = racer.carPerformance || { topSpeed: 80, cornering: 80 };
+      const p = racer.aiProfile || { pace: 0.90, brakingSkill: 0.90, corneringSkill: 0.90, consistency: 0.90 };
+      const c = racer.carPerformance || { topSpeed: 85, cornering: 85 };
 
       // Normalize car stats to 0-1
       const carFactor = ((c.topSpeed / 100) * 0.5 + (c.cornering / 100) * 0.5);
@@ -9715,13 +9692,13 @@
       // Combined potential: car 45%, driver 55%
       const combined = carFactor * 0.45 + driverFactor * 0.55;
 
-      // Difficulty utilisation: Easy 94-98%, Normal 98-102%, Hard 101-106%, Expert 104-110%
+      // Difficulty utilisation: Easy 96-101%, Normal 100-105%, Hard 103-108%, Expert 106-112%
       const utilRange = [
-        [0.94, 0.98],  // Easy (~280-295 km/h)
-        [0.98, 1.02],  // Normal (~315-325 km/h)
-        [1.01, 1.06],  // Hard (~330-345 km/h)
-        [1.04, 1.10]   // Expert (~345-360 km/h)
-      ][activeDifficulty] || [0.98, 1.02];
+        [0.96, 1.01],  // Easy (~305-325 km/h)
+        [1.00, 1.05],  // Normal (~340-355 km/h)
+        [1.03, 1.08],  // Hard (~355-370 km/h)
+        [1.06, 1.12]   // Expert (~365-385 km/h)
+      ][activeDifficulty] || [1.00, 1.05];
 
       const utilFactor = THREE.MathUtils.lerp(utilRange[0], utilRange[1], combined);
       return base * utilFactor;
@@ -10227,15 +10204,25 @@
 
         target *= dmgSpeedFactor;
 
-        // Calculate non-linear acceleration factor
+        // 🚀 AI Straightaway DRS Boost (matches player DRS straight advantage)
+        const isAIStraightZone = (racer.currentOffset >= 0.90 || racer.currentOffset <= 0.05) || (racer.currentOffset >= 0.35 && racer.currentOffset <= 0.44);
+        if (isAIStraightZone && !safetyCarActive && !redFlagActive && racer.qualifyingState !== "GARAGE") {
+          target += 9.0; // Straightaway DRS boost
+          if (racer.mesh && racer.mesh.drsFlap) {
+            racer.mesh.drsFlap.rotation.x = THREE.MathUtils.lerp(racer.mesh.drsFlap.rotation.x, -0.45, delta * 8.0);
+          }
+        } else {
+          if (racer.mesh && racer.mesh.drsFlap) {
+            racer.mesh.drsFlap.rotation.x = THREE.MathUtils.lerp(racer.mesh.drsFlap.rotation.x, 0.0, delta * 8.0);
+          }
+        }
 
+        // Calculate non-linear acceleration factor (retains strong pull even at 85-95% top speed)
         const speedRatio = Math.max(0.0, Math.min(1.0, Math.abs(racer.speed) / Math.max(1.0, target)));
+        const accelerationFactor = Math.max(0.35, 1.0 - Math.pow(speedRatio, 2.6));
 
-        const accelerationFactor = 1.0 - Math.pow(speedRatio, 1.7);
-
-        // Base AI acceleration — matched to player's gear-scaled accel potential
-
-        let aiAccel = 42.0;
+        // Base AI acceleration — intense competitive corner exit pull
+        let aiAccel = 68.0;
 
         // ERS boost acceleration based on battery energy state
 

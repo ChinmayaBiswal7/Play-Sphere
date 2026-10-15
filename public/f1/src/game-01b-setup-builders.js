@@ -406,45 +406,32 @@
   // F1 Cinematic Gantry Starting Lights & Grid Formations
   function updateStartingSequence(delta) {
     if (currentSessionIndex !== 2) {
-      console.error("[BLOCKED STARTING SEQUENCE OUTSIDE RACE]", currentSessionIndex);
-      console.trace("[STARTING SEQUENCE CALL STACK]");
       isStartingSequence = false;
+      const overlay = document.getElementById('f1-starting-lights-overlay');
+      if (overlay) {
+        overlay.classList.add('hidden');
+        overlay.style.display = 'none';
+      }
       return;
     }
     startingSequenceTime += delta;
 
-    const startPt = trackCurve.getPointAt(0);
-
-    // Positions karts into grid positions at start
+    // Position karts into exact grid positions at start
     racers.forEach((racer, idx) => {
       if (racer.isPlayer) {
-        const currentSession = ["PRACTICE", "QUALIFYING", "RACE"][currentSessionIndex] || "PRACTICE";
-        if (currentSession !== "RACE") return;
         if (racer.inPitLane || racer.pitAutopilot || racer.driveOutAutopilot) return;
       }
-      const tPos = 0.0 - idx * 0.012; // Spaced staggered rows (matches launch hold spacing!)
-      const rPoint = trackCurve.getPointAt((tPos + 1.0) % 1.0);
-      const rTangent = trackCurve.getTangentAt((tPos + 1.0) % 1.0);
-      const rNormal = new THREE.Vector3(-rTangent.z, 0, rTangent.x);
-      if (rNormal.lengthSq() > 0.000001) {
-        rNormal.normalize();
-      } else {
-        rNormal.set(1, 0, 0);
+      const myGridIdx = window.startingGrid ? window.startingGrid.findIndex(g => g.name === racer.name) : idx;
+      const slotIdx = myGridIdx !== -1 ? myGridIdx : idx;
+      const slot = window.getGridSlotTransform(slotIdx);
+
+      if (racer.mesh) {
+        racer.mesh.position.copy(slot.position);
+        racer.mesh.rotation.y = slot.heading;
       }
-      
-      const side = idx % 2 === 0 ? 1.8 : -1.8;
-      rPoint.add(rNormal.multiplyScalar(side));
-      
-      if (racer.isPlayer && typeof window.debugSetPlayerPosition === 'function') {
-        window.debugSetPlayerPosition("updateStartingSequence_GRID", rPoint);
-      } else {
-        racer.mesh.position.copy(rPoint);
-      }
-      racer.mesh.lookAt(rPoint.clone().add(rTangent));
-      
       racer.speed = 0.0;
-      racer.currentOffset = (tPos + 1.0) % 1.0;
-      racer.sideOffset = side; // Set for BOTH player and AI to prevent launch snaps!
+      racer.currentOffset = slot.progress;
+      racer.sideOffset = slot.sideOffset;
     });
 
     const currentSession = ["PRACTICE", "QUALIFYING", "RACE"][currentSessionIndex] || "PRACTICE";
@@ -864,7 +851,7 @@
     sfLine.rotateZ(Math.PI / 2);
     scene.add(sfLine);
 
-    // 7. Official 20 FIA Staggered Starting Grid Boxes (P1 - P20) across all race modes
+    // 7. Official FIA Staggered Starting Grid Boxes (Matching real Grand Prix photos)
     const gridWhiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
     const gridYellowMat = new THREE.MeshBasicMaterial({ color: 0xfacc15, side: THREE.DoubleSide });
 
@@ -877,72 +864,58 @@
       const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
       const center = p.clone().add(norm.clone().multiplyScalar(side));
 
-      // Front stop bar (white line 2.2m wide x 0.24m thick)
-      const frontCenter = center.clone().add(tang.clone().multiplyScalar(2.3));
-      const stopBarGeo = new THREE.PlaneGeometry(2.2, 0.24);
-      const stopBar = new THREE.Mesh(stopBarGeo, gridWhiteMat);
-      stopBar.position.copy(frontCenter);
-      stopBar.position.y = 0.018;
-      stopBar.lookAt(frontCenter.clone().add(tang));
-      stopBar.rotateX(Math.PI / 2);
-      stopBar.rotateZ(Math.PI / 2);
-      scene.add(stopBar);
+      const slotGroup = new THREE.Group();
+      slotGroup.position.copy(center);
+      slotGroup.position.y = 0.022;
 
-      // Yellow center alignment notch on front stop line
-      const yellowNotchGeo = new THREE.PlaneGeometry(0.12, 0.46);
-      const yellowNotch = new THREE.Mesh(yellowNotchGeo, gridYellowMat);
-      yellowNotch.position.copy(frontCenter);
-      yellowNotch.position.y = 0.020;
-      yellowNotch.lookAt(frontCenter.clone().add(tang));
-      yellowNotch.rotateX(Math.PI / 2);
-      scene.add(yellowNotch);
+      // Basis matrix: X = norm (right), Y = up, Z = tang (forward)
+      const rotMatrix = new THREE.Matrix4().makeBasis(norm, new THREE.Vector3(0, 1, 0), tang);
+      slotGroup.setRotationFromMatrix(rotMatrix);
 
-      // Left wheel guide stripe (4.6m length)
-      const leftGuideGeo = new THREE.PlaneGeometry(0.14, 4.6);
-      const leftGuide = new THREE.Mesh(leftGuideGeo, gridWhiteMat);
-      const leftCenter = center.clone().add(norm.clone().multiplyScalar(-1.1));
-      leftGuide.position.copy(leftCenter);
-      leftGuide.position.y = 0.018;
-      leftGuide.lookAt(leftCenter.clone().add(tang));
-      leftGuide.rotateX(Math.PI / 2);
-      scene.add(leftGuide);
+      // 1. Solid White Front Stop Bar (2.8m wide, 0.22m thick)
+      const stopBar = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.004, 0.22), gridWhiteMat);
+      stopBar.position.set(0, 0, 2.5);
+      slotGroup.add(stopBar);
 
-      // Right wheel guide stripe (4.6m length)
-      const rightGuideGeo = new THREE.PlaneGeometry(0.14, 4.6);
-      const rightGuide = new THREE.Mesh(rightGuideGeo, gridWhiteMat);
-      const rightCenter = center.clone().add(norm.clone().multiplyScalar(1.1));
-      rightGuide.position.copy(rightCenter);
-      rightGuide.position.y = 0.018;
-      rightGuide.lookAt(rightCenter.clone().add(tang));
-      rightGuide.rotateX(Math.PI / 2);
-      scene.add(rightGuide);
+      // 2. Long FIA Yellow Center Alignment Stripe (4.8m long down the middle from stop bar backwards)
+      const yellowCenterline = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.006, 4.8), gridYellowMat);
+      yellowCenterline.position.set(0, 0.001, 0.1);
+      slotGroup.add(yellowCenterline);
 
-      // Position Number Plate Painted on Track (P1 - P20)
+      // 3. Left White Bracket Rail ([)
+      const leftRail = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.004, 5.2), gridWhiteMat);
+      leftRail.position.set(-1.4, 0, 0.0);
+      const leftRearTick = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.004, 0.10), gridWhiteMat);
+      leftRearTick.position.set(-1.18, 0, -2.6);
+      slotGroup.add(leftRail, leftRearTick);
+
+      // 4. Right White Bracket Rail (])
+      const rightRail = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.004, 5.2), gridWhiteMat);
+      rightRail.position.set(1.4, 0, 0.0);
+      const rightRearTick = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.004, 0.10), gridWhiteMat);
+      rightRearTick.position.set(1.18, 0, -2.6);
+      slotGroup.add(rightRail, rightRearTick);
+
+      // 5. Position Number Painted Directly on Track Asphalt (P1 - P20)
       const numCanvas = document.createElement('canvas');
-      numCanvas.width = 64; numCanvas.height = 64;
+      numCanvas.width = 128; numCanvas.height = 128;
       const nctx = numCanvas.getContext('2d');
-      nctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
-      nctx.fillRect(4, 4, 56, 56);
-      nctx.strokeStyle = '#ffffff';
-      nctx.lineWidth = 3;
-      nctx.strokeRect(4, 4, 56, 56);
+      nctx.clearRect(0, 0, 128, 128);
       nctx.fillStyle = '#ffffff';
-      nctx.font = 'bold 30px sans-serif';
+      nctx.font = '900 68px "Orbitron", sans-serif';
       nctx.textAlign = 'center';
       nctx.textBaseline = 'middle';
-      nctx.fillText(String(slot + 1), 32, 34);
+      nctx.fillText(String(slot + 1), 64, 64);
 
       const numTex = new THREE.CanvasTexture(numCanvas);
       const numMat = new THREE.MeshBasicMaterial({ map: numTex, transparent: true, side: THREE.DoubleSide });
-      const numGeo = new THREE.PlaneGeometry(1.0, 1.0);
-      const numMesh = new THREE.Mesh(numGeo, numMat);
-      const numPos = center.clone().add(tang.clone().multiplyScalar(1.3));
-      numMesh.position.copy(numPos);
-      numMesh.position.y = 0.019;
-      numMesh.lookAt(numPos.clone().add(tang));
-      numMesh.rotateX(Math.PI / 2);
-      numMesh.rotateZ(Math.PI);
-      scene.add(numMesh);
+      const numMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.4), numMat);
+      numMesh.rotation.x = -Math.PI / 2;
+      numMesh.rotation.z = Math.PI; // Orient to be readable looking forward along track
+      numMesh.position.set(side < 0 ? -2.2 : 2.2, 0.002, 1.8);
+      slotGroup.add(numMesh);
+
+      scene.add(slotGroup);
     }
   }
 

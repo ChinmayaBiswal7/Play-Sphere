@@ -4,6 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Apex Stars: Chibi F1</title>
+  <script>
+    try {
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({ type: 'PAUSE_BG_MUSIC' }, '*');
+        if (typeof window.parent.ps5MusicPause === 'function') window.parent.ps5MusicPause();
+      }
+    } catch(e) {}
+  </script>
   
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Fredoka+One&family=Inter:wght@300;400;700;900&display=swap" rel="stylesheet">

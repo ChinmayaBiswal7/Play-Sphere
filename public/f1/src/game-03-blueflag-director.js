@@ -251,16 +251,15 @@
     return targetSpeed;
   }
 
-  // ─── AI Braking Zones ──────────────────────────────────
-  // Authentic high-downforce F1 cornering speeds (keeps AI within competitive gap of player)
+  // Authentic high-downforce F1 cornering speeds (keeps AI competitive with player)
   const AI_BRAKING_ZONES = [
-    { from: 0.06,  to: 0.10,  maxSpeed: 62.0 }, // Turn 1-2 fast sweeper
-    { from: 0.17,  to: 0.21,  maxSpeed: 52.0 }, // Turn 3-4 chicane
-    { from: 0.29,  to: 0.33,  maxSpeed: 45.0 }, // Turn 5 hairpin
-    { from: 0.44,  to: 0.48,  maxSpeed: 64.0 }, // Turn 6-7 high-speed bend
-    { from: 0.57,  to: 0.61,  maxSpeed: 54.0 }, // Turn 8 medium curve
-    { from: 0.72,  to: 0.76,  maxSpeed: 50.0 }, // Turn 9-10 chicane
-    { from: 0.85,  to: 0.89,  maxSpeed: 60.0 }  // Turn 11-12 final sweeping bend
+    { from: 0.06,  to: 0.10,  maxSpeed: 74.0 }, // Turn 1-2 fast sweeper (~266 km/h)
+    { from: 0.17,  to: 0.21,  maxSpeed: 64.0 }, // Turn 3-4 chicane (~230 km/h)
+    { from: 0.29,  to: 0.33,  maxSpeed: 55.0 }, // Turn 5 hairpin (~198 km/h)
+    { from: 0.44,  to: 0.48,  maxSpeed: 78.0 }, // Turn 6-7 high-speed bend (~280 km/h)
+    { from: 0.57,  to: 0.61,  maxSpeed: 68.0 }, // Turn 8 medium curve (~245 km/h)
+    { from: 0.72,  to: 0.76,  maxSpeed: 62.0 }, // Turn 9-10 chicane (~223 km/h)
+    { from: 0.85,  to: 0.89,  maxSpeed: 75.0 }  // Turn 11-12 final sweeping bend (~270 km/h)
   ];
 
   // ─── Penalty Display Timer ─────────────────────────────────────

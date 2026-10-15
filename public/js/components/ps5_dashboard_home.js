@@ -336,24 +336,46 @@
 
     // Keyboard nav — debounced to prevent double-skip
     window.addEventListener('keydown', e => {
-      // Never intercept keyboard events if the dashboard is inactive, if Cricket is running, or if an iframe game is active
       const root = document.getElementById('ps5-console-root');
-      if (!root || document.getElementById('game-session-iframe') || window.ps5ActiveGame) return;
+      if (!root) return;
+
+      const iframe = document.getElementById('game-session-iframe');
+      if (iframe) return; // a game iframe is actively running
+
+      // If no iframe is open, auto-clear stale active game flag so home dashboard navigation is fully responsive
+      if (window.ps5ActiveGame) {
+        window.ps5ActiveGame = null;
+      }
 
       if (e.key === 'f' || e.key === 'F') { toggleFullscreen(); return; }
-      if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
+      if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) return;
 
-      if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'ArrowLeft' || e.key === 'a') {
+      // Check if any modal is open - if so, allow modal handlers or Escape to close
+      const anyModalOpen = ['ps5-controller-modal', 'ps5-profile-modal', 'ps5-friends-modal', 'ps5-search-modal', 'settings-screen'].some(id => {
+        const el = document.getElementById(id);
+        return el && (el.classList.contains('show') || el.style.display === 'flex' || el.style.display === 'block');
+      });
+      if (anyModalOpen) {
+        if (e.key === 'Escape') {
+          ['ps5-controller-modal', 'ps5-profile-modal', 'ps5-friends-modal', 'ps5-search-modal', 'settings-screen'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) { el.classList.remove('show'); el.style.display = 'none'; }
+          });
+        }
+        return;
+      }
+
+      if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D' || e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
         if (navLocked) return; // block rapid repeats
         navLocked = true;
-        setTimeout(() => { navLocked = false; }, 220);
+        setTimeout(() => { navLocked = false; }, 180);
 
-        if ((e.key === 'ArrowRight' || e.key === 'd') && selectedIndex < cards.length - 1) {
+        if ((e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') && selectedIndex < cards.length - 1) {
           selectGame(selectedIndex + 1);
-        } else if ((e.key === 'ArrowLeft' || e.key === 'a') && selectedIndex > 0) {
+        } else if ((e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') && selectedIndex > 0) {
           selectGame(selectedIndex - 1);
         }
-      } else if (e.key === 'Enter') {
+      } else if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
         // Always read game ID directly from the selected card element — never from GAMES array index
         const card = cards[selectedIndex];
