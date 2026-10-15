@@ -311,29 +311,18 @@
       return;
     }
 
+    function isDashboardActive() {
+      if (document.getElementById('game-session-iframe')) return false;
+      if (window.ps5ActiveGame) return false;
+      const lobby = document.getElementById('lobby-screen');
+      if (lobby && !lobby.classList.contains('hidden')) return false;
+      return true;
+    }
+
     window.socket.on('controller-input', (data) => {
       if (data.type === 'joystick') {
         window.controllerInput.joystickX = data.x;
         window.controllerInput.joystickY = data.y;
-
-        // Dashboard shelf navigation
-        const consoleRoot = document.getElementById('ps5-console-root');
-        const isDashboardActive = !!consoleRoot && !document.getElementById('game-session-iframe') && !window.ps5ActiveGame;
-        if (isDashboardActive) {
-          if (data.x < -0.35) {
-            if (window.lastEmuJoyX !== -1) {
-              window.lastEmuJoyX = -1;
-              if (typeof window.handleInputNavigation === 'function') window.handleInputNavigation(-1);
-            }
-          } else if (data.x > 0.35) {
-            if (window.lastEmuJoyX !== 1) {
-              window.lastEmuJoyX = 1;
-              if (typeof window.handleInputNavigation === 'function') window.handleInputNavigation(1);
-            }
-          } else if (Math.abs(data.x) < 0.2) {
-            window.lastEmuJoyX = 0;
-          }
-        }
 
         // Sync to active game iframe
         const iframe = document.getElementById('game-session-iframe');
@@ -341,17 +330,19 @@
           try { iframe.contentWindow.controllerInput = window.controllerInput; } catch(e) {}
         }
 
-        // Dispatch analog steering & throttle keys for all games
-        const deadzone = 0.22;
-        setKey('KeyA', data.x < -deadzone);
-        setKey('ArrowLeft', data.x < -deadzone);
-        setKey('KeyD', data.x > deadzone);
-        setKey('ArrowRight', data.x > deadzone);
+        // Only dispatch analog steering & throttle keys when a game is active
+        if (!isDashboardActive()) {
+          const deadzone = 0.22;
+          setKey('KeyA', data.x < -deadzone);
+          setKey('ArrowLeft', data.x < -deadzone);
+          setKey('KeyD', data.x > deadzone);
+          setKey('ArrowRight', data.x > deadzone);
 
-        setKey('KeyW', data.y < -deadzone);
-        setKey('ArrowUp', data.y < -deadzone);
-        setKey('KeyS', data.y > deadzone);
-        setKey('ArrowDown', data.y > deadzone);
+          setKey('KeyW', data.y < -deadzone);
+          setKey('ArrowUp', data.y < -deadzone);
+          setKey('KeyS', data.y > deadzone);
+          setKey('ArrowDown', data.y > deadzone);
+        }
       } 
       else if (data.type === 'aim-joystick') {
         window.controllerInput.aimX = data.x;
@@ -384,109 +375,65 @@
         if (data.btn === 'touchpad')   window.controllerInput.btnTouchpad   = isPressed;
         if (data.btn === 'ps')         window.controllerInput.btnPs         = isPressed;
 
-        // Dashboard specific button handling
-        if (isPressed) {
-          const consoleRoot = document.getElementById('ps5-console-root');
-          const isDashboardActive = !!consoleRoot && !document.getElementById('game-session-iframe') && !window.ps5ActiveGame;
-
-          if (isDashboardActive) {
-            if (data.btn === 'cross') {
-              const ctrlModal = document.getElementById('ps5-controller-modal');
-              if (ctrlModal && (ctrlModal.classList.contains('show') || ctrlModal.style.display === 'block')) {
-                ctrlModal.classList.remove('show');
-                ctrlModal.style.display = 'none';
-              } else if (typeof window.launchActiveGame === 'function') {
-                window.launchActiveGame();
-              }
-            } else if (data.btn === 'circle') {
-              const ctrlModal = document.getElementById('ps5-controller-modal');
-              if (ctrlModal) { ctrlModal.classList.remove('show'); ctrlModal.style.display = 'none'; }
-              const profModal = document.getElementById('ps5-profile-modal');
-              if (profModal) { profModal.classList.remove('show'); profModal.style.display = 'none'; }
-              const searchModal = document.getElementById('ps5-search-modal');
-              if (searchModal) { searchModal.classList.remove('show'); searchModal.style.display = 'none'; }
-              const settingsScreen = document.getElementById('settings-screen');
-              if (settingsScreen) settingsScreen.classList.add('hidden');
-            } else if (data.btn === 'dpadLeft') {
-              if (typeof window.handleInputNavigation === 'function') window.handleInputNavigation(-1);
-            } else if (data.btn === 'dpadRight') {
-              if (typeof window.handleInputNavigation === 'function') window.handleInputNavigation(1);
-            } else if (data.btn === 'dpadUp') {
-              const tabGames = document.getElementById('nav-item-games');
-              if (tabGames) tabGames.click();
-            } else if (data.btn === 'dpadDown') {
-              const tabStore = document.getElementById('nav-item-store');
-              if (tabStore) tabStore.click();
-            } else if (data.btn === 'triangle') {
-              const searchBtn = document.getElementById('btn-search');
-              if (searchBtn) searchBtn.click();
-            } else if (data.btn === 'square') {
-              const profBtn = document.getElementById('btn-profile');
-              if (profBtn) profBtn.click();
-            } else if (data.btn === 'options') {
-              const settingsBtn = document.getElementById('btn-settings');
-              if (settingsBtn) settingsBtn.click();
-            }
+        // Map remote phone buttons to virtual keyboard events ONLY when inside a game
+        if (!isDashboardActive()) {
+          if (data.btn === 'r2') {
+            // R2 = Throttle / Accelerate in racing & sports
+            setKey('KeyW', isPressed);
+            setKey('ArrowUp', isPressed);
+            setKey('ShiftLeft', isPressed);
           }
-        }
-
-        // Map remote phone buttons to virtual keyboard events
-        if (data.btn === 'r2') {
-          // R2 = Throttle / Accelerate in racing & sports
-          setKey('KeyW', isPressed);
-          setKey('ArrowUp', isPressed);
-          setKey('ShiftLeft', isPressed);
-        }
-        else if (data.btn === 'l2') {
-          // L2 = Brake / Reverse
-          setKey('KeyS', isPressed);
-          setKey('ArrowDown', isPressed);
-        }
-        else if (data.btn === 'cross') {
-          setKey('Space', isPressed);
-          setKey('Enter', isPressed);
-          setKey('KeyW', isPressed); // Alternate accelerate / select
-        }
-        else if (data.btn === 'circle') {
-          setKey('KeyX', isPressed);
-          setKey('KeyS', isPressed); // Alternate brake / cancel
-        }
-        else if (data.btn === 'square') {
-          setKey('KeyR', isPressed);
-          setKey('Space', isPressed); // Drift handbrake
-        }
-        else if (data.btn === 'triangle') {
-          setKey('KeyV', isPressed); // Team Radio
-          setKey('KeyM', isPressed);
-          setKey('ShiftLeft', isPressed); // DRS flap
-        }
-        else if (data.btn === 'l1') {
-          setKey('KeyQ', isPressed); // Downshift
-        }
-        else if (data.btn === 'r1') {
-          setKey('KeyE', isPressed); // Upshift
-        }
-        else if (data.btn === 'touchpad') {
-          setKey('KeyT', isPressed); // Telemetry
-        }
-        else if (data.btn === 'options') {
-          setKey('Escape', isPressed);
-        }
-        else if (data.btn === 'dpadUp') {
-          setKey('ArrowUp', isPressed);
-          setKey('KeyW', isPressed);
-        }
-        else if (data.btn === 'dpadDown') {
-          setKey('ArrowDown', isPressed);
-          setKey('KeyS', isPressed);
-        }
-        else if (data.btn === 'dpadLeft') {
-          setKey('ArrowLeft', isPressed);
-          setKey('KeyA', isPressed);
-        }
-        else if (data.btn === 'dpadRight') {
-          setKey('ArrowRight', isPressed);
-          setKey('KeyD', isPressed);
+          else if (data.btn === 'l2') {
+            // L2 = Brake / Reverse
+            setKey('KeyS', isPressed);
+            setKey('ArrowDown', isPressed);
+          }
+          else if (data.btn === 'cross') {
+            setKey('Space', isPressed);
+            setKey('Enter', isPressed);
+            setKey('KeyW', isPressed); // Alternate accelerate / select
+          }
+          else if (data.btn === 'circle') {
+            setKey('KeyX', isPressed);
+            setKey('KeyS', isPressed); // Alternate brake / cancel
+          }
+          else if (data.btn === 'square') {
+            setKey('KeyR', isPressed);
+            setKey('Space', isPressed); // Drift handbrake
+          }
+          else if (data.btn === 'triangle') {
+            setKey('KeyV', isPressed); // Team Radio
+            setKey('KeyM', isPressed);
+            setKey('ShiftLeft', isPressed); // DRS flap
+          }
+          else if (data.btn === 'r1') {
+            setKey('KeyE', isPressed); // Shift up
+          }
+          else if (data.btn === 'l1') {
+            setKey('KeyQ', isPressed); // Shift down
+          }
+          else if (data.btn === 'touchpad') {
+            setKey('KeyT', isPressed); // Telemetry
+          }
+          else if (data.btn === 'options') {
+            setKey('Escape', isPressed);
+          }
+          else if (data.btn === 'dpadLeft') {
+            setKey('KeyA', isPressed);
+            setKey('ArrowLeft', isPressed);
+          }
+          else if (data.btn === 'dpadRight') {
+            setKey('KeyD', isPressed);
+            setKey('ArrowRight', isPressed);
+          }
+          else if (data.btn === 'dpadUp') {
+            setKey('KeyW', isPressed);
+            setKey('ArrowUp', isPressed);
+          }
+          else if (data.btn === 'dpadDown') {
+            setKey('KeyS', isPressed);
+            setKey('ArrowDown', isPressed);
+          }
         }
       }
     });

@@ -92,8 +92,7 @@
       if (typeof window.ensureFirebase === 'function') {
         const FIREBASE_WAIT_MS = 3500; // Graceful timeout for slow/offline connections
         const firebaseTimeout = setTimeout(() => {
-          // Firebase took too long or is offline — treat as guest and show modal
-          if (!window.currentUser) {
+          if (window.profileNeedsComplete) {
             const profModal = document.getElementById('ps5-profile-modal');
             if (profModal) profModal.classList.add('show');
           }
@@ -101,21 +100,13 @@
 
         window.ensureFirebase().then(() => {
           clearTimeout(firebaseTimeout);
-          // If still no user after Firebase resolved, show the modal
-          if (!window.currentUser || window.profileNeedsComplete) {
+          if (window.profileNeedsComplete) {
             const profModal = document.getElementById('ps5-profile-modal');
             if (profModal) profModal.classList.add('show');
           }
         }).catch(() => {
           clearTimeout(firebaseTimeout);
-          // Firebase failed (offline) — show modal as guest
-          const profModal = document.getElementById('ps5-profile-modal');
-          if (profModal) profModal.classList.add('show');
         });
-      } else {
-        // Firebase not available — immediately show modal as guest
-        const profModal = document.getElementById('ps5-profile-modal');
-        if (profModal) profModal.classList.add('show');
       }
     }, 2000);
   }

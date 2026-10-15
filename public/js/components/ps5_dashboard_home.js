@@ -97,6 +97,8 @@
 
   /* ── SELECT GAME ── */
   function selectGame(index) {
+    if (!cards || cards.length === 0) cards = Array.from(document.querySelectorAll('.psd-card'));
+    if (!cards || cards.length === 0 || index < 0 || index >= cards.length) return;
     selectedIndex = index;
     cards.forEach((c, i) => c.classList.toggle('selected', i === index));
 
@@ -109,13 +111,13 @@
 
     // Update hero background (blurred game art)
     const heroBg = document.getElementById('psd-hero-bg');
-    if (heroBg) {
+    if (heroBg && GAMES[index]) {
       heroBg.style.backgroundImage = `url('${GAMES[index].img}')`;
     }
 
     // Update Steam-like clear key art banner image
     const heroBanner = document.getElementById('psd-hero-banner');
-    if (heroBanner) {
+    if (heroBanner && GAMES[index]) {
       heroBanner.style.backgroundImage = `url('${GAMES[index].img}')`;
     }
 
@@ -125,6 +127,7 @@
 
     setTimeout(() => {
       const g = GAMES[index];
+      if (!g) return;
       const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
       set('game-title',  g.title);
       set('game-desc',   g.desc);

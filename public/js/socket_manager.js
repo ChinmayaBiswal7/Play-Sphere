@@ -177,28 +177,45 @@ function initSocket() {
     }
   });
 
+function isDashboardActive() {
+  if (document.getElementById('game-session-iframe')) return false;
+  if (window.ps5ActiveGame) return false;
+  const lobby = document.getElementById('lobby-screen');
+  if (lobby && !lobby.classList.contains('hidden')) return false;
+  return true;
+}
+
+function closeDashboardModals() {
+  ['ps5-controller-modal', 'ps5-profile-modal', 'ps5-friends-modal', 'ps5-search-modal'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.classList.remove('show');
+      el.style.display = 'none';
+    }
+  });
+  const settingsScreen = document.getElementById('settings-screen');
+  if (settingsScreen) settingsScreen.classList.add('hidden');
+}
+
   window.socket.on('controller-input', (data) => {
     if (data.type === 'joystick') {
       window.controllerInput.joystickX = data.x;
       window.controllerInput.joystickY = data.y;
 
-      // Only perform dashboard console navigation if the game hasn't launched (dashboard root exists)
-      const consoleRoot = document.getElementById('ps5-console-root');
-      const isLobbyActive = window.ui && window.ui.lobby && !window.ui.lobby.classList.contains('hidden');
-      const isDashboardActive = !!consoleRoot && !isLobbyActive && !document.getElementById('game-session-iframe') && !window.ps5ActiveGame;
-      
-      if (isDashboardActive) {
+      if (isDashboardActive()) {
         // Horizontal left-right game shelf navigation
-        if (data.x < -0.45) {
+        if (data.x < -0.35) {
           if (lastJoystickDir !== -1) {
             lastJoystickDir = -1;
+            closeDashboardModals();
             if (typeof window.handleInputNavigation === 'function') {
               window.handleInputNavigation(-1);
             }
           }
-        } else if (data.x > 0.45) {
+        } else if (data.x > 0.35) {
           if (lastJoystickDir !== 1) {
             lastJoystickDir = 1;
+            closeDashboardModals();
             if (typeof window.handleInputNavigation === 'function') {
               window.handleInputNavigation(1);
             }
@@ -211,14 +228,14 @@ function initSocket() {
         if (data.y < -0.5) {
           if (lastJoystickYDir !== -1) {
             lastJoystickYDir = -1;
-            const tabGames = document.getElementById('nav-item-games');
+            const tabGames = document.getElementById('tab-games');
             if (tabGames) tabGames.click();
           }
         } else if (data.y > 0.5) {
           if (lastJoystickYDir !== 1) {
             lastJoystickYDir = 1;
-            const tabStore = document.getElementById('nav-item-store');
-            if (tabStore) tabStore.click();
+            const tabMedia = document.getElementById('tab-media');
+            if (tabMedia) tabMedia.click();
           }
         } else if (Math.abs(data.y) < 0.2) {
           lastJoystickYDir = 0;
@@ -257,34 +274,22 @@ function initSocket() {
     } else if (data.type === 'btnDown') {
       updateButtonState(data.btn, true);
 
-      // Dashboard overlay navigation buttons mapping
-      const consoleRoot = document.getElementById('ps5-console-root');
-      const isLobbyActive = window.ui && window.ui.lobby && !window.ui.lobby.classList.contains('hidden');
-      const isDashboardActive = !!consoleRoot && !isLobbyActive && !document.getElementById('game-session-iframe') && !window.ps5ActiveGame;
-
-      if (isDashboardActive) {
+      if (isDashboardActive()) {
         if (data.btn === 'cross') {
-          // Close QR Modal if currently scanning/pairing
-          const ctrlModal = document.getElementById('ps5-controller-modal');
-          if (ctrlModal && (ctrlModal.classList.contains('show') || ctrlModal.style.display === 'block')) {
-            ctrlModal.classList.remove('show');
-            ctrlModal.style.display = 'none';
+          // If modal is open, close modal; else launch selected game
+          const anyModalOpen = ['ps5-controller-modal', 'ps5-profile-modal', 'ps5-friends-modal', 'ps5-search-modal'].some(id => {
+            const el = document.getElementById(id);
+            return el && (el.classList.contains('show') || el.style.display === 'block');
+          });
+          if (anyModalOpen) {
+            closeDashboardModals();
           } else {
-            // Click to launch the selected game card
             if (typeof window.launchActiveGame === 'function') {
               window.launchActiveGame();
             }
           }
         } else if (data.btn === 'circle') {
-          // Circle acts as a 'Back' button to close open modals
-          const ctrlModal = document.getElementById('ps5-controller-modal');
-          if (ctrlModal) { ctrlModal.classList.remove('show'); ctrlModal.style.display = 'none'; }
-          const profModal = document.getElementById('ps5-profile-modal');
-          if (profModal) { profModal.classList.remove('show'); profModal.style.display = 'none'; }
-          const searchModal = document.getElementById('ps5-search-modal');
-          if (searchModal) { searchModal.classList.remove('show'); searchModal.style.display = 'none'; }
-          const settingsScreen = document.getElementById('settings-screen');
-          if (settingsScreen) settingsScreen.classList.add('hidden');
+          closeDashboardModals();
         } else if (data.btn === 'triangle') {
           const searchBtn = document.getElementById('btn-search');
           if (searchBtn) searchBtn.click();
@@ -295,15 +300,17 @@ function initSocket() {
           const settingsBtn = document.getElementById('btn-settings');
           if (settingsBtn) settingsBtn.click();
         } else if (data.btn === 'dpadLeft') {
+          closeDashboardModals();
           if (typeof window.handleInputNavigation === 'function') window.handleInputNavigation(-1);
         } else if (data.btn === 'dpadRight') {
+          closeDashboardModals();
           if (typeof window.handleInputNavigation === 'function') window.handleInputNavigation(1);
         } else if (data.btn === 'dpadUp') {
-          const tabGames = document.getElementById('nav-item-games');
+          const tabGames = document.getElementById('tab-games');
           if (tabGames) tabGames.click();
         } else if (data.btn === 'dpadDown') {
-          const tabStore = document.getElementById('nav-item-store');
-          if (tabStore) tabStore.click();
+          const tabMedia = document.getElementById('tab-media');
+          if (tabMedia) tabMedia.click();
         }
       } else {
         // Game has launched: route D-pad and action button presses to menu navigation

@@ -1,135 +1,95 @@
-// PlaySphere Universal Virtual DualSense Controller Script
+// PlaySphere Virtual DualSense Controller Script
 let socket = null;
 let roomCode = '';
+let currentLayout = 'dashboard';
 
 const ui = {
   loader: document.getElementById('loader-screen'),
   roomInput: document.getElementById('room-input'),
   joinBtn: document.getElementById('join-btn'),
-  skipBtn: document.getElementById('skip-room-btn'),
   roomError: document.getElementById('room-error'),
   statusInd: document.getElementById('status-ind'),
   statusText: document.getElementById('status-text'),
   roomDisplay: document.getElementById('room-display-code'),
-  roleText: document.getElementById('role-text'),
-  rotateWarning: document.getElementById('landscape-warning'),
-  dismissRotateBtn: document.getElementById('dismiss-rotate-btn')
+  roleText: document.getElementById('role-text')
 };
 
-// ── 1. DUALSENSE ACOUSTIC & PHYSICAL HAPTICS ──────────────────────────
-let audioCtx = null;
-function getAudioContext() {
-  if (!audioCtx) {
-    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    if (AudioContextClass) audioCtx = new AudioContextClass();
-  }
-  if (audioCtx && audioCtx.state === 'suspended') {
-    audioCtx.resume().catch(() => {});
-  }
-  return audioCtx;
-}
-
-// Crisp mechanical controller click sound
-function playControllerClickSound(freq = 140, duration = 0.025, vol = 0.14) {
-  try {
-    const ctx = getAudioContext();
-    if (!ctx) return;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(freq, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(30, ctx.currentTime + duration);
-    gain.gain.setValueAtTime(vol, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + duration);
-  } catch (e) {}
-}
-
-// Dual vibration with hardware rumble + acoustic transient
-function triggerControllerVibe(pattern = 20) {
+// ── VIBRATION HAPTICS ──────────────────────────────────────────
+function triggerHaptic(pattern = 20) {
   if (navigator.vibrate) {
     try {
       navigator.vibrate(pattern);
-    } catch (e) {}
+    } catch (e) {
+      console.warn("Haptic vibrate blocked/failed:", e);
+    }
   }
-  playControllerClickSound(160, 0.025, 0.12);
 }
 
-function triggerHaptic(duration = 20) {
-  triggerControllerVibe(duration);
-}
-
-// ── 2. FULLSCREEN & ROTATION HELPERS ──────────────────────────────────
+// ── REQUEST FULLSCREEN ─────────────────────────────────────────
 function enterFullscreen() {
   try {
     if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-      const docEl = document.documentElement;
-      const req = docEl.requestFullscreen || docEl.webkitRequestFullscreen || docEl.mozRequestFullScreen || docEl.msRequestFullscreen;
+      const req = document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen;
       if (req) {
-        req.call(docEl).catch(() => {});
+        req.call(document.documentElement).catch((err) => {
+          console.warn("Fullscreen request rejected:", err);
+        });
       }
     }
   } catch (e) {}
 }
 
+// ── GET ROOM CODE FROM URL ──────────────────────────────────────
 function getUrlParam(name) {
   const params = new URLSearchParams(window.location.search);
   return params.get(name);
 }
 
-// ── 3. WEBSOCKET CONNECTION & AUTO-SYNC ──────────────────────────────
+// ── SOCKET INITIALIZATION & RECONNECT ──────────────────────────
 function initSocket() {
   socket = io();
 
   socket.on('connect', () => {
-    console.log('[Controller] Socket connected to server');
+    console.log('Controller connected to WebSocket server');
     
-    // Always prioritize URL parameter from scanned QR code
-    const urlRoom = getUrlParam('room') || getUrlParam('roomCode');
-    if (urlRoom && urlRoom.length >= 4) {
-      const code = urlRoom.toUpperCase().trim();
-      if (ui.roomInput) ui.roomInput.value = code;
-      joinRoom(code);
-    } else {
-      const storedRoom = sessionStorage.getItem('activeRoomCode');
-      if (storedRoom) {
-        socket.emit('rejoin-room-phone', { roomCode: storedRoom });
-      }
+    // Always prioritize URL parameter if present
+    const urlRoom = getUrlParam('room');
+    const storedRoom = sessionStorage.getItem('activeRoomCode');
+    
+    if (urlRoom) {
+      if (ui.roomInput) ui.roomInput.value = urlRoom;
+      joinRoom(urlRoom);
+    } else if (storedRoom) {
+      console.log(`Rejoining Room: ${storedRoom}`);
+      socket.emit('rejoin-room-phone', { roomCode: storedRoom });
     }
   });
 
-  socket.on('phone-joined', ({ roomCode: code }) => {
-    onJoinSuccess(code);
+  socket.on('phone-joined', ({ roomCode: code, layout }) => {
+    onJoinSuccess(code, layout);
   });
 
-  socket.on('phone-rejoined', ({ roomCode: code }) => {
-    onJoinSuccess(code);
+  socket.on('phone-rejoined', ({ roomCode: code, layout }) => {
+    onJoinSuccess(code, layout);
   });
 
   socket.on('room-error', (msg) => {
-    sessionStorage.removeItem('activeRoomCode');
-    
-    const urlRoom = getUrlParam('room') || getUrlParam('roomCode');
-    if (urlRoom && urlRoom.toUpperCase().trim() !== roomCode) {
-      joinRoom(urlRoom.toUpperCase().trim());
-      return;
-    }
-
     if (ui.roomError) ui.roomError.innerText = msg;
-    triggerControllerVibe([60, 40, 60]);
+    triggerHaptic([60, 40, 60]);
+    sessionStorage.removeItem('activeRoomCode');
     if (ui.loader) {
       ui.loader.classList.remove('hidden');
       ui.loader.style.display = 'flex';
     }
   });
 
-  // Game telemetry rumble relay from PC (engine revs, kerbs, shifts, crashes)
+  socket.on('layout-change', ({ layout }) => {
+    if (layout) updateLayout(layout);
+  });
+
   socket.on('trigger-vibration', (data) => {
     const pattern = (data && data.pattern) ? data.pattern : 50;
-    triggerControllerVibe(pattern);
+    triggerHaptic(pattern);
   });
 
   socket.on('pc-disconnected', () => {
@@ -144,16 +104,22 @@ function initSocket() {
     updateStatus('RECONNECTING...', '#eab308');
   });
 
-  socket.on('reconnect', () => {
+  socket.on('reconnect', (attemptNumber) => {
+    console.log(`Controller reconnected after ${attemptNumber} attempts`);
     if (roomCode) {
       socket.emit('rejoin-room-phone', { roomCode });
     }
+  });
+
+  socket.on('reconnect_error', (error) => {
+    console.warn('Reconnect error:', error);
+    updateStatus('RECONNECTING...', '#eab308');
   });
 }
 
 function joinRoom(code) {
   if (!code || code.length < 4) {
-    if (ui.roomError) ui.roomError.innerText = 'Enter 4-character room code.';
+    if (ui.roomError) ui.roomError.innerText = 'Please enter a valid 4-character code.';
     return;
   }
   if (ui.roomError) ui.roomError.innerText = '';
@@ -161,45 +127,68 @@ function joinRoom(code) {
   socket.emit('join-room-phone', { roomCode });
 }
 
-function onJoinSuccess(code) {
+function onJoinSuccess(code, initialLayout) {
   roomCode = code;
   sessionStorage.setItem('activeRoomCode', code);
   
   if (ui.roomDisplay) ui.roomDisplay.innerText = `ROOM: ${code}`;
-  
-  hideLoader();
-  updateStatus('CONNECTED', '#10b981');
-  triggerControllerVibe([70, 40, 90]);
-  enterFullscreen();
-}
-
-function hideLoader() {
   if (ui.loader) {
     ui.loader.classList.add('hidden');
     ui.loader.style.display = 'none';
   }
-  if (ui.roomInput) ui.roomInput.blur();
+  updateStatus('CONNECTED', '#10b981');
+  
+  if (initialLayout) {
+    updateLayout(initialLayout);
+  } else {
+    updateLayout('dashboard');
+  }
+  
+  triggerHaptic([60, 40, 80]); // Connected rumble feel
+  enterFullscreen();
 }
 
 function updateStatus(text, colorHex) {
   if (ui.statusText) ui.statusText.innerText = text;
   if (ui.statusInd) {
     ui.statusInd.style.backgroundColor = colorHex;
-    ui.statusInd.style.boxShadow = `0 0 12px ${colorHex}`;
+    ui.statusInd.style.boxShadow = `0 0 10px ${colorHex}`;
   }
 }
 
-// ── 4. ULTRA-RESPONSIVE DUALSENSE VIRTUAL STICK ─────────────────────────
+// ── DYNAMIC ROLE LAYOUT SWITCHER ───────────────────────────────
+function updateLayout(layout) {
+  if (currentLayout === layout) return;
+  currentLayout = layout;
+  triggerHaptic([25, 15, 25]);
+
+  if (!ui.roleText) return;
+
+  if (layout === 'bowling') {
+    ui.roleText.innerText = 'BOWLING MODE';
+    ui.roleText.style.color = '#facc15';
+  } else if (layout === 'batting') {
+    ui.roleText.innerText = 'BATTING MODE';
+    ui.roleText.style.color = '#10b981';
+  } else if (layout === 'racing' || layout === 'f1') {
+    ui.roleText.innerText = 'F1 RACING MODE';
+    ui.roleText.style.color = '#ef4444';
+  } else {
+    ui.roleText.innerText = 'DASHBOARD CONTROLLER';
+    ui.roleText.style.color = '#60a5fa';
+  }
+}
+
+// ── VIRTUAL STICK CLASS ─────────────────────────────────────────
 class VirtualStick {
-  constructor(knobId, boundaryId, zoneSelector, type) {
+  constructor(knobId, boundaryId, type) {
     this.knob = document.getElementById(knobId);
     this.boundary = document.getElementById(boundaryId);
-    this.zone = document.querySelector(zoneSelector) || this.boundary;
     this.type = type; // 'left' or 'right'
     this.activeTouchId = null;
     this.isMouseDown = false;
     this.center = { x: 0, y: 0 };
-    this.maxRadius = 42; // travel radius in pixels
+    this.maxRadius = 38;
 
     if (this.knob && this.boundary) {
       this.init();
@@ -215,32 +204,25 @@ class VirtualStick {
   init() {
     const passiveOpts = { passive: false };
 
-    const startTouch = (clientX, clientY, identifier) => {
-      this.activeTouchId = identifier;
-      this.updateCenter();
-      this.knob.classList.add('active');
-      this.knob.style.transition = 'none';
-      this.updatePosition(clientX, clientY);
-      triggerControllerVibe(15);
-    };
-
-    const touchStartHandler = (e) => {
+    // Touch start on boundary or knob
+    const startHandler = (e) => {
       if (this.activeTouchId !== null) return;
       if (!e.changedTouches || e.changedTouches.length === 0) return;
       e.preventDefault();
       const touch = e.changedTouches[0];
-      startTouch(touch.clientX, touch.clientY, touch.identifier);
+      this.activeTouchId = touch.identifier;
+      this.updateCenter();
+      this.knob.classList.add('active');
+      this.updatePosition(touch.clientX, touch.clientY);
+      triggerHaptic(15);
     };
 
-    this.boundary.addEventListener('touchstart', touchStartHandler, passiveOpts);
-    if (this.zone && this.zone !== this.boundary) {
-      this.zone.addEventListener('touchstart', touchStartHandler, passiveOpts);
-    }
+    this.boundary.addEventListener('touchstart', startHandler, passiveOpts);
     if (this.knob) {
-      this.knob.addEventListener('touchstart', touchStartHandler, passiveOpts);
+      this.knob.addEventListener('touchstart', startHandler, passiveOpts);
     }
 
-    // Global touchmove on window: tracks thumb anywhere across the screen smoothly
+    // Touch move tracked on window for seamless thumb range
     window.addEventListener('touchmove', (e) => {
       if (this.activeTouchId === null) return;
       for (let i = 0; i < e.touches.length; i++) {
@@ -252,8 +234,8 @@ class VirtualStick {
       }
     }, passiveOpts);
 
-    // Global touchend / touchcancel on window: never leaves stick stuck at angle
-    const touchEndHandler = (e) => {
+    // Touch end / cancel resets thumbstick
+    const stopHandler = (e) => {
       if (this.activeTouchId === null) return;
       if (e.changedTouches) {
         for (let i = 0; i < e.changedTouches.length; i++) {
@@ -265,14 +247,17 @@ class VirtualStick {
         }
       }
     };
-    window.addEventListener('touchend', touchEndHandler, passiveOpts);
-    window.addEventListener('touchcancel', touchEndHandler, passiveOpts);
 
-    // Mouse fallback for desktop browser testing
+    window.addEventListener('touchend', stopHandler, passiveOpts);
+    window.addEventListener('touchcancel', stopHandler, passiveOpts);
+
+    // Mouse handlers for desktop browser testing
     this.boundary.addEventListener('mousedown', (e) => {
       e.preventDefault();
       this.isMouseDown = true;
-      startTouch(e.clientX, e.clientY, 'mouse');
+      this.updateCenter();
+      this.knob.classList.add('active');
+      this.updatePosition(e.clientX, e.clientY);
     });
 
     window.addEventListener('mousemove', (e) => {
@@ -304,7 +289,9 @@ class VirtualStick {
     const normalizedY = parseFloat((dy / this.maxRadius).toFixed(2));
 
     if (this.type === 'left') {
-      sendInput('joystick', { x: normalizedX, y: normalizedY });
+      const isBowling = (currentLayout === 'bowling');
+      const finalX = isBowling ? -normalizedX : normalizedX;
+      sendInput('joystick', { x: finalX, y: normalizedY });
     } else {
       sendInput('aim-joystick', { x: normalizedX, y: normalizedY });
     }
@@ -313,7 +300,6 @@ class VirtualStick {
   reset() {
     this.activeTouchId = null;
     this.knob.classList.remove('active');
-    this.knob.style.transition = 'transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
     this.knob.style.transform = 'translate(0px, 0px)';
     if (this.type === 'left') {
       sendInput('joystick', { x: 0, y: 0 });
@@ -323,88 +309,76 @@ class VirtualStick {
   }
 }
 
-// ── 5. DUALSENSE BUTTON TOUCH HANDLERS ─────────────────────────────────
+// ── PS5 BUTTON TOUCH HANDLERS ──────────────────────────────────
 function setupButtons() {
   const buttonsList = [
-    { id: 'btn-triangle', key: 'triangle', rumble: [24] },
-    { id: 'btn-circle', key: 'circle', rumble: [20] },
-    { id: 'btn-cross', key: 'cross', rumble: [20] },
-    { id: 'btn-square', key: 'square', rumble: [20] },
-    { id: 'btn-l1', key: 'l1', rumble: [25] },
-    { id: 'btn-r1', key: 'r1', rumble: [25] },
-    { id: 'btn-l2', key: 'l2', rumble: [35, 15, 30] },
-    { id: 'btn-r2', key: 'r2', rumble: [35, 15, 30] },
-    { id: 'btn-create', key: 'create', rumble: [15] },
-    { id: 'btn-options', key: 'options', rumble: [15] },
-    { id: 'btn-dpad-up', key: 'dpadUp', rumble: [18] },
-    { id: 'btn-dpad-down', key: 'dpadDown', rumble: [18] },
-    { id: 'btn-dpad-left', key: 'dpadLeft', rumble: [18] },
-    { id: 'btn-dpad-right', key: 'dpadRight', rumble: [18] },
-    { id: 'btn-ps', key: 'ps', rumble: [50, 30, 50] }
+    { id: 'btn-triangle', key: 'triangle' },
+    { id: 'btn-circle', key: 'circle' },
+    { id: 'btn-cross', key: 'cross' },
+    { id: 'btn-square', key: 'square' },
+    { id: 'btn-l1', key: 'l1' },
+    { id: 'btn-r1', key: 'r1' },
+    { id: 'btn-l2', key: 'l2' },
+    { id: 'btn-r2', key: 'r2' },
+    { id: 'btn-create', key: 'create' },
+    { id: 'btn-options', key: 'options' },
+    { id: 'btn-dpad-up', key: 'dpadUp' },
+    { id: 'btn-dpad-down', key: 'dpadDown' },
+    { id: 'btn-dpad-left', key: 'dpadLeft' },
+    { id: 'btn-dpad-right', key: 'dpadRight' },
+    { id: 'btn-ps', key: 'ps' }
   ];
 
   const passiveOpts = { passive: false };
 
-  buttonsList.forEach(({ id, key, rumble }) => {
+  buttonsList.forEach(({ id, key }) => {
     const el = document.getElementById(id);
     if (!el) return;
 
-    let touchIdentifier = null;
-
+    // Touch Support: Direct, crisp, 100% reliable
     el.addEventListener('touchstart', (e) => {
       e.preventDefault();
-      if (e.changedTouches && e.changedTouches.length > 0) {
-        touchIdentifier = e.changedTouches[0].identifier;
-      }
       el.classList.add('active');
-      triggerControllerVibe(rumble || 20);
+      triggerHaptic(20);
       sendInput('btnDown', { btn: key });
     }, passiveOpts);
 
-    const onRelease = (e) => {
-      // Must ignore if this button is NOT currently pressed by an active touch
-      if (touchIdentifier === null) return;
-
-      if (e.changedTouches) {
-        let matched = false;
-        for (let i = 0; i < e.changedTouches.length; i++) {
-          if (e.changedTouches[i].identifier === touchIdentifier) {
-            matched = true;
-            break;
-          }
-        }
-        if (!matched) return;
-      }
-      touchIdentifier = null;
+    el.addEventListener('touchend', (e) => {
+      e.preventDefault();
       el.classList.remove('active');
       sendInput('btnUp', { btn: key });
-    };
+    }, passiveOpts);
 
-    el.addEventListener('touchend', onRelease, passiveOpts);
-    el.addEventListener('touchcancel', onRelease, passiveOpts);
-    window.addEventListener('touchend', onRelease, passiveOpts);
-    window.addEventListener('touchcancel', onRelease, passiveOpts);
+    el.addEventListener('touchcancel', (e) => {
+      e.preventDefault();
+      el.classList.remove('active');
+      sendInput('btnUp', { btn: key });
+    }, passiveOpts);
 
-    // Mouse Support
+    // Mouse Support for browser testing
     el.addEventListener('mousedown', (e) => {
       e.preventDefault();
       el.classList.add('active');
-      triggerControllerVibe(rumble || 20);
+      triggerHaptic(20);
       sendInput('btnDown', { btn: key });
     });
 
-    const onMouseUp = () => {
+    el.addEventListener('mouseup', (e) => {
+      e.preventDefault();
+      el.classList.remove('active');
+      sendInput('btnUp', { btn: key });
+    });
+
+    el.addEventListener('mouseleave', () => {
       if (el.classList.contains('active')) {
         el.classList.remove('active');
         sendInput('btnUp', { btn: key });
       }
-    };
-    el.addEventListener('mouseup', onMouseUp);
-    window.addEventListener('mouseup', onMouseUp);
+    });
   });
 }
 
-// ── 6. DUALSENSE TOUCHPAD AS MOUSE TRACKPAD ────────────────────────────
+// ── TOUCHPAD AS MOUSE TRACKPAD ──────────────────────────────────
 function setupTouchpadTrackpad() {
   const tp = document.getElementById('btn-touchpad');
   if (!tp) return;
@@ -417,7 +391,7 @@ function setupTouchpadTrackpad() {
   tp.addEventListener('touchstart', (e) => {
     e.preventDefault();
     tp.classList.add('active');
-    triggerControllerVibe(14);
+    triggerHaptic(12);
     const touch = e.touches[0];
     lastTouchX = touch.clientX;
     lastTouchY = touch.clientY;
@@ -434,6 +408,7 @@ function setupTouchpadTrackpad() {
     
     totalDist += Math.sqrt(dx * dx + dy * dy);
 
+    // Emit drag move delta coordinates to PC client
     sendInput('touchpad-move', { dx: dx, dy: dy });
 
     lastTouchX = touch.clientX;
@@ -444,13 +419,11 @@ function setupTouchpadTrackpad() {
     e.preventDefault();
     tp.classList.remove('active');
     
-    // Tap detection: short duration + small movement
+    // Tap detection: short duration + small movement = click
     const duration = Date.now() - touchStartTime;
-    if (duration < 250 && totalDist < 8) {
-      triggerControllerVibe([25, 20]);
+    if (duration < 250 && totalDist < 10) {
+      triggerHaptic(25);
       sendInput('touchpad-click', {});
-      sendInput('btnDown', { btn: 'touchpad' });
-      setTimeout(() => sendInput('btnUp', { btn: 'touchpad' }), 100);
     }
 
     lastTouchX = null;
@@ -459,6 +432,43 @@ function setupTouchpadTrackpad() {
 
   tp.addEventListener('touchend', endHandler, { passive: false });
   tp.addEventListener('touchcancel', endHandler, { passive: false });
+
+  // Mouse fallback support for emulator / testing
+  let isMouseDown = false;
+  tp.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    tp.classList.add('active');
+    triggerHaptic(12);
+    isMouseDown = true;
+    lastTouchX = e.clientX;
+    lastTouchY = e.clientY;
+    touchStartTime = Date.now();
+    totalDist = 0;
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!isMouseDown) return;
+    const dx = e.clientX - lastTouchX;
+    const dy = e.clientY - lastTouchY;
+    totalDist += Math.sqrt(dx * dx + dy * dy);
+    
+    sendInput('touchpad-move', { dx: dx, dy: dy });
+    
+    lastTouchX = e.clientX;
+    lastTouchY = e.clientY;
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (isMouseDown) {
+      isMouseDown = false;
+      tp.classList.remove('active');
+      const duration = Date.now() - touchStartTime;
+      if (duration < 250 && totalDist < 10) {
+        triggerHaptic(25);
+        sendInput('touchpad-click', {});
+      }
+    }
+  });
 }
 
 function sendInput(type, payload) {
@@ -468,7 +478,7 @@ function sendInput(type, payload) {
   socket.emit('controller-input', { type, ...payload, roomCode });
 }
 
-// ── 7. STARTUP LIFECYCLE ──────────────────────────────────────────────
+// ── STARTUP ────────────────────────────────────────────────────
 let started = false;
 
 function start() {
@@ -476,51 +486,10 @@ function start() {
   started = true;
 
   initSocket();
-  new VirtualStick('left-stick', 'left-stick-boundary', '.joystick-zone-left', 'left');
-  new VirtualStick('right-stick', 'right-stick-boundary', '.joystick-zone-right', 'right');
+  new VirtualStick('left-stick', 'left-stick-boundary', 'left');
+  new VirtualStick('right-stick', 'right-stick-boundary', 'right');
   setupButtons();
   setupTouchpadTrackpad();
-
-  // Dismiss landscape warning if user taps "Continue Anyway"
-  if (ui.dismissRotateBtn && ui.rotateWarning) {
-    ui.dismissRotateBtn.onclick = () => {
-      ui.rotateWarning.classList.add('dismissed');
-      enterFullscreen();
-    };
-  }
-
-  // Controls Guide modal
-  const guideBtn = document.getElementById('btn-guide');
-  const guideModal = document.getElementById('controls-guide-modal');
-  const guideCloseBtn = document.getElementById('cgm-close-btn');
-
-  if (guideBtn && guideModal) {
-    guideBtn.onclick = () => {
-      guideModal.style.display = 'flex';
-      triggerControllerVibe(25);
-    };
-  }
-
-  if (guideCloseBtn && guideModal) {
-    guideCloseBtn.onclick = () => {
-      guideModal.style.display = 'none';
-      triggerControllerVibe(15);
-    };
-  }
-
-  if (guideModal) {
-    guideModal.onclick = (e) => {
-      if (e.target === guideModal) guideModal.style.display = 'none';
-    };
-  }
-
-  // Skip / Close room dialog
-  if (ui.skipBtn) {
-    ui.skipBtn.onclick = () => {
-      hideLoader();
-      enterFullscreen();
-    };
-  }
 
   if (ui.joinBtn) {
     ui.joinBtn.onclick = () => {

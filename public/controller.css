@@ -1,13 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&display=swap');
-
-/* Base Reset & Lock to Landscape */
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
   user-select: none;
   -webkit-user-select: none;
-  touch-action: none;
+  touch-action: none; /* Prevents default zooming and scrolling */
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -17,10 +14,10 @@ body {
   font-family: 'Outfit', sans-serif;
   width: 100vw;
   height: 100vh;
-  margin: 0;
-  padding: 0;
   overflow: hidden;
-  position: relative;
+  display: grid;
+  grid-template-rows: 60px 1fr;
+  grid-template-columns: 1fr 1fr;
 }
 
 /* Landscape Force Warning */
@@ -30,73 +27,49 @@ body {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: #090b10;
+  background: #0f172a;
   z-index: 999;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   text-align: center;
-  padding: 24px;
+  padding: 20px;
 }
 
 @media (orientation: landscape) {
   .landscape-warning {
-    display: none !important;
+    display: none;
   }
-}
-
-.landscape-warning.dismissed {
-  display: none !important;
 }
 
 .landscape-warning h2 {
   font-size: 1.5rem;
   font-weight: 800;
-  color: #38bdf8;
+  color: #3b82f6;
   margin-bottom: 8px;
-}
-
-.landscape-warning p {
-  font-size: 0.85rem;
-  color: #94a3b8;
-  max-width: 320px;
-}
-
-/* Main Grid Container */
-.gamepad-container {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  display: grid;
-  grid-template-rows: 58px 1fr;
-  grid-template-columns: 1fr 1fr;
-  overflow: hidden;
-  background: radial-gradient(circle at 50% 100%, #111827 0%, #080a0f 80%);
 }
 
 /* Generic Button Styling */
 .btn {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #f1f5f9;
-  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 800;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  transition: transform 0.05s ease, background 0.05s ease, box-shadow 0.05s ease;
-  touch-action: none;
+  font-weight: bold;
+  font-size: 14px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition: all 0.1s ease;
 }
 
 .btn:active, .btn.active {
-  background: rgba(56, 189, 248, 0.35);
-  border-color: #38bdf8;
-  box-shadow: 0 0 18px rgba(56, 189, 248, 0.6);
-  transform: scale(0.93);
+  background: rgba(59, 130, 246, 0.3); /* Blue glow on press */
+  border-color: #3b82f6;
+  box-shadow: 0 0 14px rgba(59, 130, 246, 0.5);
+  transform: scale(0.94);
 }
 
 /* --- TOP BAR (Triggers & Menu Buttons) --- */
@@ -104,8 +77,8 @@ body {
   grid-row: 1;
   grid-column: 1;
   display: flex;
-  gap: 12px;
-  padding: 10px 24px;
+  gap: 10px;
+  padding: 10px 20px;
   align-items: center;
 }
 
@@ -114,43 +87,28 @@ body {
   grid-column: 2;
   display: flex;
   flex-direction: row-reverse;
-  gap: 12px;
-  padding: 10px 24px;
+  gap: 10px;
+  padding: 10px 20px;
   align-items: center;
 }
 
 .trigger {
-  width: 72px;
-  height: 38px;
-  font-size: 13px;
+  width: 70px;
+  height: 40px;
+  font-size: 12px;
   font-weight: 800;
   background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 8px;
-  letter-spacing: 0.05em;
-}
-
-.trigger:active, .trigger.active {
-  background: #38bdf8;
-  color: #030712;
-  border-color: #7dd3fc;
-  box-shadow: 0 0 18px rgba(56, 189, 248, 0.8);
 }
 
 .utility-btn {
-  width: 70px;
-  height: 28px;
+  width: 75px;
+  height: 30px;
   font-size: 10px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.02);
   color: #94a3b8;
-  font-weight: 700;
-  border-color: rgba(255, 255, 255, 0.08);
-}
-
-.utility-btn:active, .utility-btn.active {
-  background: #38bdf8;
-  color: #0f172a;
+  font-weight: 600;
+  border-color: rgba(255, 255, 255, 0.05);
 }
 
 /* --- LEFT GRIP (D-Pad & Left Stick) --- */
@@ -158,40 +116,38 @@ body {
   grid-row: 2;
   grid-column: 1;
   position: relative;
-  width: 100%;
-  height: 100%;
-  padding: 10px 24px 20px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
-/* D-Pad (Cross layout) */
+/* Cross D-Pad Shape */
 .dpad {
   position: absolute;
-  top: 14px;
-  left: 28px;
-  width: 126px;
-  height: 126px;
+  top: 10px;
+  left: 40px;
+  width: 120px;
+  height: 120px;
 }
 
 .dpad-btn {
   position: absolute;
-  width: 42px;
-  height: 42px;
-  background: radial-gradient(circle, #1e293b 0%, #0f172a 100%);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  font-size: 17px;
-  color: #94a3b8;
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 16px;
 }
-
-.dpad-up    { top: 0; left: 42px; border-radius: 10px 10px 0 0; }
-.dpad-down  { bottom: 0; left: 42px; border-radius: 0 0 10px 10px; }
-.dpad-left  { top: 42px; left: 0; border-radius: 10px 0 0 10px; }
-.dpad-right { top: 42px; right: 0; border-radius: 0 10px 10px 0; }
+.dpad-up    { top: 0; left: 40px; border-radius: 8px 8px 0 0; }
+.dpad-down  { bottom: 0; left: 40px; border-radius: 0 0 8px 8px; }
+.dpad-left  { top: 40px; left: 0; border-radius: 8px 0 0 8px; }
+.dpad-right { top: 40px; right: 0; border-radius: 0 8px 8px 0; }
 
 .dpad-btn:active, .dpad-btn.active {
-  background: #38bdf8;
-  border-color: #7dd3fc;
-  color: #030712;
-  box-shadow: 0 0 16px rgba(56, 189, 248, 0.7);
+  background: #3b82f6;
+  border-color: #60a5fa;
+  color: #ffffff;
 }
 
 /* --- RIGHT GRIP (Action Buttons & Right Stick) --- */
@@ -199,158 +155,96 @@ body {
   grid-row: 2;
   grid-column: 2;
   position: relative;
-  width: 100%;
-  height: 100%;
-  padding: 10px 24px 20px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-end;
 }
 
-/* Action Diamond Buttons */
+/* Diamond Action Buttons Shape */
 .action-group {
   position: absolute;
-  top: 14px;
-  right: 28px;
-  width: 126px;
-  height: 126px;
+  top: 10px;
+  right: 40px;
+  width: 120px;
+  height: 120px;
 }
 
 .action-btn {
   position: absolute;
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%; /* Classic round buttons */
   font-size: 16px;
-  font-weight: 900;
-  background: radial-gradient(circle at 35% 35%, rgba(51, 65, 85, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%);
-  border: 2px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 4px 10px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.2);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
 }
+.act-triangle { top: 0; left: 41px; color: #10b981; }
+.act-cross    { bottom: 0; left: 41px; color: #3b82f6; }
+.act-square   { top: 41px; left: 0; color: #d946ef; }
+.act-circle   { top: 41px; right: 0; color: #ef4444; }
 
-.act-triangle { top: 0; left: 42px; color: #10b981; }
-.act-square   { top: 42px; left: 0; color: #ec4899; }
-.act-cross    { bottom: 0; left: 42px; color: #38bdf8; }
-.act-circle   { top: 42px; right: 0; color: #ef4444; }
+.act-triangle:active, .act-triangle.active { background: #10b981; color: #ffffff; border-color: #34d399; box-shadow: 0 0 14px rgba(16, 185, 129, 0.5); }
+.act-cross:active, .act-cross.active       { background: #3b82f6; color: #ffffff; border-color: #60a5fa; box-shadow: 0 0 14px rgba(59, 130, 246, 0.5); }
+.act-square:active, .act-square.active     { background: #d946ef; color: #ffffff; border-color: #f472b6; box-shadow: 0 0 14px rgba(217, 70, 239, 0.5); }
+.act-circle:active, .act-circle.active     { background: #ef4444; color: #ffffff; border-color: #fca5a5; box-shadow: 0 0 14px rgba(239, 68, 68, 0.5); }
 
-.act-triangle:active, .act-triangle.active { background: #10b981; color: #ffffff; border-color: #34d399; box-shadow: 0 0 18px rgba(16, 185, 129, 0.8); }
-.act-cross:active, .act-cross.active       { background: #3b82f6; color: #ffffff; border-color: #60a5fa; box-shadow: 0 0 18px rgba(59, 130, 246, 0.8); }
-.act-square:active, .act-square.active     { background: #ec4899; color: #ffffff; border-color: #f472b6; box-shadow: 0 0 18px rgba(236, 72, 153, 0.8); }
-.act-circle:active, .act-circle.active     { background: #ef4444; color: #ffffff; border-color: #fca5a5; box-shadow: 0 0 18px rgba(239, 68, 68, 0.8); }
-
-/* --- JOYSTICKS (Spacious ergonomic zones) --- */
+/* --- JOYSTICKS (Thumb Zones) --- */
 .joystick-zone-left {
   position: absolute;
-  bottom: 8px;
-  left: 170px;
-  width: 130px;
-  height: 130px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  touch-action: none;
+  bottom: 20px;
+  left: 140px;
 }
 
 .joystick-zone-right {
   position: absolute;
-  bottom: 8px;
-  right: 170px;
-  width: 130px;
-  height: 130px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  touch-action: none;
+  bottom: 20px;
+  right: 140px;
 }
 
 .thumbstick-base {
-  width: 104px;
-  height: 104px;
-  background: radial-gradient(circle, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.75) 100%);
+  width: 100px;
+  height: 100px;
+  background: rgba(15, 23, 42, 0.45);
   border: 3px solid #1e293b;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: inset 0 4px 12px rgba(0, 0, 0, 0.7), 0 0 12px rgba(0, 0, 0, 0.4);
+  box-shadow: inset 0 4px 10px rgba(0, 0, 0, 0.6);
   position: relative;
-  touch-action: none;
 }
 
 .thumbstick-knob {
-  width: 60px;
-  height: 60px;
-  background: radial-gradient(circle at 35% 35%, #475569 0%, #1e293b 70%, #090d16 100%);
-  border: 2px solid #64748b;
+  width: 58px;
+  height: 58px;
+  background: radial-gradient(circle at 30% 30%, #475569 0%, #1e293b 80%, #0f172a 100%);
+  border: 2px solid #4b5563;
   border-radius: 50%;
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.6), inset 0 2px 3px rgba(255, 255, 255, 0.25);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.5), inset 0 2px 2px rgba(255, 255, 255, 0.15);
   position: absolute;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
-  font-weight: 900;
-  color: #94a3b8;
+  font-size: 8px;
+  font-weight: 800;
+  color: #64748b;
   letter-spacing: 0.05em;
-  user-select: none;
-  -webkit-user-select: none;
-  touch-action: none;
+  transition: transform 0.05s ease;
 }
 
-.thumbstick-knob.active {
-  border-color: #38bdf8;
-  box-shadow: 0 0 18px rgba(56, 189, 248, 0.7), inset 0 2px 3px rgba(255, 255, 255, 0.4);
-}
-
-.stick-label {
-  pointer-events: none;
-}
-
-/* Center DualSense Touchpad & PS Button */
+/* Center Subtle Logo Touch */
 .center-ps-zone {
   position: absolute;
-  bottom: 8px;
+  bottom: 12px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
   flex-direction: column;
   align-items: center;
   z-index: 10;
-  pointer-events: auto;
-}
-
-.touchpad-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.ps5-lightbar {
-  width: 4px;
-  height: 48px;
-  border-radius: 4px;
-  background: #38bdf8;
-  box-shadow: 0 0 12px #38bdf8;
-  transition: all 0.3s ease;
-}
-
-.ps5-lightbar-left {
-  margin-right: 6px;
-}
-
-.ps5-lightbar-right {
-  margin-left: 6px;
-}
-
-.touchpad-stub {
-  width: 136px;
-  height: 50px;
-  background: linear-gradient(180deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.7) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  box-shadow: inset 0 1px 3px rgba(0,0,0,0.4), 0 4px 6px rgba(0,0,0,0.3);
 }
 
 .ps-btn {
@@ -358,11 +252,23 @@ body {
   height: 38px;
   border-radius: 50%;
   font-size: 11px;
-  font-weight: 900;
+  font-weight: 800;
   background: radial-gradient(circle, #334155 0%, #1e293b 100%);
-  border-color: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
-  margin-top: 6px;
+  border-color: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+.touchpad-stub {
+  width: 140px;
+  height: 52px;
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.6) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.4), 0 4px 6px rgba(0,0,0,0.2);
 }
 
 /* Loader Screen Overlay */
@@ -376,20 +282,19 @@ body {
   justify-content: center;
   align-items: center;
   gap: 16px;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.4s ease;
 }
 
 .loader-screen.hidden {
-  opacity: 0 !important;
-  pointer-events: none !important;
-  display: none !important;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .room-input-box {
-  background: rgba(15, 23, 42, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 20px;
-  padding: 28px;
+  padding: 30px;
   max-width: 320px;
   width: 85%;
   text-align: center;
@@ -428,24 +333,24 @@ body {
 }
 
 .room-input-box input:focus {
-  border-color: #38bdf8;
-  box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+  border-color: #3b82f6;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
 }
 
-.room-input-box button#join-btn {
+.room-input-box button {
   width: 100%;
-  background: #38bdf8;
+  background: #3b82f6;
   border: none;
   border-radius: 12px;
   padding: 12px;
   font-size: 1rem;
   font-weight: 800;
-  color: #030712;
+  color: #fff;
   cursor: pointer;
-  box-shadow: 0 4px 10px rgba(56, 189, 248, 0.4);
+  box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
 }
 
-.room-input-box button#join-btn:active {
+.room-input-box button:active {
   transform: scale(0.97);
 }
 
@@ -456,130 +361,8 @@ body {
   font-weight: 600;
 }
 
-/* Button Sublabels */
-.sublabel {
-  display: block;
-  font-size: 7px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  opacity: 0.75;
-  margin-top: 1px;
-}
-
-.stick-sub {
-  font-size: 6.5px;
-  font-weight: 700;
-  color: #94a3b8;
-  letter-spacing: 0.04em;
-}
-
-/* Guide Button Pill */
-.btn-guide-pill {
-  background: rgba(56, 189, 248, 0.15);
-  border: 1px solid rgba(56, 189, 248, 0.4);
-  color: #38bdf8;
-  font-size: 8px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  padding: 4px 10px;
-  border-radius: 20px;
-  cursor: pointer;
-  box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
-  transition: all 0.2s ease;
-}
-
-.btn-guide-pill:active {
-  background: rgba(56, 189, 248, 0.4);
-  transform: scale(0.95);
-}
-
-/* Controls Guide Modal Overlay */
-.controls-guide-modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(3, 7, 18, 0.88);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  z-index: 10000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-}
-
-.cgm-content {
-  background: #0b0f19;
-  border: 1px solid #1e293b;
-  border-radius: 16px;
-  width: 90%;
-  max-width: 620px;
-  max-height: 85vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(56, 189, 248, 0.15);
-  overflow: hidden;
-}
-
-.cgm-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 18px;
-  border-bottom: 1px solid #1e293b;
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.cgm-header h3 {
-  font-size: 13px;
-  font-weight: 900;
-  color: #38bdf8;
-  letter-spacing: 0.08em;
-  margin: 0;
-}
-
-.cgm-header button {
-  background: #1e293b;
-  border: 1px solid #334155;
-  color: #f1f5f9;
-  font-size: 10px;
-  font-weight: 800;
-  padding: 4px 10px;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.cgm-body {
-  padding: 14px 18px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.cgm-section {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 10px;
-  padding: 10px 14px;
-}
-
-.cgm-section h4 {
-  font-size: 11px;
-  font-weight: 800;
-  color: #f59e0b;
-  letter-spacing: 0.06em;
-  margin-bottom: 8px;
-}
-
-.cgm-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px 12px;
-  font-size: 9.5px;
-  color: #cbd5e1;
-  line-height: 1.4;
-}
-
-.cgm-grid b {
-  color: #38bdf8;
+.gamepad-container {
+  width: 100%;
+  height: 100%;
+  display: contents; /* Grid defined in body is used directly */
 }
