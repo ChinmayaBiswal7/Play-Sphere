@@ -3947,45 +3947,51 @@
       scene.add(dash);
     }
 
-    // 6. Official F1 Start / Finish Line (Checkered FIA Timing Stripe across full 15.6m track asphalt at t = 0.0)
+    // 6. Official F1 Start / Finish Line (Solid Checkered FIA Timing Stripe spanning 16.0m across full track asphalt at t = 0.0)
+    const sfP = trackCurve.getPointAt(0.0);
+    const sfTang = trackCurve.getTangentAt(0.0).normalize();
+    const sfHeading = Math.atan2(sfTang.x, sfTang.z);
+
     const sfcCanvas = document.createElement('canvas');
-    sfcCanvas.width = 128; sfcCanvas.height = 32;
+    sfcCanvas.width = 256; sfcCanvas.height = 32;
     const sctx = sfcCanvas.getContext('2d');
-    sctx.fillStyle = '#ffffff'; sctx.fillRect(0, 0, 128, 32);
-    sctx.fillStyle = '#090d16';
+    sctx.fillStyle = '#ffffff'; sctx.fillRect(0, 0, 256, 32);
+    sctx.fillStyle = '#0a0a0f';
     for (let r = 0; r < 2; r++) {
-      for (let c = 0; c < 8; c++) {
+      for (let c = 0; c < 16; c++) {
         if ((r + c) % 2 === 1) sctx.fillRect(c * 16, r * 16, 16, 16);
       }
     }
     const sfTex = new THREE.CanvasTexture(sfcCanvas);
     sfTex.wrapS = THREE.RepeatWrapping; sfTex.wrapT = THREE.ClampToEdgeWrapping;
-    sfTex.repeat.set(10, 1);
-    const sfMat = new THREE.MeshBasicMaterial({ map: sfTex, side: THREE.DoubleSide });
-    const sfGeo = new THREE.PlaneGeometry(15.6, 1.4);
+    sfTex.repeat.set(2, 1);
+    const sfMat = new THREE.MeshBasicMaterial({ 
+      map: sfTex, 
+      side: THREE.DoubleSide,
+      polygonOffset: true, 
+      polygonOffsetFactor: -4, 
+      polygonOffsetUnits: -4 
+    });
+    // 16.0m across the track (X), 0.012m height (Y), 1.2m thickness along track (Z)
+    const sfGeo = new THREE.BoxGeometry(16.0, 0.012, 1.2);
     const sfLine = new THREE.Mesh(sfGeo, sfMat);
-    const sfP = trackCurve.getPointAt(0.0);
-    const sfTang = trackCurve.getTangentAt(0.0);
-    sfLine.position.copy(sfP);
-    sfLine.position.y = 0.018;
-    sfLine.lookAt(sfP.clone().add(sfTang));
-    sfLine.rotateX(Math.PI / 2);
-    sfLine.rotateZ(Math.PI / 2);
+    sfLine.position.set(sfP.x, sfP.y + 0.035, sfP.z);
+    sfLine.rotation.y = sfHeading;
     scene.add(sfLine);
 
     // 7. Official FIA Staggered Starting Grid Boxes (Matching real Grand Prix photos)
     const gridWhiteMat = new THREE.MeshBasicMaterial({ 
       color: 0xffffff, 
       side: THREE.DoubleSide,
-      polygonOffset: true,
-      polygonOffsetFactor: -4,
+      polygonOffset: true, 
+      polygonOffsetFactor: -4, 
       polygonOffsetUnits: -4
     });
     const gridYellowMat = new THREE.MeshBasicMaterial({ 
       color: 0xffe600, 
       side: THREE.DoubleSide,
-      polygonOffset: true,
-      polygonOffsetFactor: -5,
+      polygonOffset: true, 
+      polygonOffsetFactor: -5, 
       polygonOffsetUnits: -5
     });
 
@@ -4000,32 +4006,30 @@
 
       const slotGroup = new THREE.Group();
       slotGroup.position.set(center.x, center.y + 0.035, center.z);
+      // Strictly align local +Z forward along racing direction using heading angle (guarantees det +1)
+      slotGroup.rotation.y = Math.atan2(tang.x, tang.z);
 
-      // Basis matrix: X = norm (right), Y = up, Z = tang (forward)
-      const rotMatrix = new THREE.Matrix4().makeBasis(norm, new THREE.Vector3(0, 1, 0), tang);
-      slotGroup.setRotationFromMatrix(rotMatrix);
-
-      // 1. Solid White Front Stop Bar (3.2m wide, 0.35m thick)
-      const stopBar = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.006, 0.35), gridWhiteMat);
+      // 1. Solid White Front Stop Bar (3.2m wide across, 0.35m thick along track) at front of slot
+      const stopBar = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.008, 0.35), gridWhiteMat);
       stopBar.position.set(0, 0, 2.5);
       slotGroup.add(stopBar);
 
-      // 2. Long FIA Yellow Center Alignment Stripe (7.0m long down the middle, extending forward past stop bar)
-      const yellowCenterline = new THREE.Mesh(new THREE.BoxGeometry(0.20, 0.008, 7.0), gridYellowMat);
-      yellowCenterline.position.set(0, 0.002, 1.0);
+      // 2. Long FIA Yellow Center Alignment Stripe (6.0m long down middle, extending forward past stop bar)
+      const yellowCenterline = new THREE.Mesh(new THREE.BoxGeometry(0.20, 0.010, 6.0), gridYellowMat);
+      yellowCenterline.position.set(0, 0.002, 1.5);
       slotGroup.add(yellowCenterline);
 
       // 3. Left White Bracket Rail ([)
-      const leftRail = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.006, 5.6), gridWhiteMat);
+      const leftRail = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.008, 5.6), gridWhiteMat);
       leftRail.position.set(-1.6, 0, -0.3);
-      const leftRearTick = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.006, 0.18), gridWhiteMat);
+      const leftRearTick = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.008, 0.18), gridWhiteMat);
       leftRearTick.position.set(-1.325, 0, -3.1);
       slotGroup.add(leftRail, leftRearTick);
 
       // 4. Right White Bracket Rail (])
-      const rightRail = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.006, 5.6), gridWhiteMat);
+      const rightRail = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.008, 5.6), gridWhiteMat);
       rightRail.position.set(1.6, 0, -0.3);
-      const rightRearTick = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.006, 0.18), gridWhiteMat);
+      const rightRearTick = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.008, 0.18), gridWhiteMat);
       rightRearTick.position.set(1.325, 0, -3.1);
       slotGroup.add(rightRail, rightRearTick);
 
@@ -4034,6 +4038,9 @@
       numCanvas.width = 128; numCanvas.height = 128;
       const nctx = numCanvas.getContext('2d');
       nctx.clearRect(0, 0, 128, 128);
+      // Correct for horizontal mirroring so text reads upright and un-mirrored looking forward
+      nctx.translate(128, 0);
+      nctx.scale(-1, 1);
       nctx.fillStyle = '#ffffff';
       nctx.font = '900 68px "Orbitron", sans-serif';
       nctx.textAlign = 'center';
@@ -4051,7 +4058,7 @@
       });
       const numMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.4), numMat);
       numMesh.rotation.x = -Math.PI / 2;
-      numMesh.rotation.z = Math.PI; // Orient to be readable looking forward along track
+      numMesh.rotation.z = Math.PI; // Upright looking forward along track
       numMesh.position.set(side < 0 ? -2.4 : 2.4, 0.003, 2.0);
       slotGroup.add(numMesh);
 
@@ -4083,19 +4090,19 @@
 
     // Apply a smoothstep S-curve (cubic Hermite spline) to calculate the offsets
     // of control points at entry (s=0 to 4) and exit (s=8 to 12).
-    // This replaces linear steps with a mathematically smooth transition.
+    // Starts at 9.5m (beyond the 8.0m main road curb) so pit curve never encroaches into the main track!
     const offsets = [];
     for (let s = 0; s <= samples; s++) {
       if (s < 4) {
-        // Smooth S-curve entry from 6.0m to 17.0m
+        // Smooth S-curve entry from 9.5m (curb boundary) to 17.0m (fast lane)
         const x = s / 4;
         const smooth = x * x * (3 - 2 * x);
-        offsets.push(6.0 + 11.0 * smooth);
+        offsets.push(9.5 + 7.5 * smooth);
       } else if (s > 8) {
-        // Smooth S-curve exit from 17.0m to 6.0m
+        // Smooth S-curve exit from 17.0m to 9.5m (curb boundary)
         const x = (12 - s) / 4;
         const smooth = x * x * (3 - 2 * x);
-        offsets.push(6.0 + 11.0 * smooth);
+        offsets.push(9.5 + 7.5 * smooth);
       } else {
         // Parallel fast lane section
         offsets.push(17.0);
@@ -8287,10 +8294,13 @@
 
     // ── Pit lane entry world-space trigger ──
     const isPitEntryAllowed = (currentSessionIndex !== 2 || raceTimer > 5.0);
-    if (!isPitting && !isStartingSequence && isPitEntryAllowed && pitCurve) {
+    // Main track road is 16.0m wide (from -8.0m to +8.0m). Car must physically steer off the right edge (lateralOffset >= 9.0m) to enter pit lane!
+    const isPhysicallyEnteringPitRoad = proj && proj.lateralOffset >= 9.0;
+
+    if (!isPitting && !isStartingSequence && isPitEntryAllowed && pitCurve && isPhysicallyEnteringPitRoad) {
       const pitProj = findNearestPitProjection(playerKart.mesh.position);
-      // When car approaches pit entrance lane (progress < 0.15, within 5.5m lateral offset)
-      if (pitProj.progress < 0.15 && Math.abs(pitProj.lateralOffset) < 5.5) {
+      // When car approaches pit entrance lane (progress < 0.22, within 4.0m distance to pitCurve)
+      if (pitProj.progress >= 0.0 && pitProj.progress < 0.22 && pitProj.distance < 4.0) {
         const forward = new THREE.Vector3(Math.sin(playerKart.heading), 0, Math.cos(playerKart.heading)).normalize();
         const pitTangent = pitCurve.getTangentAt(Math.max(0, pitProj.progress)).normalize();
         const dirDot = forward.dot(pitTangent);
@@ -8324,6 +8334,19 @@
           }
         }
       }
+    }
+
+    // Guard: If player is on the main track (within 8.0m), never trap them in pit lane mode!
+    if (playerKart.inPitLane && !isPitStopActive && proj && Math.abs(proj.lateralOffset) < 8.0 && pitProgress < 0.25) {
+      playerKart.inPitLane = false;
+      isPitting = false;
+      playerKart.pitLimiterActive = false;
+      playerKart.pitZone = "MAIN_TRACK";
+      playerKart.currentPath = "TRACK";
+      const stratCard = document.getElementById('hud-pit-strategy-card');
+      if (stratCard) { stratCard.classList.add('hidden'); stratCard.style.display = 'none'; }
+      const pitCard = document.getElementById('hud-pit-lane-card');
+      if (pitCard) { pitCard.classList.add('hidden'); pitCard.style.display = 'none'; }
     }
 
     // ── Manual steering and progression inside the pit lane ──

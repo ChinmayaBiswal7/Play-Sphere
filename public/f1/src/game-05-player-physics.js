@@ -1300,10 +1300,13 @@
 
     // ── Pit lane entry world-space trigger ──
     const isPitEntryAllowed = (currentSessionIndex !== 2 || raceTimer > 5.0);
-    if (!isPitting && !isStartingSequence && isPitEntryAllowed && pitCurve) {
+    // Main track road is 16.0m wide (from -8.0m to +8.0m). Car must physically steer off the right edge (lateralOffset >= 9.0m) to enter pit lane!
+    const isPhysicallyEnteringPitRoad = proj && proj.lateralOffset >= 9.0;
+
+    if (!isPitting && !isStartingSequence && isPitEntryAllowed && pitCurve && isPhysicallyEnteringPitRoad) {
       const pitProj = findNearestPitProjection(playerKart.mesh.position);
-      // When car approaches pit entrance lane (progress < 0.15, within 5.5m lateral offset)
-      if (pitProj.progress < 0.15 && Math.abs(pitProj.lateralOffset) < 5.5) {
+      // When car approaches pit entrance lane (progress < 0.22, within 4.0m distance to pitCurve)
+      if (pitProj.progress >= 0.0 && pitProj.progress < 0.22 && pitProj.distance < 4.0) {
         const forward = new THREE.Vector3(Math.sin(playerKart.heading), 0, Math.cos(playerKart.heading)).normalize();
         const pitTangent = pitCurve.getTangentAt(Math.max(0, pitProj.progress)).normalize();
         const dirDot = forward.dot(pitTangent);
@@ -1337,6 +1340,19 @@
           }
         }
       }
+    }
+
+    // Guard: If player is on the main track (within 8.0m), never trap them in pit lane mode!
+    if (playerKart.inPitLane && !isPitStopActive && proj && Math.abs(proj.lateralOffset) < 8.0 && pitProgress < 0.25) {
+      playerKart.inPitLane = false;
+      isPitting = false;
+      playerKart.pitLimiterActive = false;
+      playerKart.pitZone = "MAIN_TRACK";
+      playerKart.currentPath = "TRACK";
+      const stratCard = document.getElementById('hud-pit-strategy-card');
+      if (stratCard) { stratCard.classList.add('hidden'); stratCard.style.display = 'none'; }
+      const pitCard = document.getElementById('hud-pit-lane-card');
+      if (pitCard) { pitCard.classList.add('hidden'); pitCard.style.display = 'none'; }
     }
 
     // ── Manual steering and progression inside the pit lane ──
