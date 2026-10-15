@@ -71,7 +71,6 @@
         fs: 0,
         rel: 0,
         modestbranding: 1,
-        autoplay: 1,
         origin: window.location.origin,
       },
       events: {
@@ -190,6 +189,23 @@
       ps5SetVinylSpin(false);
       ps5SetPlayIcon(false);
     } catch(e) {}
+  };
+
+  window.ps5MusicDestroy = function() {
+    try {
+      if (ps5YtPlayer) {
+        if (typeof ps5YtPlayer.stopVideo === 'function') ps5YtPlayer.stopVideo();
+        if (typeof ps5YtPlayer.destroy === 'function') ps5YtPlayer.destroy();
+      }
+    } catch(e) {}
+    ps5YtPlayer = null;
+    ps5YtReady = false;
+    ps5MusicPlaying = false;
+    const container = document.getElementById('ps5-yt-container');
+    if (container) container.innerHTML = '<div id="ps5-yt-player"></div>';
+    ps5SetVinylSpin(false);
+    ps5SetPlayIcon(false);
+    document.querySelectorAll('audio, video').forEach(a => { try { a.pause(); a.muted = true; } catch(err){} });
   };
 
   function ps5MusicSetTitle(title) {

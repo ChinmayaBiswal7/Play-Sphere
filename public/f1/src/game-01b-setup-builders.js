@@ -852,8 +852,20 @@
     scene.add(sfLine);
 
     // 7. Official FIA Staggered Starting Grid Boxes (Matching real Grand Prix photos)
-    const gridWhiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
-    const gridYellowMat = new THREE.MeshBasicMaterial({ color: 0xfacc15, side: THREE.DoubleSide });
+    const gridWhiteMat = new THREE.MeshBasicMaterial({ 
+      color: 0xffffff, 
+      side: THREE.DoubleSide,
+      polygonOffset: true,
+      polygonOffsetFactor: -4,
+      polygonOffsetUnits: -4
+    });
+    const gridYellowMat = new THREE.MeshBasicMaterial({ 
+      color: 0xffe600, 
+      side: THREE.DoubleSide,
+      polygonOffset: true,
+      polygonOffsetFactor: -5,
+      polygonOffsetUnits: -5
+    });
 
     for (let slot = 0; slot < 20; slot++) {
       const slotOffset = (1.0 - 0.003 - (slot * 0.0045) + 1.0) % 1.0;
@@ -865,35 +877,34 @@
       const center = p.clone().add(norm.clone().multiplyScalar(side));
 
       const slotGroup = new THREE.Group();
-      slotGroup.position.copy(center);
-      slotGroup.position.y = 0.022;
+      slotGroup.position.set(center.x, center.y + 0.035, center.z);
 
       // Basis matrix: X = norm (right), Y = up, Z = tang (forward)
       const rotMatrix = new THREE.Matrix4().makeBasis(norm, new THREE.Vector3(0, 1, 0), tang);
       slotGroup.setRotationFromMatrix(rotMatrix);
 
-      // 1. Solid White Front Stop Bar (2.8m wide, 0.22m thick)
-      const stopBar = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.004, 0.22), gridWhiteMat);
+      // 1. Solid White Front Stop Bar (3.2m wide, 0.35m thick)
+      const stopBar = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.006, 0.35), gridWhiteMat);
       stopBar.position.set(0, 0, 2.5);
       slotGroup.add(stopBar);
 
-      // 2. Long FIA Yellow Center Alignment Stripe (4.8m long down the middle from stop bar backwards)
-      const yellowCenterline = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.006, 4.8), gridYellowMat);
-      yellowCenterline.position.set(0, 0.001, 0.1);
+      // 2. Long FIA Yellow Center Alignment Stripe (7.0m long down the middle, extending forward past stop bar)
+      const yellowCenterline = new THREE.Mesh(new THREE.BoxGeometry(0.20, 0.008, 7.0), gridYellowMat);
+      yellowCenterline.position.set(0, 0.002, 1.0);
       slotGroup.add(yellowCenterline);
 
       // 3. Left White Bracket Rail ([)
-      const leftRail = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.004, 5.2), gridWhiteMat);
-      leftRail.position.set(-1.4, 0, 0.0);
-      const leftRearTick = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.004, 0.10), gridWhiteMat);
-      leftRearTick.position.set(-1.18, 0, -2.6);
+      const leftRail = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.006, 5.6), gridWhiteMat);
+      leftRail.position.set(-1.6, 0, -0.3);
+      const leftRearTick = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.006, 0.18), gridWhiteMat);
+      leftRearTick.position.set(-1.325, 0, -3.1);
       slotGroup.add(leftRail, leftRearTick);
 
       // 4. Right White Bracket Rail (])
-      const rightRail = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.004, 5.2), gridWhiteMat);
-      rightRail.position.set(1.4, 0, 0.0);
-      const rightRearTick = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.004, 0.10), gridWhiteMat);
-      rightRearTick.position.set(1.18, 0, -2.6);
+      const rightRail = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.006, 5.6), gridWhiteMat);
+      rightRail.position.set(1.6, 0, -0.3);
+      const rightRearTick = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.006, 0.18), gridWhiteMat);
+      rightRearTick.position.set(1.325, 0, -3.1);
       slotGroup.add(rightRail, rightRearTick);
 
       // 5. Position Number Painted Directly on Track Asphalt (P1 - P20)
@@ -908,11 +919,18 @@
       nctx.fillText(String(slot + 1), 64, 64);
 
       const numTex = new THREE.CanvasTexture(numCanvas);
-      const numMat = new THREE.MeshBasicMaterial({ map: numTex, transparent: true, side: THREE.DoubleSide });
+      const numMat = new THREE.MeshBasicMaterial({ 
+        map: numTex, 
+        transparent: true, 
+        side: THREE.DoubleSide,
+        polygonOffset: true,
+        polygonOffsetFactor: -4,
+        polygonOffsetUnits: -4
+      });
       const numMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.4), numMat);
       numMesh.rotation.x = -Math.PI / 2;
       numMesh.rotation.z = Math.PI; // Orient to be readable looking forward along track
-      numMesh.position.set(side < 0 ? -2.2 : 2.2, 0.002, 1.8);
+      numMesh.position.set(side < 0 ? -2.4 : 2.4, 0.003, 2.0);
       slotGroup.add(numMesh);
 
       scene.add(slotGroup);

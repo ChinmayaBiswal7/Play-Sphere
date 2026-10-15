@@ -186,7 +186,9 @@
     const iframe = document.getElementById('game-session-iframe');
     if (iframe) iframe.remove();
     window.ps5ActiveGame = null;
-    if (window.ps5YtPlayer && window.ps5YtReady) {
+    if (typeof window.ps5LoadYouTubeAPI === 'function') {
+      window.ps5LoadYouTubeAPI();
+    } else if (window.ps5YtPlayer && window.ps5YtReady) {
       try {
         window.ps5YtPlayer.unMute();
         window.ps5YtPlayer.playVideo();
@@ -197,7 +199,9 @@
   /* ── LAUNCH GAME ── */
   window.ps5LaunchGame = function (gameId, roomCode) {
     window.ps5ActiveGame = gameId;
-    if (typeof window.ps5MusicPause === 'function') {
+    if (typeof window.ps5MusicDestroy === 'function') {
+      window.ps5MusicDestroy();
+    } else if (typeof window.ps5MusicPause === 'function') {
       window.ps5MusicPause();
     } else if (window.ps5YtPlayer) {
       try {
@@ -212,7 +216,9 @@
     if (window.sounds && typeof window.sounds.playLaunch === 'function') window.sounds.playLaunch();
 
     setTimeout(() => {
-      if (typeof window.ps5MusicPause === 'function') {
+      if (typeof window.ps5MusicDestroy === 'function') {
+        window.ps5MusicDestroy();
+      } else if (typeof window.ps5MusicPause === 'function') {
         window.ps5MusicPause();
       } else if (window.ps5YtPlayer) {
         try { window.ps5YtPlayer.pauseVideo(); window.ps5YtPlayer.mute(); } catch (e) {}
@@ -351,16 +357,22 @@
       if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) return;
 
       // Check if any modal is open - if so, allow modal handlers or Escape to close
-      const anyModalOpen = ['ps5-controller-modal', 'ps5-profile-modal', 'ps5-friends-modal', 'ps5-search-modal', 'settings-screen'].some(id => {
+      const isAnyModalActive = ['ps5-controller-modal', 'ps5-profile-modal', 'ps5-friends-modal', 'ps5-search-modal'].some(id => {
         const el = document.getElementById(id);
-        return el && (el.classList.contains('show') || el.style.display === 'flex' || el.style.display === 'block');
-      });
-      if (anyModalOpen) {
+        return el && el.classList.contains('show') && el.style.display !== 'none';
+      }) || (() => {
+        const s = document.getElementById('settings-screen');
+        return s && !s.classList.contains('hidden') && s.style.display === 'flex';
+      })();
+
+      if (isAnyModalActive) {
         if (e.key === 'Escape') {
-          ['ps5-controller-modal', 'ps5-profile-modal', 'ps5-friends-modal', 'ps5-search-modal', 'settings-screen'].forEach(id => {
+          ['ps5-controller-modal', 'ps5-profile-modal', 'ps5-friends-modal', 'ps5-search-modal'].forEach(id => {
             const el = document.getElementById(id);
             if (el) { el.classList.remove('show'); el.style.display = 'none'; }
           });
+          const s = document.getElementById('settings-screen');
+          if (s) { s.classList.add('hidden'); s.style.display = 'none'; }
         }
         return;
       }

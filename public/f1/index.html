@@ -2122,8 +2122,8 @@
       </div>
     </div>
 
-    <!-- Floating Mic Button Trigger in bottom right -->
-    <div class="mic-btn-container" id="hud-mic-container" style="position: absolute; bottom: 24px; right: 28px; z-index: 90;">
+    <!-- Floating Mic Button Trigger in bottom right (Hidden on-screen; V key activates radio) -->
+    <div class="mic-btn-container" id="hud-mic-container" style="display: none !important;">
       <button class="mic-circle-btn" id="hud-mic-btn" title="Toggle Team Radio (V)" onclick="window.toggleVoiceListening()">
         🎙️
       </button>
@@ -3369,7 +3369,7 @@
   <!-- Static F1 team, driver, and AI personality data (must load before game.js) -->
   <script src="f1-data.js?v=6.0"></script>
   <!-- Main physics and game logic -->
-  <script src="game.js?v=6.0"></script>
+  <script src="game.js?v=6.1"></script>
   <script src="f1_pvp.js"></script>
   <script src="/js/ps_multiplayer.js"></script>
   <script>
