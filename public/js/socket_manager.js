@@ -26,25 +26,25 @@ let lastJoystickDir = 0;
 let lastJoystickYDir = 0;
 
 function initSocket() {
-  if (window.socket) return; // Already initialized
+  if (window.socketManagerListenersAttached) return;
+  window.socketManagerListenersAttached = true;
 
-  window.socket = io();
+  if (!window.socket && typeof io !== 'undefined') {
+    window.socket = io();
+  }
+  if (!window.socket) return;
 
-  window.socket.on('connect', () => {
-    console.log('PC connected to Node WebSocket Server');
-    window.socket.emit('join-room-pc');
-    if (typeof window.updatePresence === 'function') {
-      window.updatePresence('Idle');
-    }
-  });
-
-  window.socket.on('room-created', ({ roomCode: code, localIp, port }) => {
+  function updateLobbyUI(code, localIp, port) {
+    if (!code) return;
     window.roomCode = code;
+    try { sessionStorage.setItem('activeRoomCode', code); } catch(e) {}
 
     // Smart URL routing: use Wi-Fi IP on localhost, and origin domain on public hosted servers
     let phoneUrl;
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === '') {
-      phoneUrl = `http://${localIp}:${port}/controller.html?room=${code}`;
+      const ip = localIp || window.location.hostname;
+      const pt = port || window.location.port || 3000;
+      phoneUrl = `http://${ip}:${pt}/controller.html?room=${code}`;
     } else {
       phoneUrl = `${window.location.origin}/controller.html?room=${code}`;
     }
@@ -73,7 +73,29 @@ function initSocket() {
         ctrlQr.style.display = 'block';
       };
     }
-    
+  }
+
+  if (window.roomCode) {
+    updateLobbyUI(window.roomCode);
+  }
+
+  if (window.socket.connected && !window.roomCode) {
+    window.socket.emit('join-room-pc');
+    if (typeof window.updatePresence === 'function') {
+      window.updatePresence('Idle');
+    }
+  }
+
+  window.socket.on('connect', () => {
+    console.log('PC connected to Node WebSocket Server');
+    window.socket.emit('join-room-pc', window.roomCode ? { roomCode: window.roomCode } : {});
+    if (typeof window.updatePresence === 'function') {
+      window.updatePresence('Idle');
+    }
+  });
+
+  window.socket.on('room-created', ({ roomCode: code, localIp, port }) => {
+    updateLobbyUI(code, localIp, port);
     console.log(`Lobby room code assigned: ${code}`);
   });
 
@@ -101,12 +123,16 @@ function initSocket() {
     if (ctrlModal && ctrlModal.classList.contains('show')) {
       setTimeout(() => {
         ctrlModal.classList.remove('show');
+        ctrlModal.style.display = 'none';
       }, 1000);
     }
 
     // 4. Force mobile controller layout sync depending on active match state
     const isBatting = window.MATCH && window.MATCH.userIsBatting;
     window.socket.emit('layout-change', { layout: isBatting ? 'batting' : 'bowling' });
+
+    // Haptic greeting on phone controller
+    window.vibrateController([60, 40, 80]);
 
     // 5. If PvP lobby screen is active, auto-trigger PvP match load
     const lobbyEl = window.ui && window.ui.lobby;
@@ -159,17 +185,18 @@ function initSocket() {
       // Only perform dashboard console navigation if the game hasn't launched (dashboard root exists)
       const consoleRoot = document.getElementById('ps5-console-root');
       const isLobbyActive = window.ui && window.ui.lobby && !window.ui.lobby.classList.contains('hidden');
+      const isDashboardActive = consoleRoot && !isLobbyActive && !document.getElementById('game-session-iframe') && !window.ps5ActiveGame && (typeof window.gameState === 'undefined' || window.gameState === null);
       
-      if (consoleRoot && !isLobbyActive) {
+      if (isDashboardActive) {
         // Horizontal left-right game shelf navigation
-        if (data.x < -0.5) {
+        if (data.x < -0.45) {
           if (lastJoystickDir !== -1) {
             lastJoystickDir = -1;
             if (typeof window.handleInputNavigation === 'function') {
               window.handleInputNavigation(-1);
             }
           }
-        } else if (data.x > 0.5) {
+        } else if (data.x > 0.45) {
           if (lastJoystickDir !== 1) {
             lastJoystickDir = 1;
             if (typeof window.handleInputNavigation === 'function') {
@@ -217,19 +244,31 @@ function initSocket() {
       window.controllerInput.aimX = data.x;
       window.controllerInput.aimY = data.y;
 
+    } else if (data.type === 'touchpad-move') {
+      if (typeof window.moveVirtualCursor === 'function') {
+        window.moveVirtualCursor(data.dx, data.dy);
+      }
+
+    } else if (data.type === 'touchpad-click') {
+      if (typeof window.clickVirtualCursor === 'function') {
+        window.clickVirtualCursor();
+      }
+
     } else if (data.type === 'btnDown') {
       updateButtonState(data.btn, true);
 
       // Dashboard overlay navigation buttons mapping
       const consoleRoot = document.getElementById('ps5-console-root');
       const isLobbyActive = window.ui && window.ui.lobby && !window.ui.lobby.classList.contains('hidden');
+      const isDashboardActive = consoleRoot && !isLobbyActive && !document.getElementById('game-session-iframe') && !window.ps5ActiveGame && (typeof window.gameState === 'undefined' || window.gameState === null);
 
-      if (consoleRoot && !isLobbyActive) {
+      if (isDashboardActive) {
         if (data.btn === 'cross') {
           // Close QR Modal if currently scanning/pairing
           const ctrlModal = document.getElementById('ps5-controller-modal');
-          if (ctrlModal && ctrlModal.classList.contains('show')) {
+          if (ctrlModal && (ctrlModal.classList.contains('show') || ctrlModal.style.display === 'block')) {
             ctrlModal.classList.remove('show');
+            ctrlModal.style.display = 'none';
           } else {
             // Click to launch the selected game card
             if (typeof window.launchActiveGame === 'function') {
@@ -239,9 +278,22 @@ function initSocket() {
         } else if (data.btn === 'circle') {
           // Circle acts as a 'Back' button to close open modals
           const ctrlModal = document.getElementById('ps5-controller-modal');
-          if (ctrlModal) ctrlModal.classList.remove('show');
+          if (ctrlModal) { ctrlModal.classList.remove('show'); ctrlModal.style.display = 'none'; }
           const profModal = document.getElementById('ps5-profile-modal');
-          if (profModal) profModal.classList.remove('show');
+          if (profModal) { profModal.classList.remove('show'); profModal.style.display = 'none'; }
+          const searchModal = document.getElementById('ps5-search-modal');
+          if (searchModal) { searchModal.classList.remove('show'); searchModal.style.display = 'none'; }
+          const settingsScreen = document.getElementById('settings-screen');
+          if (settingsScreen) settingsScreen.classList.add('hidden');
+        } else if (data.btn === 'triangle') {
+          const searchBtn = document.getElementById('btn-search');
+          if (searchBtn) searchBtn.click();
+        } else if (data.btn === 'square') {
+          const profBtn = document.getElementById('btn-profile');
+          if (profBtn) profBtn.click();
+        } else if (data.btn === 'options') {
+          const settingsBtn = document.getElementById('btn-settings');
+          if (settingsBtn) settingsBtn.click();
         } else if (data.btn === 'dpadLeft') {
           if (typeof window.handleInputNavigation === 'function') window.handleInputNavigation(-1);
         } else if (data.btn === 'dpadRight') {

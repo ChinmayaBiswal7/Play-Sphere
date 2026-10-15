@@ -137,8 +137,36 @@
     if (window.sounds && typeof window.sounds.playNav === 'function') window.sounds.playNav();
   }
 
+  /* ── INPUT & GAME NAVIGATION ── */
+  window.handleInputNavigation = function (dir) {
+    if (!cards || cards.length === 0) return;
+    if (dir > 0 && selectedIndex < cards.length - 1) {
+      selectGame(selectedIndex + 1);
+    } else if (dir < 0 && selectedIndex > 0) {
+      selectGame(selectedIndex - 1);
+    }
+  };
+
+  window.launchActiveGame = function () {
+    if (!cards || !cards[selectedIndex]) return;
+    const card = cards[selectedIndex];
+    if (card && card.dataset.game) {
+      window.ps5LaunchGame(card.dataset.game);
+    }
+  };
+
+  window.closeGameIframe = function () {
+    const iframe = document.getElementById('game-session-iframe');
+    if (iframe) iframe.remove();
+    window.ps5ActiveGame = null;
+    if (window.ps5YtPlayer && window.ps5YtReady) {
+      try { window.ps5YtPlayer.playVideo(); } catch (e) {}
+    }
+  };
+
   /* ── LAUNCH GAME ── */
   window.ps5LaunchGame = function (gameId, roomCode) {
+    window.ps5ActiveGame = gameId;
     if (window.ps5YtPlayer && window.ps5YtReady) {
       try { window.ps5YtPlayer.pauseVideo(); } catch (e) {}
     }
@@ -151,9 +179,13 @@
       if (gameId === 'cricket') {
         if (typeof window.animationFrameId !== 'undefined') cancelAnimationFrame(window.animationFrameId);
         if (typeof window.resizeBgCanvas === 'function') window.removeEventListener('resize', window.resizeBgCanvas);
-        ['ps5-friends-modal','ps5-profile-modal','ps5-controller-modal'].forEach(id => {
+        ['ps5-friends-modal','ps5-profile-modal','ps5-controller-modal','ps5-search-modal'].forEach(id => {
           const el = document.getElementById(id);
-          if (el) document.body.appendChild(el);
+          if (el) {
+            el.classList.remove('show');
+            el.style.display = 'none';
+            document.body.appendChild(el);
+          }
         });
         if (root) root.remove();
         if (typeof window.launchCricketGame === 'function') window.launchCricketGame();
@@ -262,6 +294,11 @@
 
     // Keyboard nav — debounced to prevent double-skip
     window.addEventListener('keydown', e => {
+      // Never intercept keyboard events if the dashboard is inactive, if Cricket is running, or if an iframe game is active
+      const root = document.getElementById('ps5-console-root');
+      if (!root || document.getElementById('game-session-iframe') || window.ps5ActiveGame) return;
+      if (typeof window.gameState !== 'undefined' && window.gameState !== null) return;
+
       if (e.key === 'f' || e.key === 'F') { toggleFullscreen(); return; }
       if (document.querySelector('.ps5-profile-modal.show') || document.activeElement.tagName === 'INPUT') return;
 

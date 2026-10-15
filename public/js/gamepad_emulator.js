@@ -215,9 +215,13 @@
     }
   }
 
+  window.moveVirtualCursor = moveVirtualCursor;
+  window.clickVirtualCursor = clickVirtualCursor;
+  window.setVirtualKey = setKey;
+
   // ── 5. SOCKET CONNECTION FOR REMOTE MOBILE CONTROLLER ──
   const params = new URLSearchParams(window.location.search);
-  const room = params.get('room') || params.get('roomCode') || sessionStorage.getItem('activeRoomCode') || localStorage.getItem('play_sphere_room');
+  const room = params.get('room') || params.get('roomCode') || sessionStorage.getItem('activeRoomCode');
 
   if (!window.socket && typeof io !== 'undefined') {
     window.socket = io();
@@ -227,7 +231,7 @@
     });
     window.socket.on('room-created', ({ roomCode }) => {
       window.roomCode = roomCode;
-      try { localStorage.setItem('play_sphere_room', roomCode); } catch(e) {}
+      try { sessionStorage.setItem('activeRoomCode', roomCode); } catch(e) {}
       if (typeof window.updateF1ControllerModalUI === 'function') {
         window.updateF1ControllerModalUI();
       }
@@ -258,6 +262,25 @@
       if (data.type === 'joystick') {
         window.controllerInput.joystickX = data.x;
         window.controllerInput.joystickY = data.y;
+
+        // Dashboard shelf navigation
+        const consoleRoot = document.getElementById('ps5-console-root');
+        const isDashboardActive = consoleRoot && !document.getElementById('game-session-iframe') && !window.ps5ActiveGame && (typeof window.gameState === 'undefined' || window.gameState === null);
+        if (isDashboardActive) {
+          if (data.x < -0.45) {
+            if (window.lastEmuJoyX !== -1) {
+              window.lastEmuJoyX = -1;
+              if (typeof window.handleInputNavigation === 'function') window.handleInputNavigation(-1);
+            }
+          } else if (data.x > 0.45) {
+            if (window.lastEmuJoyX !== 1) {
+              window.lastEmuJoyX = 1;
+              if (typeof window.handleInputNavigation === 'function') window.handleInputNavigation(1);
+            }
+          } else if (Math.abs(data.x) < 0.2) {
+            window.lastEmuJoyX = 0;
+          }
+        }
 
         // Dispatch analog steering & throttle keys for all games
         const deadzone = 0.22;
@@ -301,6 +324,52 @@
         if (data.btn === 'dpadRight')  window.controllerInput.btnDpadRight  = isPressed;
         if (data.btn === 'touchpad')   window.controllerInput.btnTouchpad   = isPressed;
         if (data.btn === 'ps')         window.controllerInput.btnPs         = isPressed;
+
+        // Dashboard specific button handling
+        if (isPressed) {
+          const consoleRoot = document.getElementById('ps5-console-root');
+          const isDashboardActive = consoleRoot && !document.getElementById('game-session-iframe') && !window.ps5ActiveGame && (typeof window.gameState === 'undefined' || window.gameState === null);
+
+          if (isDashboardActive) {
+            if (data.btn === 'cross') {
+              const ctrlModal = document.getElementById('ps5-controller-modal');
+              if (ctrlModal && (ctrlModal.classList.contains('show') || ctrlModal.style.display === 'block')) {
+                ctrlModal.classList.remove('show');
+                ctrlModal.style.display = 'none';
+              } else if (typeof window.launchActiveGame === 'function') {
+                window.launchActiveGame();
+              }
+            } else if (data.btn === 'circle') {
+              const ctrlModal = document.getElementById('ps5-controller-modal');
+              if (ctrlModal) { ctrlModal.classList.remove('show'); ctrlModal.style.display = 'none'; }
+              const profModal = document.getElementById('ps5-profile-modal');
+              if (profModal) { profModal.classList.remove('show'); profModal.style.display = 'none'; }
+              const searchModal = document.getElementById('ps5-search-modal');
+              if (searchModal) { searchModal.classList.remove('show'); searchModal.style.display = 'none'; }
+              const settingsScreen = document.getElementById('settings-screen');
+              if (settingsScreen) settingsScreen.classList.add('hidden');
+            } else if (data.btn === 'dpadLeft') {
+              if (typeof window.handleInputNavigation === 'function') window.handleInputNavigation(-1);
+            } else if (data.btn === 'dpadRight') {
+              if (typeof window.handleInputNavigation === 'function') window.handleInputNavigation(1);
+            } else if (data.btn === 'dpadUp') {
+              const tabGames = document.getElementById('nav-item-games');
+              if (tabGames) tabGames.click();
+            } else if (data.btn === 'dpadDown') {
+              const tabStore = document.getElementById('nav-item-store');
+              if (tabStore) tabStore.click();
+            } else if (data.btn === 'triangle') {
+              const searchBtn = document.getElementById('btn-search');
+              if (searchBtn) searchBtn.click();
+            } else if (data.btn === 'square') {
+              const profBtn = document.getElementById('btn-profile');
+              if (profBtn) profBtn.click();
+            } else if (data.btn === 'options') {
+              const settingsBtn = document.getElementById('btn-settings');
+              if (settingsBtn) settingsBtn.click();
+            }
+          }
+        }
 
         // Map remote phone buttons to virtual keyboard events
         if (data.btn === 'r2') {
