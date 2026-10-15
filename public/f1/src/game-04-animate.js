@@ -236,15 +236,20 @@
         );
       }
 
-      // Voice listener 5-second automatic timeout window countdown
+      // Voice listener 15-second automatic timeout window countdown
       if (window.keepListeningForVoice) {
         window.micTimeoutTimer -= delta;
+        const micBtn = document.getElementById('hud-mic-btn');
+        if (micBtn) micBtn.classList.add('listening');
+
         if (window.micTimeoutTimer <= 0.0) {
           window.keepListeningForVoice = false;
+          pendingRadioQuestion = null;
           if (recognition) {
             try { recognition.stop(); } catch(e) {}
           }
-          speakEngineerRadio("Microphone listening window timed out.", 10);
+          if (micBtn) micBtn.classList.remove('listening');
+          speakEngineerRadio("Microphone listening window closed.", 10);
         }
       }
 

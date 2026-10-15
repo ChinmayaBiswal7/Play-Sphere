@@ -318,18 +318,19 @@
   }
 
   function parseVoiceCommand(text) {
-    // Reset listening window upon receiving input
-    window.keepListeningForVoice = false;
+    console.log("[VOICE COMMAND RECEIVED]", text, "Pending Question:", pendingRadioQuestion);
 
     // 1. Interactive QTE confirmations
     if (pendingRadioQuestion === 'crash') {
       if (text.includes("yes") || text.includes("yeah") || text.includes("ok") || text.includes("sure")) {
         pendingRadioQuestion = null;
+        window.keepListeningForVoice = false;
         pendingPitStop = true; // Schedule pit lane entry
         speakEngineerRadio("Copy that, boxing this lap.", 70, true);
         return;
       } else if (text.includes("no") || text.includes("nope") || text.includes("stay out")) {
         pendingRadioQuestion = null;
+        window.keepListeningForVoice = false;
         speakEngineerRadio("Copy, stay out. Keep pushing.", 70, true);
         return;
       }
@@ -338,11 +339,13 @@
     if (pendingRadioQuestion === 'tyres') {
       if (text.includes("yes") || text.includes("yeah") || text.includes("box") || text.includes("pit")) {
         pendingRadioQuestion = null;
+        window.keepListeningForVoice = false;
         pendingPitStop = true; // Schedule pit lane entry
         speakEngineerRadio("Copy, boxing this lap for fresh rubber.", 70, true);
         return;
       } else if (text.includes("no") || text.includes("stay out")) {
         pendingRadioQuestion = null;
+        window.keepListeningForVoice = false;
         speakEngineerRadio("Copy, stay out. Keep pushing.", 70, true);
         return;
       }
@@ -351,6 +354,7 @@
     if (pendingRadioQuestion === 'rain') {
       if (text.includes("yes") || text.includes("yeah") || text.includes("ok") || text.includes("sure")) {
         pendingRadioQuestion = null;
+        window.keepListeningForVoice = false;
         activeCompound = 'intermediate';
         window.voiceSelectedCompound = 'intermediate';
         speakEngineerRadio("Copy, boxing for intermediates.", 70, true);
@@ -358,6 +362,7 @@
         return;
       } else if (text.includes("no") || text.includes("nope")) {
         pendingRadioQuestion = null;
+        window.keepListeningForVoice = false;
         speakEngineerRadio("Copy, stay out. Be careful on the slicks.", 70, true);
         return;
       }
@@ -375,14 +380,22 @@
         activeCompound = comp;
         window.voiceSelectedCompound = comp;
         pendingRadioQuestion = null;
+        window.keepListeningForVoice = false;
         speakEngineerRadio(`${comp.toUpperCase()} tyres confirmed. Box box box.`, 70, true);
         
-        // Sync selected button style in HTML if overlay is shown
-        const btn = document.getElementById(`compound-${comp}`);
-        if (btn) selectTyreCompound(comp, btn);
+        if (typeof window.choosePitCompound === 'function') {
+          window.choosePitCompound(comp);
+        }
         return;
+      } else {
+        // Did not catch valid compound yet; keep 15-second window alive so user can repeat
+        window.keepListeningForVoice = true;
+        window.micTimeoutTimer = 15.0;
       }
     }
+
+    // Default close listening window for standard single-turn commands
+    window.keepListeningForVoice = false;
 
     // 2. Weather command
     if (text.includes("weather") || text.includes("rain") || text.includes("report")) {
@@ -434,9 +447,9 @@
       pendingRadioQuestion = 'tyres_choice';
       pendingPitStop = true; // Schedule it!
       speakEngineerRadio("Copy, boxing this lap. Which compound?", 70, true);
-      // Keep mic listening for 5 seconds window
+      // Keep mic listening for 15 seconds multi-turn dialogue window
       window.keepListeningForVoice = true;
-      window.micTimeoutTimer = 5.0;
+      window.micTimeoutTimer = 15.0;
       return;
     }
 

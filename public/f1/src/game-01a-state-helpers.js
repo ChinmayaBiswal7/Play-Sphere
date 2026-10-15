@@ -944,7 +944,137 @@
     
     // Show console-style landing screen loading bar transition on first load
     window.triggerLoadingScreen("APEX STARS", "Chibi F1 Grand Prix", () => {
-      // Completed loading
+      // Completed loading - smoothly reveal main landing screen
+      const landing = document.getElementById("main-landing-screen");
+      if (landing) {
+        landing.classList.remove("hidden");
+        landing.style.display = "";
+      }
+    });
+  };
+
+  // ════ PIT STRATEGY TYRE SELECTOR HANDLERS ════
+  window.choosePitCompound = (comp) => {
+    if (!comp) return;
+    activeCompound = comp;
+    window.voiceSelectedCompound = comp;
+    if (playerKart) {
+      playerKart.tyreCompound = comp;
+      if (typeof window.updateCarTyreColor === 'function') {
+        window.updateCarTyreColor(playerKart);
+      }
+    }
+    
+    // Update button states in pit strategy card
+    const buttons = document.querySelectorAll('.strategy-compound-btn');
+    buttons.forEach(btn => btn.classList.remove('selected'));
+    const activeBtn = document.getElementById(`strat-btn-${comp}`);
+    if (activeBtn) activeBtn.classList.add('selected');
+
+    // Also update post-race pit compound buttons if present
+    const garBtns = document.querySelectorAll('.compound-btn');
+    garBtns.forEach(btn => btn.classList.remove('selected'));
+    const postBtn = document.getElementById(`compound-${comp}`);
+    if (postBtn) postBtn.classList.add('selected');
+
+    if (typeof speakEngineerRadio === 'function') {
+      speakEngineerRadio(`Copy, fitting ${comp.toUpperCase()} tyres on entry. Box box box.`, 70, true);
+    }
+    if (window.ApexAudio) {
+      window.ApexAudio.playClick();
+    }
+    pendingRadioQuestion = null;
+    window.keepListeningForVoice = false;
+  };
+
+  // Number key shortcuts 1-5 for quick strategy selection
+  window.addEventListener('keydown', (e) => {
+    const stratCard = document.getElementById('hud-pit-strategy-card');
+    if (!stratCard || stratCard.classList.contains('hidden') || stratCard.style.display === 'none') return;
+    if (e.key === '1') window.choosePitCompound('soft');
+    else if (e.key === '2') window.choosePitCompound('medium');
+    else if (e.key === '3') window.choosePitCompound('hard');
+    else if (e.key === '4') window.choosePitCompound('intermediate');
+    else if (e.key === '5') window.choosePitCompound('wet');
+  });
+
+  // ════ TERMINAL DAMAGE OVERLAY & REPAIR HANDLERS ════
+  window.showTerminalDamageOverlay = () => {
+    const overlay = document.getElementById('f1-terminal-damage-overlay');
+    if (overlay) {
+      overlay.style.display = 'flex';
+    }
+    if (playerKart) {
+      playerKart.speed = 0.0;
+      playerKart.controlsEnabled = false;
+    }
+    if (window.ApexAudio) {
+      window.ApexAudio.stopEngine();
+      window.ApexAudio.playDriftScreech();
+    }
+    if (typeof speakEngineerRadio === 'function') {
+      speakEngineerRadio("Engine failure! Terminal damage, pull over and switch off. We're out of the race.", 100, true);
+    }
+  };
+
+  window.towToGarageAndRepair = () => {
+    const overlay = document.getElementById('f1-terminal-damage-overlay');
+    if (overlay) overlay.style.display = 'none';
+
+    carDamage = 0.0;
+    tyreWear = 0.0;
+    if (typeof updateDamageHUD === 'function') updateDamageHUD();
+
+    if (playerKart) {
+      playerKart.speed = 0.0;
+      playerKart.damage = 0.0;
+      playerKart.frontWingAttached = true;
+      playerKart.rearWingAttached = true;
+      playerKart.controlsEnabled = true;
+      if (typeof window.restoreCarWings === 'function') {
+        window.restoreCarWings(playerKart);
+      } else if (typeof restoreCarWings === 'function') {
+        restoreCarWings(playerKart);
+      }
+
+      // If in Practice or Qualifying, tow back into garage bay
+      if (currentSessionIndex === 0 || currentSessionIndex === 1) {
+        playerKart.qualifyingState = "GARAGE";
+        playerKart.inPitLane = true;
+        playerKart.hasDrivenOutThisSession = false;
+        playerKart.driveOutState = "IN_GARAGE";
+        if (typeof showGarageDriveOutUI === 'function') {
+          showGarageDriveOutUI();
+        }
+      } else {
+        // In Race, restart race cleanly
+        window.restartCurrentSessionFromCrash();
+        return;
+      }
+    }
+
+    if (typeof speakEngineerRadio === 'function') {
+      speakEngineerRadio("Car recovered to garage. Mechanics fitted fresh power unit, new front wing and checked telemetry. You're clear to drive out.", 80, true);
+    }
+  };
+
+  window.restartCurrentSessionFromCrash = () => {
+    const overlay = document.getElementById('f1-terminal-damage-overlay');
+    if (overlay) overlay.style.display = 'none';
+
+    carDamage = 0.0;
+    tyreWear = 0.0;
+    if (playerKart) {
+      playerKart.damage = 0.0;
+      playerKart.frontWingAttached = true;
+      playerKart.rearWingAttached = true;
+      if (typeof window.restoreCarWings === 'function') window.restoreCarWings(playerKart);
+    }
+
+    const sessionTitle = sessionNames[currentSessionIndex];
+    const trackNames = ["Sunset Coast Circuit", "Alpine Heights"];
+    window.triggerLoadingScreen(sessionTitle, trackNames[activeTrack], () => {
+      setupGame();
     });
   };
 

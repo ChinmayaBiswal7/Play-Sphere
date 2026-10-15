@@ -533,25 +533,49 @@
       shiftActiveTimer -= delta;
     }
 
+    // ── AUTHENTIC F1 COMPONENT DAMAGE ENGINEERING & RETIREMENT ──
+    if (carDamage >= 100.0) {
+      playerKart.speed = 0.0;
+      if (typeof window.showTerminalDamageOverlay === 'function') {
+        window.showTerminalDamageOverlay();
+      }
+      return;
+    }
+
     let target = 0;
-    // Base top speed: matches gear 8 ceiling so full speed is reachable in G8
-    // upgrades.speed adds extra above the base, but scaled down by car damage (up to 30% speed penalty)
-    const dmgSpeedFactor = 1.0 - (carDamage / 100.0) * 0.30;
+    let dmgSpeedFactor = 1.0;
+    window.dmgSteerAgility = 1.0;
+
+    if (carDamage > 85.0) {
+      // CRITICAL DAMAGE / LIMP MODE: Limp back to pit at ~35 km/h max
+      dmgSpeedFactor = 0.12;
+      window.dmgSteerAgility = 0.45;
+      if (Math.random() < 0.20) spawnExhaustSmoke(playerKart.mesh.position, true);
+    } else if (carDamage > 70.0) {
+      // SEVERE PU & CHASSIS DAMAGE: 45% power cut, sputtering
+      dmgSpeedFactor = 0.48;
+      window.dmgSteerAgility = 0.60;
+      if (Math.random() < 0.10) spawnExhaustSmoke(playerKart.mesh.position, false);
+    } else if (carDamage > 40.0) {
+      // MODERATE AERO LOSS: 25% speed cut, front wing downforce loss (understeer)
+      dmgSpeedFactor = 0.75;
+      window.dmgSteerAgility = 0.72;
+    } else if (carDamage > 15.0) {
+      // MINOR CONTACT: 10% drag penalty
+      dmgSpeedFactor = 0.90;
+      window.dmgSteerAgility = 0.88;
+    }
+
     let topSpeedBase = (88.0 + upgrades.speed * 2) * dmgSpeedFactor;
     if (playerKart.bonus === 'topSpeed') topSpeedBase += 4 * dmgSpeedFactor;
     
     // Speed limit for current gear: gear max speed IS the top speed
-    // topSpeedBase is the ABSOLUTE car cap (upgrades + team bonus)
-    // The gear max speed gates how fast you can go per gear
     let gearSpeedLimit = 0.0;
     if (currentGear === 0)       gearSpeedLimit = 0.0;
     else if (currentGear === -1) gearSpeedLimit = 5.0;   // Reverse max: 20 km/h
     else                         gearSpeedLimit = gearMaxSpeed[currentGear];
 
-    // topSpeed = the lower of car's absolute max and gear ceiling
-    // BUT base car top speed matches gear 8 ceiling so player can always reach full speed
     let topSpeed = Math.min(topSpeedBase, gearSpeedLimit);
-    // At gear 8 gearSpeedLimit (90) >= topSpeedBase so topSpeed = topSpeedBase (full speed)
     if (currentGear !== 0) {
       topSpeed *= modePower;
     }
@@ -1080,7 +1104,7 @@
 
     // Calculate target steering angle (up to 30° at low speed / garage manoeuvres for easy tight turns)
     const currentMaxSteer = isLowSpeedManoeuvre ? THREE.MathUtils.degToRad(30) : hConfig.physicsMaxSteer;
-    const targetSteeringAngle = curvedSteeringInput * currentMaxSteer * steeringAuthority;
+    const targetSteeringAngle = curvedSteeringInput * currentMaxSteer * steeringAuthority * (window.dmgSteerAgility || 1.0);
 
     // Smooth steering rack movement
     const steeringRackSpeed = isLowSpeedManoeuvre ? 10.0 : THREE.MathUtils.lerp(7.0, 3.0, steerSpeedRatio);
@@ -1296,7 +1320,13 @@
           playerKart.inPitLane = true;
           playerKart.pitLimiterActive = true;
           playerKart.currentPath = "PIT";
-          speakEngineerRadio("Entering pit lane. Pit limiter is active.", 80);
+          speakEngineerRadio("Entering pit lane. Pit limiter is active. Select your tyre compound.", 80);
+
+          const stratCard = document.getElementById('hud-pit-strategy-card');
+          if (stratCard) {
+            stratCard.classList.remove('hidden');
+            stratCard.style.display = 'block';
+          }
 
           // Pre-spawn pit crew standing ready at pit box immediately on entry
           if (typeof spawnPitCrewBoxes === 'function') {
@@ -1509,6 +1539,12 @@
           playerKart.pitZone = "MAIN_TRACK";
           playerKart.currentPath = "TRACK";
           playerKart.pitLimiterActive = false;
+
+          const stratCard = document.getElementById('hud-pit-strategy-card');
+          if (stratCard) {
+            stratCard.classList.add('hidden');
+            stratCard.style.display = 'none';
+          }
           
           playerKart.currentOffset = Math.max(0.045, proj.progress);
           playerKart.previousTrackProgress = playerKart.currentOffset;

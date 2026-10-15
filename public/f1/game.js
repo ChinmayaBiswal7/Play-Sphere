@@ -952,7 +952,137 @@
     
     // Show console-style landing screen loading bar transition on first load
     window.triggerLoadingScreen("APEX STARS", "Chibi F1 Grand Prix", () => {
-      // Completed loading
+      // Completed loading - smoothly reveal main landing screen
+      const landing = document.getElementById("main-landing-screen");
+      if (landing) {
+        landing.classList.remove("hidden");
+        landing.style.display = "";
+      }
+    });
+  };
+
+  // ════ PIT STRATEGY TYRE SELECTOR HANDLERS ════
+  window.choosePitCompound = (comp) => {
+    if (!comp) return;
+    activeCompound = comp;
+    window.voiceSelectedCompound = comp;
+    if (playerKart) {
+      playerKart.tyreCompound = comp;
+      if (typeof window.updateCarTyreColor === 'function') {
+        window.updateCarTyreColor(playerKart);
+      }
+    }
+    
+    // Update button states in pit strategy card
+    const buttons = document.querySelectorAll('.strategy-compound-btn');
+    buttons.forEach(btn => btn.classList.remove('selected'));
+    const activeBtn = document.getElementById(`strat-btn-${comp}`);
+    if (activeBtn) activeBtn.classList.add('selected');
+
+    // Also update post-race pit compound buttons if present
+    const garBtns = document.querySelectorAll('.compound-btn');
+    garBtns.forEach(btn => btn.classList.remove('selected'));
+    const postBtn = document.getElementById(`compound-${comp}`);
+    if (postBtn) postBtn.classList.add('selected');
+
+    if (typeof speakEngineerRadio === 'function') {
+      speakEngineerRadio(`Copy, fitting ${comp.toUpperCase()} tyres on entry. Box box box.`, 70, true);
+    }
+    if (window.ApexAudio) {
+      window.ApexAudio.playClick();
+    }
+    pendingRadioQuestion = null;
+    window.keepListeningForVoice = false;
+  };
+
+  // Number key shortcuts 1-5 for quick strategy selection
+  window.addEventListener('keydown', (e) => {
+    const stratCard = document.getElementById('hud-pit-strategy-card');
+    if (!stratCard || stratCard.classList.contains('hidden') || stratCard.style.display === 'none') return;
+    if (e.key === '1') window.choosePitCompound('soft');
+    else if (e.key === '2') window.choosePitCompound('medium');
+    else if (e.key === '3') window.choosePitCompound('hard');
+    else if (e.key === '4') window.choosePitCompound('intermediate');
+    else if (e.key === '5') window.choosePitCompound('wet');
+  });
+
+  // ════ TERMINAL DAMAGE OVERLAY & REPAIR HANDLERS ════
+  window.showTerminalDamageOverlay = () => {
+    const overlay = document.getElementById('f1-terminal-damage-overlay');
+    if (overlay) {
+      overlay.style.display = 'flex';
+    }
+    if (playerKart) {
+      playerKart.speed = 0.0;
+      playerKart.controlsEnabled = false;
+    }
+    if (window.ApexAudio) {
+      window.ApexAudio.stopEngine();
+      window.ApexAudio.playDriftScreech();
+    }
+    if (typeof speakEngineerRadio === 'function') {
+      speakEngineerRadio("Engine failure! Terminal damage, pull over and switch off. We're out of the race.", 100, true);
+    }
+  };
+
+  window.towToGarageAndRepair = () => {
+    const overlay = document.getElementById('f1-terminal-damage-overlay');
+    if (overlay) overlay.style.display = 'none';
+
+    carDamage = 0.0;
+    tyreWear = 0.0;
+    if (typeof updateDamageHUD === 'function') updateDamageHUD();
+
+    if (playerKart) {
+      playerKart.speed = 0.0;
+      playerKart.damage = 0.0;
+      playerKart.frontWingAttached = true;
+      playerKart.rearWingAttached = true;
+      playerKart.controlsEnabled = true;
+      if (typeof window.restoreCarWings === 'function') {
+        window.restoreCarWings(playerKart);
+      } else if (typeof restoreCarWings === 'function') {
+        restoreCarWings(playerKart);
+      }
+
+      // If in Practice or Qualifying, tow back into garage bay
+      if (currentSessionIndex === 0 || currentSessionIndex === 1) {
+        playerKart.qualifyingState = "GARAGE";
+        playerKart.inPitLane = true;
+        playerKart.hasDrivenOutThisSession = false;
+        playerKart.driveOutState = "IN_GARAGE";
+        if (typeof showGarageDriveOutUI === 'function') {
+          showGarageDriveOutUI();
+        }
+      } else {
+        // In Race, restart race cleanly
+        window.restartCurrentSessionFromCrash();
+        return;
+      }
+    }
+
+    if (typeof speakEngineerRadio === 'function') {
+      speakEngineerRadio("Car recovered to garage. Mechanics fitted fresh power unit, new front wing and checked telemetry. You're clear to drive out.", 80, true);
+    }
+  };
+
+  window.restartCurrentSessionFromCrash = () => {
+    const overlay = document.getElementById('f1-terminal-damage-overlay');
+    if (overlay) overlay.style.display = 'none';
+
+    carDamage = 0.0;
+    tyreWear = 0.0;
+    if (playerKart) {
+      playerKart.damage = 0.0;
+      playerKart.frontWingAttached = true;
+      playerKart.rearWingAttached = true;
+      if (typeof window.restoreCarWings === 'function') window.restoreCarWings(playerKart);
+    }
+
+    const sessionTitle = sessionNames[currentSessionIndex];
+    const trackNames = ["Sunset Coast Circuit", "Alpine Heights"];
+    window.triggerLoadingScreen(sessionTitle, trackNames[activeTrack], () => {
+      setupGame();
     });
   };
 
@@ -6386,15 +6516,20 @@
         );
       }
 
-      // Voice listener 5-second automatic timeout window countdown
+      // Voice listener 15-second automatic timeout window countdown
       if (window.keepListeningForVoice) {
         window.micTimeoutTimer -= delta;
+        const micBtn = document.getElementById('hud-mic-btn');
+        if (micBtn) micBtn.classList.add('listening');
+
         if (window.micTimeoutTimer <= 0.0) {
           window.keepListeningForVoice = false;
+          pendingRadioQuestion = null;
           if (recognition) {
             try { recognition.stop(); } catch(e) {}
           }
-          speakEngineerRadio("Microphone listening window timed out.", 10);
+          if (micBtn) micBtn.classList.remove('listening');
+          speakEngineerRadio("Microphone listening window closed.", 10);
         }
       }
 
@@ -7098,25 +7233,49 @@
       shiftActiveTimer -= delta;
     }
 
+    // ── AUTHENTIC F1 COMPONENT DAMAGE ENGINEERING & RETIREMENT ──
+    if (carDamage >= 100.0) {
+      playerKart.speed = 0.0;
+      if (typeof window.showTerminalDamageOverlay === 'function') {
+        window.showTerminalDamageOverlay();
+      }
+      return;
+    }
+
     let target = 0;
-    // Base top speed: matches gear 8 ceiling so full speed is reachable in G8
-    // upgrades.speed adds extra above the base, but scaled down by car damage (up to 30% speed penalty)
-    const dmgSpeedFactor = 1.0 - (carDamage / 100.0) * 0.30;
+    let dmgSpeedFactor = 1.0;
+    window.dmgSteerAgility = 1.0;
+
+    if (carDamage > 85.0) {
+      // CRITICAL DAMAGE / LIMP MODE: Limp back to pit at ~35 km/h max
+      dmgSpeedFactor = 0.12;
+      window.dmgSteerAgility = 0.45;
+      if (Math.random() < 0.20) spawnExhaustSmoke(playerKart.mesh.position, true);
+    } else if (carDamage > 70.0) {
+      // SEVERE PU & CHASSIS DAMAGE: 45% power cut, sputtering
+      dmgSpeedFactor = 0.48;
+      window.dmgSteerAgility = 0.60;
+      if (Math.random() < 0.10) spawnExhaustSmoke(playerKart.mesh.position, false);
+    } else if (carDamage > 40.0) {
+      // MODERATE AERO LOSS: 25% speed cut, front wing downforce loss (understeer)
+      dmgSpeedFactor = 0.75;
+      window.dmgSteerAgility = 0.72;
+    } else if (carDamage > 15.0) {
+      // MINOR CONTACT: 10% drag penalty
+      dmgSpeedFactor = 0.90;
+      window.dmgSteerAgility = 0.88;
+    }
+
     let topSpeedBase = (88.0 + upgrades.speed * 2) * dmgSpeedFactor;
     if (playerKart.bonus === 'topSpeed') topSpeedBase += 4 * dmgSpeedFactor;
     
     // Speed limit for current gear: gear max speed IS the top speed
-    // topSpeedBase is the ABSOLUTE car cap (upgrades + team bonus)
-    // The gear max speed gates how fast you can go per gear
     let gearSpeedLimit = 0.0;
     if (currentGear === 0)       gearSpeedLimit = 0.0;
     else if (currentGear === -1) gearSpeedLimit = 5.0;   // Reverse max: 20 km/h
     else                         gearSpeedLimit = gearMaxSpeed[currentGear];
 
-    // topSpeed = the lower of car's absolute max and gear ceiling
-    // BUT base car top speed matches gear 8 ceiling so player can always reach full speed
     let topSpeed = Math.min(topSpeedBase, gearSpeedLimit);
-    // At gear 8 gearSpeedLimit (90) >= topSpeedBase so topSpeed = topSpeedBase (full speed)
     if (currentGear !== 0) {
       topSpeed *= modePower;
     }
@@ -7645,7 +7804,7 @@
 
     // Calculate target steering angle (up to 30° at low speed / garage manoeuvres for easy tight turns)
     const currentMaxSteer = isLowSpeedManoeuvre ? THREE.MathUtils.degToRad(30) : hConfig.physicsMaxSteer;
-    const targetSteeringAngle = curvedSteeringInput * currentMaxSteer * steeringAuthority;
+    const targetSteeringAngle = curvedSteeringInput * currentMaxSteer * steeringAuthority * (window.dmgSteerAgility || 1.0);
 
     // Smooth steering rack movement
     const steeringRackSpeed = isLowSpeedManoeuvre ? 10.0 : THREE.MathUtils.lerp(7.0, 3.0, steerSpeedRatio);
@@ -7861,7 +8020,13 @@
           playerKart.inPitLane = true;
           playerKart.pitLimiterActive = true;
           playerKart.currentPath = "PIT";
-          speakEngineerRadio("Entering pit lane. Pit limiter is active.", 80);
+          speakEngineerRadio("Entering pit lane. Pit limiter is active. Select your tyre compound.", 80);
+
+          const stratCard = document.getElementById('hud-pit-strategy-card');
+          if (stratCard) {
+            stratCard.classList.remove('hidden');
+            stratCard.style.display = 'block';
+          }
 
           // Pre-spawn pit crew standing ready at pit box immediately on entry
           if (typeof spawnPitCrewBoxes === 'function') {
@@ -8074,6 +8239,12 @@
           playerKart.pitZone = "MAIN_TRACK";
           playerKart.currentPath = "TRACK";
           playerKart.pitLimiterActive = false;
+
+          const stratCard = document.getElementById('hud-pit-strategy-card');
+          if (stratCard) {
+            stratCard.classList.add('hidden');
+            stratCard.style.display = 'none';
+          }
           
           playerKart.currentOffset = Math.max(0.045, proj.progress);
           playerKart.previousTrackProgress = playerKart.currentOffset;
@@ -9232,46 +9403,32 @@
 
     // Boosted AI top speeds to match player top speed potential (player base = 75 m/s)
 
-    // Easy:62, Normal:74, Hard:80, Expert:86
-
-    const baseSpeed = [62.0, 74.0, 80.0, 86.0][activeDifficulty] || 74.0;
+    // Boosted AI top speeds to match realistic F1 player speeds (player max ~88-92 m/s, ~315-330 km/h)
+    // Easy:74, Normal:84, Hard:89, Expert:93
+    const baseSpeed = [74.0, 84.0, 89.0, 93.0][activeDifficulty] || 84.0;
 
     // Per-racer pace calculation using driver + car performance profiles
-
     function calculateAIPace(racer, base) {
-
       const p = racer.aiProfile || { pace: 0.85, brakingSkill: 0.85, corneringSkill: 0.85, consistency: 0.85 };
-
       const c = racer.carPerformance || { topSpeed: 80, cornering: 80 };
 
       // Normalize car stats to 0-1
-
       const carFactor = ((c.topSpeed / 100) * 0.5 + (c.cornering / 100) * 0.5);
-
       const driverFactor = p.pace * 0.50 + p.brakingSkill * 0.20 + p.corneringSkill * 0.20 + p.consistency * 0.10;
 
       // Combined potential: car 45%, driver 55%
-
       const combined = carFactor * 0.45 + driverFactor * 0.55;
 
-      // Difficulty utilisation: Easy 80-88%, Normal 88-96%, Hard 94-102%, Expert 98-106%
-
+      // Difficulty utilisation: Easy 88-94%, Normal 95-101%, Hard 99-105%, Expert 102-108%
       const utilRange = [
-
-        [0.80, 0.88],  // Easy
-
-        [0.88, 0.96],  // Normal
-
-        [0.94, 1.02],  // Hard
-
-        [0.98, 1.06]   // Expert
-
-      ][activeDifficulty] || [0.88, 0.96];
+        [0.88, 0.94],  // Easy (~250-265 km/h)
+        [0.95, 1.01],  // Normal (~290-305 km/h)
+        [0.99, 1.05],  // Hard (~315-335 km/h)
+        [1.02, 1.08]   // Expert (~340-360 km/h)
+      ][activeDifficulty] || [0.95, 1.01];
 
       const utilFactor = THREE.MathUtils.lerp(utilRange[0], utilRange[1], combined);
-
       return base * utilFactor;
-
     }
 
     racers.forEach((racer) => {
@@ -10629,145 +10786,132 @@
   }
 
   function updateCollisionDetection() {
-    // --- F1 Vehicle-to-Vehicle Physics Collisions & Damage ---
+    // --- Authentic 3D F1 Vehicle-to-Vehicle Physics Collisions & Damage ---
     for (let i = 0; i < racers.length; i++) {
       for (let j = i + 1; j < racers.length; j++) {
         const racerI = racers[i];
         const racerJ = racers[j];
 
-        // GARAGE / INACTIVE GUARD: completely skip cars not physically on track
-        // This prevents invisible-car collisions when a car is in the garage
+        // Guard: skip inactive or invisible cars
+        if (!racerI.mesh || !racerJ.mesh) continue;
+        if (!racerI.mesh.visible || !racerJ.mesh.visible) continue;
         if (racerI.isTrackActive === false || racerJ.isTrackActive === false) continue;
-        if (racerI.collisionEnabled === false || racerJ.collisionEnabled === false) continue;
-        // Also skip cars whose mesh is hidden (belt + suspenders)
-        if (racerI.mesh && !racerI.mesh.visible) continue;
-        if (racerJ.mesh && !racerJ.mesh.visible) continue;
-        
-        // Zone separation guard: isolate track and pit lane traffic
+        if (racerI.qualifyingState === "GARAGE" || racerJ.qualifyingState === "GARAGE") continue;
+
+        // Isolate pit lane and track traffic
         const myInPit = racerI.inPitLane || racerI.isPitting;
         const otherInPit = racerJ.inPitLane || racerJ.isPitting;
         if (myInPit !== otherInPit) continue;
-        
-        // Track-space Oriented Bounding Box (OBB) collision check:
-        // F1 cars are aligned along the track tangent.
-        const trackLen = trackCurve ? trackCurve.getLength() : 1800;
-        const diffOffset = racerI.currentOffset - racerJ.currentOffset;
-        const normDiff = ((diffOffset + 0.5) % 1.0) - 0.5;
-        const longDist = normDiff * trackLen;
-        const latDist = racerI.sideOffset - racerJ.sideOffset;
 
-        // F1 Car length is ~3.6m, width is ~1.6m (Tighter bounding boxes)
-        const isColliding = Math.abs(longDist) < 3.6 && Math.abs(latDist) < 1.6;
-        if (isColliding) {
-          if (racerI.isPlayer || racerJ.isPlayer) {
-            const collidedObject = racerI.isPlayer ? racerJ.mesh : racerI.mesh;
-            // console.error(
-            //   "[PLAYER COLLISION TARGET]",
-            //   {
-            //     objectName: collidedObject?.name,
-            //     objectType: collidedObject?.type,
-            //     uuid: collidedObject?.uuid,
-            //     parentName: collidedObject?.parent?.name,
-            //     parentUuid: collidedObject?.parent?.uuid,
-            //     userData: collidedObject?.userData,
-            //     visible: collidedObject?.visible,
-            //     worldPosition: collidedObject ? (() => {
-            //       const p = new THREE.Vector3();
-            //       collidedObject.getWorldPosition(p);
-            //       return p;
-            //     })() : null
-            //   }
-            // );
-            // console.trace("[COLLISION CALL STACK]");
+        const posI = racerI.mesh.position;
+        const posJ = racerJ.mesh.position;
+        const dist3D = posI.distanceTo(posJ);
+
+        // Center-to-center collision distance for authentic F1 cars (length ~4.8m, width ~1.9m)
+        const minCollDist = 3.4;
+        if (dist3D < minCollDist) {
+          // 1. Calculate horizontal separating push vector
+          const pushVec = new THREE.Vector3().subVectors(posI, posJ);
+          let len = pushVec.length();
+          if (len < 0.001) {
+            pushVec.set(0.1, 0, 0.1);
+            len = pushVec.length();
           }
+          pushVec.y = 0;
+          pushVec.normalize();
 
-          // Calculate precise overlap depth along both axes (Tighter kart bounding boxes to reduce collisions)
-          const overlapL = 3.6 - Math.abs(longDist); // was 4.6
-          const overlapW = 1.6 - Math.abs(latDist);  // was 1.95
+          const overlap = minCollDist - len;
 
-          // Resolve overlap instantly along the axis of minimum penetration (Separating Axis Theorem)
-          if (overlapW < overlapL) {
-            // Resolve laterally (push sideOffset apart instantly by the exact overlap)
-            const resolveDist = overlapW * 0.5;
-            const dir = latDist >= 0 ? 1 : -1;
-            
-            racerI.sideOffset = THREE.MathUtils.clamp(racerI.sideOffset + dir * resolveDist, -10.5, 10.5);
-            racerJ.sideOffset = THREE.MathUtils.clamp(racerJ.sideOffset - dir * resolveDist, -10.5, 10.5);
-            
-            // Sync target offsets for AI so they don't immediately steer back in
-            if (!racerI.isPlayer) racerI.targetSideOffset = racerI.sideOffset;
-            if (!racerJ.isPlayer) racerJ.targetSideOffset = racerJ.sideOffset;
+          // Push both cars apart in 3D world space
+          if (racerI.isPlayer) {
+            posI.addScaledVector(pushVec, overlap * 0.55);
+            posJ.addScaledVector(pushVec, -overlap * 0.45);
+          } else if (racerJ.isPlayer) {
+            posI.addScaledVector(pushVec, overlap * 0.45);
+            posJ.addScaledVector(pushVec, -overlap * 0.55);
           } else {
-            // Resolve longitudinally (push currentOffset apart instantly)
-            const resolveOffset = (overlapL * 0.5) / trackLen;
-            const dir = longDist >= 0 ? 1 : -1;
-            
-            racerI.currentOffset = (racerI.currentOffset + dir * resolveOffset + 1.0) % 1.0;
-            racerJ.currentOffset = (racerJ.currentOffset - dir * resolveOffset + 1.0) % 1.0;
+            posI.addScaledVector(pushVec, overlap * 0.50);
+            posJ.addScaledVector(pushVec, -overlap * 0.50);
           }
 
-          // Sync 3D positions immediately to prevent visual ghosting/lag
-          [racerI, racerJ].forEach(r => {
-            if (!r.mesh) return;
-            const inPit = r.inPitLane || r.isPitting;
-            const curve = (inPit && pitCurve) ? pitCurve : trackCurve;
-            if (!curve) return;
-            
-            // Clamp offset to valid [0,1] range - defensive guard against any bad sentinel values
-            const safeOff = Math.max(0.0, Math.min(1.0, r.currentOffset));
-            const pos = curve.getPointAt(safeOff);
-            const tang = curve.getTangentAt(safeOff).normalize();
-            const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-            r.mesh.position.copy(pos.add(norm.multiplyScalar(r.sideOffset)));
-            r.mesh.lookAt(r.mesh.position.clone().add(tang));
-          });
-          
-          // 3. Elastic speed response
+          // Push side offsets apart so AI steering lines react
+          const latDiff = (racerI.sideOffset || 0) - (racerJ.sideOffset || 0);
+          const pushSide = latDiff >= 0 ? 1 : -1;
+          if (racerI.sideOffset !== undefined) racerI.sideOffset += pushSide * overlap * 0.4;
+          if (racerJ.sideOffset !== undefined) racerJ.sideOffset -= pushSide * overlap * 0.4;
+          if (!racerI.isPlayer) racerI.targetSideOffset = racerI.sideOffset;
+          if (!racerJ.isPlayer) racerJ.targetSideOffset = racerJ.sideOffset;
+
+          // 2. Elastic speed exchange and impact force
           const speedDiff = racerI.speed - racerJ.speed;
-          const impact = Math.abs(speedDiff);
-          if (impact > 1.5) {
-            const impulse = speedDiff * 0.45;
-            racerI.speed = Math.max(3.0, racerI.speed - impulse);
-            racerJ.speed = Math.max(3.0, racerJ.speed + impulse * 0.6);
-            
-            // Accumulate damage on BOTH cars symmetrically!
-            racerI.damage = Math.min(100.0, (racerI.damage || 0.0) + impact * 0.75);
-            racerJ.damage = Math.min(100.0, (racerJ.damage || 0.0) + impact * 0.75);
-            
-            if (racerI.isPlayer) { carDamage = racerI.damage; updateDamageHUD(); }
-            if (racerJ.isPlayer) { carDamage = racerJ.damage; updateDamageHUD(); }
-            
-            // Visual crash feedback (smoke/spark particles)
-            spawnExhaustSmoke(racerI.mesh.position, true);
-            spawnExhaustSmoke(racerJ.mesh.position, true);
-            
-            if (impact > 12.0) {
-              window.ApexAudio.playDriftScreech();
-              // Trigger a local yellow flag in this sector for 12-20 seconds
-              if (typeof window.getSectorForOffset === 'function' && typeof window.setSectorYellow === 'function') {
-                const sectorIdx = window.getSectorForOffset(racerI.currentOffset);
-                window.setSectorYellow(sectorIdx, 12.0 + Math.random() * 8.0);
-              }
-              // If it's a massive impact, spin both cars. Otherwise spin the car ahead (victim)
-              if (impact > 20.0) {
-                triggerSpinout(racerI);
-                triggerSpinout(racerJ);
-              } else {
-                if (longDist > 0.0) {
-                  // racerI is ahead of racerJ -> spin racerI
-                  triggerSpinout(racerI);
-                } else {
-                  // racerJ is ahead of racerI -> spin racerJ
-                  triggerSpinout(racerJ);
-                }
-              }
+          const impact = Math.max(Math.abs(speedDiff), overlap * 7.5);
+
+          const impulse = speedDiff * 0.45;
+          racerI.speed = Math.max(2.0, racerI.speed - impulse);
+          racerJ.speed = Math.max(2.0, racerJ.speed + impulse * 0.6);
+
+          // 3. F1 Component Damage Accumulation
+          const addedDamage = Math.max(2.5, impact * 1.35);
+          racerI.damage = Math.min(100.0, (racerI.damage || 0.0) + addedDamage);
+          racerJ.damage = Math.min(100.0, (racerJ.damage || 0.0) + addedDamage);
+
+          if (racerI.isPlayer) {
+            carDamage = racerI.damage;
+            updateDamageHUD();
+            if (typeof window.triggerGamepadRumble === 'function') {
+              window.triggerGamepadRumble(120, 0.7, 0.4);
+            }
+          }
+          if (racerJ.isPlayer) {
+            carDamage = racerJ.damage;
+            updateDamageHUD();
+            if (typeof window.triggerGamepadRumble === 'function') {
+              window.triggerGamepadRumble(120, 0.7, 0.4);
+            }
+          }
+
+          // Visual spark/smoke crash particles
+          spawnExhaustSmoke(posI, true);
+          spawnExhaustSmoke(posJ, true);
+
+          if (impact > 6.0 && window.ApexAudio) {
+            window.ApexAudio.playDriftScreech();
+          }
+
+          // 4. Detach wings on significant impact
+          if (racerI.damage > 30.0 && racerI.frontWingAttached !== false) {
+            racerI.frontWingAttached = false;
+            detachPart(racerI, "frontWing");
+          }
+          if (racerJ.damage > 30.0 && racerJ.frontWingAttached !== false) {
+            racerJ.frontWingAttached = false;
+            detachPart(racerJ, "frontWing");
+          }
+          if (racerI.damage > 60.0 && racerI.rearWingAttached !== false) {
+            racerI.rearWingAttached = false;
+            detachPart(racerI, "rearWing");
+            detachPart(racerI, "drsFlap");
+          }
+          if (racerJ.damage > 60.0 && racerJ.rearWingAttached !== false) {
+            racerJ.rearWingAttached = false;
+            detachPart(racerJ, "rearWing");
+            detachPart(racerJ, "drsFlap");
+          }
+
+          // 5. Massive impact spinouts & Yellow Flag / Safety Car
+          if (impact > 18.0) {
+            if (racerI.isPlayer || Math.random() < 0.5) triggerSpinout(racerI);
+            if (racerJ.isPlayer || Math.random() < 0.5) triggerSpinout(racerJ);
+
+            if (typeof window.getSectorForOffset === 'function' && typeof window.setSectorYellow === 'function') {
+              const sectorIdx = window.getSectorForOffset(racerI.currentOffset);
+              window.setSectorYellow(sectorIdx, 14.0);
             }
 
-            // Deploy safety car on heavy high-speed impacts during GP Race session (not during formation/starting sequence)
-            if (currentSessionIndex === 2 && !window.formationLapActive && !isStartingSequence && impact > 36.0 && !safetyCarActive && Math.random() < 0.35) {
+            if (currentSessionIndex === 2 && !window.formationLapActive && !isStartingSequence && impact > 32.0 && !safetyCarActive && Math.random() < 0.40) {
               triggerSafetyCar();
-            } else if (currentSessionIndex === 2 && !window.formationLapActive && !isStartingSequence && impact > 16.0 && impact <= 36.0 && !vscActive && !safetyCarActive && Math.random() < 0.40) {
-              deployVSC(15.0 + Math.random() * 15.0);
+            } else if (currentSessionIndex === 2 && !window.formationLapActive && !isStartingSequence && impact > 16.0 && !vscActive && !safetyCarActive && Math.random() < 0.40) {
+              deployVSC(15.0);
             }
           }
         }
@@ -10842,6 +10986,7 @@
       });
     }
   }
+  window.restoreCarWings = restoreCarWings;
 
   function detachPart(racer, partName) {
     let partMesh = null;
@@ -12816,18 +12961,19 @@
   }
 
   function parseVoiceCommand(text) {
-    // Reset listening window upon receiving input
-    window.keepListeningForVoice = false;
+    console.log("[VOICE COMMAND RECEIVED]", text, "Pending Question:", pendingRadioQuestion);
 
     // 1. Interactive QTE confirmations
     if (pendingRadioQuestion === 'crash') {
       if (text.includes("yes") || text.includes("yeah") || text.includes("ok") || text.includes("sure")) {
         pendingRadioQuestion = null;
+        window.keepListeningForVoice = false;
         pendingPitStop = true; // Schedule pit lane entry
         speakEngineerRadio("Copy that, boxing this lap.", 70, true);
         return;
       } else if (text.includes("no") || text.includes("nope") || text.includes("stay out")) {
         pendingRadioQuestion = null;
+        window.keepListeningForVoice = false;
         speakEngineerRadio("Copy, stay out. Keep pushing.", 70, true);
         return;
       }
@@ -12836,11 +12982,13 @@
     if (pendingRadioQuestion === 'tyres') {
       if (text.includes("yes") || text.includes("yeah") || text.includes("box") || text.includes("pit")) {
         pendingRadioQuestion = null;
+        window.keepListeningForVoice = false;
         pendingPitStop = true; // Schedule pit lane entry
         speakEngineerRadio("Copy, boxing this lap for fresh rubber.", 70, true);
         return;
       } else if (text.includes("no") || text.includes("stay out")) {
         pendingRadioQuestion = null;
+        window.keepListeningForVoice = false;
         speakEngineerRadio("Copy, stay out. Keep pushing.", 70, true);
         return;
       }
@@ -12849,6 +12997,7 @@
     if (pendingRadioQuestion === 'rain') {
       if (text.includes("yes") || text.includes("yeah") || text.includes("ok") || text.includes("sure")) {
         pendingRadioQuestion = null;
+        window.keepListeningForVoice = false;
         activeCompound = 'intermediate';
         window.voiceSelectedCompound = 'intermediate';
         speakEngineerRadio("Copy, boxing for intermediates.", 70, true);
@@ -12856,6 +13005,7 @@
         return;
       } else if (text.includes("no") || text.includes("nope")) {
         pendingRadioQuestion = null;
+        window.keepListeningForVoice = false;
         speakEngineerRadio("Copy, stay out. Be careful on the slicks.", 70, true);
         return;
       }
@@ -12873,14 +13023,22 @@
         activeCompound = comp;
         window.voiceSelectedCompound = comp;
         pendingRadioQuestion = null;
+        window.keepListeningForVoice = false;
         speakEngineerRadio(`${comp.toUpperCase()} tyres confirmed. Box box box.`, 70, true);
         
-        // Sync selected button style in HTML if overlay is shown
-        const btn = document.getElementById(`compound-${comp}`);
-        if (btn) selectTyreCompound(comp, btn);
+        if (typeof window.choosePitCompound === 'function') {
+          window.choosePitCompound(comp);
+        }
         return;
+      } else {
+        // Did not catch valid compound yet; keep 15-second window alive so user can repeat
+        window.keepListeningForVoice = true;
+        window.micTimeoutTimer = 15.0;
       }
     }
+
+    // Default close listening window for standard single-turn commands
+    window.keepListeningForVoice = false;
 
     // 2. Weather command
     if (text.includes("weather") || text.includes("rain") || text.includes("report")) {
@@ -12932,9 +13090,9 @@
       pendingRadioQuestion = 'tyres_choice';
       pendingPitStop = true; // Schedule it!
       speakEngineerRadio("Copy, boxing this lap. Which compound?", 70, true);
-      // Keep mic listening for 5 seconds window
+      // Keep mic listening for 15 seconds multi-turn dialogue window
       window.keepListeningForVoice = true;
-      window.micTimeoutTimer = 5.0;
+      window.micTimeoutTimer = 15.0;
       return;
     }
 

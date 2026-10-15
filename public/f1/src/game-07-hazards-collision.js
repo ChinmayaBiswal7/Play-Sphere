@@ -58,145 +58,132 @@
   }
 
   function updateCollisionDetection() {
-    // --- F1 Vehicle-to-Vehicle Physics Collisions & Damage ---
+    // --- Authentic 3D F1 Vehicle-to-Vehicle Physics Collisions & Damage ---
     for (let i = 0; i < racers.length; i++) {
       for (let j = i + 1; j < racers.length; j++) {
         const racerI = racers[i];
         const racerJ = racers[j];
 
-        // GARAGE / INACTIVE GUARD: completely skip cars not physically on track
-        // This prevents invisible-car collisions when a car is in the garage
+        // Guard: skip inactive or invisible cars
+        if (!racerI.mesh || !racerJ.mesh) continue;
+        if (!racerI.mesh.visible || !racerJ.mesh.visible) continue;
         if (racerI.isTrackActive === false || racerJ.isTrackActive === false) continue;
-        if (racerI.collisionEnabled === false || racerJ.collisionEnabled === false) continue;
-        // Also skip cars whose mesh is hidden (belt + suspenders)
-        if (racerI.mesh && !racerI.mesh.visible) continue;
-        if (racerJ.mesh && !racerJ.mesh.visible) continue;
-        
-        // Zone separation guard: isolate track and pit lane traffic
+        if (racerI.qualifyingState === "GARAGE" || racerJ.qualifyingState === "GARAGE") continue;
+
+        // Isolate pit lane and track traffic
         const myInPit = racerI.inPitLane || racerI.isPitting;
         const otherInPit = racerJ.inPitLane || racerJ.isPitting;
         if (myInPit !== otherInPit) continue;
-        
-        // Track-space Oriented Bounding Box (OBB) collision check:
-        // F1 cars are aligned along the track tangent.
-        const trackLen = trackCurve ? trackCurve.getLength() : 1800;
-        const diffOffset = racerI.currentOffset - racerJ.currentOffset;
-        const normDiff = ((diffOffset + 0.5) % 1.0) - 0.5;
-        const longDist = normDiff * trackLen;
-        const latDist = racerI.sideOffset - racerJ.sideOffset;
 
-        // F1 Car length is ~3.6m, width is ~1.6m (Tighter bounding boxes)
-        const isColliding = Math.abs(longDist) < 3.6 && Math.abs(latDist) < 1.6;
-        if (isColliding) {
-          if (racerI.isPlayer || racerJ.isPlayer) {
-            const collidedObject = racerI.isPlayer ? racerJ.mesh : racerI.mesh;
-            // console.error(
-            //   "[PLAYER COLLISION TARGET]",
-            //   {
-            //     objectName: collidedObject?.name,
-            //     objectType: collidedObject?.type,
-            //     uuid: collidedObject?.uuid,
-            //     parentName: collidedObject?.parent?.name,
-            //     parentUuid: collidedObject?.parent?.uuid,
-            //     userData: collidedObject?.userData,
-            //     visible: collidedObject?.visible,
-            //     worldPosition: collidedObject ? (() => {
-            //       const p = new THREE.Vector3();
-            //       collidedObject.getWorldPosition(p);
-            //       return p;
-            //     })() : null
-            //   }
-            // );
-            // console.trace("[COLLISION CALL STACK]");
+        const posI = racerI.mesh.position;
+        const posJ = racerJ.mesh.position;
+        const dist3D = posI.distanceTo(posJ);
+
+        // Center-to-center collision distance for authentic F1 cars (length ~4.8m, width ~1.9m)
+        const minCollDist = 3.4;
+        if (dist3D < minCollDist) {
+          // 1. Calculate horizontal separating push vector
+          const pushVec = new THREE.Vector3().subVectors(posI, posJ);
+          let len = pushVec.length();
+          if (len < 0.001) {
+            pushVec.set(0.1, 0, 0.1);
+            len = pushVec.length();
           }
+          pushVec.y = 0;
+          pushVec.normalize();
 
-          // Calculate precise overlap depth along both axes (Tighter kart bounding boxes to reduce collisions)
-          const overlapL = 3.6 - Math.abs(longDist); // was 4.6
-          const overlapW = 1.6 - Math.abs(latDist);  // was 1.95
+          const overlap = minCollDist - len;
 
-          // Resolve overlap instantly along the axis of minimum penetration (Separating Axis Theorem)
-          if (overlapW < overlapL) {
-            // Resolve laterally (push sideOffset apart instantly by the exact overlap)
-            const resolveDist = overlapW * 0.5;
-            const dir = latDist >= 0 ? 1 : -1;
-            
-            racerI.sideOffset = THREE.MathUtils.clamp(racerI.sideOffset + dir * resolveDist, -10.5, 10.5);
-            racerJ.sideOffset = THREE.MathUtils.clamp(racerJ.sideOffset - dir * resolveDist, -10.5, 10.5);
-            
-            // Sync target offsets for AI so they don't immediately steer back in
-            if (!racerI.isPlayer) racerI.targetSideOffset = racerI.sideOffset;
-            if (!racerJ.isPlayer) racerJ.targetSideOffset = racerJ.sideOffset;
+          // Push both cars apart in 3D world space
+          if (racerI.isPlayer) {
+            posI.addScaledVector(pushVec, overlap * 0.55);
+            posJ.addScaledVector(pushVec, -overlap * 0.45);
+          } else if (racerJ.isPlayer) {
+            posI.addScaledVector(pushVec, overlap * 0.45);
+            posJ.addScaledVector(pushVec, -overlap * 0.55);
           } else {
-            // Resolve longitudinally (push currentOffset apart instantly)
-            const resolveOffset = (overlapL * 0.5) / trackLen;
-            const dir = longDist >= 0 ? 1 : -1;
-            
-            racerI.currentOffset = (racerI.currentOffset + dir * resolveOffset + 1.0) % 1.0;
-            racerJ.currentOffset = (racerJ.currentOffset - dir * resolveOffset + 1.0) % 1.0;
+            posI.addScaledVector(pushVec, overlap * 0.50);
+            posJ.addScaledVector(pushVec, -overlap * 0.50);
           }
 
-          // Sync 3D positions immediately to prevent visual ghosting/lag
-          [racerI, racerJ].forEach(r => {
-            if (!r.mesh) return;
-            const inPit = r.inPitLane || r.isPitting;
-            const curve = (inPit && pitCurve) ? pitCurve : trackCurve;
-            if (!curve) return;
-            
-            // Clamp offset to valid [0,1] range - defensive guard against any bad sentinel values
-            const safeOff = Math.max(0.0, Math.min(1.0, r.currentOffset));
-            const pos = curve.getPointAt(safeOff);
-            const tang = curve.getTangentAt(safeOff).normalize();
-            const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-            r.mesh.position.copy(pos.add(norm.multiplyScalar(r.sideOffset)));
-            r.mesh.lookAt(r.mesh.position.clone().add(tang));
-          });
-          
-          // 3. Elastic speed response
+          // Push side offsets apart so AI steering lines react
+          const latDiff = (racerI.sideOffset || 0) - (racerJ.sideOffset || 0);
+          const pushSide = latDiff >= 0 ? 1 : -1;
+          if (racerI.sideOffset !== undefined) racerI.sideOffset += pushSide * overlap * 0.4;
+          if (racerJ.sideOffset !== undefined) racerJ.sideOffset -= pushSide * overlap * 0.4;
+          if (!racerI.isPlayer) racerI.targetSideOffset = racerI.sideOffset;
+          if (!racerJ.isPlayer) racerJ.targetSideOffset = racerJ.sideOffset;
+
+          // 2. Elastic speed exchange and impact force
           const speedDiff = racerI.speed - racerJ.speed;
-          const impact = Math.abs(speedDiff);
-          if (impact > 1.5) {
-            const impulse = speedDiff * 0.45;
-            racerI.speed = Math.max(3.0, racerI.speed - impulse);
-            racerJ.speed = Math.max(3.0, racerJ.speed + impulse * 0.6);
-            
-            // Accumulate damage on BOTH cars symmetrically!
-            racerI.damage = Math.min(100.0, (racerI.damage || 0.0) + impact * 0.75);
-            racerJ.damage = Math.min(100.0, (racerJ.damage || 0.0) + impact * 0.75);
-            
-            if (racerI.isPlayer) { carDamage = racerI.damage; updateDamageHUD(); }
-            if (racerJ.isPlayer) { carDamage = racerJ.damage; updateDamageHUD(); }
-            
-            // Visual crash feedback (smoke/spark particles)
-            spawnExhaustSmoke(racerI.mesh.position, true);
-            spawnExhaustSmoke(racerJ.mesh.position, true);
-            
-            if (impact > 12.0) {
-              window.ApexAudio.playDriftScreech();
-              // Trigger a local yellow flag in this sector for 12-20 seconds
-              if (typeof window.getSectorForOffset === 'function' && typeof window.setSectorYellow === 'function') {
-                const sectorIdx = window.getSectorForOffset(racerI.currentOffset);
-                window.setSectorYellow(sectorIdx, 12.0 + Math.random() * 8.0);
-              }
-              // If it's a massive impact, spin both cars. Otherwise spin the car ahead (victim)
-              if (impact > 20.0) {
-                triggerSpinout(racerI);
-                triggerSpinout(racerJ);
-              } else {
-                if (longDist > 0.0) {
-                  // racerI is ahead of racerJ -> spin racerI
-                  triggerSpinout(racerI);
-                } else {
-                  // racerJ is ahead of racerI -> spin racerJ
-                  triggerSpinout(racerJ);
-                }
-              }
+          const impact = Math.max(Math.abs(speedDiff), overlap * 7.5);
+
+          const impulse = speedDiff * 0.45;
+          racerI.speed = Math.max(2.0, racerI.speed - impulse);
+          racerJ.speed = Math.max(2.0, racerJ.speed + impulse * 0.6);
+
+          // 3. F1 Component Damage Accumulation
+          const addedDamage = Math.max(2.5, impact * 1.35);
+          racerI.damage = Math.min(100.0, (racerI.damage || 0.0) + addedDamage);
+          racerJ.damage = Math.min(100.0, (racerJ.damage || 0.0) + addedDamage);
+
+          if (racerI.isPlayer) {
+            carDamage = racerI.damage;
+            updateDamageHUD();
+            if (typeof window.triggerGamepadRumble === 'function') {
+              window.triggerGamepadRumble(120, 0.7, 0.4);
+            }
+          }
+          if (racerJ.isPlayer) {
+            carDamage = racerJ.damage;
+            updateDamageHUD();
+            if (typeof window.triggerGamepadRumble === 'function') {
+              window.triggerGamepadRumble(120, 0.7, 0.4);
+            }
+          }
+
+          // Visual spark/smoke crash particles
+          spawnExhaustSmoke(posI, true);
+          spawnExhaustSmoke(posJ, true);
+
+          if (impact > 6.0 && window.ApexAudio) {
+            window.ApexAudio.playDriftScreech();
+          }
+
+          // 4. Detach wings on significant impact
+          if (racerI.damage > 30.0 && racerI.frontWingAttached !== false) {
+            racerI.frontWingAttached = false;
+            detachPart(racerI, "frontWing");
+          }
+          if (racerJ.damage > 30.0 && racerJ.frontWingAttached !== false) {
+            racerJ.frontWingAttached = false;
+            detachPart(racerJ, "frontWing");
+          }
+          if (racerI.damage > 60.0 && racerI.rearWingAttached !== false) {
+            racerI.rearWingAttached = false;
+            detachPart(racerI, "rearWing");
+            detachPart(racerI, "drsFlap");
+          }
+          if (racerJ.damage > 60.0 && racerJ.rearWingAttached !== false) {
+            racerJ.rearWingAttached = false;
+            detachPart(racerJ, "rearWing");
+            detachPart(racerJ, "drsFlap");
+          }
+
+          // 5. Massive impact spinouts & Yellow Flag / Safety Car
+          if (impact > 18.0) {
+            if (racerI.isPlayer || Math.random() < 0.5) triggerSpinout(racerI);
+            if (racerJ.isPlayer || Math.random() < 0.5) triggerSpinout(racerJ);
+
+            if (typeof window.getSectorForOffset === 'function' && typeof window.setSectorYellow === 'function') {
+              const sectorIdx = window.getSectorForOffset(racerI.currentOffset);
+              window.setSectorYellow(sectorIdx, 14.0);
             }
 
-            // Deploy safety car on heavy high-speed impacts during GP Race session (not during formation/starting sequence)
-            if (currentSessionIndex === 2 && !window.formationLapActive && !isStartingSequence && impact > 36.0 && !safetyCarActive && Math.random() < 0.35) {
+            if (currentSessionIndex === 2 && !window.formationLapActive && !isStartingSequence && impact > 32.0 && !safetyCarActive && Math.random() < 0.40) {
               triggerSafetyCar();
-            } else if (currentSessionIndex === 2 && !window.formationLapActive && !isStartingSequence && impact > 16.0 && impact <= 36.0 && !vscActive && !safetyCarActive && Math.random() < 0.40) {
-              deployVSC(15.0 + Math.random() * 15.0);
+            } else if (currentSessionIndex === 2 && !window.formationLapActive && !isStartingSequence && impact > 16.0 && !vscActive && !safetyCarActive && Math.random() < 0.40) {
+              deployVSC(15.0);
             }
           }
         }
@@ -271,6 +258,7 @@
       });
     }
   }
+  window.restoreCarWings = restoreCarWings;
 
   function detachPart(racer, partName) {
     let partMesh = null;

@@ -254,49 +254,123 @@ class PitComplexBuilder {
             perchGroup.lookAt(perchPos.clone().add(norm)); // Faces across the pit road towards garages
             scene.add(perchGroup);
 
-            // ── CLEAN F1 PIT BOX ON APRON (+9.5m offset, 5.5m clear of fast lane) ──
+            // ── CLEAN WIDE F1 PIT BOX ON APRON (+9.5m offset, 5.5m clear of fast lane) ──
             const pitBoxGroup = new THREE.Group();
             const boxPos = pos.clone().add(norm.clone().multiplyScalar(9.5));
 
-            // Clean, flush white painted box outline (No 3D clutter on the ground!)
-            const boxOutlineMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85 });
-            const boxStripeMat  = new THREE.MeshBasicMaterial({ color: team.color, transparent: true, opacity: 0.85 });
+            // High-contrast textured pit box ground pad
+            const pitBoxPad = new THREE.Mesh(
+                new THREE.PlaneGeometry(7.2, 8.2),
+                new THREE.MeshStandardMaterial({
+                    color: 0x1e293b,
+                    roughness: 0.65,
+                    metalness: 0.2,
+                    polygonOffset: true,
+                    polygonOffsetFactor: -1,
+                    polygonOffsetUnits: -1
+                })
+            );
+            pitBoxPad.rotation.x = -Math.PI / 2;
+            pitBoxPad.position.set(0, 0.025, 0);
+            pitBoxPad.receiveShadow = true;
+            pitBoxGroup.add(pitBoxPad);
+
+            // Clean, flush white painted box outline (Wide 7.2m x 8.2m F1 regulation box)
+            const boxOutlineMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.90 });
+            const boxStripeMat  = new THREE.MeshBasicMaterial({ color: team.color, transparent: true, opacity: 0.90 });
+
+            const boxHalfW = 3.6;
+            const boxHalfL = 4.1;
 
             // Box boundary rectangle lines flat on concrete
-            const boxL = new THREE.Mesh(new THREE.PlaneGeometry(0.14, 6.4), boxOutlineMat);
+            const boxL = new THREE.Mesh(new THREE.PlaneGeometry(0.18, boxHalfL * 2), boxOutlineMat);
             boxL.rotation.x = -Math.PI / 2;
-            boxL.position.set(-2.4, 0.03, 0);
+            boxL.position.set(-boxHalfW, 0.035, 0);
             pitBoxGroup.add(boxL);
 
-            const boxR = new THREE.Mesh(new THREE.PlaneGeometry(0.14, 6.4), boxOutlineMat);
+            const boxR = new THREE.Mesh(new THREE.PlaneGeometry(0.18, boxHalfL * 2), boxOutlineMat);
             boxR.rotation.x = -Math.PI / 2;
-            boxR.position.set(2.4, 0.03, 0);
+            boxR.position.set(boxHalfW, 0.035, 0);
             pitBoxGroup.add(boxR);
 
-            const boxFront = new THREE.Mesh(new THREE.PlaneGeometry(4.94, 0.14), boxOutlineMat);
+            const boxFront = new THREE.Mesh(new THREE.PlaneGeometry(boxHalfW * 2 + 0.18, 0.18), boxOutlineMat);
             boxFront.rotation.x = -Math.PI / 2;
-            boxFront.position.set(0, 0.03, 3.2);
+            boxFront.position.set(0, 0.035, boxHalfL);
             pitBoxGroup.add(boxFront);
 
-            const boxRear = new THREE.Mesh(new THREE.PlaneGeometry(4.94, 0.14), boxOutlineMat);
+            const boxRear = new THREE.Mesh(new THREE.PlaneGeometry(boxHalfW * 2 + 0.18, 0.18), boxOutlineMat);
             boxRear.rotation.x = -Math.PI / 2;
-            boxRear.position.set(0, 0.03, -3.2);
+            boxRear.position.set(0, 0.035, -boxHalfL);
             pitBoxGroup.add(boxRear);
 
-            // Team color accent chevrons on ground
-            const teamChevrons = new THREE.Mesh(new THREE.PlaneGeometry(4.4, 0.40), boxStripeMat);
+            // Team color accent band across pit stop entry
+            const teamChevrons = new THREE.Mesh(new THREE.PlaneGeometry(boxHalfW * 1.8, 0.50), boxStripeMat);
             teamChevrons.rotation.x = -Math.PI / 2;
-            teamChevrons.position.set(0, 0.035, -2.7);
+            teamChevrons.position.set(0, 0.038, -boxHalfL + 0.6);
             pitBoxGroup.add(teamChevrons);
 
-            // Subtle flat wheel stop brackets (flat 2D decals on ground)
-            const stopMarkMat = new THREE.MeshBasicMaterial({ color: 0xfacc15, transparent: true, opacity: 0.70 });
-            [[-1.4, 1.4], [1.4, 1.4], [-1.4, -1.4], [1.4, -1.4]].forEach(([sx, sz]) => {
-                const mark = new THREE.Mesh(new THREE.PlaneGeometry(0.40, 0.65), stopMarkMat);
+            // Front yellow hazard stop line where the front wing stops
+            const stopBar = new THREE.Mesh(new THREE.PlaneGeometry(boxHalfW * 1.6, 0.30), new THREE.MeshBasicMaterial({ color: 0xfacc15, transparent: true, opacity: 0.9 }));
+            stopBar.rotation.x = -Math.PI / 2;
+            stopBar.position.set(0, 0.038, 1.8);
+            pitBoxGroup.add(stopBar);
+
+            // Flat wheel stop brackets (flat 2D decals on ground)
+            const stopMarkMat = new THREE.MeshBasicMaterial({ color: 0xfacc15, transparent: true, opacity: 0.85 });
+            [[-1.6, 1.6], [1.6, 1.6], [-1.6, -1.6], [1.6, -1.6]].forEach(([sx, sz]) => {
+                const mark = new THREE.Mesh(new THREE.PlaneGeometry(0.45, 0.70), stopMarkMat);
                 mark.rotation.x = -Math.PI / 2;
-                mark.position.set(sx, 0.035, sz);
+                mark.position.set(sx, 0.038, sz);
                 pitBoxGroup.add(mark);
             });
+
+            // ── PIT CREW ACTIVE ON APRON AT PIT BOX (Wheel Gunners & Jack Mechanics) ──
+            const apronCrewMat = new THREE.MeshStandardMaterial({ color: team.color, roughness: 0.5 });
+            const apronTrouserMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.8 });
+            const apronSkinMat = new THREE.MeshStandardMaterial({ color: 0xd4a373, roughness: 0.5 });
+            const createApronMechanic = (px, pz, protY, hasGun = false) => {
+                const mech = new THREE.Group();
+                const lLeg = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.65, 0.16), apronTrouserMat);
+                lLeg.position.set(-0.09, 0.32, 0);
+                mech.add(lLeg);
+                const rLeg = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.65, 0.16), apronTrouserMat);
+                rLeg.position.set(0.09, 0.32, 0);
+                mech.add(rLeg);
+
+                const torso = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.50, 0.22), apronCrewMat);
+                torso.position.set(0, 0.85, 0);
+                mech.add(torso);
+
+                const head = new THREE.Mesh(new THREE.SphereGeometry(0.12, 14, 14), apronSkinMat);
+                head.position.set(0, 1.22, 0);
+                mech.add(head);
+
+                const helm = new THREE.Mesh(new THREE.SphereGeometry(0.15, 14, 14), apronCrewMat);
+                helm.position.set(0, 1.25, 0);
+                mech.add(helm);
+
+                if (hasGun) {
+                    const gun = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.14, 0.35), new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8 }));
+                    gun.position.set(0.2, 0.70, 0.25);
+                    mech.add(gun);
+                }
+
+                mech.position.set(px, 0.03, pz);
+                mech.rotation.y = protY;
+                return mech;
+            };
+
+            // 6 active pit crew members stationed around the box
+            const pitBoxCrew = [
+                createApronMechanic(-2.4, 1.6, Math.PI / 2, true),   // Front Left Gunner
+                createApronMechanic(2.4, 1.6, -Math.PI / 2, true),   // Front Right Gunner
+                createApronMechanic(-2.4, -1.6, Math.PI / 2, true),  // Rear Left Gunner
+                createApronMechanic(2.4, -1.6, -Math.PI / 2, true),  // Rear Right Gunner
+                createApronMechanic(0.0, 3.2, Math.PI, false),       // Front Jack Engineer
+                createApronMechanic(0.0, -3.2, 0.0, false),          // Rear Jack Engineer
+                createApronMechanic(-2.8, 0.0, Math.PI / 2, false)   // Team Controller / Chief Mechanic
+            ];
+            pitBoxCrew.forEach(m => pitBoxGroup.add(m));
 
             // ── HIGH OVERHEAD CANTILEVER BOOM (NO POSTS ON THE ROAD!) ──
             // Boom originates safely at the garage facade (+8.5m from box = +18.0m) and reaches over the pit box
@@ -347,26 +421,61 @@ class PitComplexBuilder {
                 tProgress: tCenter
             });
 
-            // ── SPACIOUS HIGH-TECH GARAGE BODY (Center at +26.0m, Front entrance at +18.0m) ──
+            // ── DEDICATED INDIVIDUAL TEAM GARAGE ROOM (Center at +26.0m, Front entrance at +18.0m) ──
             const garagePos = pos.clone().add(norm.clone().multiplyScalar(26.0));
             garagePos.y = GARAGE_HEIGHT / 2;
 
             const garageGroup = new THREE.Group();
 
-            // Back wall (located at local -Z away from track, so front facing track at +Z is completely wide open!)
+            // Back wall (located at local -Z away from track, so front facing track at +Z is wide open)
             const backWall = this.box(GARAGE_WIDTH - 0.1, GARAGE_HEIGHT, 0.3, 0x1e293b);
             backWall.position.set(0, 0, -GARAGE_DEPTH / 2);
             garageGroup.add(backWall);
 
-            // Structural architectural divider columns at bay boundary (No solid walls cutting across bay!)
-            [-GARAGE_WIDTH / 2, GARAGE_WIDTH / 2].forEach(colX => {
-                const column = this.box(0.35, GARAGE_HEIGHT, 1.4, 0x334155);
-                column.position.set(colX, 0, GARAGE_DEPTH / 2 - 0.7); // Front portal column
-                garageGroup.add(column);
+            // Illuminated Team Branding Signboard on Back Wall of the Garage Room
+            const backSignboard = new THREE.Mesh(
+                new THREE.BoxGeometry(GARAGE_WIDTH * 0.65, 1.2, 0.15),
+                new THREE.MeshStandardMaterial({ color: 0x0b0f19, roughness: 0.2, metalness: 0.8 })
+            );
+            backSignboard.position.set(0, 1.8, -GARAGE_DEPTH / 2 + 0.2);
+            garageGroup.add(backSignboard);
 
-                const rearColumn = this.box(0.35, GARAGE_HEIGHT, 1.4, 0x334155);
-                rearColumn.position.set(colX, 0, -GARAGE_DEPTH / 2 + 0.7); // Rear pillar
-                garageGroup.add(rearColumn);
+            const teamStripeBack = new THREE.Mesh(
+                new THREE.BoxGeometry(GARAGE_WIDTH * 0.68, 0.18, 0.18),
+                new THREE.MeshStandardMaterial({ color: team.color, emissive: team.color, emissiveIntensity: 0.9 })
+            );
+            teamStripeBack.position.set(0, 2.45, -GARAGE_DEPTH / 2 + 0.22);
+            garageGroup.add(teamStripeBack);
+
+            // FULL DIVIDING PARTITION WALLS BETWEEN TEAM GARAGE ROOMS (Left & Right)
+            [-GARAGE_WIDTH / 2, GARAGE_WIDTH / 2].forEach(colX => {
+                // Full solid dividing wall running along entire depth
+                const dividerWall = this.box(0.35, GARAGE_HEIGHT - 0.1, GARAGE_DEPTH - 0.3, 0x1e293b);
+                dividerWall.position.set(colX, 0, 0);
+                garageGroup.add(dividerWall);
+
+                // Team accent horizontal livery stripe across the partition wall
+                const liveryStripe = this.box(0.38, 0.45, GARAGE_DEPTH - 0.4, team.color);
+                liveryStripe.position.set(colX, 0.4, 0);
+                garageGroup.add(liveryStripe);
+
+                // Lower kickplate trim
+                const kickPlate = this.box(0.38, 0.30, GARAGE_DEPTH - 0.4, 0x0f172a);
+                kickPlate.position.set(colX, -GARAGE_HEIGHT / 2 + 0.15, 0);
+                garageGroup.add(kickPlate);
+
+                // Upper LED light cove along top of partition wall
+                const wallLightCove = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.38, 0.10, GARAGE_DEPTH - 1.0),
+                    new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.8 })
+                );
+                wallLightCove.position.set(colX, GARAGE_HEIGHT / 2 - 0.25, 0);
+                garageGroup.add(wallLightCove);
+
+                // Front entrance portal pillar
+                const frontColumn = this.box(0.45, GARAGE_HEIGHT, 1.4, 0x334155);
+                frontColumn.position.set(colX, 0, GARAGE_DEPTH / 2 - 0.7);
+                garageGroup.add(frontColumn);
             });
 
             // High Cathedral Ceiling Roof

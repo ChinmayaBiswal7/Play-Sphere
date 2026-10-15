@@ -383,46 +383,32 @@
 
     // Boosted AI top speeds to match player top speed potential (player base = 75 m/s)
 
-    // Easy:62, Normal:74, Hard:80, Expert:86
-
-    const baseSpeed = [62.0, 74.0, 80.0, 86.0][activeDifficulty] || 74.0;
+    // Boosted AI top speeds to match realistic F1 player speeds (player max ~88-92 m/s, ~315-330 km/h)
+    // Easy:74, Normal:84, Hard:89, Expert:93
+    const baseSpeed = [74.0, 84.0, 89.0, 93.0][activeDifficulty] || 84.0;
 
     // Per-racer pace calculation using driver + car performance profiles
-
     function calculateAIPace(racer, base) {
-
       const p = racer.aiProfile || { pace: 0.85, brakingSkill: 0.85, corneringSkill: 0.85, consistency: 0.85 };
-
       const c = racer.carPerformance || { topSpeed: 80, cornering: 80 };
 
       // Normalize car stats to 0-1
-
       const carFactor = ((c.topSpeed / 100) * 0.5 + (c.cornering / 100) * 0.5);
-
       const driverFactor = p.pace * 0.50 + p.brakingSkill * 0.20 + p.corneringSkill * 0.20 + p.consistency * 0.10;
 
       // Combined potential: car 45%, driver 55%
-
       const combined = carFactor * 0.45 + driverFactor * 0.55;
 
-      // Difficulty utilisation: Easy 80-88%, Normal 88-96%, Hard 94-102%, Expert 98-106%
-
+      // Difficulty utilisation: Easy 88-94%, Normal 95-101%, Hard 99-105%, Expert 102-108%
       const utilRange = [
-
-        [0.80, 0.88],  // Easy
-
-        [0.88, 0.96],  // Normal
-
-        [0.94, 1.02],  // Hard
-
-        [0.98, 1.06]   // Expert
-
-      ][activeDifficulty] || [0.88, 0.96];
+        [0.88, 0.94],  // Easy (~250-265 km/h)
+        [0.95, 1.01],  // Normal (~290-305 km/h)
+        [0.99, 1.05],  // Hard (~315-335 km/h)
+        [1.02, 1.08]   // Expert (~340-360 km/h)
+      ][activeDifficulty] || [0.95, 1.01];
 
       const utilFactor = THREE.MathUtils.lerp(utilRange[0], utilRange[1], combined);
-
       return base * utilFactor;
-
     }
 
     racers.forEach((racer) => {
