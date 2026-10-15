@@ -3742,6 +3742,9 @@
     // ── 3D Holographic Turn-In Target Gate (Matching Reference Image 1 & 2) ──
     window.buildTurnInHologram = function(teamIdx) {
       if (window.turnInHologram) {
+        if (window.turnInHologram.arrows) {
+          window.turnInHologram.arrows.forEach(a => scene.remove(a));
+        }
         scene.remove(window.turnInHologram);
         window.turnInHologram = null;
       }
@@ -3762,55 +3765,126 @@
       gateGroup.turnInT = turnInT;
       gateGroup.pBoxT = pBoxT;
       gateGroup.rated = false;
+      gateGroup.arrows = [];
 
-      // Position gate at right edge of fast lane entering apron (+4.2m offset)
-      const gatePos = pt.clone().add(norm.clone().multiplyScalar(4.2));
+      // Spans across the fast lane road (offset +1.5m to encompass fast lane and apron entrance)
+      const gatePos = pt.clone().add(norm.clone().multiplyScalar(1.5));
       gateGroup.position.copy(gatePos);
       gateGroup.lookAt(gatePos.clone().add(tang));
 
-      // Holographic cyan glowing portal brackets
-      const holoMat = new THREE.MeshBasicMaterial({ color: 0x06b6d4, transparent: true, opacity: 0.85 });
-      const glowMat = new THREE.MeshStandardMaterial({ color: 0x06b6d4, emissive: 0x06b6d4, emissiveIntensity: 1.6, transparent: true, opacity: 0.9 });
+      // 1. Semi-transparent Glowing Emerald Green Holographic Wall
+      const wallMat = new THREE.MeshBasicMaterial({
+        color: 0x10b981,
+        transparent: true,
+        opacity: 0.44,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      });
+      const wallGeom = new THREE.PlaneGeometry(8.0, 3.4);
+      const wallMesh = new THREE.Mesh(wallGeom, wallMat);
+      wallMesh.position.set(0, 1.7, 0);
+      gateGroup.add(wallMesh);
+      gateGroup.wallMesh = wallMesh;
 
-      // Left & Right vertical laser beams
-      [-2.2, 2.2].forEach(gx => {
-        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 3.2, 8), glowMat);
-        post.position.set(gx, 1.6, 0);
-        gateGroup.add(post);
+      // 2. Glowing Neon Green Laser Border Frame
+      const frameMat = new THREE.MeshBasicMaterial({ color: 0x34d399, transparent: true, opacity: 0.95 });
+      const frameEdges = new THREE.EdgesGeometry(wallGeom);
+      const frameLines = new THREE.LineSegments(frameEdges, new THREE.LineBasicMaterial({ color: 0x34d399, linewidth: 3 }));
+      frameLines.position.set(0, 1.7, 0.01);
+      gateGroup.add(frameLines);
 
-        // Corner bracket caps
-        const cap = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.08, 0.08), glowMat);
-        cap.position.set(gx > 0 ? (gx - 0.16) : (gx + 0.16), 3.2, 0);
-        gateGroup.add(cap);
+      // Vertical laser pylons at edges
+      [-4.0, 4.0].forEach(gx => {
+        const pylon = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 3.5, 12), frameMat);
+        pylon.position.set(gx, 1.7, 0);
+        gateGroup.add(pylon);
+        
+        const base = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.1, 16), frameMat);
+        base.position.set(gx, 0.05, 0);
+        gateGroup.add(base);
       });
 
-      // Top glowing laser crossbar
-      const topBar = new THREE.Mesh(new THREE.BoxGeometry(4.4, 0.04, 0.04), glowMat);
-      topBar.position.set(0, 3.2, 0);
-      gateGroup.add(topBar);
+      // Horizontal holographic scan-lines across wall
+      for (let y = 0.5; y <= 3.0; y += 0.5) {
+        const lineGeo = new THREE.BufferGeometry().setFromPoints([
+          new THREE.Vector3(-3.95, y, 0.01),
+          new THREE.Vector3(3.95, y, 0.01)
+        ]);
+        const scanLine = new THREE.Line(lineGeo, new THREE.LineBasicMaterial({ color: 0x6ee7b7, transparent: true, opacity: 0.4 }));
+        gateGroup.add(scanLine);
+      }
 
-      // Floating crosshair target ring (X) in center of gate (y = 1.4m)
-      const reticleRing = new THREE.Mesh(new THREE.RingGeometry(0.38, 0.44, 24), holoMat);
-      reticleRing.position.set(0, 1.4, 0);
-      gateGroup.add(reticleRing);
+      // 3. Center Target Reticle & (X) Crosshair
+      const outerRing = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.65, 32), frameMat);
+      outerRing.position.set(0, 1.7, 0.02);
+      gateGroup.add(outerRing);
 
-      // Target X crosshair struts
+      const innerRing = new THREE.Mesh(new THREE.RingGeometry(0.2, 0.25, 24), frameMat);
+      innerRing.position.set(0, 1.7, 0.02);
+      gateGroup.add(innerRing);
+
       [-0.25, 0.25].forEach(ang => {
-        const cross = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 0.05), holoMat);
-        cross.position.set(0, 1.4, 0.01);
+        const cross = new THREE.Mesh(new THREE.PlaneGeometry(0.65, 0.06), frameMat);
+        cross.position.set(0, 1.7, 0.03);
         cross.rotation.z = ang * Math.PI;
         gateGroup.add(cross);
       });
 
-      // Road chevron arrows leading diagonally from gate into pit box
-      for (let ch = 1; ch <= 4; ch++) {
-        const chFrac = ch / 4;
-        const chPos = new THREE.Vector3(chFrac * 4.8, 0.04, chFrac * 6.5);
-        const arrow = new THREE.Mesh(new THREE.PlaneGeometry(0.35, 1.2), holoMat);
+      // 4. Overhead Holographic Badge "PIT TURN-IN"
+      try {
+        const badgeCanvas = document.createElement('canvas');
+        badgeCanvas.width = 512;
+        badgeCanvas.height = 128;
+        const bCtx = badgeCanvas.getContext('2d');
+        bCtx.fillStyle = 'rgba(6, 78, 59, 0.9)';
+        if (typeof bCtx.roundRect === 'function') {
+          bCtx.roundRect(8, 8, 496, 112, 16);
+          bCtx.fill();
+          bCtx.strokeStyle = '#10b981';
+          bCtx.lineWidth = 6;
+          bCtx.roundRect(8, 8, 496, 112, 16);
+          bCtx.stroke();
+        } else {
+          bCtx.fillRect(8, 8, 496, 112);
+        }
+        bCtx.fillStyle = '#ffffff';
+        bCtx.font = 'bold 44px "Orbitron", sans-serif';
+        bCtx.textAlign = 'center';
+        bCtx.textBaseline = 'middle';
+        bCtx.fillText('PIT TURN-IN', 256, 64);
+        
+        const badgeTex = new THREE.CanvasTexture(badgeCanvas);
+        const badgeMat = new THREE.MeshBasicMaterial({ map: badgeTex, transparent: true, side: THREE.DoubleSide });
+        const badgeMesh = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 0.65), badgeMat);
+        badgeMesh.position.set(0, 3.8, 0.02);
+        gateGroup.add(badgeMesh);
+      } catch (e) {
+        console.warn("Badge canvas skipped:", e);
+      }
+
+      // 5. Road Chevron Arrows angled from green wall into the pit box on apron
+      const boxPt = pitCurve.getPointAt(pBoxT);
+      const boxTang = pitCurve.getTangentAt(pBoxT).normalize();
+      const boxNorm = new THREE.Vector3(-boxTang.z, 0, boxTang.x).normalize();
+      const boxPos = boxPt.clone().add(boxNorm.clone().multiplyScalar(9.5));
+      const gateCenter = pt.clone().add(norm.clone().multiplyScalar(1.5));
+
+      for (let ch = 1; ch <= 6; ch++) {
+        const frac = ch / 7;
+        const cPt = gateCenter.clone().lerp(boxPos, frac);
+        cPt.y = 0.05;
+        const arrow = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 1.4), new THREE.MeshBasicMaterial({
+          color: 0x10b981,
+          transparent: true,
+          opacity: 0.85,
+          side: THREE.DoubleSide
+        }));
+        arrow.position.copy(cPt);
         arrow.rotation.x = -Math.PI / 2;
-        arrow.rotation.z = Math.PI / 5;
-        arrow.position.copy(chPos);
-        gateGroup.add(arrow);
+        const lookDir = boxPos.clone().sub(gateCenter).normalize();
+        arrow.rotation.z = Math.atan2(-lookDir.x, -lookDir.z);
+        scene.add(arrow);
+        gateGroup.arrows.push(arrow);
       }
 
       scene.add(gateGroup);
@@ -7366,6 +7440,19 @@
       hFuel.style.color = fuelLevelLaps > 0 ? 'var(--neon-yellow)' : '#ef4444';
     }
 
+    if (window.turnInHologram && window.turnInHologram.wallMesh) {
+      const pulse = 0.40 + 0.16 * Math.sin(clock.getElapsedTime() * 5.0);
+      window.turnInHologram.wallMesh.material.opacity = pulse;
+    }
+
+    if (playerKart.isPitInAutopilot) {
+      updatePitInAutopilot(delta);
+      return;
+    }
+    if (playerKart.isPitOutAutopilot) {
+      updatePitOutAutopilot(delta);
+      return;
+    }
     if (playerKart.driveOutAutopilot) {
       updateDriveOutAutopilot(delta);
       return;
@@ -7753,15 +7840,23 @@
       }
 
       // ── Stop at green pit box on pit lane apron ──
-      if (!isPitStopActive && !hasStoppedAtPitBox) {
+      if (!isPitStopActive && !hasStoppedAtPitBox && !playerKart.isPitInAutopilot) {
         const pBoxT = 0.26 + (selectedTeamIndex + 0.5) * (0.74 - 0.26) / totalBoxes;
         const pos = pitCurve.getPointAt(pBoxT);
         const tang = pitCurve.getTangentAt(pBoxT).normalize();
         const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
         const boxPos = pos.clone().add(norm.clone().multiplyScalar(9.5));
 
+        const turnInT = Math.max(0.12, pBoxT - 0.026);
+        const turnInPt = pitCurve.getPointAt(turnInT);
+        const turnInTang = pitCurve.getTangentAt(turnInT).normalize();
+        const turnInNorm = new THREE.Vector3(-turnInTang.z, 0, turnInTang.x).normalize();
+        const gatePos = turnInPt.clone().add(turnInNorm.clone().multiplyScalar(1.5));
+
         // 3D Turn-In Countdown & Rating Evaluation (Matching Reference Images 1 & 2)
-        const turnInDist = (pBoxT - 0.026 - pitProgress) * 450;
+        const turnInDist = (turnInT - pitProgress) * 450;
+        const distToGate = playerKart.mesh.position.distanceTo(gatePos);
+
         if (turnInDist > -12.0 && turnInDist < 35.0 && !playerKart.isExitingGarage) {
           if (turnInPrompt) {
             turnInPrompt.classList.remove('hidden');
@@ -7779,38 +7874,45 @@
               }
               if (turnInSub) turnInSub.innerText = "AIM FOR PIT BOX ENTRY (X)";
             }
-            // Trigger turn-in rating when driver steers right towards box or crosses the turn-in point
-            if (playerKart.filteredSteeringInput > 0.08 || keys.d || turnInDist <= 0.0) {
-              window.turnInRated = true;
-              let rating = "OPTIMAL";
-              let ratingColor = "#c084fc"; // Purple glow (matching Image 2)
-              let estTime = 2.4;
-              if (Math.abs(turnInDist) <= 5.0) {
-                rating = "OPTIMAL";
-                ratingColor = "#c084fc";
-                estTime = 2.3;
-              } else if (Math.abs(turnInDist) <= 12.0) {
-                rating = "GOOD";
-                ratingColor = "#22c55e";
-                estTime = 2.8;
-              } else if (turnInDist > 12.0) {
-                rating = "EARLY";
-                ratingColor = "#fbbf24";
-                estTime = 3.6;
-              } else {
-                rating = "LATE";
-                ratingColor = "#ef4444";
-                estTime = 4.4;
-              }
-              if (turnInHeader) turnInHeader.innerText = "TURN-IN";
-              if (turnInVal) {
-                turnInVal.innerText = rating;
-                turnInVal.style.color = ratingColor;
-              }
-              if (turnInSub) turnInSub.innerText = `Estimated stop time: ${estTime}s`;
-              if (window.ApexAudio) window.ApexAudio.playClick();
-            }
           }
+        }
+
+        // 🟢 Touching or entering the transparent green wall activates Autopilot into pit box!
+        const touchedGreenWall = (distToGate <= 4.6) || (turnInDist <= 1.8 && turnInDist >= -8.0) || ((keys.d || playerKart.filteredSteeringInput > 0.08) && turnInDist <= 8.0);
+
+        if (touchedGreenWall && !playerKart.isExitingGarage) {
+          if (!window.turnInRated) {
+            window.turnInRated = true;
+            let rating = "OPTIMAL";
+            let ratingColor = "#c084fc"; // Purple glow (matching Image 2)
+            let estTime = 2.4;
+            if (Math.abs(turnInDist) <= 3.5 || distToGate <= 2.8) {
+              rating = "OPTIMAL";
+              ratingColor = "#c084fc";
+              estTime = 2.2;
+            } else if (Math.abs(turnInDist) <= 8.0 || distToGate <= 5.0) {
+              rating = "GOOD";
+              ratingColor = "#22c55e";
+              estTime = 2.6;
+            } else if (turnInDist > 8.0) {
+              rating = "EARLY";
+              ratingColor = "#fbbf24";
+              estTime = 3.4;
+            } else {
+              rating = "LATE";
+              ratingColor = "#ef4444";
+              estTime = 4.2;
+            }
+            if (turnInHeader) turnInHeader.innerText = "TURN-IN";
+            if (turnInVal) {
+              turnInVal.innerText = rating;
+              turnInVal.style.color = ratingColor;
+            }
+            if (turnInSub) turnInSub.innerText = `Estimated stop time: ${estTime}s`;
+            if (window.ApexAudio) window.ApexAudio.playClick();
+          }
+
+          startPitInAutopilot(pBoxT, boxPos, tang);
         }
 
         const distToBox = playerKart.mesh.position.distanceTo(boxPos);
@@ -7820,7 +7922,7 @@
           rdShowMessage('PULL INTO PIT BOX // BRAKE & STOP', 0.2, '#10b981');
         }
 
-        if (isNearBox) {
+        if (isNearBox && !playerKart.isPitInAutopilot) {
           pitProgress = pBoxT;
           playerKart.mesh.position.copy(boxPos);
           playerKart.heading = Math.atan2(tang.x, tang.z);
@@ -8186,6 +8288,221 @@
       }
     } else {
       playerKart.qualifyingState = "OUT_LAP";
+    }
+  }
+
+  function startPitInAutopilot(pBoxT, targetBoxPos, targetTang) {
+    if (!playerKart) return;
+    playerKart.isPitInAutopilot = true;
+    playerKart.controlsEnabled = false;
+    playerKart.pitInLerp = 0.0;
+    playerKart.pitInStartPos = playerKart.mesh.position.clone();
+    playerKart.pitInStartHeading = playerKart.heading;
+    playerKart.pitInStartSpeed = Math.max(7.0, Math.min(20.0, playerKart.speed));
+    playerKart.pitInTargetPos = targetBoxPos.clone();
+    playerKart.pitInTargetHeading = Math.atan2(targetTang.x, targetTang.z);
+    playerKart.pBoxT = pBoxT;
+    
+    // Control points for cubic Bezier curve from fast lane into pit box
+    const startForward = new THREE.Vector3(Math.sin(playerKart.heading), 0, Math.cos(playerKart.heading)).normalize();
+    const targetForward = targetTang.clone().normalize();
+    
+    playerKart.pitInP0 = playerKart.pitInStartPos.clone();
+    playerKart.pitInP1 = playerKart.pitInStartPos.clone().add(startForward.multiplyScalar(4.5));
+    playerKart.pitInP2 = targetBoxPos.clone().sub(targetForward.clone().multiplyScalar(3.5));
+    playerKart.pitInP3 = targetBoxPos.clone();
+
+    // Remove green wall when touched / entered
+    if (window.turnInHologram) {
+      if (window.turnInHologram.arrows) {
+        window.turnInHologram.arrows.forEach(a => scene.remove(a));
+      }
+      scene.remove(window.turnInHologram);
+      window.turnInHologram = null;
+    }
+    
+    rdShowMessage('AUTOPILOT // GUIDING INTO PIT BOX', 1.5, '#10b981');
+  }
+  window.startPitInAutopilot = startPitInAutopilot;
+
+  function updatePitInAutopilot(delta) {
+    if (!playerKart || !playerKart.isPitInAutopilot) return;
+    
+    // Smooth progress over ~1.7 seconds
+    playerKart.pitInLerp = Math.min(1.0, playerKart.pitInLerp + delta * 0.58);
+    const u = playerKart.pitInLerp;
+    const s = u * u * (3 - 2 * u); // Smoothstep
+    
+    // Cubic Bezier interpolation: B(s) = (1-s)^3 P0 + 3(1-s)^2 s P1 + 3(1-s) s^2 P2 + s^3 P3
+    const om = 1 - s;
+    const c0 = om * om * om;
+    const c1 = 3 * om * om * s;
+    const c2 = 3 * om * s * s;
+    const c3 = s * s * s;
+    
+    const nextPos = new THREE.Vector3()
+      .addScaledVector(playerKart.pitInP0, c0)
+      .addScaledVector(playerKart.pitInP1, c1)
+      .addScaledVector(playerKart.pitInP2, c2)
+      .addScaledVector(playerKart.pitInP3, c3);
+
+    // Tangent along curve for heading
+    const d0 = 3 * om * om;
+    const d1 = 6 * om * s;
+    const d2 = 3 * s * s;
+    const v10 = playerKart.pitInP1.clone().sub(playerKart.pitInP0);
+    const v21 = playerKart.pitInP2.clone().sub(playerKart.pitInP1);
+    const v32 = playerKart.pitInP3.clone().sub(playerKart.pitInP2);
+    const curveTang = new THREE.Vector3()
+      .addScaledVector(v10, d0)
+      .addScaledVector(v21, d1)
+      .addScaledVector(v32, d2)
+      .normalize();
+
+    playerKart.mesh.position.copy(nextPos);
+    
+    const targetHeading = Math.atan2(curveTang.x, curveTang.z);
+    playerKart.heading = lerpHeading(playerKart.heading, targetHeading, delta * 14.0);
+    playerKart.mesh.rotation.y = playerKart.heading;
+    playerKart.mesh.rotation.x = 0;
+    playerKart.mesh.rotation.z = 0;
+
+    // Visual steering angle (front wheels turn into curve)
+    let steerDelta = (targetHeading - playerKart.heading);
+    steerDelta = (steerDelta + Math.PI * 3) % (Math.PI * 2) - Math.PI;
+    const steerAngle = THREE.MathUtils.clamp(steerDelta * 2.5, -0.42, 0.42);
+    if (playerKart.mesh.wheels && playerKart.mesh.wheels.length >= 2) {
+      playerKart.mesh.wheels[0].rotation.y = steerAngle;
+      playerKart.mesh.wheels[1].rotation.y = steerAngle;
+    }
+
+    // Decelerate speed smoothly to zero at the box
+    playerKart.speed = THREE.MathUtils.lerp(playerKart.pitInStartSpeed, 0.0, s);
+    
+    // Update pit progress
+    if (pitCurve) {
+      const pitProj = findNearestPitProjection(playerKart.mesh.position);
+      pitProgress = pitProj.progress;
+      playerKart.currentOffset = pitProj.progress;
+      playerKart.sideOffset = pitProj.lateralOffset;
+    }
+    
+    // Pit lane timer keeps ticking
+    const pitTimeVal = document.getElementById('hud-pit-time-val');
+    window.pitLaneTimer = (window.pitLaneTimer || 0.0) + delta;
+    if (pitTimeVal) pitTimeVal.innerText = `${window.pitLaneTimer.toFixed(1)}`;
+
+    if (u >= 1.0) {
+      playerKart.isPitInAutopilot = false;
+      playerKart.mesh.position.copy(playerKart.pitInTargetPos);
+      playerKart.heading = playerKart.pitInTargetHeading;
+      playerKart.mesh.rotation.y = playerKart.heading;
+      playerKart.speed = 0.0;
+      if (playerKart.mesh.wheels && playerKart.mesh.wheels.length >= 2) {
+        playerKart.mesh.wheels[0].rotation.y = 0.0;
+        playerKart.mesh.wheels[1].rotation.y = 0.0;
+      }
+      
+      const turnInPrompt = document.getElementById('hud-turnin-prompt');
+      if (turnInPrompt) {
+        turnInPrompt.classList.add('hidden');
+        turnInPrompt.style.display = 'none';
+      }
+      window.pitStopTime = 0.0;
+      
+      triggerPitStop();
+    }
+  }
+
+  window.startPitOutAutopilot = function() {
+    if (!pitCurve || !playerKart) return;
+    const totalBoxes = F1_TEAMS.length;
+    const pBoxT = 0.26 + (selectedTeamIndex + 0.5) * (0.74 - 0.26) / totalBoxes;
+    const exitFastLaneT = Math.min(0.86, pBoxT + 0.038);
+    
+    const exitPt = pitCurve.getPointAt(exitFastLaneT);
+    const exitTang = pitCurve.getTangentAt(exitFastLaneT).normalize();
+    
+    playerKart.isPitOutAutopilot = true;
+    playerKart.controlsEnabled = false;
+    playerKart.pitOutLerp = 0.0;
+    playerKart.pitOutStartPos = playerKart.mesh.position.clone();
+    
+    const startForward = new THREE.Vector3(Math.sin(playerKart.heading), 0, Math.cos(playerKart.heading)).normalize();
+    
+    playerKart.pitOutP0 = playerKart.pitOutStartPos.clone();
+    playerKart.pitOutP1 = playerKart.pitOutStartPos.clone().add(startForward.multiplyScalar(4.5));
+    playerKart.pitOutP2 = exitPt.clone().sub(exitTang.clone().multiplyScalar(4.0));
+    playerKart.pitOutP3 = exitPt.clone();
+    playerKart.pitOutTargetHeading = Math.atan2(exitTang.x, exitTang.z);
+    
+    rdShowMessage('PIT RELEASE // MERGING TO FAST LANE', 1.5, '#22c55e');
+  };
+
+  function updatePitOutAutopilot(delta) {
+    if (!playerKart || !playerKart.isPitOutAutopilot) return;
+    
+    playerKart.pitOutLerp = Math.min(1.0, playerKart.pitOutLerp + delta * 0.65);
+    const u = playerKart.pitOutLerp;
+    const s = u * u * (3 - 2 * u);
+    
+    const om = 1 - s;
+    const c0 = om * om * om;
+    const c1 = 3 * om * om * s;
+    const c2 = 3 * om * s * s;
+    const c3 = s * s * s;
+    
+    const nextPos = new THREE.Vector3()
+      .addScaledVector(playerKart.pitOutP0, c0)
+      .addScaledVector(playerKart.pitOutP1, c1)
+      .addScaledVector(playerKart.pitOutP2, c2)
+      .addScaledVector(playerKart.pitOutP3, c3);
+
+    const d0 = 3 * om * om;
+    const d1 = 6 * om * s;
+    const d2 = 3 * s * s;
+    const v10 = playerKart.pitOutP1.clone().sub(playerKart.pitOutP0);
+    const v21 = playerKart.pitOutP2.clone().sub(playerKart.pitOutP1);
+    const v32 = playerKart.pitOutP3.clone().sub(playerKart.pitOutP2);
+    const curveTang = new THREE.Vector3()
+      .addScaledVector(v10, d0)
+      .addScaledVector(v21, d1)
+      .addScaledVector(v32, d2)
+      .normalize();
+
+    playerKart.mesh.position.copy(nextPos);
+    
+    const targetHeading = Math.atan2(curveTang.x, curveTang.z);
+    playerKart.heading = lerpHeading(playerKart.heading, targetHeading, delta * 12.0);
+    playerKart.mesh.rotation.y = playerKart.heading;
+    playerKart.mesh.rotation.x = 0;
+    playerKart.mesh.rotation.z = 0;
+    
+    let steerDelta = (targetHeading - playerKart.heading);
+    steerDelta = (steerDelta + Math.PI * 3) % (Math.PI * 2) - Math.PI;
+    const steerAngle = THREE.MathUtils.clamp(steerDelta * 2.0, -0.35, 0.35);
+    if (playerKart.mesh.wheels && playerKart.mesh.wheels.length >= 2) {
+      playerKart.mesh.wheels[0].rotation.y = steerAngle;
+      playerKart.mesh.wheels[1].rotation.y = steerAngle;
+    }
+
+    // Accelerate up to 18 m/s (~65 km/h, well within pit limiter)
+    playerKart.speed = THREE.MathUtils.lerp(0.0, 18.0, s);
+    currentGear = 1;
+    
+    // Pit lane timer keeps updating
+    const pitTimeVal = document.getElementById('hud-pit-time-val');
+    window.pitLaneTimer = (window.pitLaneTimer || 0.0) + delta;
+    if (pitTimeVal) pitTimeVal.innerText = `${window.pitLaneTimer.toFixed(1)}`;
+
+    if (u >= 1.0) {
+      playerKart.isPitOutAutopilot = false;
+      playerKart.controlsEnabled = true;
+      if (playerKart.mesh.wheels && playerKart.mesh.wheels.length >= 2) {
+        playerKart.mesh.wheels[0].rotation.y = 0.0;
+        playerKart.mesh.wheels[1].rotation.y = 0.0;
+      }
+      speakEngineerRadio("Pit exit clear. Watch the white line on exit.", 60);
     }
   }
 
@@ -12013,7 +12330,9 @@
     }, 1800);
 
     document.getElementById('pit-prompt-text').innerText = "TYRES FITTED! GREEN LIGHT!";
-    if (playerKart) {
+    if (typeof window.startPitOutAutopilot === 'function') {
+      window.startPitOutAutopilot();
+    } else if (playerKart) {
       playerKart.boostTime = 0.0;
       playerKart.speed = 0.0;
       currentGear = 1; // 1st gear ready for launch

@@ -936,6 +936,9 @@
     // ── 3D Holographic Turn-In Target Gate (Matching Reference Image 1 & 2) ──
     window.buildTurnInHologram = function(teamIdx) {
       if (window.turnInHologram) {
+        if (window.turnInHologram.arrows) {
+          window.turnInHologram.arrows.forEach(a => scene.remove(a));
+        }
         scene.remove(window.turnInHologram);
         window.turnInHologram = null;
       }
@@ -956,55 +959,126 @@
       gateGroup.turnInT = turnInT;
       gateGroup.pBoxT = pBoxT;
       gateGroup.rated = false;
+      gateGroup.arrows = [];
 
-      // Position gate at right edge of fast lane entering apron (+4.2m offset)
-      const gatePos = pt.clone().add(norm.clone().multiplyScalar(4.2));
+      // Spans across the fast lane road (offset +1.5m to encompass fast lane and apron entrance)
+      const gatePos = pt.clone().add(norm.clone().multiplyScalar(1.5));
       gateGroup.position.copy(gatePos);
       gateGroup.lookAt(gatePos.clone().add(tang));
 
-      // Holographic cyan glowing portal brackets
-      const holoMat = new THREE.MeshBasicMaterial({ color: 0x06b6d4, transparent: true, opacity: 0.85 });
-      const glowMat = new THREE.MeshStandardMaterial({ color: 0x06b6d4, emissive: 0x06b6d4, emissiveIntensity: 1.6, transparent: true, opacity: 0.9 });
+      // 1. Semi-transparent Glowing Emerald Green Holographic Wall
+      const wallMat = new THREE.MeshBasicMaterial({
+        color: 0x10b981,
+        transparent: true,
+        opacity: 0.44,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      });
+      const wallGeom = new THREE.PlaneGeometry(8.0, 3.4);
+      const wallMesh = new THREE.Mesh(wallGeom, wallMat);
+      wallMesh.position.set(0, 1.7, 0);
+      gateGroup.add(wallMesh);
+      gateGroup.wallMesh = wallMesh;
 
-      // Left & Right vertical laser beams
-      [-2.2, 2.2].forEach(gx => {
-        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 3.2, 8), glowMat);
-        post.position.set(gx, 1.6, 0);
-        gateGroup.add(post);
+      // 2. Glowing Neon Green Laser Border Frame
+      const frameMat = new THREE.MeshBasicMaterial({ color: 0x34d399, transparent: true, opacity: 0.95 });
+      const frameEdges = new THREE.EdgesGeometry(wallGeom);
+      const frameLines = new THREE.LineSegments(frameEdges, new THREE.LineBasicMaterial({ color: 0x34d399, linewidth: 3 }));
+      frameLines.position.set(0, 1.7, 0.01);
+      gateGroup.add(frameLines);
 
-        // Corner bracket caps
-        const cap = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.08, 0.08), glowMat);
-        cap.position.set(gx > 0 ? (gx - 0.16) : (gx + 0.16), 3.2, 0);
-        gateGroup.add(cap);
+      // Vertical laser pylons at edges
+      [-4.0, 4.0].forEach(gx => {
+        const pylon = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 3.5, 12), frameMat);
+        pylon.position.set(gx, 1.7, 0);
+        gateGroup.add(pylon);
+        
+        const base = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.1, 16), frameMat);
+        base.position.set(gx, 0.05, 0);
+        gateGroup.add(base);
       });
 
-      // Top glowing laser crossbar
-      const topBar = new THREE.Mesh(new THREE.BoxGeometry(4.4, 0.04, 0.04), glowMat);
-      topBar.position.set(0, 3.2, 0);
-      gateGroup.add(topBar);
+      // Horizontal holographic scan-lines across wall
+      for (let y = 0.5; y <= 3.0; y += 0.5) {
+        const lineGeo = new THREE.BufferGeometry().setFromPoints([
+          new THREE.Vector3(-3.95, y, 0.01),
+          new THREE.Vector3(3.95, y, 0.01)
+        ]);
+        const scanLine = new THREE.Line(lineGeo, new THREE.LineBasicMaterial({ color: 0x6ee7b7, transparent: true, opacity: 0.4 }));
+        gateGroup.add(scanLine);
+      }
 
-      // Floating crosshair target ring (X) in center of gate (y = 1.4m)
-      const reticleRing = new THREE.Mesh(new THREE.RingGeometry(0.38, 0.44, 24), holoMat);
-      reticleRing.position.set(0, 1.4, 0);
-      gateGroup.add(reticleRing);
+      // 3. Center Target Reticle & (X) Crosshair
+      const outerRing = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.65, 32), frameMat);
+      outerRing.position.set(0, 1.7, 0.02);
+      gateGroup.add(outerRing);
 
-      // Target X crosshair struts
+      const innerRing = new THREE.Mesh(new THREE.RingGeometry(0.2, 0.25, 24), frameMat);
+      innerRing.position.set(0, 1.7, 0.02);
+      gateGroup.add(innerRing);
+
       [-0.25, 0.25].forEach(ang => {
-        const cross = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 0.05), holoMat);
-        cross.position.set(0, 1.4, 0.01);
+        const cross = new THREE.Mesh(new THREE.PlaneGeometry(0.65, 0.06), frameMat);
+        cross.position.set(0, 1.7, 0.03);
         cross.rotation.z = ang * Math.PI;
         gateGroup.add(cross);
       });
 
-      // Road chevron arrows leading diagonally from gate into pit box
-      for (let ch = 1; ch <= 4; ch++) {
-        const chFrac = ch / 4;
-        const chPos = new THREE.Vector3(chFrac * 4.8, 0.04, chFrac * 6.5);
-        const arrow = new THREE.Mesh(new THREE.PlaneGeometry(0.35, 1.2), holoMat);
+      // 4. Overhead Holographic Badge "PIT TURN-IN"
+      try {
+        const badgeCanvas = document.createElement('canvas');
+        badgeCanvas.width = 512;
+        badgeCanvas.height = 128;
+        const bCtx = badgeCanvas.getContext('2d');
+        bCtx.fillStyle = 'rgba(6, 78, 59, 0.9)';
+        if (typeof bCtx.roundRect === 'function') {
+          bCtx.roundRect(8, 8, 496, 112, 16);
+          bCtx.fill();
+          bCtx.strokeStyle = '#10b981';
+          bCtx.lineWidth = 6;
+          bCtx.roundRect(8, 8, 496, 112, 16);
+          bCtx.stroke();
+        } else {
+          bCtx.fillRect(8, 8, 496, 112);
+        }
+        bCtx.fillStyle = '#ffffff';
+        bCtx.font = 'bold 44px "Orbitron", sans-serif';
+        bCtx.textAlign = 'center';
+        bCtx.textBaseline = 'middle';
+        bCtx.fillText('PIT TURN-IN', 256, 64);
+        
+        const badgeTex = new THREE.CanvasTexture(badgeCanvas);
+        const badgeMat = new THREE.MeshBasicMaterial({ map: badgeTex, transparent: true, side: THREE.DoubleSide });
+        const badgeMesh = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 0.65), badgeMat);
+        badgeMesh.position.set(0, 3.8, 0.02);
+        gateGroup.add(badgeMesh);
+      } catch (e) {
+        console.warn("Badge canvas skipped:", e);
+      }
+
+      // 5. Road Chevron Arrows angled from green wall into the pit box on apron
+      const boxPt = pitCurve.getPointAt(pBoxT);
+      const boxTang = pitCurve.getTangentAt(pBoxT).normalize();
+      const boxNorm = new THREE.Vector3(-boxTang.z, 0, boxTang.x).normalize();
+      const boxPos = boxPt.clone().add(boxNorm.clone().multiplyScalar(9.5));
+      const gateCenter = pt.clone().add(norm.clone().multiplyScalar(1.5));
+
+      for (let ch = 1; ch <= 6; ch++) {
+        const frac = ch / 7;
+        const cPt = gateCenter.clone().lerp(boxPos, frac);
+        cPt.y = 0.05;
+        const arrow = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 1.4), new THREE.MeshBasicMaterial({
+          color: 0x10b981,
+          transparent: true,
+          opacity: 0.85,
+          side: THREE.DoubleSide
+        }));
+        arrow.position.copy(cPt);
         arrow.rotation.x = -Math.PI / 2;
-        arrow.rotation.z = Math.PI / 5;
-        arrow.position.copy(chPos);
-        gateGroup.add(arrow);
+        const lookDir = boxPos.clone().sub(gateCenter).normalize();
+        arrow.rotation.z = Math.atan2(-lookDir.x, -lookDir.z);
+        scene.add(arrow);
+        gateGroup.arrows.push(arrow);
       }
 
       scene.add(gateGroup);

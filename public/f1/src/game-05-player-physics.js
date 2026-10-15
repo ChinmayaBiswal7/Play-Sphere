@@ -893,6 +893,19 @@
       hFuel.style.color = fuelLevelLaps > 0 ? 'var(--neon-yellow)' : '#ef4444';
     }
 
+    if (window.turnInHologram && window.turnInHologram.wallMesh) {
+      const pulse = 0.40 + 0.16 * Math.sin(clock.getElapsedTime() * 5.0);
+      window.turnInHologram.wallMesh.material.opacity = pulse;
+    }
+
+    if (playerKart.isPitInAutopilot) {
+      updatePitInAutopilot(delta);
+      return;
+    }
+    if (playerKart.isPitOutAutopilot) {
+      updatePitOutAutopilot(delta);
+      return;
+    }
     if (playerKart.driveOutAutopilot) {
       updateDriveOutAutopilot(delta);
       return;
@@ -1280,15 +1293,23 @@
       }
 
       // ── Stop at green pit box on pit lane apron ──
-      if (!isPitStopActive && !hasStoppedAtPitBox) {
+      if (!isPitStopActive && !hasStoppedAtPitBox && !playerKart.isPitInAutopilot) {
         const pBoxT = 0.26 + (selectedTeamIndex + 0.5) * (0.74 - 0.26) / totalBoxes;
         const pos = pitCurve.getPointAt(pBoxT);
         const tang = pitCurve.getTangentAt(pBoxT).normalize();
         const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
         const boxPos = pos.clone().add(norm.clone().multiplyScalar(9.5));
 
+        const turnInT = Math.max(0.12, pBoxT - 0.026);
+        const turnInPt = pitCurve.getPointAt(turnInT);
+        const turnInTang = pitCurve.getTangentAt(turnInT).normalize();
+        const turnInNorm = new THREE.Vector3(-turnInTang.z, 0, turnInTang.x).normalize();
+        const gatePos = turnInPt.clone().add(turnInNorm.clone().multiplyScalar(1.5));
+
         // 3D Turn-In Countdown & Rating Evaluation (Matching Reference Images 1 & 2)
-        const turnInDist = (pBoxT - 0.026 - pitProgress) * 450;
+        const turnInDist = (turnInT - pitProgress) * 450;
+        const distToGate = playerKart.mesh.position.distanceTo(gatePos);
+
         if (turnInDist > -12.0 && turnInDist < 35.0 && !playerKart.isExitingGarage) {
           if (turnInPrompt) {
             turnInPrompt.classList.remove('hidden');
@@ -1306,38 +1327,45 @@
               }
               if (turnInSub) turnInSub.innerText = "AIM FOR PIT BOX ENTRY (X)";
             }
-            // Trigger turn-in rating when driver steers right towards box or crosses the turn-in point
-            if (playerKart.filteredSteeringInput > 0.08 || keys.d || turnInDist <= 0.0) {
-              window.turnInRated = true;
-              let rating = "OPTIMAL";
-              let ratingColor = "#c084fc"; // Purple glow (matching Image 2)
-              let estTime = 2.4;
-              if (Math.abs(turnInDist) <= 5.0) {
-                rating = "OPTIMAL";
-                ratingColor = "#c084fc";
-                estTime = 2.3;
-              } else if (Math.abs(turnInDist) <= 12.0) {
-                rating = "GOOD";
-                ratingColor = "#22c55e";
-                estTime = 2.8;
-              } else if (turnInDist > 12.0) {
-                rating = "EARLY";
-                ratingColor = "#fbbf24";
-                estTime = 3.6;
-              } else {
-                rating = "LATE";
-                ratingColor = "#ef4444";
-                estTime = 4.4;
-              }
-              if (turnInHeader) turnInHeader.innerText = "TURN-IN";
-              if (turnInVal) {
-                turnInVal.innerText = rating;
-                turnInVal.style.color = ratingColor;
-              }
-              if (turnInSub) turnInSub.innerText = `Estimated stop time: ${estTime}s`;
-              if (window.ApexAudio) window.ApexAudio.playClick();
-            }
           }
+        }
+
+        // 🟢 Touching or entering the transparent green wall activates Autopilot into pit box!
+        const touchedGreenWall = (distToGate <= 4.6) || (turnInDist <= 1.8 && turnInDist >= -8.0) || ((keys.d || playerKart.filteredSteeringInput > 0.08) && turnInDist <= 8.0);
+
+        if (touchedGreenWall && !playerKart.isExitingGarage) {
+          if (!window.turnInRated) {
+            window.turnInRated = true;
+            let rating = "OPTIMAL";
+            let ratingColor = "#c084fc"; // Purple glow (matching Image 2)
+            let estTime = 2.4;
+            if (Math.abs(turnInDist) <= 3.5 || distToGate <= 2.8) {
+              rating = "OPTIMAL";
+              ratingColor = "#c084fc";
+              estTime = 2.2;
+            } else if (Math.abs(turnInDist) <= 8.0 || distToGate <= 5.0) {
+              rating = "GOOD";
+              ratingColor = "#22c55e";
+              estTime = 2.6;
+            } else if (turnInDist > 8.0) {
+              rating = "EARLY";
+              ratingColor = "#fbbf24";
+              estTime = 3.4;
+            } else {
+              rating = "LATE";
+              ratingColor = "#ef4444";
+              estTime = 4.2;
+            }
+            if (turnInHeader) turnInHeader.innerText = "TURN-IN";
+            if (turnInVal) {
+              turnInVal.innerText = rating;
+              turnInVal.style.color = ratingColor;
+            }
+            if (turnInSub) turnInSub.innerText = `Estimated stop time: ${estTime}s`;
+            if (window.ApexAudio) window.ApexAudio.playClick();
+          }
+
+          startPitInAutopilot(pBoxT, boxPos, tang);
         }
 
         const distToBox = playerKart.mesh.position.distanceTo(boxPos);
@@ -1347,7 +1375,7 @@
           rdShowMessage('PULL INTO PIT BOX // BRAKE & STOP', 0.2, '#10b981');
         }
 
-        if (isNearBox) {
+        if (isNearBox && !playerKart.isPitInAutopilot) {
           pitProgress = pBoxT;
           playerKart.mesh.position.copy(boxPos);
           playerKart.heading = Math.atan2(tang.x, tang.z);
@@ -1713,6 +1741,221 @@
       }
     } else {
       playerKart.qualifyingState = "OUT_LAP";
+    }
+  }
+
+  function startPitInAutopilot(pBoxT, targetBoxPos, targetTang) {
+    if (!playerKart) return;
+    playerKart.isPitInAutopilot = true;
+    playerKart.controlsEnabled = false;
+    playerKart.pitInLerp = 0.0;
+    playerKart.pitInStartPos = playerKart.mesh.position.clone();
+    playerKart.pitInStartHeading = playerKart.heading;
+    playerKart.pitInStartSpeed = Math.max(7.0, Math.min(20.0, playerKart.speed));
+    playerKart.pitInTargetPos = targetBoxPos.clone();
+    playerKart.pitInTargetHeading = Math.atan2(targetTang.x, targetTang.z);
+    playerKart.pBoxT = pBoxT;
+    
+    // Control points for cubic Bezier curve from fast lane into pit box
+    const startForward = new THREE.Vector3(Math.sin(playerKart.heading), 0, Math.cos(playerKart.heading)).normalize();
+    const targetForward = targetTang.clone().normalize();
+    
+    playerKart.pitInP0 = playerKart.pitInStartPos.clone();
+    playerKart.pitInP1 = playerKart.pitInStartPos.clone().add(startForward.multiplyScalar(4.5));
+    playerKart.pitInP2 = targetBoxPos.clone().sub(targetForward.clone().multiplyScalar(3.5));
+    playerKart.pitInP3 = targetBoxPos.clone();
+
+    // Remove green wall when touched / entered
+    if (window.turnInHologram) {
+      if (window.turnInHologram.arrows) {
+        window.turnInHologram.arrows.forEach(a => scene.remove(a));
+      }
+      scene.remove(window.turnInHologram);
+      window.turnInHologram = null;
+    }
+    
+    rdShowMessage('AUTOPILOT // GUIDING INTO PIT BOX', 1.5, '#10b981');
+  }
+  window.startPitInAutopilot = startPitInAutopilot;
+
+  function updatePitInAutopilot(delta) {
+    if (!playerKart || !playerKart.isPitInAutopilot) return;
+    
+    // Smooth progress over ~1.7 seconds
+    playerKart.pitInLerp = Math.min(1.0, playerKart.pitInLerp + delta * 0.58);
+    const u = playerKart.pitInLerp;
+    const s = u * u * (3 - 2 * u); // Smoothstep
+    
+    // Cubic Bezier interpolation: B(s) = (1-s)^3 P0 + 3(1-s)^2 s P1 + 3(1-s) s^2 P2 + s^3 P3
+    const om = 1 - s;
+    const c0 = om * om * om;
+    const c1 = 3 * om * om * s;
+    const c2 = 3 * om * s * s;
+    const c3 = s * s * s;
+    
+    const nextPos = new THREE.Vector3()
+      .addScaledVector(playerKart.pitInP0, c0)
+      .addScaledVector(playerKart.pitInP1, c1)
+      .addScaledVector(playerKart.pitInP2, c2)
+      .addScaledVector(playerKart.pitInP3, c3);
+
+    // Tangent along curve for heading
+    const d0 = 3 * om * om;
+    const d1 = 6 * om * s;
+    const d2 = 3 * s * s;
+    const v10 = playerKart.pitInP1.clone().sub(playerKart.pitInP0);
+    const v21 = playerKart.pitInP2.clone().sub(playerKart.pitInP1);
+    const v32 = playerKart.pitInP3.clone().sub(playerKart.pitInP2);
+    const curveTang = new THREE.Vector3()
+      .addScaledVector(v10, d0)
+      .addScaledVector(v21, d1)
+      .addScaledVector(v32, d2)
+      .normalize();
+
+    playerKart.mesh.position.copy(nextPos);
+    
+    const targetHeading = Math.atan2(curveTang.x, curveTang.z);
+    playerKart.heading = lerpHeading(playerKart.heading, targetHeading, delta * 14.0);
+    playerKart.mesh.rotation.y = playerKart.heading;
+    playerKart.mesh.rotation.x = 0;
+    playerKart.mesh.rotation.z = 0;
+
+    // Visual steering angle (front wheels turn into curve)
+    let steerDelta = (targetHeading - playerKart.heading);
+    steerDelta = (steerDelta + Math.PI * 3) % (Math.PI * 2) - Math.PI;
+    const steerAngle = THREE.MathUtils.clamp(steerDelta * 2.5, -0.42, 0.42);
+    if (playerKart.mesh.wheels && playerKart.mesh.wheels.length >= 2) {
+      playerKart.mesh.wheels[0].rotation.y = steerAngle;
+      playerKart.mesh.wheels[1].rotation.y = steerAngle;
+    }
+
+    // Decelerate speed smoothly to zero at the box
+    playerKart.speed = THREE.MathUtils.lerp(playerKart.pitInStartSpeed, 0.0, s);
+    
+    // Update pit progress
+    if (pitCurve) {
+      const pitProj = findNearestPitProjection(playerKart.mesh.position);
+      pitProgress = pitProj.progress;
+      playerKart.currentOffset = pitProj.progress;
+      playerKart.sideOffset = pitProj.lateralOffset;
+    }
+    
+    // Pit lane timer keeps ticking
+    const pitTimeVal = document.getElementById('hud-pit-time-val');
+    window.pitLaneTimer = (window.pitLaneTimer || 0.0) + delta;
+    if (pitTimeVal) pitTimeVal.innerText = `${window.pitLaneTimer.toFixed(1)}`;
+
+    if (u >= 1.0) {
+      playerKart.isPitInAutopilot = false;
+      playerKart.mesh.position.copy(playerKart.pitInTargetPos);
+      playerKart.heading = playerKart.pitInTargetHeading;
+      playerKart.mesh.rotation.y = playerKart.heading;
+      playerKart.speed = 0.0;
+      if (playerKart.mesh.wheels && playerKart.mesh.wheels.length >= 2) {
+        playerKart.mesh.wheels[0].rotation.y = 0.0;
+        playerKart.mesh.wheels[1].rotation.y = 0.0;
+      }
+      
+      const turnInPrompt = document.getElementById('hud-turnin-prompt');
+      if (turnInPrompt) {
+        turnInPrompt.classList.add('hidden');
+        turnInPrompt.style.display = 'none';
+      }
+      window.pitStopTime = 0.0;
+      
+      triggerPitStop();
+    }
+  }
+
+  window.startPitOutAutopilot = function() {
+    if (!pitCurve || !playerKart) return;
+    const totalBoxes = F1_TEAMS.length;
+    const pBoxT = 0.26 + (selectedTeamIndex + 0.5) * (0.74 - 0.26) / totalBoxes;
+    const exitFastLaneT = Math.min(0.86, pBoxT + 0.038);
+    
+    const exitPt = pitCurve.getPointAt(exitFastLaneT);
+    const exitTang = pitCurve.getTangentAt(exitFastLaneT).normalize();
+    
+    playerKart.isPitOutAutopilot = true;
+    playerKart.controlsEnabled = false;
+    playerKart.pitOutLerp = 0.0;
+    playerKart.pitOutStartPos = playerKart.mesh.position.clone();
+    
+    const startForward = new THREE.Vector3(Math.sin(playerKart.heading), 0, Math.cos(playerKart.heading)).normalize();
+    
+    playerKart.pitOutP0 = playerKart.pitOutStartPos.clone();
+    playerKart.pitOutP1 = playerKart.pitOutStartPos.clone().add(startForward.multiplyScalar(4.5));
+    playerKart.pitOutP2 = exitPt.clone().sub(exitTang.clone().multiplyScalar(4.0));
+    playerKart.pitOutP3 = exitPt.clone();
+    playerKart.pitOutTargetHeading = Math.atan2(exitTang.x, exitTang.z);
+    
+    rdShowMessage('PIT RELEASE // MERGING TO FAST LANE', 1.5, '#22c55e');
+  };
+
+  function updatePitOutAutopilot(delta) {
+    if (!playerKart || !playerKart.isPitOutAutopilot) return;
+    
+    playerKart.pitOutLerp = Math.min(1.0, playerKart.pitOutLerp + delta * 0.65);
+    const u = playerKart.pitOutLerp;
+    const s = u * u * (3 - 2 * u);
+    
+    const om = 1 - s;
+    const c0 = om * om * om;
+    const c1 = 3 * om * om * s;
+    const c2 = 3 * om * s * s;
+    const c3 = s * s * s;
+    
+    const nextPos = new THREE.Vector3()
+      .addScaledVector(playerKart.pitOutP0, c0)
+      .addScaledVector(playerKart.pitOutP1, c1)
+      .addScaledVector(playerKart.pitOutP2, c2)
+      .addScaledVector(playerKart.pitOutP3, c3);
+
+    const d0 = 3 * om * om;
+    const d1 = 6 * om * s;
+    const d2 = 3 * s * s;
+    const v10 = playerKart.pitOutP1.clone().sub(playerKart.pitOutP0);
+    const v21 = playerKart.pitOutP2.clone().sub(playerKart.pitOutP1);
+    const v32 = playerKart.pitOutP3.clone().sub(playerKart.pitOutP2);
+    const curveTang = new THREE.Vector3()
+      .addScaledVector(v10, d0)
+      .addScaledVector(v21, d1)
+      .addScaledVector(v32, d2)
+      .normalize();
+
+    playerKart.mesh.position.copy(nextPos);
+    
+    const targetHeading = Math.atan2(curveTang.x, curveTang.z);
+    playerKart.heading = lerpHeading(playerKart.heading, targetHeading, delta * 12.0);
+    playerKart.mesh.rotation.y = playerKart.heading;
+    playerKart.mesh.rotation.x = 0;
+    playerKart.mesh.rotation.z = 0;
+    
+    let steerDelta = (targetHeading - playerKart.heading);
+    steerDelta = (steerDelta + Math.PI * 3) % (Math.PI * 2) - Math.PI;
+    const steerAngle = THREE.MathUtils.clamp(steerDelta * 2.0, -0.35, 0.35);
+    if (playerKart.mesh.wheels && playerKart.mesh.wheels.length >= 2) {
+      playerKart.mesh.wheels[0].rotation.y = steerAngle;
+      playerKart.mesh.wheels[1].rotation.y = steerAngle;
+    }
+
+    // Accelerate up to 18 m/s (~65 km/h, well within pit limiter)
+    playerKart.speed = THREE.MathUtils.lerp(0.0, 18.0, s);
+    currentGear = 1;
+    
+    // Pit lane timer keeps updating
+    const pitTimeVal = document.getElementById('hud-pit-time-val');
+    window.pitLaneTimer = (window.pitLaneTimer || 0.0) + delta;
+    if (pitTimeVal) pitTimeVal.innerText = `${window.pitLaneTimer.toFixed(1)}`;
+
+    if (u >= 1.0) {
+      playerKart.isPitOutAutopilot = false;
+      playerKart.controlsEnabled = true;
+      if (playerKart.mesh.wheels && playerKart.mesh.wheels.length >= 2) {
+        playerKart.mesh.wheels[0].rotation.y = 0.0;
+        playerKart.mesh.wheels[1].rotation.y = 0.0;
+      }
+      speakEngineerRadio("Pit exit clear. Watch the white line on exit.", 60);
     }
   }
 

@@ -561,7 +561,9 @@
     }, 1800);
 
     document.getElementById('pit-prompt-text').innerText = "TYRES FITTED! GREEN LIGHT!";
-    if (playerKart) {
+    if (typeof window.startPitOutAutopilot === 'function') {
+      window.startPitOutAutopilot();
+    } else if (playerKart) {
       playerKart.boostTime = 0.0;
       playerKart.speed = 0.0;
       currentGear = 1; // 1st gear ready for launch
