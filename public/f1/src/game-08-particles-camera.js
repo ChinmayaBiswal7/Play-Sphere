@@ -69,7 +69,7 @@
     
     // Cinematic on-board rollout camera inside garage and exiting through doors (Zero Wall Clipping!)
     const inGarage = (playerKart.qualifyingState === "GARAGE");
-    const isExitingGarage = (playerKart.isExitingGarage && (playerKart.sideOffset === undefined || playerKart.sideOffset > 6.0));
+    const isExitingGarage = Boolean(playerKart.isExitingGarage || (playerKart.inPitLane && playerKart.sideOffset !== undefined && playerKart.sideOffset > 13.0));
 
     if ((inGarage || isExitingGarage) && pitCurve) {
       camera.up.set(0, 1, 0);

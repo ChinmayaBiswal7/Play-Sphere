@@ -442,24 +442,23 @@
       const totalBoxes = F1_TEAMS.length;
       const pBoxT = 0.26 + (selectedTeamIndex + 0.5) * (0.74 - 0.26) / totalBoxes;
       const tang = pitCurve.getTangentAt(pBoxT).normalize();
-      const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-      // Angle the car 45° towards pit exit direction so driving out into the fast lane is smooth and avoids opposite barrier
-      const exitDir = norm.clone().negate().add(tang.clone().multiplyScalar(0.95)).normalize();
+      // Keep car pointing straight forward out of garage portal onto apron (avoids wall clipping!)
+      const exitDir = norm.clone().negate().normalize();
       playerKart.heading = Math.atan2(exitDir.x, exitDir.z);
       playerKart.mesh.rotation.y = playerKart.heading;
     }
 
-    // Mechanics immediately clear the central bay by stepping back against the walls
+    // Mechanics immediately clear the bay by stepping back against the walls
     if (window.f1ActiveGarages) {
       window.f1ActiveGarages.forEach(g => {
         if (g.mechanics) {
           g.mechanics.forEach(m => {
             if (m.role === 'front_jack') {
-              m.position.x = 3.6;
+              m.position.x = -3.2;
               m.rotation.y = -Math.PI / 2;
-            } else {
-              const targetX = m.baseX > 0 ? (m.baseX + 2.5) : (m.baseX - 2.5);
-              m.position.x = targetX;
+            } else if (m.role === 'front_jack2') {
+              m.position.x = 3.2;
+              m.rotation.y = Math.PI / 2;
             }
           });
         }
@@ -506,7 +505,7 @@
       const pt = pitCurve.getPointAt(pBoxT);
       const tang = pitCurve.getTangentAt(pBoxT).normalize();
       const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-      playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(24.0)));
+      playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(21.5)).add(tang.clone().multiplyScalar(-5.25)));
       const exitDir = norm.clone().negate().normalize();
       playerKart.heading = Math.atan2(exitDir.x, exitDir.z);
       playerKart.mesh.rotation.set(0, playerKart.heading, 0);
@@ -1185,13 +1184,7 @@
 
       // If in Practice or Qualifying, tow back into garage bay
       if (currentSessionIndex === 0 || currentSessionIndex === 1) {
-        playerKart.qualifyingState = "GARAGE";
-        playerKart.inPitLane = true;
-        playerKart.hasDrivenOutThisSession = false;
-        playerKart.driveOutState = "IN_GARAGE";
-        if (typeof showGarageDriveOutUI === 'function') {
-          showGarageDriveOutUI();
-        }
+        window.returnToGarage();
       } else {
         // In Race, restart race cleanly
         window.restartCurrentSessionFromCrash();
@@ -3409,7 +3402,7 @@
         document.getElementById('garage-session-type').innerText = sessionTitles[currentSessionIndex] || "SESSION";
       }
 
-      // Position player at pit box
+      // Position player at pit box / garage
       playerKart.inPitLane = true;
       playerKart.pitZone = "PIT_BOX";
       playerKart.currentPath = "PIT";
@@ -3424,7 +3417,8 @@
         const pt = pitCurve.getPointAt(pBoxT);
         const tang = pitCurve.getTangentAt(pBoxT).normalize();
         const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-        playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(24.0)));
+        // Bay 1 (Left Bay): centered at -5.25m from garage center along tangent, 21.5m offset from pit curve
+        playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(21.5)).add(tang.clone().multiplyScalar(-5.25)));
         const exitDir = norm.clone().negate().normalize(); // points straight out of garage door towards pit road
         playerKart.heading = Math.atan2(exitDir.x, exitDir.z);
         playerKart.mesh.rotation.set(0, playerKart.heading, 0);
@@ -3443,7 +3437,8 @@
       playerKart.collisionEnabled = true;
       if (playerKart.mesh) playerKart.mesh.visible = true;
 
-      // Position AI racers at their respective pit boxes (GARAGE = physically inactive)
+      // Group non-player racers by teamIndex
+      const teamRacersMap = {};
       racers.forEach(r => {
         r.completedLaps = 0;
         r.finished = false;
@@ -3456,35 +3451,59 @@
         }
         
         if (r.isPlayer) return;
-        r.inPitLane = true;
-        r.pitZone = "PIT_BOX";
-        r.currentPath = "PIT";
-        const boxT = 0.30 + (r.teamIndex / Math.max(1, totalBoxes - 1)) * 0.40;
-        r.pitProgress = boxT;
-        if (pitCurve && r.mesh) {
+        const tIdx = (r.teamIndex !== undefined) ? r.teamIndex : 0;
+        if (!teamRacersMap[tIdx]) teamRacersMap[tIdx] = [];
+        teamRacersMap[tIdx].push(r);
+      });
+
+      // Position each constructor team's AI cars in Bay 1 & Bay 2 side-by-side
+      Object.keys(teamRacersMap).forEach(teamKey => {
+        const tIdx = parseInt(teamKey, 10);
+        const teamCars = teamRacersMap[tIdx];
+        const boxT = T_START + (tIdx + 0.5) * TEAM_STEP;
+
+        if (pitCurve) {
           const pt = pitCurve.getPointAt(boxT);
           const tang = pitCurve.getTangentAt(boxT).normalize();
           const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-          r.mesh.position.copy(pt.clone().add(norm.multiplyScalar(17.0)));
-          r.mesh.lookAt(pt.clone().add(tang));
-        }
-        r.qualifyingState  = "GARAGE";
-        r.speed            = 0.0;
-        if (typeof window.deactivateTrackCar === 'function') {
-          window.deactivateTrackCar(r);
-        } else {
-          r.isTrackActive    = false;
-          r.collisionEnabled = false;
-          if (r.mesh) r.mesh.visible = true;
-        }
-        r.currentOffset    = 0.0;
-        
-        if (currentSessionIndex === 1) {
-          r.qualifyingReleaseTime = 3.0 + Math.random() * 120.0;
-          r.qualifyingTimedLapsRemaining = 2 + Math.floor(Math.random() * 2);
-        } else {
-          r.qualifyingReleaseTime = 2.0 + Math.random() * 30.0;
-          r.qualifyingTimedLapsRemaining = 4 + Math.floor(Math.random() * 3);
+          const exitDir = norm.clone().negate().normalize();
+          const heading = Math.atan2(exitDir.x, exitDir.z);
+
+          teamCars.forEach((r, carIdx) => {
+            r.inPitLane = true;
+            r.pitZone = "PIT_BOX";
+            r.currentPath = "PIT";
+            r.pitProgress = boxT;
+
+            // If player's team, player is Car 1 (Bay 1: -5.25), so teammate is Car 2 (Bay 2: +5.25)
+            // For other teams: carIdx 0 is Car 1 (Bay 1: -5.25), carIdx 1 is Car 2 (Bay 2: +5.25)
+            const isPlayerTeam = (tIdx === selectedTeamIndex);
+            const bayLateral = isPlayerTeam ? 5.25 : (carIdx === 0 ? -5.25 : 5.25);
+
+            if (r.mesh) {
+              r.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(21.5)).add(tang.clone().multiplyScalar(bayLateral)));
+              r.mesh.rotation.set(0, heading, 0);
+            }
+
+            r.qualifyingState  = "GARAGE";
+            r.speed            = 0.0;
+            if (typeof window.deactivateTrackCar === 'function') {
+              window.deactivateTrackCar(r);
+            } else {
+              r.isTrackActive    = false;
+              r.collisionEnabled = false;
+              if (r.mesh) r.mesh.visible = true;
+            }
+            r.currentOffset    = 0.0;
+
+            if (currentSessionIndex === 1) {
+              r.qualifyingReleaseTime = 3.0 + Math.random() * 120.0;
+              r.qualifyingTimedLapsRemaining = 2 + Math.floor(Math.random() * 2);
+            } else {
+              r.qualifyingReleaseTime = 2.0 + Math.random() * 30.0;
+              r.qualifyingTimedLapsRemaining = 4 + Math.floor(Math.random() * 3);
+            }
+          });
         }
       });
     }
@@ -8368,18 +8387,18 @@
       playerKart.currentOffset = pitProj.progress; // keep synced for timing tower
       playerKart.sideOffset = pitProj.lateralOffset; // keep synced
 
-      // Clear garage exit flag once the car merges into the pit fast lane or gets up to speed
+      // Clear garage exit flag once the car reaches the open apron / pit box line (lateralOffset <= 12.0m)
       if (playerKart.isExitingGarage) {
-        if (Math.abs(pitProj.lateralOffset) < 5.5 || playerKart.speed > 4.0) {
+        if (pitProj.lateralOffset <= 12.0) {
           playerKart.isExitingGarage = false;
         }
       }
 
-      // Pit lane boundaries: Left pit wall at -6.8m, Right garage wall up to +32.0m (Ultra-spacious 38m corridor!)
+      // Pit lane boundaries: Left pit wall at -6.8m, Right garage wall up to +35.0m (Ultra-spacious 42m corridor!)
       if (!playerKart.isExitingGarage && playerKart.qualifyingState !== "GARAGE") {
         if (pitProj.lateralOffset < -6.8) {
           playerKart.speed = Math.max(0.0, playerKart.speed - delta * 12.0);
-        } else if (pitProj.lateralOffset > 32.0) {
+        } else if (pitProj.lateralOffset > 35.0) {
           playerKart.speed = Math.max(0.0, playerKart.speed - delta * 12.0);
         }
       }
@@ -10828,6 +10847,14 @@
       let defenceOffset = 0.0;
       let overtakeOffset = 0.0;
 
+      function getUpcomingTrackCurvature(offset) {
+        if (!trackCurve) return 0.0;
+        const t1 = trackCurve.getTangentAt(offset % 1.0).normalize();
+        const t2 = trackCurve.getTangentAt((offset + 0.016) % 1.0).normalize();
+        return (t1.x * t2.z - t1.z * t2.x);
+      }
+      const upcomingCurvature = getUpcomingTrackCurvature(racer.currentOffset);
+
       // We only run race tactical logic if not in pit, not in formation, and safety car is not active
       const inPit = racer.inPitLane || racer.isPitting;
       const isFormation = window.formationLapActive;
@@ -10969,14 +10996,6 @@
 
         const gapBehindMeters = gapBehind * 1800;
         const defenceRange = 36.0; // Defend when opponent closes within 36 meters
-
-        function getUpcomingTrackCurvature(offset) {
-          if (!trackCurve) return 0.0;
-          const t1 = trackCurve.getTangentAt(offset % 1.0).normalize();
-          const t2 = trackCurve.getTangentAt((offset + 0.016) % 1.0).normalize();
-          return (t1.x * t2.z - t1.z * t2.x);
-        }
-        const upcomingCurvature = getUpcomingTrackCurvature(racer.currentOffset);
 
         if (carBehind && gapBehindMeters < defenceRange && overtakeOffset === 0.0) {
           const now = clock.getElapsedTime();
@@ -11574,7 +11593,7 @@
     
     // Cinematic on-board rollout camera inside garage and exiting through doors (Zero Wall Clipping!)
     const inGarage = (playerKart.qualifyingState === "GARAGE");
-    const isExitingGarage = (playerKart.isExitingGarage && (playerKart.sideOffset === undefined || playerKart.sideOffset > 6.0));
+    const isExitingGarage = Boolean(playerKart.isExitingGarage || (playerKart.inPitLane && playerKart.sideOffset !== undefined && playerKart.sideOffset > 13.0));
 
     if ((inGarage || isExitingGarage) && pitCurve) {
       camera.up.set(0, 1, 0);

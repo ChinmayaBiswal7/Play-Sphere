@@ -434,24 +434,23 @@
       const totalBoxes = F1_TEAMS.length;
       const pBoxT = 0.26 + (selectedTeamIndex + 0.5) * (0.74 - 0.26) / totalBoxes;
       const tang = pitCurve.getTangentAt(pBoxT).normalize();
-      const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-      // Angle the car 45° towards pit exit direction so driving out into the fast lane is smooth and avoids opposite barrier
-      const exitDir = norm.clone().negate().add(tang.clone().multiplyScalar(0.95)).normalize();
+      // Keep car pointing straight forward out of garage portal onto apron (avoids wall clipping!)
+      const exitDir = norm.clone().negate().normalize();
       playerKart.heading = Math.atan2(exitDir.x, exitDir.z);
       playerKart.mesh.rotation.y = playerKart.heading;
     }
 
-    // Mechanics immediately clear the central bay by stepping back against the walls
+    // Mechanics immediately clear the bay by stepping back against the walls
     if (window.f1ActiveGarages) {
       window.f1ActiveGarages.forEach(g => {
         if (g.mechanics) {
           g.mechanics.forEach(m => {
             if (m.role === 'front_jack') {
-              m.position.x = 3.6;
+              m.position.x = -3.2;
               m.rotation.y = -Math.PI / 2;
-            } else {
-              const targetX = m.baseX > 0 ? (m.baseX + 2.5) : (m.baseX - 2.5);
-              m.position.x = targetX;
+            } else if (m.role === 'front_jack2') {
+              m.position.x = 3.2;
+              m.rotation.y = Math.PI / 2;
             }
           });
         }
@@ -498,7 +497,7 @@
       const pt = pitCurve.getPointAt(pBoxT);
       const tang = pitCurve.getTangentAt(pBoxT).normalize();
       const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-      playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(24.0)));
+      playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(21.5)).add(tang.clone().multiplyScalar(-5.25)));
       const exitDir = norm.clone().negate().normalize();
       playerKart.heading = Math.atan2(exitDir.x, exitDir.z);
       playerKart.mesh.rotation.set(0, playerKart.heading, 0);
@@ -1177,13 +1176,7 @@
 
       // If in Practice or Qualifying, tow back into garage bay
       if (currentSessionIndex === 0 || currentSessionIndex === 1) {
-        playerKart.qualifyingState = "GARAGE";
-        playerKart.inPitLane = true;
-        playerKart.hasDrivenOutThisSession = false;
-        playerKart.driveOutState = "IN_GARAGE";
-        if (typeof showGarageDriveOutUI === 'function') {
-          showGarageDriveOutUI();
-        }
+        window.returnToGarage();
       } else {
         // In Race, restart race cleanly
         window.restartCurrentSessionFromCrash();

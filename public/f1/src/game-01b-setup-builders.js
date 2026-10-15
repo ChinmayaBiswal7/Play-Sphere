@@ -287,7 +287,7 @@
         document.getElementById('garage-session-type').innerText = sessionTitles[currentSessionIndex] || "SESSION";
       }
 
-      // Position player at pit box
+      // Position player at pit box / garage
       playerKart.inPitLane = true;
       playerKart.pitZone = "PIT_BOX";
       playerKart.currentPath = "PIT";
@@ -302,7 +302,8 @@
         const pt = pitCurve.getPointAt(pBoxT);
         const tang = pitCurve.getTangentAt(pBoxT).normalize();
         const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-        playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(24.0)));
+        // Bay 1 (Left Bay): centered at -5.25m from garage center along tangent, 21.5m offset from pit curve
+        playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(21.5)).add(tang.clone().multiplyScalar(-5.25)));
         const exitDir = norm.clone().negate().normalize(); // points straight out of garage door towards pit road
         playerKart.heading = Math.atan2(exitDir.x, exitDir.z);
         playerKart.mesh.rotation.set(0, playerKart.heading, 0);
@@ -321,7 +322,8 @@
       playerKart.collisionEnabled = true;
       if (playerKart.mesh) playerKart.mesh.visible = true;
 
-      // Position AI racers at their respective pit boxes (GARAGE = physically inactive)
+      // Group non-player racers by teamIndex
+      const teamRacersMap = {};
       racers.forEach(r => {
         r.completedLaps = 0;
         r.finished = false;
@@ -334,35 +336,59 @@
         }
         
         if (r.isPlayer) return;
-        r.inPitLane = true;
-        r.pitZone = "PIT_BOX";
-        r.currentPath = "PIT";
-        const boxT = 0.30 + (r.teamIndex / Math.max(1, totalBoxes - 1)) * 0.40;
-        r.pitProgress = boxT;
-        if (pitCurve && r.mesh) {
+        const tIdx = (r.teamIndex !== undefined) ? r.teamIndex : 0;
+        if (!teamRacersMap[tIdx]) teamRacersMap[tIdx] = [];
+        teamRacersMap[tIdx].push(r);
+      });
+
+      // Position each constructor team's AI cars in Bay 1 & Bay 2 side-by-side
+      Object.keys(teamRacersMap).forEach(teamKey => {
+        const tIdx = parseInt(teamKey, 10);
+        const teamCars = teamRacersMap[tIdx];
+        const boxT = T_START + (tIdx + 0.5) * TEAM_STEP;
+
+        if (pitCurve) {
           const pt = pitCurve.getPointAt(boxT);
           const tang = pitCurve.getTangentAt(boxT).normalize();
           const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-          r.mesh.position.copy(pt.clone().add(norm.multiplyScalar(17.0)));
-          r.mesh.lookAt(pt.clone().add(tang));
-        }
-        r.qualifyingState  = "GARAGE";
-        r.speed            = 0.0;
-        if (typeof window.deactivateTrackCar === 'function') {
-          window.deactivateTrackCar(r);
-        } else {
-          r.isTrackActive    = false;
-          r.collisionEnabled = false;
-          if (r.mesh) r.mesh.visible = true;
-        }
-        r.currentOffset    = 0.0;
-        
-        if (currentSessionIndex === 1) {
-          r.qualifyingReleaseTime = 3.0 + Math.random() * 120.0;
-          r.qualifyingTimedLapsRemaining = 2 + Math.floor(Math.random() * 2);
-        } else {
-          r.qualifyingReleaseTime = 2.0 + Math.random() * 30.0;
-          r.qualifyingTimedLapsRemaining = 4 + Math.floor(Math.random() * 3);
+          const exitDir = norm.clone().negate().normalize();
+          const heading = Math.atan2(exitDir.x, exitDir.z);
+
+          teamCars.forEach((r, carIdx) => {
+            r.inPitLane = true;
+            r.pitZone = "PIT_BOX";
+            r.currentPath = "PIT";
+            r.pitProgress = boxT;
+
+            // If player's team, player is Car 1 (Bay 1: -5.25), so teammate is Car 2 (Bay 2: +5.25)
+            // For other teams: carIdx 0 is Car 1 (Bay 1: -5.25), carIdx 1 is Car 2 (Bay 2: +5.25)
+            const isPlayerTeam = (tIdx === selectedTeamIndex);
+            const bayLateral = isPlayerTeam ? 5.25 : (carIdx === 0 ? -5.25 : 5.25);
+
+            if (r.mesh) {
+              r.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(21.5)).add(tang.clone().multiplyScalar(bayLateral)));
+              r.mesh.rotation.set(0, heading, 0);
+            }
+
+            r.qualifyingState  = "GARAGE";
+            r.speed            = 0.0;
+            if (typeof window.deactivateTrackCar === 'function') {
+              window.deactivateTrackCar(r);
+            } else {
+              r.isTrackActive    = false;
+              r.collisionEnabled = false;
+              if (r.mesh) r.mesh.visible = true;
+            }
+            r.currentOffset    = 0.0;
+
+            if (currentSessionIndex === 1) {
+              r.qualifyingReleaseTime = 3.0 + Math.random() * 120.0;
+              r.qualifyingTimedLapsRemaining = 2 + Math.floor(Math.random() * 2);
+            } else {
+              r.qualifyingReleaseTime = 2.0 + Math.random() * 30.0;
+              r.qualifyingTimedLapsRemaining = 4 + Math.floor(Math.random() * 3);
+            }
+          });
         }
       });
     }

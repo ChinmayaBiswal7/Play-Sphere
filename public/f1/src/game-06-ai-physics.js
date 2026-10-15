@@ -1485,6 +1485,14 @@
       let defenceOffset = 0.0;
       let overtakeOffset = 0.0;
 
+      function getUpcomingTrackCurvature(offset) {
+        if (!trackCurve) return 0.0;
+        const t1 = trackCurve.getTangentAt(offset % 1.0).normalize();
+        const t2 = trackCurve.getTangentAt((offset + 0.016) % 1.0).normalize();
+        return (t1.x * t2.z - t1.z * t2.x);
+      }
+      const upcomingCurvature = getUpcomingTrackCurvature(racer.currentOffset);
+
       // We only run race tactical logic if not in pit, not in formation, and safety car is not active
       const inPit = racer.inPitLane || racer.isPitting;
       const isFormation = window.formationLapActive;
@@ -1626,14 +1634,6 @@
 
         const gapBehindMeters = gapBehind * 1800;
         const defenceRange = 36.0; // Defend when opponent closes within 36 meters
-
-        function getUpcomingTrackCurvature(offset) {
-          if (!trackCurve) return 0.0;
-          const t1 = trackCurve.getTangentAt(offset % 1.0).normalize();
-          const t2 = trackCurve.getTangentAt((offset + 0.016) % 1.0).normalize();
-          return (t1.x * t2.z - t1.z * t2.x);
-        }
-        const upcomingCurvature = getUpcomingTrackCurvature(racer.currentOffset);
 
         if (carBehind && gapBehindMeters < defenceRange && overtakeOffset === 0.0) {
           const now = clock.getElapsedTime();

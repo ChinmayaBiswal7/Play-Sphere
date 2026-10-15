@@ -1362,18 +1362,18 @@
       playerKart.currentOffset = pitProj.progress; // keep synced for timing tower
       playerKart.sideOffset = pitProj.lateralOffset; // keep synced
 
-      // Clear garage exit flag once the car merges into the pit fast lane or gets up to speed
+      // Clear garage exit flag once the car reaches the open apron / pit box line (lateralOffset <= 12.0m)
       if (playerKart.isExitingGarage) {
-        if (Math.abs(pitProj.lateralOffset) < 5.5 || playerKart.speed > 4.0) {
+        if (pitProj.lateralOffset <= 12.0) {
           playerKart.isExitingGarage = false;
         }
       }
 
-      // Pit lane boundaries: Left pit wall at -6.8m, Right garage wall up to +32.0m (Ultra-spacious 38m corridor!)
+      // Pit lane boundaries: Left pit wall at -6.8m, Right garage wall up to +35.0m (Ultra-spacious 42m corridor!)
       if (!playerKart.isExitingGarage && playerKart.qualifyingState !== "GARAGE") {
         if (pitProj.lateralOffset < -6.8) {
           playerKart.speed = Math.max(0.0, playerKart.speed - delta * 12.0);
-        } else if (pitProj.lateralOffset > 32.0) {
+        } else if (pitProj.lateralOffset > 35.0) {
           playerKart.speed = Math.max(0.0, playerKart.speed - delta * 12.0);
         }
       }
