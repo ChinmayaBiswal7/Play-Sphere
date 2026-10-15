@@ -1,11 +1,7 @@
   function getSignedTrackGap(carA, carB) {
-
     const diff = carB.currentOffset - carA.currentOffset;
-
-    const normDiff = ((diff + 0.5) % 1.0) - 0.5;
-
+    const normDiff = (((diff + 0.5) % 1.0 + 1.0) % 1.0) - 0.5;
     return normDiff * 1800.0;
-
   }
 
   function getNearbyCars(car, range) {
@@ -650,12 +646,21 @@
 
       let target = calculateAIPace(racer, baseSpeed);
 
+      if (!racer.aiStyle) {
+        const idx = racers.indexOf(racer);
+        const agg = 0.55 + ((idx * 7) % 38) / 100; // range 0.55 to 0.92
+        const def = 0.50 + ((idx * 11) % 41) / 100; // range 0.50 to 0.90
+        const con = 0.70 + ((idx * 13) % 27) / 100; // range 0.70 to 0.96
+        racer.aiStyle = { aggression: agg, defence: def, consistency: con };
+      }
+      const aggression = racer.aiStyle.aggression;
+      const paceMultiplier = 0.98 + aggression * 0.08;
+      target *= paceMultiplier;
+
       if (racer.tyreLife === undefined) racer.tyreLife = 100.0;
 
       if (racer.tyreLife < 35.0 && (maxLaps - racer.completedLaps >= 1)) {
-
         racer.willPitThisLap = true;
-
       }
 
       target *= getTyreGripMultiplier(racer);
@@ -1018,28 +1023,39 @@
               target = Math.min(target, 35.0);
             }
           } else {
-            // Normal dynamic following and collision avoidance
-            const pred = predictCollision(racer, closestAhead);
-            const risk = getCollisionRisk(pred);
+            // Authentic F1 Racecraft: Dynamic following, slipstream tow, and overtaking
+            // 1. Slipstream (Tow Boost) on straights & open track
+            if (minGapAhead > 4.5 && minGapAhead < 42.0) {
+              const towStrength = (1.0 - minGapAhead / 42.0) * 0.09;
+              target *= (1.0 + towStrength); // Up to +9% top speed boost in tow!
 
-            if (risk === "CAUTION") {
-              target = Math.min(target, closestAhead.speed * 0.98);
-            } else if (risk === "HIGH") {
-              target = Math.min(target, closestAhead.speed * 0.88);
-              if (racer.avoidanceCommitTimer === undefined) racer.avoidanceCommitTimer = 0.0;
-              if (racer.avoidanceSide === undefined || racer.avoidanceSide === "NONE") {
-                racer.avoidanceSide = (closestAhead.sideOffset > 0) ? "LEFT" : "RIGHT";
-                racer.avoidanceCommitTimer = 0.8;
+              // Trigger overtake mode & aggressive ERS deployment
+              if (minGapAhead < 30.0) {
+                racer.overtakeModeActive = true;
+                racer.ersPower = 1.0;
               }
-              avoidanceOffset = racer.avoidanceSide === "LEFT" ? -2.2 : 2.2;
-            } else if (risk === "EMERGENCY") {
-              target = Math.min(target, closestAhead.speed * 0.70);
-              emergencyBrake = true;
-              if (racer.avoidanceCommitTimer === undefined || racer.avoidanceSide === "NONE") {
-                racer.avoidanceSide = (closestAhead.sideOffset > 0) ? "LEFT" : "RIGHT";
-                racer.avoidanceCommitTimer = 0.8;
+            }
+
+            // 2. Decisive Overtake Lane Selection
+            if (minGapAhead < 32.0) {
+              if (racer.avoidanceCommitTimer === undefined) racer.avoidanceCommitTimer = 0.0;
+              if (racer.avoidanceSide === undefined || racer.avoidanceSide === "NONE" || racer.avoidanceCommitTimer <= 0.0) {
+                // Steer decisively to whichever side has more room (or inside line)
+                racer.avoidanceSide = (closestAhead.sideOffset >= 0.0) ? "LEFT" : "RIGHT";
+                racer.avoidanceCommitTimer = 1.4;
               }
               avoidanceOffset = racer.avoidanceSide === "LEFT" ? -3.8 : 3.8;
+            }
+
+            // 3. Speed Regulation: ONLY brake if directly blocked in same lateral lane (< 1.6m) and < 4.5m gap
+            if (latDiff < 1.6) {
+              if (minGapAhead < 4.0) {
+                // Too close to car directly ahead: match speed smoothly
+                target = Math.min(target, closestAhead.speed * 0.95);
+                emergencyBrake = true;
+              } else if (minGapAhead < 7.5 && racer.speed > closestAhead.speed) {
+                target = Math.min(target, closestAhead.speed * 0.99);
+              }
             }
           }
 
@@ -1456,26 +1472,9 @@
       }
 
             // ── ADVANCED RACING LINE, DEFENDING, OVERTAKING & PREDICITIVE COLLISION AVOIDANCE ──
-      // B2: Simple persistent driver style
-      if (!racer.aiStyle) {
-        const idx = racers.indexOf(racer);
-        const agg = 0.55 + ((idx * 7) % 38) / 100; // range 0.55 to 0.92
-        const def = 0.50 + ((idx * 11) % 41) / 100; // range 0.50 to 0.90
-        const con = 0.70 + ((idx * 13) % 27) / 100; // range 0.70 to 0.96
-        racer.aiStyle = {
-          aggression: agg,
-          defence: def,
-          consistency: con
-        };
-      }
-
-      const aggression = racer.aiStyle.aggression;
-      const defenceSkill = racer.aiStyle.defence;
-
-      // B3: Competitive pace multiplier (target speed)
-      // Base pace calculation is already done at the top of updateAIPysics: target = calculateAIPace(racer, baseSpeed)
-      const paceMultiplier = 0.97 + aggression * 0.06;
-      target *= paceMultiplier;
+      // B2: Persistent driver style
+      const aggression = racer.aiStyle ? racer.aiStyle.aggression : 0.75;
+      const defenceSkill = racer.aiStyle ? racer.aiStyle.defence : 0.70;
 
       // Clamp target speed using existing limits
       const maxLimit = racer.boostTime > 0.0 ? baseSpeed * 1.35 : baseSpeed * 1.15;

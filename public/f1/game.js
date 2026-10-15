@@ -505,7 +505,7 @@
       const pt = pitCurve.getPointAt(pBoxT);
       const tang = pitCurve.getTangentAt(pBoxT).normalize();
       const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-      playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(21.5)).add(tang.clone().multiplyScalar(-5.25)));
+      playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(19.5)).add(tang.clone().multiplyScalar(-6.0)));
       const exitDir = norm.clone().negate().normalize();
       playerKart.heading = Math.atan2(exitDir.x, exitDir.z);
       playerKart.mesh.rotation.set(0, playerKart.heading, 0);
@@ -3417,8 +3417,8 @@
         const pt = pitCurve.getPointAt(pBoxT);
         const tang = pitCurve.getTangentAt(pBoxT).normalize();
         const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-        // Bay 1 (Left Bay): centered at -5.25m from garage center along tangent, 21.5m offset from pit curve
-        playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(21.5)).add(tang.clone().multiplyScalar(-5.25)));
+        // Bay 1 (Left Bay): centered at -6.0m from garage center along tangent, 19.5m offset from pit curve
+        playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(19.5)).add(tang.clone().multiplyScalar(-6.0)));
         const exitDir = norm.clone().negate().normalize(); // points straight out of garage door towards pit road
         playerKart.heading = Math.atan2(exitDir.x, exitDir.z);
         playerKart.mesh.rotation.set(0, playerKart.heading, 0);
@@ -3475,13 +3475,13 @@
             r.currentPath = "PIT";
             r.pitProgress = boxT;
 
-            // If player's team, player is Car 1 (Bay 1: -5.25), so teammate is Car 2 (Bay 2: +5.25)
-            // For other teams: carIdx 0 is Car 1 (Bay 1: -5.25), carIdx 1 is Car 2 (Bay 2: +5.25)
+            // If player's team, player is Car 1 (Bay 1: -6.0), so teammate is Car 2 (Bay 2: +6.0)
+            // For other teams: carIdx 0 is Car 1 (Bay 1: -6.0), carIdx 1 is Car 2 (Bay 2: +6.0)
             const isPlayerTeam = (tIdx === selectedTeamIndex);
-            const bayLateral = isPlayerTeam ? 5.25 : (carIdx === 0 ? -5.25 : 5.25);
+            const bayLateral = isPlayerTeam ? 6.0 : (carIdx === 0 ? -6.0 : 6.0);
 
             if (r.mesh) {
-              r.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(21.5)).add(tang.clone().multiplyScalar(bayLateral)));
+              r.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(19.5)).add(tang.clone().multiplyScalar(bayLateral)));
               r.mesh.rotation.set(0, heading, 0);
             }
 
@@ -9361,13 +9361,9 @@
 
 // ═══ game-06-ai-physics.js ═══
   function getSignedTrackGap(carA, carB) {
-
     const diff = carB.currentOffset - carA.currentOffset;
-
-    const normDiff = ((diff + 0.5) % 1.0) - 0.5;
-
+    const normDiff = (((diff + 0.5) % 1.0 + 1.0) % 1.0) - 0.5;
     return normDiff * 1800.0;
-
   }
 
   function getNearbyCars(car, range) {
@@ -10012,12 +10008,21 @@
 
       let target = calculateAIPace(racer, baseSpeed);
 
+      if (!racer.aiStyle) {
+        const idx = racers.indexOf(racer);
+        const agg = 0.55 + ((idx * 7) % 38) / 100; // range 0.55 to 0.92
+        const def = 0.50 + ((idx * 11) % 41) / 100; // range 0.50 to 0.90
+        const con = 0.70 + ((idx * 13) % 27) / 100; // range 0.70 to 0.96
+        racer.aiStyle = { aggression: agg, defence: def, consistency: con };
+      }
+      const aggression = racer.aiStyle.aggression;
+      const paceMultiplier = 0.98 + aggression * 0.08;
+      target *= paceMultiplier;
+
       if (racer.tyreLife === undefined) racer.tyreLife = 100.0;
 
       if (racer.tyreLife < 35.0 && (maxLaps - racer.completedLaps >= 1)) {
-
         racer.willPitThisLap = true;
-
       }
 
       target *= getTyreGripMultiplier(racer);
@@ -10380,28 +10385,39 @@
               target = Math.min(target, 35.0);
             }
           } else {
-            // Normal dynamic following and collision avoidance
-            const pred = predictCollision(racer, closestAhead);
-            const risk = getCollisionRisk(pred);
+            // Authentic F1 Racecraft: Dynamic following, slipstream tow, and overtaking
+            // 1. Slipstream (Tow Boost) on straights & open track
+            if (minGapAhead > 4.5 && minGapAhead < 42.0) {
+              const towStrength = (1.0 - minGapAhead / 42.0) * 0.09;
+              target *= (1.0 + towStrength); // Up to +9% top speed boost in tow!
 
-            if (risk === "CAUTION") {
-              target = Math.min(target, closestAhead.speed * 0.98);
-            } else if (risk === "HIGH") {
-              target = Math.min(target, closestAhead.speed * 0.88);
-              if (racer.avoidanceCommitTimer === undefined) racer.avoidanceCommitTimer = 0.0;
-              if (racer.avoidanceSide === undefined || racer.avoidanceSide === "NONE") {
-                racer.avoidanceSide = (closestAhead.sideOffset > 0) ? "LEFT" : "RIGHT";
-                racer.avoidanceCommitTimer = 0.8;
+              // Trigger overtake mode & aggressive ERS deployment
+              if (minGapAhead < 30.0) {
+                racer.overtakeModeActive = true;
+                racer.ersPower = 1.0;
               }
-              avoidanceOffset = racer.avoidanceSide === "LEFT" ? -2.2 : 2.2;
-            } else if (risk === "EMERGENCY") {
-              target = Math.min(target, closestAhead.speed * 0.70);
-              emergencyBrake = true;
-              if (racer.avoidanceCommitTimer === undefined || racer.avoidanceSide === "NONE") {
-                racer.avoidanceSide = (closestAhead.sideOffset > 0) ? "LEFT" : "RIGHT";
-                racer.avoidanceCommitTimer = 0.8;
+            }
+
+            // 2. Decisive Overtake Lane Selection
+            if (minGapAhead < 32.0) {
+              if (racer.avoidanceCommitTimer === undefined) racer.avoidanceCommitTimer = 0.0;
+              if (racer.avoidanceSide === undefined || racer.avoidanceSide === "NONE" || racer.avoidanceCommitTimer <= 0.0) {
+                // Steer decisively to whichever side has more room (or inside line)
+                racer.avoidanceSide = (closestAhead.sideOffset >= 0.0) ? "LEFT" : "RIGHT";
+                racer.avoidanceCommitTimer = 1.4;
               }
               avoidanceOffset = racer.avoidanceSide === "LEFT" ? -3.8 : 3.8;
+            }
+
+            // 3. Speed Regulation: ONLY brake if directly blocked in same lateral lane (< 1.6m) and < 4.5m gap
+            if (latDiff < 1.6) {
+              if (minGapAhead < 4.0) {
+                // Too close to car directly ahead: match speed smoothly
+                target = Math.min(target, closestAhead.speed * 0.95);
+                emergencyBrake = true;
+              } else if (minGapAhead < 7.5 && racer.speed > closestAhead.speed) {
+                target = Math.min(target, closestAhead.speed * 0.99);
+              }
             }
           }
 
@@ -10818,26 +10834,9 @@
       }
 
             // ── ADVANCED RACING LINE, DEFENDING, OVERTAKING & PREDICITIVE COLLISION AVOIDANCE ──
-      // B2: Simple persistent driver style
-      if (!racer.aiStyle) {
-        const idx = racers.indexOf(racer);
-        const agg = 0.55 + ((idx * 7) % 38) / 100; // range 0.55 to 0.92
-        const def = 0.50 + ((idx * 11) % 41) / 100; // range 0.50 to 0.90
-        const con = 0.70 + ((idx * 13) % 27) / 100; // range 0.70 to 0.96
-        racer.aiStyle = {
-          aggression: agg,
-          defence: def,
-          consistency: con
-        };
-      }
-
-      const aggression = racer.aiStyle.aggression;
-      const defenceSkill = racer.aiStyle.defence;
-
-      // B3: Competitive pace multiplier (target speed)
-      // Base pace calculation is already done at the top of updateAIPysics: target = calculateAIPace(racer, baseSpeed)
-      const paceMultiplier = 0.97 + aggression * 0.06;
-      target *= paceMultiplier;
+      // B2: Persistent driver style
+      const aggression = racer.aiStyle ? racer.aiStyle.aggression : 0.75;
+      const defenceSkill = racer.aiStyle ? racer.aiStyle.defence : 0.70;
 
       // Clamp target speed using existing limits
       const maxLimit = racer.boostTime > 0.0 ? baseSpeed * 1.35 : baseSpeed * 1.15;
@@ -11202,51 +11201,76 @@
         const posJ = racerJ.mesh.position;
         const dist3D = posI.distanceTo(posJ);
 
-        // Center-to-center collision distance for authentic F1 cars (length ~4.8m, width ~1.9m)
-        const minCollDist = 3.4;
-        if (dist3D < minCollDist) {
-          // 1. Calculate horizontal separating push vector
-          const pushVec = new THREE.Vector3().subVectors(posI, posJ);
-          let len = pushVec.length();
-          if (len < 0.001) {
-            pushVec.set(0.1, 0, 0.1);
-            len = pushVec.length();
-          }
-          pushVec.y = 0;
-          pushVec.normalize();
+        // Authentic Oriented Bounding Box collision for F1 cars (Length 4.8m, Width 2.1m)
+        let tang = new THREE.Vector3(0, 0, 1);
+        let norm = new THREE.Vector3(1, 0, 0);
+        if (trackCurve) {
+          const trackT = racerI.currentOffset !== undefined ? racerI.currentOffset : 0.0;
+          tang = trackCurve.getTangentAt(trackT % 1.0).normalize();
+          norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
+        }
 
-          const overlap = minCollDist - len;
+        const deltaPos = posI.clone().sub(posJ);
+        deltaPos.y = 0; // horizontal collision plane
+        const longDist = deltaPos.dot(tang); // longitudinal separation along track (+ = I ahead, - = J ahead)
+        const latDist = deltaPos.dot(norm);   // lateral separation across track
 
-          // Push both cars apart in 3D world space
-          if (racerI.isPlayer) {
-            posI.addScaledVector(pushVec, overlap * 0.55);
-            posJ.addScaledVector(pushVec, -overlap * 0.45);
-          } else if (racerJ.isPlayer) {
-            posI.addScaledVector(pushVec, overlap * 0.45);
-            posJ.addScaledVector(pushVec, -overlap * 0.55);
+        const CAR_LENGTH = 4.8;
+        const CAR_WIDTH = 2.1;
+
+        if (Math.abs(longDist) < CAR_LENGTH && Math.abs(latDist) < CAR_WIDTH) {
+          const longOverlap = CAR_LENGTH - Math.abs(longDist);
+          const latOverlap = CAR_WIDTH - Math.abs(latDist);
+
+          const isRearEnd = (Math.abs(latDist) < 1.7) || (longOverlap < latOverlap * 1.5);
+          const leadingCar = (longDist >= 0) ? racerI : racerJ;
+          const trailingCar = (longDist >= 0) ? racerJ : racerI;
+
+          // 1. SOLID PHYSICAL SEPARATION (Cars CANNOT pass inside each other!)
+          if (isRearEnd) {
+            // Trailing car is physically blocked from passing through leading car
+            const pushDir = (longDist >= 0) ? -1 : 1;
+            if (trailingCar.isPlayer) {
+              playerKart.mesh.position.addScaledVector(tang, pushDir * longOverlap * 1.05);
+              playerKart.speed = Math.min(playerKart.speed, leadingCar.speed * 0.70);
+            } else {
+              trailingCar.currentOffset += (pushDir * longOverlap * 1.05) / 1800.0;
+              trailingCar.speed = Math.min(trailingCar.speed, leadingCar.speed * 0.70);
+              if (trailingCar.mesh) trailingCar.mesh.position.addScaledVector(tang, pushDir * longOverlap * 1.05);
+            }
+
+            // Leading car gets a bump impulse forward
+            leadingCar.speed = Math.max(leadingCar.speed, leadingCar.speed + 3.2);
           } else {
-            posI.addScaledVector(pushVec, overlap * 0.50);
-            posJ.addScaledVector(pushVec, -overlap * 0.50);
+            // Side-by-side wheel banging: bounce laterally apart along track normal
+            const sidePushI = latDist >= 0 ? 1 : -1;
+            const sidePushJ = -sidePushI;
+
+            if (racerI.isPlayer) {
+              playerKart.mesh.position.addScaledVector(norm, sidePushI * latOverlap * 0.65);
+              playerKart.sideOffset = (playerKart.sideOffset || 0) + sidePushI * latOverlap * 0.65;
+            } else {
+              racerI.sideOffset = (racerI.sideOffset || 0) + sidePushI * latOverlap * 0.65;
+              racerI.targetSideOffset = racerI.sideOffset;
+              if (racerI.mesh) racerI.mesh.position.addScaledVector(norm, sidePushI * latOverlap * 0.65);
+            }
+
+            if (racerJ.isPlayer) {
+              playerKart.mesh.position.addScaledVector(norm, sidePushJ * latOverlap * 0.65);
+              playerKart.sideOffset = (playerKart.sideOffset || 0) + sidePushJ * latOverlap * 0.65;
+            } else {
+              racerJ.sideOffset = (racerJ.sideOffset || 0) + sidePushJ * latOverlap * 0.65;
+              racerJ.targetSideOffset = racerJ.sideOffset;
+              if (racerJ.mesh) racerJ.mesh.position.addScaledVector(norm, sidePushJ * latOverlap * 0.65);
+            }
           }
 
-          // Push side offsets apart so AI steering lines react
-          const latDiff = (racerI.sideOffset || 0) - (racerJ.sideOffset || 0);
-          const pushSide = latDiff >= 0 ? 1 : -1;
-          if (racerI.sideOffset !== undefined) racerI.sideOffset += pushSide * overlap * 0.4;
-          if (racerJ.sideOffset !== undefined) racerJ.sideOffset -= pushSide * overlap * 0.4;
-          if (!racerI.isPlayer) racerI.targetSideOffset = racerI.sideOffset;
-          if (!racerJ.isPlayer) racerJ.targetSideOffset = racerJ.sideOffset;
-
-          // 2. Elastic speed exchange and impact force
+          // 2. Realistic Speed Exchange & Crash Impulse
           const speedDiff = racerI.speed - racerJ.speed;
-          const impact = Math.max(Math.abs(speedDiff), overlap * 7.5);
-
-          const impulse = speedDiff * 0.45;
-          racerI.speed = Math.max(2.0, racerI.speed - impulse);
-          racerJ.speed = Math.max(2.0, racerJ.speed + impulse * 0.6);
+          const impact = Math.max(Math.abs(speedDiff), Math.max(longOverlap, latOverlap) * 8.5);
 
           // 3. F1 Component Damage Accumulation
-          const addedDamage = Math.max(2.5, impact * 1.35);
+          const addedDamage = Math.max(3.5, impact * 1.45);
           racerI.damage = Math.min(100.0, (racerI.damage || 0.0) + addedDamage);
           racerJ.damage = Math.min(100.0, (racerJ.damage || 0.0) + addedDamage);
 
@@ -11254,14 +11278,14 @@
             carDamage = racerI.damage;
             updateDamageHUD();
             if (typeof window.triggerGamepadRumble === 'function') {
-              window.triggerGamepadRumble(120, 0.7, 0.4);
+              window.triggerGamepadRumble(160, 0.85, 0.6);
             }
           }
           if (racerJ.isPlayer) {
             carDamage = racerJ.damage;
             updateDamageHUD();
             if (typeof window.triggerGamepadRumble === 'function') {
-              window.triggerGamepadRumble(120, 0.7, 0.4);
+              window.triggerGamepadRumble(160, 0.85, 0.6);
             }
           }
 

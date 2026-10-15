@@ -302,8 +302,8 @@
         const pt = pitCurve.getPointAt(pBoxT);
         const tang = pitCurve.getTangentAt(pBoxT).normalize();
         const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-        // Bay 1 (Left Bay): centered at -5.25m from garage center along tangent, 21.5m offset from pit curve
-        playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(21.5)).add(tang.clone().multiplyScalar(-5.25)));
+        // Bay 1 (Left Bay): centered at -6.0m from garage center along tangent, 19.5m offset from pit curve
+        playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(19.5)).add(tang.clone().multiplyScalar(-6.0)));
         const exitDir = norm.clone().negate().normalize(); // points straight out of garage door towards pit road
         playerKart.heading = Math.atan2(exitDir.x, exitDir.z);
         playerKart.mesh.rotation.set(0, playerKart.heading, 0);
@@ -360,13 +360,13 @@
             r.currentPath = "PIT";
             r.pitProgress = boxT;
 
-            // If player's team, player is Car 1 (Bay 1: -5.25), so teammate is Car 2 (Bay 2: +5.25)
-            // For other teams: carIdx 0 is Car 1 (Bay 1: -5.25), carIdx 1 is Car 2 (Bay 2: +5.25)
+            // If player's team, player is Car 1 (Bay 1: -6.0), so teammate is Car 2 (Bay 2: +6.0)
+            // For other teams: carIdx 0 is Car 1 (Bay 1: -6.0), carIdx 1 is Car 2 (Bay 2: +6.0)
             const isPlayerTeam = (tIdx === selectedTeamIndex);
-            const bayLateral = isPlayerTeam ? 5.25 : (carIdx === 0 ? -5.25 : 5.25);
+            const bayLateral = isPlayerTeam ? 6.0 : (carIdx === 0 ? -6.0 : 6.0);
 
             if (r.mesh) {
-              r.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(21.5)).add(tang.clone().multiplyScalar(bayLateral)));
+              r.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(19.5)).add(tang.clone().multiplyScalar(bayLateral)));
               r.mesh.rotation.set(0, heading, 0);
             }
 

@@ -497,7 +497,7 @@
       const pt = pitCurve.getPointAt(pBoxT);
       const tang = pitCurve.getTangentAt(pBoxT).normalize();
       const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-      playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(21.5)).add(tang.clone().multiplyScalar(-5.25)));
+      playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(19.5)).add(tang.clone().multiplyScalar(-6.0)));
       const exitDir = norm.clone().negate().normalize();
       playerKart.heading = Math.atan2(exitDir.x, exitDir.z);
       playerKart.mesh.rotation.set(0, playerKart.heading, 0);

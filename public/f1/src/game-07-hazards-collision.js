@@ -79,51 +79,76 @@
         const posJ = racerJ.mesh.position;
         const dist3D = posI.distanceTo(posJ);
 
-        // Center-to-center collision distance for authentic F1 cars (length ~4.8m, width ~1.9m)
-        const minCollDist = 3.4;
-        if (dist3D < minCollDist) {
-          // 1. Calculate horizontal separating push vector
-          const pushVec = new THREE.Vector3().subVectors(posI, posJ);
-          let len = pushVec.length();
-          if (len < 0.001) {
-            pushVec.set(0.1, 0, 0.1);
-            len = pushVec.length();
-          }
-          pushVec.y = 0;
-          pushVec.normalize();
+        // Authentic Oriented Bounding Box collision for F1 cars (Length 4.8m, Width 2.1m)
+        let tang = new THREE.Vector3(0, 0, 1);
+        let norm = new THREE.Vector3(1, 0, 0);
+        if (trackCurve) {
+          const trackT = racerI.currentOffset !== undefined ? racerI.currentOffset : 0.0;
+          tang = trackCurve.getTangentAt(trackT % 1.0).normalize();
+          norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
+        }
 
-          const overlap = minCollDist - len;
+        const deltaPos = posI.clone().sub(posJ);
+        deltaPos.y = 0; // horizontal collision plane
+        const longDist = deltaPos.dot(tang); // longitudinal separation along track (+ = I ahead, - = J ahead)
+        const latDist = deltaPos.dot(norm);   // lateral separation across track
 
-          // Push both cars apart in 3D world space
-          if (racerI.isPlayer) {
-            posI.addScaledVector(pushVec, overlap * 0.55);
-            posJ.addScaledVector(pushVec, -overlap * 0.45);
-          } else if (racerJ.isPlayer) {
-            posI.addScaledVector(pushVec, overlap * 0.45);
-            posJ.addScaledVector(pushVec, -overlap * 0.55);
+        const CAR_LENGTH = 4.8;
+        const CAR_WIDTH = 2.1;
+
+        if (Math.abs(longDist) < CAR_LENGTH && Math.abs(latDist) < CAR_WIDTH) {
+          const longOverlap = CAR_LENGTH - Math.abs(longDist);
+          const latOverlap = CAR_WIDTH - Math.abs(latDist);
+
+          const isRearEnd = (Math.abs(latDist) < 1.7) || (longOverlap < latOverlap * 1.5);
+          const leadingCar = (longDist >= 0) ? racerI : racerJ;
+          const trailingCar = (longDist >= 0) ? racerJ : racerI;
+
+          // 1. SOLID PHYSICAL SEPARATION (Cars CANNOT pass inside each other!)
+          if (isRearEnd) {
+            // Trailing car is physically blocked from passing through leading car
+            const pushDir = (longDist >= 0) ? -1 : 1;
+            if (trailingCar.isPlayer) {
+              playerKart.mesh.position.addScaledVector(tang, pushDir * longOverlap * 1.05);
+              playerKart.speed = Math.min(playerKart.speed, leadingCar.speed * 0.70);
+            } else {
+              trailingCar.currentOffset += (pushDir * longOverlap * 1.05) / 1800.0;
+              trailingCar.speed = Math.min(trailingCar.speed, leadingCar.speed * 0.70);
+              if (trailingCar.mesh) trailingCar.mesh.position.addScaledVector(tang, pushDir * longOverlap * 1.05);
+            }
+
+            // Leading car gets a bump impulse forward
+            leadingCar.speed = Math.max(leadingCar.speed, leadingCar.speed + 3.2);
           } else {
-            posI.addScaledVector(pushVec, overlap * 0.50);
-            posJ.addScaledVector(pushVec, -overlap * 0.50);
+            // Side-by-side wheel banging: bounce laterally apart along track normal
+            const sidePushI = latDist >= 0 ? 1 : -1;
+            const sidePushJ = -sidePushI;
+
+            if (racerI.isPlayer) {
+              playerKart.mesh.position.addScaledVector(norm, sidePushI * latOverlap * 0.65);
+              playerKart.sideOffset = (playerKart.sideOffset || 0) + sidePushI * latOverlap * 0.65;
+            } else {
+              racerI.sideOffset = (racerI.sideOffset || 0) + sidePushI * latOverlap * 0.65;
+              racerI.targetSideOffset = racerI.sideOffset;
+              if (racerI.mesh) racerI.mesh.position.addScaledVector(norm, sidePushI * latOverlap * 0.65);
+            }
+
+            if (racerJ.isPlayer) {
+              playerKart.mesh.position.addScaledVector(norm, sidePushJ * latOverlap * 0.65);
+              playerKart.sideOffset = (playerKart.sideOffset || 0) + sidePushJ * latOverlap * 0.65;
+            } else {
+              racerJ.sideOffset = (racerJ.sideOffset || 0) + sidePushJ * latOverlap * 0.65;
+              racerJ.targetSideOffset = racerJ.sideOffset;
+              if (racerJ.mesh) racerJ.mesh.position.addScaledVector(norm, sidePushJ * latOverlap * 0.65);
+            }
           }
 
-          // Push side offsets apart so AI steering lines react
-          const latDiff = (racerI.sideOffset || 0) - (racerJ.sideOffset || 0);
-          const pushSide = latDiff >= 0 ? 1 : -1;
-          if (racerI.sideOffset !== undefined) racerI.sideOffset += pushSide * overlap * 0.4;
-          if (racerJ.sideOffset !== undefined) racerJ.sideOffset -= pushSide * overlap * 0.4;
-          if (!racerI.isPlayer) racerI.targetSideOffset = racerI.sideOffset;
-          if (!racerJ.isPlayer) racerJ.targetSideOffset = racerJ.sideOffset;
-
-          // 2. Elastic speed exchange and impact force
+          // 2. Realistic Speed Exchange & Crash Impulse
           const speedDiff = racerI.speed - racerJ.speed;
-          const impact = Math.max(Math.abs(speedDiff), overlap * 7.5);
-
-          const impulse = speedDiff * 0.45;
-          racerI.speed = Math.max(2.0, racerI.speed - impulse);
-          racerJ.speed = Math.max(2.0, racerJ.speed + impulse * 0.6);
+          const impact = Math.max(Math.abs(speedDiff), Math.max(longOverlap, latOverlap) * 8.5);
 
           // 3. F1 Component Damage Accumulation
-          const addedDamage = Math.max(2.5, impact * 1.35);
+          const addedDamage = Math.max(3.5, impact * 1.45);
           racerI.damage = Math.min(100.0, (racerI.damage || 0.0) + addedDamage);
           racerJ.damage = Math.min(100.0, (racerJ.damage || 0.0) + addedDamage);
 
@@ -131,14 +156,14 @@
             carDamage = racerI.damage;
             updateDamageHUD();
             if (typeof window.triggerGamepadRumble === 'function') {
-              window.triggerGamepadRumble(120, 0.7, 0.4);
+              window.triggerGamepadRumble(160, 0.85, 0.6);
             }
           }
           if (racerJ.isPlayer) {
             carDamage = racerJ.damage;
             updateDamageHUD();
             if (typeof window.triggerGamepadRumble === 'function') {
-              window.triggerGamepadRumble(120, 0.7, 0.4);
+              window.triggerGamepadRumble(160, 0.85, 0.6);
             }
           }
 

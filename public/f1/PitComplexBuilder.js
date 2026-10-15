@@ -9,13 +9,13 @@
 // - Garage Complex (+18.0m to +34.0m): Grand high-tech open bays with engineers at side walls
 // =========================================================
 
-const GARAGE_WIDTH        = 21.0;
+const GARAGE_WIDTH        = 26.0;
 const GARAGE_DEPTH        = 18.0;
-const GARAGE_HEIGHT       = 7.5;
+const GARAGE_HEIGHT       = 8.5;
 const PIT_WALL_OFFSET     = -7.0;
 const PIT_WALL_HEIGHT     = 1.1;
 const TEAM_BUILDING_DEPTH = 18.0;
-const TEAM_BUILDING_HEIGHT= 8.5;
+const TEAM_BUILDING_HEIGHT= 9.5;
 const GRANDSTAND_HEIGHT   = 7.5;
 
 const DEFAULT_TEAMS_PCB = [
@@ -421,77 +421,86 @@ class PitComplexBuilder {
                 tProgress: tCenter
             });
 
-            // ── DEDICATED DOUBLE-BAY CONSTRUCTOR GARAGE (Width 21.0m, Center at +26.0m, Front entrance at +17.0m) ──
+            // ── ULTRA-WIDE GRAND OPEN DOUBLE GARAGE (Width 26.0m, Height 8.5m, Center at +26.0m) ──
             const garagePos = pos.clone().add(norm.clone().multiplyScalar(26.0));
             garagePos.y = GARAGE_HEIGHT / 2;
 
             const garageGroup = new THREE.Group();
 
-            // Back wall spanning entire 21m width (located at local -Z away from track)
+            // Back wall spanning entire 26m width (located at local -Z away from track)
             const backWall = this.box(GARAGE_WIDTH - 0.1, GARAGE_HEIGHT, 0.3, 0x1e293b);
             backWall.position.set(0, 0, -GARAGE_DEPTH / 2);
             garageGroup.add(backWall);
 
             // Illuminated Driver Signboards on Back Wall: Bay 1 (Left: Car 1) and Bay 2 (Right: Car 2)
-            [-5.25, 5.25].forEach((bayX, bayIdx) => {
+            [-6.0, 6.0].forEach((bayX, bayIdx) => {
                 const baySignboard = new THREE.Mesh(
-                    new THREE.BoxGeometry(7.5, 1.2, 0.15),
+                    new THREE.BoxGeometry(9.0, 1.4, 0.15),
                     new THREE.MeshStandardMaterial({ color: 0x0b0f19, roughness: 0.2, metalness: 0.8 })
                 );
-                baySignboard.position.set(bayX, 1.8, -GARAGE_DEPTH / 2 + 0.2);
+                baySignboard.position.set(bayX, 2.0, -GARAGE_DEPTH / 2 + 0.2);
                 garageGroup.add(baySignboard);
 
                 const teamStripeBack = new THREE.Mesh(
-                    new THREE.BoxGeometry(7.7, 0.18, 0.18),
-                    new THREE.MeshStandardMaterial({ color: team.color, emissive: team.color, emissiveIntensity: 0.9 })
+                    new THREE.BoxGeometry(9.2, 0.20, 0.18),
+                    new THREE.MeshStandardMaterial({ color: team.color, emissive: team.color, emissiveIntensity: 0.95 })
                 );
-                teamStripeBack.position.set(bayX, 2.45, -GARAGE_DEPTH / 2 + 0.22);
+                teamStripeBack.position.set(bayX, 2.8, -GARAGE_DEPTH / 2 + 0.22);
                 garageGroup.add(teamStripeBack);
 
                 const bayIdPlaque = new THREE.Mesh(
-                    new THREE.BoxGeometry(1.6, 0.45, 0.2),
-                    new THREE.MeshStandardMaterial({ color: 0x1e293b, emissive: team.accent, emissiveIntensity: 0.6 })
+                    new THREE.BoxGeometry(2.2, 0.50, 0.2),
+                    new THREE.MeshStandardMaterial({ color: 0x1e293b, emissive: team.accent, emissiveIntensity: 0.7 })
                 );
-                bayIdPlaque.position.set(bayX, 2.9, -GARAGE_DEPTH / 2 + 0.22);
+                bayIdPlaque.position.set(bayX, 3.3, -GARAGE_DEPTH / 2 + 0.22);
                 garageGroup.add(bayIdPlaque);
             });
 
-            // ── INTERNAL CENTER DIVIDING PARTITION WALL SPLITTING GARAGE INTO TWO BAYS (x = 0) ──
-            const centerDivider = this.box(0.35, GARAGE_HEIGHT - 0.2, GARAGE_DEPTH - 1.2, 0x1e293b);
-            centerDivider.position.set(0, 0, -0.4);
-            garageGroup.add(centerDivider);
+            // ── CENTRAL LOW ENGINEERING & TELEMETRY ISLAND (x = 0, Height 1.15m) ──
+            // Sleek waist-height carbon workstation console so the entire 26m garage is open and visible!
+            const centerIsland = this.box(1.2, 1.15, 12.0, 0x1e293b, 0.3, 0.6);
+            centerIsland.position.set(0, -GARAGE_HEIGHT / 2 + 0.575, -1.0);
+            garageGroup.add(centerIsland);
 
-            const centerLivery = this.box(0.38, 0.45, GARAGE_DEPTH - 1.4, team.color);
-            centerLivery.position.set(0, 0.4, -0.4);
-            garageGroup.add(centerLivery);
+            const islandTop = this.box(1.3, 0.08, 12.1, 0x0f172a, 0.5, 0.4);
+            islandTop.position.set(0, -GARAGE_HEIGHT / 2 + 1.17, -1.0);
+            garageGroup.add(islandTop);
 
-            const centerKick = this.box(0.38, 0.30, GARAGE_DEPTH - 1.4, 0x0f172a);
-            centerKick.position.set(0, -GARAGE_HEIGHT / 2 + 0.15, -0.4);
-            garageGroup.add(centerKick);
+            // Team color accent strip along engineering island
+            const islandStripe = this.box(1.32, 0.15, 12.0, team.color);
+            islandStripe.position.set(0, -GARAGE_HEIGHT / 2 + 1.05, -1.0);
+            garageGroup.add(islandStripe);
 
-            const centerLightCove = new THREE.Mesh(
-                new THREE.BoxGeometry(0.38, 0.10, GARAGE_DEPTH - 1.4),
-                new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.85 })
-            );
-            centerLightCove.position.set(0, GARAGE_HEIGHT / 2 - 0.25, -0.4);
-            garageGroup.add(centerLightCove);
-
-            // Double-sided telemetry monitor banks mounted on center partition facing both bays
+            // Double-sided telemetry screens facing Bay 1 and Bay 2
             [-1, 1].forEach(side => {
-                const mon = new THREE.Mesh(
-                    new THREE.BoxGeometry(0.08, 1.0, 2.2),
-                    new THREE.MeshStandardMaterial({ color: 0x090d16, emissive: 0x06b6d4, emissiveIntensity: 0.8 })
-                );
-                mon.position.set(side * 0.24, 0.6, 0.0);
-                garageGroup.add(mon);
+                for (let sc = -4.0; sc <= 4.0; sc += 2.5) {
+                    const screen = new THREE.Mesh(
+                        new THREE.BoxGeometry(0.06, 0.45, 0.75),
+                        new THREE.MeshStandardMaterial({ color: 0x090d16, emissive: 0x06b6d4, emissiveIntensity: 0.85 })
+                    );
+                    screen.position.set(side * 0.68, -GARAGE_HEIGHT / 2 + 1.45, sc - 1.0);
+                    screen.rotation.y = side * 0.1;
+                    garageGroup.add(screen);
+                }
             });
 
-            // Center entrance arch pillar between Bay 1 & Bay 2
-            const centerPillar = this.box(0.65, GARAGE_HEIGHT, 1.4, 0x334155);
-            centerPillar.position.set(0, 0, GARAGE_DEPTH / 2 - 0.7);
-            garageGroup.add(centerPillar);
+            // Suspended High Ceiling Timing Screens (y = 6.8m, realistic F1 overhead gantry)
+            const gantryRail = this.box(0.15, 0.15, 8.0, 0x334155);
+            gantryRail.position.set(0, GARAGE_HEIGHT / 2 - 1.2, -1.0);
+            garageGroup.add(gantryRail);
 
-            // FULL DIVIDING PARTITION WALLS BETWEEN DIFFERENT TEAM CONSTRUCTOR BUILDINGS (Left & Right)
+            [-1, 1].forEach(side => {
+                for (let sc = -2.5; sc <= 2.5; sc += 2.5) {
+                    const overScreen = new THREE.Mesh(
+                        new THREE.BoxGeometry(0.05, 0.8, 1.3),
+                        new THREE.MeshStandardMaterial({ color: 0x090d16, emissive: 0x22c55e, emissiveIntensity: 0.75 })
+                    );
+                    overScreen.position.set(side * 0.35, GARAGE_HEIGHT / 2 - 1.8, sc - 1.0);
+                    garageGroup.add(overScreen);
+                }
+            });
+
+            // FULL DIVIDING PARTITION WALLS BETWEEN NEIGHBORING TEAM CONSTRUCTORS (Outer left & right)
             [-GARAGE_WIDTH / 2, GARAGE_WIDTH / 2].forEach(colX => {
                 const dividerWall = this.box(0.35, GARAGE_HEIGHT - 0.1, GARAGE_DEPTH - 0.3, 0x1e293b);
                 dividerWall.position.set(colX, 0, 0);
@@ -507,22 +516,22 @@ class PitComplexBuilder {
 
                 const wallLightCove = new THREE.Mesh(
                     new THREE.BoxGeometry(0.38, 0.10, GARAGE_DEPTH - 1.0),
-                    new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.8 })
+                    new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.9 })
                 );
                 wallLightCove.position.set(colX, GARAGE_HEIGHT / 2 - 0.25, 0);
                 garageGroup.add(wallLightCove);
 
-                const frontColumn = this.box(0.55, GARAGE_HEIGHT, 1.4, 0x334155);
+                const frontColumn = this.box(0.65, GARAGE_HEIGHT, 1.4, 0x334155);
                 frontColumn.position.set(colX, 0, GARAGE_DEPTH / 2 - 0.7);
                 garageGroup.add(frontColumn);
             });
 
-            // High Cathedral Ceiling Roof spanning 21m
+            // High Cathedral Ceiling Roof spanning 26m
             const roof = this.box(GARAGE_WIDTH, 0.3, GARAGE_DEPTH, 0x0f172a);
             roof.position.set(0, GARAGE_HEIGHT / 2, 0);
             garageGroup.add(roof);
 
-            // Polished Dark Epoxy Garage Floor across both bays
+            // Polished Dark Epoxy Garage Floor across entire 26m width
             const epoxyFloor = new THREE.Mesh(
                 new THREE.BoxGeometry(GARAGE_WIDTH, 0.08, GARAGE_DEPTH),
                 new THREE.MeshStandardMaterial({ color: 0x181e28, roughness: 0.25, metalness: 0.4 })
@@ -531,36 +540,36 @@ class PitComplexBuilder {
             epoxyFloor.receiveShadow = true;
             garageGroup.add(epoxyFloor);
 
-            // Dedicated Overhead Linear LED Ceiling Lights for Bay 1 (x = -5.25m) and Bay 2 (x = +5.25m)
-            [-5.25, 5.25].forEach(bayCenterX => {
-                for (let l = -6.0; l <= 6.0; l += 2.5) {
+            // Grand Overhead High-Bay Linear LED Floodlights
+            [-6.0, 6.0].forEach(bayCenterX => {
+                for (let l = -6.5; l <= 6.5; l += 2.2) {
                     const ledStrip = new THREE.Mesh(
-                        new THREE.BoxGeometry(7.8, 0.06, 0.25),
-                        new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 1.2 })
+                        new THREE.BoxGeometry(10.0, 0.06, 0.25),
+                        new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 1.35 })
                     );
                     ledStrip.position.set(bayCenterX, GARAGE_HEIGHT / 2 - 0.15, l);
                     garageGroup.add(ledStrip);
                 }
             });
 
-            // High-Tech Diagnostics & Tool Trolleys along outer side walls
+            // Diagnostic & Tool Cabinets along outer walls (pushed way out to 12.2m from center!)
             [-1, 1].forEach(side => {
-                const wallX = side * (GARAGE_WIDTH / 2 - 0.6);
+                const wallX = side * (GARAGE_WIDTH / 2 - 0.65);
                 for (let s = -5.5; s <= 5.5; s += 3.5) {
-                    const cabinet = this.box(0.8, 1.1, 1.6, side === -1 ? team.color : 0x1f2937, 0.4, 0.5);
+                    const cabinet = this.box(0.9, 1.1, 1.8, side === -1 ? team.color : 0x1f2937, 0.4, 0.5);
                     cabinet.position.set(wallX, -GARAGE_HEIGHT / 2 + 0.55, s);
                     garageGroup.add(cabinet);
 
                     const diagScreen = new THREE.Mesh(
-                        new THREE.BoxGeometry(0.08, 1.1, 1.8),
-                        new THREE.MeshStandardMaterial({ color: 0x090d16, emissive: 0x06b6d4, emissiveIntensity: 0.7 })
+                        new THREE.BoxGeometry(0.08, 1.2, 2.0),
+                        new THREE.MeshStandardMaterial({ color: 0x090d16, emissive: 0x06b6d4, emissiveIntensity: 0.75 })
                     );
-                    diagScreen.position.set(side * (GARAGE_WIDTH / 2 - 0.12), 0.7, s);
+                    diagScreen.position.set(side * (GARAGE_WIDTH / 2 - 0.14), 0.8, s);
                     garageGroup.add(diagScreen);
                 }
             });
 
-            // ── Mechanics inside garage positioned cleanly around Bay 1 and Bay 2 ──
+            // ── Mechanics inside garage positioned cleanly to the SIDES (Zero View Obstruction!) ──
             const crewMat = new THREE.MeshStandardMaterial({ color: team.color, roughness: 0.6 });
             const trousersMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.8 });
             const skinMat = new THREE.MeshStandardMaterial({ color: 0xd4a373, roughness: 0.5 });
@@ -604,10 +613,10 @@ class PitComplexBuilder {
                 armR.position.set(0.25, 0.82, 0.05);
                 person.add(armR);
 
-                if (role === 'telemetry') {
+                if (role && role.startsWith('telemetry')) {
                     const tablet = new THREE.Mesh(
                         new THREE.BoxGeometry(0.24, 0.18, 0.02),
-                        new THREE.MeshStandardMaterial({ color: 0x06b6d4, emissive: 0x06b6d4, emissiveIntensity: 0.8 })
+                        new THREE.MeshStandardMaterial({ color: 0x06b6d4, emissive: 0x06b6d4, emissiveIntensity: 0.85 })
                     );
                     tablet.position.set(0, 0.82, 0.22);
                     tablet.rotation.x = -Math.PI / 4;
@@ -619,25 +628,21 @@ class PitComplexBuilder {
                 return person;
             };
 
-            // Mechanics stationed around Bay 1 (x = -5.25m) and Bay 2 (x = +5.25m)
+            // Stationed cleanly at the SIDES (Corridor in front of cars x = ±6.0 is 100% CLEAR!)
             const mechanics = [
-                // Bay 1 Crew (Left Car)
-                createGarageMechanic(-7.2, 3.2, Math.PI / 2, 'aero_front_l'),
-                createGarageMechanic(-3.3, 3.2, -Math.PI / 2, 'aero_front_r'),
-                createGarageMechanic(-7.5, 1.8, Math.PI / 2, 'telemetry'),
-                createGarageMechanic(-3.0, 1.8, -Math.PI / 2, 'mechanic_r'),
-                createGarageMechanic(-7.2, 0.5, Math.PI / 2, 'tyre_l'),
-                createGarageMechanic(-3.3, 0.5, -Math.PI / 2, 'tyre_r'),
-                createGarageMechanic(-5.25, 4.8, Math.PI, 'front_jack'),
+                // Bay 1 Crew (Car centered at x = -6.0m)
+                createGarageMechanic(-9.2, 0.5, Math.PI / 2, 'tyre_l'),        // Left side tyre technician
+                createGarageMechanic(-2.8, 0.5, -Math.PI / 2, 'tyre_r'),       // Right side tyre technician
+                createGarageMechanic(-9.2, 2.4, Math.PI / 2, 'aero_l'),        // Side aero technician
+                createGarageMechanic(-2.8, 2.0, -Math.PI / 2, 'telemetry'),    // Telemetry engineer beside island
+                createGarageMechanic(-8.6, 3.8, Math.PI / 3, 'front_jack'),    // Front jack mechanic ready at the side
 
-                // Bay 2 Crew (Right Car)
-                createGarageMechanic(3.3, 3.2, Math.PI / 2, 'aero_front_l2'),
-                createGarageMechanic(7.2, 3.2, -Math.PI / 2, 'aero_front_r2'),
-                createGarageMechanic(3.0, 1.8, Math.PI / 2, 'telemetry2'),
-                createGarageMechanic(7.5, 1.8, -Math.PI / 2, 'mechanic_r2'),
-                createGarageMechanic(3.3, 0.5, Math.PI / 2, 'tyre_l2'),
-                createGarageMechanic(7.2, 0.5, -Math.PI / 2, 'tyre_r2'),
-                createGarageMechanic(5.25, 4.8, Math.PI, 'front_jack2')
+                // Bay 2 Crew (Car centered at x = +6.0m)
+                createGarageMechanic(2.8, 0.5, Math.PI / 2, 'tyre_l2'),        // Left side tyre technician beside island
+                createGarageMechanic(9.2, 0.5, -Math.PI / 2, 'tyre_r2'),       // Right side tyre technician
+                createGarageMechanic(2.8, 2.0, Math.PI / 2, 'telemetry2'),     // Telemetry engineer beside island
+                createGarageMechanic(9.2, 2.4, -Math.PI / 2, 'aero_r2'),       // Side aero technician
+                createGarageMechanic(8.6, 3.8, -Math.PI / 3, 'front_jack2')    // Front jack mechanic ready at the side
             ];
 
             garageGroup.mechanics = mechanics;
@@ -649,21 +654,21 @@ class PitComplexBuilder {
             garageGroup.lookAt(garagePos.clone().sub(norm)); // Faces forward towards the apron & track
             scene.add(garageGroup);
 
-            // ── DUAL GARAGE BAY PORTAL ENTRANCES (Bay 1 & Bay 2) AT +17.0m ──
+            // ── ULTRA-WIDE PANORAMIC ENTRANCE PORTALS AT +17.0m ──
             const doorPos = garagePos.clone().sub(norm.clone().multiplyScalar(GARAGE_DEPTH / 2 - 0.1));
             
-            [-5.25, 5.25].forEach(bayX => {
+            [-6.0, 6.0].forEach(bayX => {
                 const bayDoorPos = doorPos.clone().add(tang.clone().multiplyScalar(bayX));
                 
-                // Raised shutter at top of portal
-                const shutter = this.box(9.2, 1.0, 0.25, 0x111827);
+                // Raised shutter way up high at y = 7.5m (completely out of driver view)
+                const shutter = this.box(11.8, 0.9, 0.25, 0x111827);
                 shutter.position.copy(bayDoorPos);
-                shutter.position.y = GARAGE_HEIGHT - 0.6;
+                shutter.position.y = GARAGE_HEIGHT - 0.55;
                 shutter.lookAt(bayDoorPos.clone().sub(norm));
                 scene.add(shutter);
 
                 // Illuminated team banner above bay opening
-                const band = this.box(9.4, 1.2, 0.22, team.color);
+                const band = this.box(12.0, 1.2, 0.22, team.color);
                 band.position.copy(bayDoorPos);
                 band.position.y = GARAGE_HEIGHT - 1.4;
                 band.lookAt(bayDoorPos.clone().sub(norm));
@@ -671,7 +676,7 @@ class PitComplexBuilder {
 
                 // LED glow line under team band
                 const ledStrip = new THREE.Mesh(
-                    new THREE.PlaneGeometry(9.0, 0.25),
+                    new THREE.PlaneGeometry(11.6, 0.25),
                     new THREE.MeshStandardMaterial({ color: team.accent, emissive: team.accent, emissiveIntensity: 1.0 })
                 );
                 const ledPos = bayDoorPos.clone().add(norm.clone().multiplyScalar(-0.15));
@@ -681,7 +686,7 @@ class PitComplexBuilder {
                 scene.add(ledStrip);
             });
 
-            // ── Team Motorhome / Hospitality Building behind Garage (Width 21m) ──
+            // ── Team Motorhome / Hospitality Building behind Garage (Width 26m) ──
             const bldgPos = garagePos.clone().add(norm.clone().multiplyScalar(GARAGE_DEPTH / 2 + TEAM_BUILDING_DEPTH / 2));
             bldgPos.y = TEAM_BUILDING_HEIGHT / 2;
             const bldg = this.box(GARAGE_WIDTH, TEAM_BUILDING_HEIGHT, TEAM_BUILDING_DEPTH, 0x94a3b8);
@@ -691,7 +696,7 @@ class PitComplexBuilder {
 
             // Glass facade on upper floor of motorhome
             const glass = new THREE.Mesh(
-                new THREE.BoxGeometry(GARAGE_WIDTH - 1.0, 3.2, 0.2),
+                new THREE.BoxGeometry(GARAGE_WIDTH - 1.0, 3.4, 0.2),
                 new THREE.MeshStandardMaterial({ color: 0x0284c7, transparent: true, opacity: 0.6, roughness: 0.1 })
             );
             const glassPos = bldgPos.clone().sub(norm.clone().multiplyScalar(TEAM_BUILDING_DEPTH / 2 + 0.1));
