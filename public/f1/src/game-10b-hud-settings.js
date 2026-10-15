@@ -137,10 +137,15 @@
       // Rebuild inner contents dynamically (keeps DOM transitions intact!)
       row.innerHTML = '';
 
-      // F1 Position badge (P1, P2, P3...)
+      // F1 Position badge (P1, P2, P3... or DNF)
       const posEl = document.createElement('span');
-      posEl.innerText = `P${pos}`;
-      posEl.style.cssText = `font-weight: 900; width: 26px; ${racer.isPlayer ? 'color: var(--neon-cyan);' : 'color: rgba(255,255,255,0.65);'}`;
+      if (racer.retired) {
+        posEl.innerText = "DNF";
+        posEl.style.cssText = "font-weight: 900; width: 28px; color: #ef4444; font-size: 0.65rem;";
+      } else {
+        posEl.innerText = `P${pos}`;
+        posEl.style.cssText = `font-weight: 900; width: 26px; ${racer.isPlayer ? 'color: var(--neon-cyan);' : 'color: rgba(255,255,255,0.65);'}`;
+      }
       row.appendChild(posEl);
 
       // Gained/Lost Place Indicator Badge relative to starting grid slot!
@@ -180,7 +185,10 @@
       // Pit status or Gap / Lap time
       let isPittingNow = racer.isPlayer ? isPitting : (racer.isPitting || false);
       const gapEl = document.createElement('span');
-      if (isPittingNow) {
+      if (racer.retired) {
+        gapEl.innerText = "DNF";
+        gapEl.style.cssText = "font-weight: 900; color: #ef4444; background: rgba(239,68,68,0.18); padding: 1px 5px; border-radius: 3px; font-size: 0.6rem;";
+      } else if (isPittingNow) {
         gapEl.innerText = "PIT";
         gapEl.style.cssText = "font-weight: 900; color: #22c55e; background: rgba(34,197,94,0.15); padding: 1px 5px; border-radius: 3px; font-size: 0.6rem; letter-spacing: 0.5px;";
       } else if (currentSessionIndex === 0 || currentSessionIndex === 1) {
@@ -195,15 +203,26 @@
         gapEl.innerText = timeText;
         gapEl.style.cssText = `font-weight: 700; font-size: 0.65rem; font-family: monospace; ${racer.isPlayer ? 'color: #facc15;' : 'color: rgba(255,255,255,0.7);'}`;
       } else {
-        // Race: show gap to leader
+        // Race: show gap to leader or lapped indicator
         let gapText = "";
         if (idx === 0) {
           gapText = "LEADER";
         } else {
-          const score = getRacerScore(racer);
-          const diffScore = leaderScore - score;
-          const gapSecs = diffScore * 20.0;
-          gapText = `+${gapSecs.toFixed(3)}`;
+          const leaderLaps = sorted[0].completedLaps || 0;
+          const racerLaps = racer.completedLaps || 0;
+          const lapDiff = leaderLaps - racerLaps;
+
+          if (lapDiff > 1) {
+            gapText = `+${lapDiff} LAPS`;
+          } else if (lapDiff === 1) {
+            gapText = `+1 LAP`;
+          } else {
+            const leaderOffset = sorted[0].currentOffset || 0.0;
+            const racerOffset = racer.currentOffset || 0.0;
+            const offsetDiff = (leaderOffset - racerOffset + 1.0) % 1.0;
+            const gapSecs = offsetDiff * (1800.0 / Math.max(20.0, racer.speed || 80.0));
+            gapText = `+${gapSecs.toFixed(2)}s`;
+          }
         }
         gapEl.innerText = gapText;
         gapEl.style.cssText = `font-weight: 700; font-size: 0.65rem; ${racer.isPlayer ? 'color: #fff;' : 'color: rgba(255,255,255,0.7);'}`;

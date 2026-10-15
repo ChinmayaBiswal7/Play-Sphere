@@ -302,7 +302,7 @@
   function getRacerScore(racer) {
     const completed = racer.completedLaps !== undefined ? racer.completedLaps : 0;
     const progress = racer.currentOffset !== undefined ? racer.currentOffset : 0.0;
-    return completed + progress;
+    return completed * 1000.0 + progress;
   }
 
   function validateRaceOrder(sorted) {
@@ -345,26 +345,38 @@
         }
       });
     } else {
-      // Main GP Race: sort by total progress
+      // Main GP Race: sort by finished status, total lap score, and DNF/retired status
       const sorted = [...racers].sort((a, b) => {
         if (a.finished && b.finished) {
-          return a.finishPos - b.finishPos;
+          // If both finished normally, order by finish position
+          if (!a.retired && !b.retired) return a.finishPos - b.finishPos;
+          if (!a.retired) return -1;
+          if (!b.retired) return 1;
         }
-        if (a.finished) return -1;
-        if (b.finished) return 1;
+        if (a.finished && !a.retired) return -1;
+        if (b.finished && !b.retired) return 1;
+        
+        // Handle retired/DNF cars (placed behind active runners)
+        if (a.retired && b.retired) {
+          return (b.completedLaps || 0) - (a.completedLaps || 0);
+        }
+        if (a.retired) return 1;
+        if (b.retired) return -1;
+
         return getRacerScore(b) - getRacerScore(a);
       });
+
       sorted.forEach((racer, idx) => {
         racer.posRank = idx + 1;
         if (racer.isPlayer) {
           const hudPosVal = document.getElementById('hud-pos-val');
           if (hudPosVal) {
-            hudPosVal.innerText = `P${idx + 1}`;
+            hudPosVal.innerText = racer.retired ? "DNF" : `P${idx + 1}`;
           }
           const hudPos = document.getElementById('hud-pos');
           if (hudPos) {
             const ranks = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th", "11th", "12th", "13th", "14th", "15th", "16th"];
-            hudPos.innerText = ranks[idx] || `${idx+1}th`;
+            hudPos.innerText = racer.retired ? "DNF" : (ranks[idx] || `${idx+1}th`);
           }
         }
       });
@@ -714,8 +726,11 @@
           }
         }
       } else {
-        // Ignore grid launch crossings in the first 8 seconds of the race!
-        if (raceTimer < 8.0) {
+        // On standing start, all cars launch from behind the finish line.
+        // Ignore the initial line crossing from the grid launch so it does NOT count as a full lap!
+        if (!car.gridLaunchCrossingHandled) {
+          car.gridLaunchCrossingHandled = true;
+          car.lapTimeElapsed = 0.0;
           car.previousTrackProgress = current;
           return;
         }
@@ -1019,15 +1034,40 @@
     }
   });
 
+  window.spectatorModeActive = false;
+  window.spectatorCarIndex = 0;
+  window.spectatorTargetCar = null;
+
   // ════ TERMINAL DAMAGE OVERLAY & REPAIR HANDLERS ════
   window.showTerminalDamageOverlay = () => {
     const overlay = document.getElementById('f1-terminal-damage-overlay');
     if (overlay) {
       overlay.style.display = 'flex';
+
+      const towBtn = document.getElementById('btn-terminal-tow');
+      const spectateBtn = document.getElementById('btn-terminal-spectate');
+      const endBtn = document.getElementById('btn-terminal-end-session');
+
+      if (currentSessionIndex === 2) {
+        // Race DNF: Player cannot repair and continue race!
+        if (towBtn) towBtn.style.display = 'none';
+        if (spectateBtn) spectateBtn.style.display = 'inline-block';
+        if (endBtn) endBtn.style.display = 'inline-block';
+      } else {
+        // Practice / Qualifying: Can tow back to garage
+        if (towBtn) towBtn.style.display = 'inline-block';
+        if (spectateBtn) spectateBtn.style.display = 'none';
+        if (endBtn) endBtn.style.display = 'none';
+      }
     }
+
     if (playerKart) {
       playerKart.speed = 0.0;
       playerKart.controlsEnabled = false;
+      if (currentSessionIndex === 2) {
+        playerKart.retired = true;
+        playerKart.finished = true;
+      }
     }
     if (window.ApexAudio) {
       window.ApexAudio.stopEngine();
@@ -1035,6 +1075,83 @@
     }
     if (typeof speakEngineerRadio === 'function') {
       speakEngineerRadio("Engine failure! Terminal damage, pull over and switch off. We're out of the race.", 100, true);
+    }
+  };
+
+  window.startSpectatorMode = () => {
+    window.spectatorModeActive = true;
+    const overlay = document.getElementById('f1-terminal-damage-overlay');
+    if (overlay) overlay.style.display = 'none';
+
+    if (playerKart) {
+      playerKart.speed = 0.0;
+      playerKart.controlsEnabled = false;
+      playerKart.retired = true;
+      playerKart.finished = true;
+    }
+
+    // Pick top active AI car
+    const activeAI = racers.filter(r => !r.isPlayer && !r.retired);
+    window.spectatorCarIndex = 0;
+    window.spectatorTargetCar = activeAI[0] || racers.find(r => !r.isPlayer) || playerKart;
+
+    const specHud = document.getElementById('f1-spectator-hud');
+    if (specHud) {
+      specHud.style.display = 'flex';
+    }
+    updateSpectatorHUD();
+    if (typeof speakEngineerRadio === 'function') {
+      speakEngineerRadio("Switched to onboard broadcast spectator feed.", 80, true);
+    }
+  };
+
+  window.cycleSpectatorCar = (dir) => {
+    if (window.ApexAudio) window.ApexAudio.playClick();
+    const activeCars = racers.filter(r => !r.isPlayer && !r.retired);
+    if (activeCars.length === 0) return;
+    window.spectatorCarIndex = (window.spectatorCarIndex + dir + activeCars.length) % activeCars.length;
+    window.spectatorTargetCar = activeCars[window.spectatorCarIndex];
+    updateSpectatorHUD();
+  };
+
+  function updateSpectatorHUD() {
+    const car = window.spectatorTargetCar;
+    if (!car) return;
+    const nameEl = document.getElementById('spectator-driver-name');
+    const teamEl = document.getElementById('spectator-driver-team');
+    const posEl = document.getElementById('spectator-driver-pos');
+    const lapEl = document.getElementById('spectator-driver-lap');
+
+    if (nameEl) nameEl.innerText = car.name || "DRIVER";
+    if (teamEl) {
+      const team = F1_TEAMS[car.teamIndex || 0];
+      teamEl.innerText = team ? team.name : "";
+      if (team) teamEl.style.color = team.color;
+    }
+    if (posEl) posEl.innerText = `P${car.posRank || 1}`;
+    if (lapEl) lapEl.innerText = `LAP ${Math.min(maxLaps, (car.completedLaps || 0) + 1)}/${maxLaps}`;
+  }
+
+  window.retireAndEndSession = () => {
+    if (window.ApexAudio) window.ApexAudio.playClick();
+    const overlay = document.getElementById('f1-terminal-damage-overlay');
+    if (overlay) overlay.style.display = 'none';
+    const specHud = document.getElementById('f1-spectator-hud');
+    if (specHud) specHud.style.display = 'none';
+
+    window.spectatorModeActive = false;
+
+    if (playerKart) {
+      playerKart.speed = 0.0;
+      playerKart.controlsEnabled = false;
+      playerKart.retired = true;
+      playerKart.finished = true;
+    }
+
+    if (typeof showFinalResultsUI === 'function') {
+      showFinalResultsUI();
+    } else {
+      transitionToPostRaceState("RESULTS");
     }
   };
 
@@ -2720,7 +2837,7 @@
     const contBtn = document.getElementById('gp-btn-continue');
     if (contBtn) {
       if (step === 4) {
-        contBtn.innerText = "START WEEKEND ➔";
+        contBtn.innerText = "START GRAND PRIX RACE ➔";
       } else {
         contBtn.innerText = "CONTINUE ➔";
       }
@@ -2732,7 +2849,7 @@
     if (window.gpCurrentStep < 4) {
       window.gpRenderStep(window.gpCurrentStep + 1);
     } else {
-      window.startGrandPrixWeekend();
+      window.startDirectGrandPrixRace();
     }
   };
 
@@ -2785,6 +2902,34 @@
     window.ApexAudio.playClick();
     window.weekendConfig.difficulty = diff;
     window.gpRenderStep(3);
+  };
+
+  window.startDirectGrandPrixRace = () => {
+    // Validate
+    if (window.weekendConfig.selectedTeamId === undefined) throw new Error("No team selected");
+    if (window.weekendConfig.selectedDriverId === undefined) throw new Error("No driver selected");
+    if (window.weekendConfig.selectedTrackId === undefined) throw new Error("No circuit selected");
+    if (window.weekendConfig.raceLaps < 3) throw new Error("Invalid race lap count");
+
+    // Lock in choices globally
+    selectedTeamIndex = window.weekendConfig.selectedTeamId;
+    activeDriver = window.weekendConfig.selectedDriverId;
+    activeTrack = window.weekendConfig.selectedTrackId;
+    maxLaps = window.weekendConfig.raceLaps;
+    activeDifficulty = window.weekendConfig.difficulty;
+
+    // Launch Grand Prix directly into the Main Race session on starting grid!
+    currentSessionIndex = 2; // Main GP Race
+    completedSessions = [true, true, false];
+    sessionStatuses = ['COMPLETED', 'COMPLETED', 'AVAILABLE'];
+
+    // Hide GP setup screen
+    document.getElementById('grandPrixSetupScreen').style.display = 'none';
+
+    const trackNames = ["Sunset Coast Circuit", "Alpine Heights"];
+    window.triggerLoadingScreen("GRAND PRIX RACE", trackNames[activeTrack], () => {
+      setupGame();
+    });
   };
 
   window.startGrandPrixWeekend = () => {

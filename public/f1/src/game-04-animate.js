@@ -173,30 +173,30 @@
       }
     }
 
-    if (isRaceActive || (postRaceActive && postRaceState === "FINISHING")) {
+    if (isStartingSequence || isRaceActive || (postRaceActive && postRaceState === "FINISHING")) {
       if (isStartingSequence) {
         updateStartingSequence(delta);
       } else {
         if (isRaceActive) updateRaceTimer(delta);
       }
 
-        if (isRaceActive) {
-          updatePlayerPhysics(delta);
-          updateAIPysics(delta);
-          
-          // Update tyre wear for all cars
-          racers.forEach(car => calculateTyreWear(car, delta));
+      if (isRaceActive && !isStartingSequence) {
+        updatePlayerPhysics(delta);
+        updateAIPysics(delta);
+        
+        // Update tyre wear for all cars
+        racers.forEach(car => calculateTyreWear(car, delta));
 
-          racers.forEach(car => {
-            const inGarage = car.qualifyingState === "GARAGE";
-            const isTimingActive = !isStartingSequence && !inGarage;
-            if (isTimingActive) {
-              car.lapTimeElapsed = (car.lapTimeElapsed || 0.0) + delta;
-            }
-          });
+        racers.forEach(car => {
+          const inGarage = car.qualifyingState === "GARAGE";
+          const isTimingActive = !isStartingSequence && !inGarage;
+          if (isTimingActive) {
+            car.lapTimeElapsed = (car.lapTimeElapsed || 0.0) + delta;
+          }
+        });
 
-          racers.forEach(car => updateCarLap(car, delta));
-        }
+        racers.forEach(car => updateCarLap(car, delta));
+      }
 
       // Unified position sorting
       updateRacePositions();

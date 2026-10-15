@@ -383,9 +383,9 @@
 
     // Boosted AI top speeds to match player top speed potential (player base = 75 m/s)
 
-    // Boosted AI top speeds to match realistic F1 player speeds (player max ~88-92 m/s, ~315-330 km/h)
-    // Easy:74, Normal:84, Hard:89, Expert:93
-    const baseSpeed = [74.0, 84.0, 89.0, 93.0][activeDifficulty] || 84.0;
+    // Realistic modern F1 AI speeds: player max ~88-92 m/s (~315-330 km/h) on straights
+    // Easy: 82 m/s (~295 km/h), Normal: 89 m/s (~320 km/h), Hard: 93 m/s (~335 km/h), Expert: 97 m/s (~350 km/h)
+    const baseSpeed = [82.0, 89.0, 93.0, 97.0][activeDifficulty] || 89.0;
 
     // Per-racer pace calculation using driver + car performance profiles
     function calculateAIPace(racer, base) {
@@ -399,13 +399,13 @@
       // Combined potential: car 45%, driver 55%
       const combined = carFactor * 0.45 + driverFactor * 0.55;
 
-      // Difficulty utilisation: Easy 88-94%, Normal 95-101%, Hard 99-105%, Expert 102-108%
+      // Difficulty utilisation: Easy 94-98%, Normal 98-102%, Hard 101-106%, Expert 104-110%
       const utilRange = [
-        [0.88, 0.94],  // Easy (~250-265 km/h)
-        [0.95, 1.01],  // Normal (~290-305 km/h)
-        [0.99, 1.05],  // Hard (~315-335 km/h)
-        [1.02, 1.08]   // Expert (~340-360 km/h)
-      ][activeDifficulty] || [0.95, 1.01];
+        [0.94, 0.98],  // Easy (~280-295 km/h)
+        [0.98, 1.02],  // Normal (~315-325 km/h)
+        [1.01, 1.06],  // Hard (~330-345 km/h)
+        [1.04, 1.10]   // Expert (~345-360 km/h)
+      ][activeDifficulty] || [0.98, 1.02];
 
       const utilFactor = THREE.MathUtils.lerp(utilRange[0], utilRange[1], combined);
       return base * utilFactor;
@@ -825,13 +825,13 @@
 
         const DIFFICULTY_CONFIG = {
 
-          0: { brakingMargin: 0.045, paceError: 0.12, overtakeAggression: 0.35, baseSpeedMult: 0.82 },
+          0: { brakingMargin: 0.040, paceError: 0.08, overtakeAggression: 0.45, baseSpeedMult: 0.95 },
 
-          1: { brakingMargin: 0.036, paceError: 0.06, overtakeAggression: 0.55, baseSpeedMult: 1.0 },
+          1: { brakingMargin: 0.033, paceError: 0.04, overtakeAggression: 0.65, baseSpeedMult: 1.0 },
 
-          2: { brakingMargin: 0.031, paceError: 0.025, overtakeAggression: 0.78, baseSpeedMult: 1.12 },
+          2: { brakingMargin: 0.029, paceError: 0.015, overtakeAggression: 0.85, baseSpeedMult: 1.04 },
 
-          3: { brakingMargin: 0.027, paceError: 0.008, overtakeAggression: 0.94, baseSpeedMult: 1.25 }
+          3: { brakingMargin: 0.025, paceError: 0.005, overtakeAggression: 0.96, baseSpeedMult: 1.08 }
 
         };
 
@@ -958,6 +958,9 @@
         let minGapAhead = Infinity;
         avoidanceOffset = 0.0;
 
+        // Enhanced lookahead: speed-dependent distance (detects obstacles well in advance)
+        const lookaheadDist = Math.max(75.0, racer.speed * 1.5);
+
         racers.forEach(other => {
           if (other === racer) return;
           if (other.isTrackActive === false || other.qualifyingState === "GARAGE") return;
@@ -967,7 +970,7 @@
           if (myInPit !== otherInPit) return;
 
           const gap = getSignedTrackGap(racer, other);
-          if (gap > 0.0 && gap < 35.0) {
+          if (gap > 0.0 && gap < lookaheadDist) {
             if (gap < minGapAhead) {
               minGapAhead = gap;
               closestAhead = other;
@@ -975,27 +978,54 @@
           }
         });
 
-        if (closestAhead) {
-          const pred = predictCollision(racer, closestAhead);
-          const risk = getCollisionRisk(pred);
+        let emergencyBrake = false;
 
-          if (risk === "CAUTION") {
-            target = Math.min(target, closestAhead.speed * 0.95);
-          } else if (risk === "HIGH") {
-            target = Math.min(target, closestAhead.speed * 0.82);
-            if (racer.avoidanceCommitTimer === undefined) racer.avoidanceCommitTimer = 0.0;
-            if (racer.avoidanceSide === undefined || racer.avoidanceSide === "NONE") {
-              racer.avoidanceSide = (closestAhead.sideOffset > 0) ? "LEFT" : "RIGHT";
-              racer.avoidanceCommitTimer = 0.8;
+        if (closestAhead) {
+          const latDiff = Math.abs(racer.sideOffset - closestAhead.sideOffset);
+          const isHazardStopped = (closestAhead.speed < 15.0);
+
+          if (isHazardStopped) {
+            // 🛑 STATIONARY / CRASHED OBSTACLE AVOIDANCE & EMERGENCY BRAKING
+            // Steer decisively toward the clear side of the track
+            const clearSide = (closestAhead.sideOffset >= 0) ? -4.5 : 4.5;
+            avoidanceOffset = clearSide;
+            racer.avoidanceSide = (closestAhead.sideOffset >= 0) ? "LEFT" : "RIGHT";
+            racer.avoidanceCommitTimer = 1.2;
+
+            if (minGapAhead < 45.0 && latDiff < 3.2) {
+              // Lane is directly obstructed ahead: slam emergency brakes to avoid rear-ending!
+              target = 0.0;
+              emergencyBrake = true;
+            } else if (minGapAhead < 25.0) {
+              target = Math.min(target, 12.0);
+              emergencyBrake = true;
+            } else if (minGapAhead < 60.0) {
+              target = Math.min(target, 35.0);
             }
-            avoidanceOffset = racer.avoidanceSide === "LEFT" ? -1.5 : 1.5;
-          } else if (risk === "EMERGENCY") {
-            target = Math.min(target, closestAhead.speed * 0.50);
-            if (racer.avoidanceCommitTimer === undefined || racer.avoidanceSide === "NONE") {
-              racer.avoidanceSide = (closestAhead.sideOffset > 0) ? "LEFT" : "RIGHT";
-              racer.avoidanceCommitTimer = 0.8;
+          } else {
+            // Normal dynamic following and collision avoidance
+            const pred = predictCollision(racer, closestAhead);
+            const risk = getCollisionRisk(pred);
+
+            if (risk === "CAUTION") {
+              target = Math.min(target, closestAhead.speed * 0.98);
+            } else if (risk === "HIGH") {
+              target = Math.min(target, closestAhead.speed * 0.88);
+              if (racer.avoidanceCommitTimer === undefined) racer.avoidanceCommitTimer = 0.0;
+              if (racer.avoidanceSide === undefined || racer.avoidanceSide === "NONE") {
+                racer.avoidanceSide = (closestAhead.sideOffset > 0) ? "LEFT" : "RIGHT";
+                racer.avoidanceCommitTimer = 0.8;
+              }
+              avoidanceOffset = racer.avoidanceSide === "LEFT" ? -2.2 : 2.2;
+            } else if (risk === "EMERGENCY") {
+              target = Math.min(target, closestAhead.speed * 0.70);
+              emergencyBrake = true;
+              if (racer.avoidanceCommitTimer === undefined || racer.avoidanceSide === "NONE") {
+                racer.avoidanceSide = (closestAhead.sideOffset > 0) ? "LEFT" : "RIGHT";
+                racer.avoidanceCommitTimer = 0.8;
+              }
+              avoidanceOffset = racer.avoidanceSide === "LEFT" ? -3.8 : 3.8;
             }
-            avoidanceOffset = racer.avoidanceSide === "LEFT" ? -3.0 : 3.0;
           }
 
           if (racer.avoidanceCommitTimer > 0.0) {
@@ -1009,26 +1039,17 @@
         let accel = aiAccel * accelerationFactor;
 
         // Add progressive ERS boost
-
         accel += (racer.ersPower * ersAccelBoost) * accelerationFactor;
 
         if (racer.speed < target) {
-
           racer.speed = Math.min(target, racer.speed + accel * delta);
-
         } else {
-
           // Decelerate (braking/coasting)
-          let decelRate = (target < racer.speed * 0.9) ? 35.0 : 20.0;
-          if (closestAhead) {
-            const pred = predictCollision(racer, closestAhead);
-            if (getCollisionRisk(pred) === "EMERGENCY") {
-              decelRate = 95.0; // EMERGENCY BRAKING!
-            }
+          let decelRate = (target < racer.speed * 0.9) ? 42.0 : 25.0;
+          if (emergencyBrake) {
+            decelRate = 125.0; // FULL EMERGENCY BRAKING — stops before collision!
           }
-
           racer.speed = Math.max(target, racer.speed - decelRate * delta);
-
         }
 
       } else {
@@ -1635,7 +1656,8 @@
       }
 
       if (racer.sideOffset === undefined) racer.sideOffset = 0.0;
-      racer.sideOffset = THREE.MathUtils.lerp(racer.sideOffset, racer.targetSideOffset, delta * 3.5);
+      const steerRate = (avoidanceOffset !== 0.0) ? 9.5 : 3.8;
+      racer.sideOffset = THREE.MathUtils.lerp(racer.sideOffset, racer.targetSideOffset, delta * steerRate);
 
       point.add(normal.multiplyScalar(racer.sideOffset));
 

@@ -220,17 +220,21 @@
       }
       playerKart.completedLaps = 0;
       playerKart.finished = false;
+      playerKart.retired = false;
+      playerKart.gridLaunchCrossingHandled = false;
       playerKart.tyreLife = 100.0;
       playerKart.tyreCompound = activeCompound || "medium";
       playerKart.hasDrivenOutThisSession = true; // Skip drive out!
       playerKart.driveOutState = "COMPLETE";
       playerKart.driveOutAutopilot = false;
-      playerKart.controlsEnabled = true;
+      playerKart.controlsEnabled = false; // Locked until lights out!
 
       // Position all AI karts on starting grid
       racers.forEach(r => {
         r.completedLaps = 0;
         r.finished = false;
+        r.retired = false;
+        r.gridLaunchCrossingHandled = false;
         r.postRaceStopped = false;
         r.postFinishStartProgress = undefined;
         r.tyreLife = 100.0;
@@ -452,47 +456,48 @@
       playerKart.pitAutopilot !== true &&
       playerKart.inPitLane !== true;
 
-    if (startingSequenceTime < 4.0) {
-      if (formationCameraAllowed) {
-        // 🎥 Camera Flyby Sweep view (Panning along the 16 karts grid)
-        const progress = startingSequenceTime / 4.0;
-        const camOffset = (1.0 - 0.075 * (1.0 - progress)) % 1.0;
-        const camPt = trackCurve.getPointAt(camOffset);
-        
-        if (typeof window.claimCameraOwner === 'function') {
-          window.claimCameraOwner("GRID_FLYBY_SWEEP");
-        }
-        camera.position.copy(camPt.clone().add(new THREE.Vector3(0, 3.5, 4.0)));
-        camera.lookAt(playerKart.mesh.position);
-      }
-      
-      document.getElementById('lights-banner-title').innerText = "GRID FORMATION";
-      
-      // Rev engines slightly
-      if (Math.random() < 0.05) {
-        window.ApexAudio.updateEnginePitch(0.3 + Math.random() * 0.15);
-      }
-    } else if (startingSequenceTime < 9.0 + (window.randomLightsOutHold || 1.2)) {
-      if (formationCameraAllowed) {
-        // 🚦 Camera Focus on starting lights gantry (behind the player kart looking forward)
-        const pPos = playerKart.mesh.position;
-        const tangent = trackCurve.getTangentAt(playerKart.currentOffset);
-        if (typeof window.claimCameraOwner === 'function') {
-          window.claimCameraOwner("GRID_LIGHTS_FOCUS");
-        }
-        camera.position.copy(pPos.clone().add(tangent.clone().multiplyScalar(-6.5)));
-        camera.position.y = 3.0;
-        camera.lookAt(pPos.clone().add(tangent.clone().multiplyScalar(4.0)));
-      }
+    if (window.randomLightsOutHold === undefined) {
+      window.randomLightsOutHold = 1.0 + Math.random() * 1.5;
+    }
 
-      document.getElementById('lights-banner-title').innerText = "PREPARE TO LAUNCH";
+    if (formationCameraAllowed) {
+      // 🚦 Camera Focus on starting lights gantry (behind the player kart looking forward)
+      const pPos = playerKart.mesh.position;
+      const tangent = trackCurve.getTangentAt(playerKart.currentOffset);
+      if (typeof window.claimCameraOwner === 'function') {
+        window.claimCameraOwner("GRID_LIGHTS_FOCUS");
+      }
+      camera.position.copy(pPos.clone().add(tangent.clone().multiplyScalar(-6.5)));
+      camera.position.y = 3.0;
+      camera.lookAt(pPos.clone().add(tangent.clone().multiplyScalar(4.0)));
+    }
+
+    const bannerTitle = document.getElementById('lights-banner-title');
+
+    if (startingSequenceTime < 1.0) {
+      // Initial grid formation pause (bulbs dark)
+      if (bannerTitle) bannerTitle.innerText = "GRID FORMATION";
+      if (Math.random() < 0.05 && window.ApexAudio) {
+        window.ApexAudio.updateEnginePitch(0.35 + Math.random() * 0.15);
+      }
+      for (let i = 0; i < 10; i++) {
+        const el = document.getElementById(`light-red-${i}`);
+        if (el) {
+          el.style.background = "#1f2937";
+          el.style.boxShadow = "inset 0 2px 4px rgba(0,0,0,0.6)";
+        }
+      }
+    } else if (startingSequenceTime < 6.0 + window.randomLightsOutHold) {
+      if (bannerTitle) bannerTitle.innerText = "PREPARE TO LAUNCH";
 
       // Rev engines high during starting hold
-      window.ApexAudio.updateEnginePitch(0.72 + Math.sin(clock.getElapsedTime() * 16.0) * 0.04);
+      if (window.ApexAudio) {
+        window.ApexAudio.updateEnginePitch(0.72 + Math.sin(clock.getElapsedTime() * 16.0) * 0.04);
+      }
 
-      // Bulbs check one-by-one (every 1.0s)
-      const elapsedLights = startingSequenceTime - 4.0; // 0 to 5 seconds
-      const bulbCols = Math.floor(elapsedLights);
+      // 5 Red Lights turn on column-by-column every 1.0s (1.0s, 2.0s, 3.0s, 4.0s, 5.0s)
+      const elapsedLights = startingSequenceTime - 1.0; // 0.0 to 5.0
+      const bulbCols = Math.min(4, Math.floor(elapsedLights));
 
       for (let c = 0; c < 5; c++) {
         const glow = c <= bulbCols;
@@ -502,7 +507,7 @@
           if (el) {
             if (glow) {
               el.style.background = "#ef4444";
-              el.style.boxShadow = "0 0 18px #ef4444, inset 0 2px 4px rgba(255,255,255,0.65)";
+              el.style.boxShadow = "0 0 22px #ef4444, inset 0 2px 4px rgba(255,255,255,0.75)";
             } else {
               el.style.background = "#1f2937";
               el.style.boxShadow = "inset 0 2px 4px rgba(0,0,0,0.6)";
@@ -510,12 +515,12 @@
           }
         }
         if (glow && c > lastLightSoundIndex) {
-          window.ApexAudio.playPickup(); // Beep chimes
+          if (window.ApexAudio) window.ApexAudio.playPickup(); // Audio beep chime per column
           lastLightSoundIndex = c;
         }
       }
     } else {
-      // 🟢 Lights Out!
+      // 🟢 ALL 5 LIGHTS OUT AT ONCE! Away we go!
       for (let i = 0; i < 10; i++) {
         const el = document.getElementById(`light-red-${i}`);
         if (el) {
@@ -524,13 +529,19 @@
         }
       }
 
-      const overlay = document.getElementById('f1-starting-lights-overlay');
-      if (overlay) {
-        overlay.classList.add('hidden');
-        overlay.style.display = 'none'; // Direct style override
+      if (bannerTitle) {
+        bannerTitle.innerHTML = '<span style="color:#22c55e; text-shadow:0 0 20px #22c55e; letter-spacing:3px;">LIGHTS OUT AND AWAY WE GO!</span>';
       }
 
-      window.ApexAudio.playBoost();
+      const overlay = document.getElementById('f1-starting-lights-overlay');
+      if (overlay) {
+        setTimeout(() => {
+          overlay.classList.add('hidden');
+          overlay.style.display = 'none';
+        }, 1200);
+      }
+
+      if (window.ApexAudio) window.ApexAudio.playBoost();
       window.enterNormalRaceMode();
       startTime = clock.getElapsedTime(); // Start race clock
       speakEngineerRadio("Green light! Lights out and away we go!");

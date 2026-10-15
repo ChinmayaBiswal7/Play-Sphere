@@ -252,15 +252,15 @@
   }
 
   // ─── AI Braking Zones ──────────────────────────────────
-  // Raised maxSpeed values so AI carries more corner speed (was: 22-36, now: 30-46)
+  // Authentic high-downforce F1 cornering speeds (keeps AI within competitive gap of player)
   const AI_BRAKING_ZONES = [
-    { from: 0.06,  to: 0.10,  maxSpeed: 40.0 },
-    { from: 0.17,  to: 0.21,  maxSpeed: 34.0 },
-    { from: 0.29,  to: 0.33,  maxSpeed: 30.0 },
-    { from: 0.44,  to: 0.48,  maxSpeed: 44.0 },
-    { from: 0.57,  to: 0.61,  maxSpeed: 36.0 },
-    { from: 0.72,  to: 0.76,  maxSpeed: 38.0 },
-    { from: 0.85,  to: 0.89,  maxSpeed: 42.0 }
+    { from: 0.06,  to: 0.10,  maxSpeed: 62.0 }, // Turn 1-2 fast sweeper
+    { from: 0.17,  to: 0.21,  maxSpeed: 52.0 }, // Turn 3-4 chicane
+    { from: 0.29,  to: 0.33,  maxSpeed: 45.0 }, // Turn 5 hairpin
+    { from: 0.44,  to: 0.48,  maxSpeed: 64.0 }, // Turn 6-7 high-speed bend
+    { from: 0.57,  to: 0.61,  maxSpeed: 54.0 }, // Turn 8 medium curve
+    { from: 0.72,  to: 0.76,  maxSpeed: 50.0 }, // Turn 9-10 chicane
+    { from: 0.85,  to: 0.89,  maxSpeed: 60.0 }  // Turn 11-12 final sweeping bend
   ];
 
   // ─── Penalty Display Timer ─────────────────────────────────────

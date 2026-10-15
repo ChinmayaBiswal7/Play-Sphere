@@ -40,6 +40,31 @@
 
   function updateCameraFollow() {
     if (postRaceActive || isStartingSequence) return;
+
+    // Live Spectator Broadcast POV for retired/DNF player
+    if (window.spectatorModeActive && window.spectatorTargetCar && window.spectatorTargetCar.mesh) {
+      camera.up.set(0, 1, 0);
+      if (typeof window.claimCameraOwner === 'function') {
+        window.claimCameraOwner("SPECTATOR_POV");
+      }
+      const tCar = window.spectatorTargetCar;
+      const tPos = tCar.mesh.position;
+      const rotY = tCar.mesh.rotation.y;
+      const forward = new THREE.Vector3(Math.sin(rotY), 0, Math.cos(rotY)).normalize();
+      
+      const camPos = tPos.clone()
+        .add(forward.clone().multiplyScalar(-5.4))
+        .add(new THREE.Vector3(0, 2.1, 0));
+      camera.position.lerp(camPos, 0.12);
+      camera.lookAt(tPos.clone().add(new THREE.Vector3(0, 0.65, 0)));
+      camera.updateProjectionMatrix();
+
+      if (typeof updateSpectatorHUD === 'function') {
+        updateSpectatorHUD();
+      }
+      return;
+    }
+
     const pPos = playerKart.mesh.position;
     
     // Cinematic on-board rollout camera inside garage and exiting through doors (Zero Wall Clipping!)

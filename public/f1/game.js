@@ -310,7 +310,7 @@
   function getRacerScore(racer) {
     const completed = racer.completedLaps !== undefined ? racer.completedLaps : 0;
     const progress = racer.currentOffset !== undefined ? racer.currentOffset : 0.0;
-    return completed + progress;
+    return completed * 1000.0 + progress;
   }
 
   function validateRaceOrder(sorted) {
@@ -353,26 +353,38 @@
         }
       });
     } else {
-      // Main GP Race: sort by total progress
+      // Main GP Race: sort by finished status, total lap score, and DNF/retired status
       const sorted = [...racers].sort((a, b) => {
         if (a.finished && b.finished) {
-          return a.finishPos - b.finishPos;
+          // If both finished normally, order by finish position
+          if (!a.retired && !b.retired) return a.finishPos - b.finishPos;
+          if (!a.retired) return -1;
+          if (!b.retired) return 1;
         }
-        if (a.finished) return -1;
-        if (b.finished) return 1;
+        if (a.finished && !a.retired) return -1;
+        if (b.finished && !b.retired) return 1;
+        
+        // Handle retired/DNF cars (placed behind active runners)
+        if (a.retired && b.retired) {
+          return (b.completedLaps || 0) - (a.completedLaps || 0);
+        }
+        if (a.retired) return 1;
+        if (b.retired) return -1;
+
         return getRacerScore(b) - getRacerScore(a);
       });
+
       sorted.forEach((racer, idx) => {
         racer.posRank = idx + 1;
         if (racer.isPlayer) {
           const hudPosVal = document.getElementById('hud-pos-val');
           if (hudPosVal) {
-            hudPosVal.innerText = `P${idx + 1}`;
+            hudPosVal.innerText = racer.retired ? "DNF" : `P${idx + 1}`;
           }
           const hudPos = document.getElementById('hud-pos');
           if (hudPos) {
             const ranks = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th", "11th", "12th", "13th", "14th", "15th", "16th"];
-            hudPos.innerText = ranks[idx] || `${idx+1}th`;
+            hudPos.innerText = racer.retired ? "DNF" : (ranks[idx] || `${idx+1}th`);
           }
         }
       });
@@ -722,8 +734,11 @@
           }
         }
       } else {
-        // Ignore grid launch crossings in the first 8 seconds of the race!
-        if (raceTimer < 8.0) {
+        // On standing start, all cars launch from behind the finish line.
+        // Ignore the initial line crossing from the grid launch so it does NOT count as a full lap!
+        if (!car.gridLaunchCrossingHandled) {
+          car.gridLaunchCrossingHandled = true;
+          car.lapTimeElapsed = 0.0;
           car.previousTrackProgress = current;
           return;
         }
@@ -1027,15 +1042,40 @@
     }
   });
 
+  window.spectatorModeActive = false;
+  window.spectatorCarIndex = 0;
+  window.spectatorTargetCar = null;
+
   // ════ TERMINAL DAMAGE OVERLAY & REPAIR HANDLERS ════
   window.showTerminalDamageOverlay = () => {
     const overlay = document.getElementById('f1-terminal-damage-overlay');
     if (overlay) {
       overlay.style.display = 'flex';
+
+      const towBtn = document.getElementById('btn-terminal-tow');
+      const spectateBtn = document.getElementById('btn-terminal-spectate');
+      const endBtn = document.getElementById('btn-terminal-end-session');
+
+      if (currentSessionIndex === 2) {
+        // Race DNF: Player cannot repair and continue race!
+        if (towBtn) towBtn.style.display = 'none';
+        if (spectateBtn) spectateBtn.style.display = 'inline-block';
+        if (endBtn) endBtn.style.display = 'inline-block';
+      } else {
+        // Practice / Qualifying: Can tow back to garage
+        if (towBtn) towBtn.style.display = 'inline-block';
+        if (spectateBtn) spectateBtn.style.display = 'none';
+        if (endBtn) endBtn.style.display = 'none';
+      }
     }
+
     if (playerKart) {
       playerKart.speed = 0.0;
       playerKart.controlsEnabled = false;
+      if (currentSessionIndex === 2) {
+        playerKart.retired = true;
+        playerKart.finished = true;
+      }
     }
     if (window.ApexAudio) {
       window.ApexAudio.stopEngine();
@@ -1043,6 +1083,83 @@
     }
     if (typeof speakEngineerRadio === 'function') {
       speakEngineerRadio("Engine failure! Terminal damage, pull over and switch off. We're out of the race.", 100, true);
+    }
+  };
+
+  window.startSpectatorMode = () => {
+    window.spectatorModeActive = true;
+    const overlay = document.getElementById('f1-terminal-damage-overlay');
+    if (overlay) overlay.style.display = 'none';
+
+    if (playerKart) {
+      playerKart.speed = 0.0;
+      playerKart.controlsEnabled = false;
+      playerKart.retired = true;
+      playerKart.finished = true;
+    }
+
+    // Pick top active AI car
+    const activeAI = racers.filter(r => !r.isPlayer && !r.retired);
+    window.spectatorCarIndex = 0;
+    window.spectatorTargetCar = activeAI[0] || racers.find(r => !r.isPlayer) || playerKart;
+
+    const specHud = document.getElementById('f1-spectator-hud');
+    if (specHud) {
+      specHud.style.display = 'flex';
+    }
+    updateSpectatorHUD();
+    if (typeof speakEngineerRadio === 'function') {
+      speakEngineerRadio("Switched to onboard broadcast spectator feed.", 80, true);
+    }
+  };
+
+  window.cycleSpectatorCar = (dir) => {
+    if (window.ApexAudio) window.ApexAudio.playClick();
+    const activeCars = racers.filter(r => !r.isPlayer && !r.retired);
+    if (activeCars.length === 0) return;
+    window.spectatorCarIndex = (window.spectatorCarIndex + dir + activeCars.length) % activeCars.length;
+    window.spectatorTargetCar = activeCars[window.spectatorCarIndex];
+    updateSpectatorHUD();
+  };
+
+  function updateSpectatorHUD() {
+    const car = window.spectatorTargetCar;
+    if (!car) return;
+    const nameEl = document.getElementById('spectator-driver-name');
+    const teamEl = document.getElementById('spectator-driver-team');
+    const posEl = document.getElementById('spectator-driver-pos');
+    const lapEl = document.getElementById('spectator-driver-lap');
+
+    if (nameEl) nameEl.innerText = car.name || "DRIVER";
+    if (teamEl) {
+      const team = F1_TEAMS[car.teamIndex || 0];
+      teamEl.innerText = team ? team.name : "";
+      if (team) teamEl.style.color = team.color;
+    }
+    if (posEl) posEl.innerText = `P${car.posRank || 1}`;
+    if (lapEl) lapEl.innerText = `LAP ${Math.min(maxLaps, (car.completedLaps || 0) + 1)}/${maxLaps}`;
+  }
+
+  window.retireAndEndSession = () => {
+    if (window.ApexAudio) window.ApexAudio.playClick();
+    const overlay = document.getElementById('f1-terminal-damage-overlay');
+    if (overlay) overlay.style.display = 'none';
+    const specHud = document.getElementById('f1-spectator-hud');
+    if (specHud) specHud.style.display = 'none';
+
+    window.spectatorModeActive = false;
+
+    if (playerKart) {
+      playerKart.speed = 0.0;
+      playerKart.controlsEnabled = false;
+      playerKart.retired = true;
+      playerKart.finished = true;
+    }
+
+    if (typeof showFinalResultsUI === 'function') {
+      showFinalResultsUI();
+    } else {
+      transitionToPostRaceState("RESULTS");
     }
   };
 
@@ -2728,7 +2845,7 @@
     const contBtn = document.getElementById('gp-btn-continue');
     if (contBtn) {
       if (step === 4) {
-        contBtn.innerText = "START WEEKEND ➔";
+        contBtn.innerText = "START GRAND PRIX RACE ➔";
       } else {
         contBtn.innerText = "CONTINUE ➔";
       }
@@ -2740,7 +2857,7 @@
     if (window.gpCurrentStep < 4) {
       window.gpRenderStep(window.gpCurrentStep + 1);
     } else {
-      window.startGrandPrixWeekend();
+      window.startDirectGrandPrixRace();
     }
   };
 
@@ -2793,6 +2910,34 @@
     window.ApexAudio.playClick();
     window.weekendConfig.difficulty = diff;
     window.gpRenderStep(3);
+  };
+
+  window.startDirectGrandPrixRace = () => {
+    // Validate
+    if (window.weekendConfig.selectedTeamId === undefined) throw new Error("No team selected");
+    if (window.weekendConfig.selectedDriverId === undefined) throw new Error("No driver selected");
+    if (window.weekendConfig.selectedTrackId === undefined) throw new Error("No circuit selected");
+    if (window.weekendConfig.raceLaps < 3) throw new Error("Invalid race lap count");
+
+    // Lock in choices globally
+    selectedTeamIndex = window.weekendConfig.selectedTeamId;
+    activeDriver = window.weekendConfig.selectedDriverId;
+    activeTrack = window.weekendConfig.selectedTrackId;
+    maxLaps = window.weekendConfig.raceLaps;
+    activeDifficulty = window.weekendConfig.difficulty;
+
+    // Launch Grand Prix directly into the Main Race session on starting grid!
+    currentSessionIndex = 2; // Main GP Race
+    completedSessions = [true, true, false];
+    sessionStatuses = ['COMPLETED', 'COMPLETED', 'AVAILABLE'];
+
+    // Hide GP setup screen
+    document.getElementById('grandPrixSetupScreen').style.display = 'none';
+
+    const trackNames = ["Sunset Coast Circuit", "Alpine Heights"];
+    window.triggerLoadingScreen("GRAND PRIX RACE", trackNames[activeTrack], () => {
+      setupGame();
+    });
   };
 
   window.startGrandPrixWeekend = () => {
@@ -3196,17 +3341,21 @@
       }
       playerKart.completedLaps = 0;
       playerKart.finished = false;
+      playerKart.retired = false;
+      playerKart.gridLaunchCrossingHandled = false;
       playerKart.tyreLife = 100.0;
       playerKart.tyreCompound = activeCompound || "medium";
       playerKart.hasDrivenOutThisSession = true; // Skip drive out!
       playerKart.driveOutState = "COMPLETE";
       playerKart.driveOutAutopilot = false;
-      playerKart.controlsEnabled = true;
+      playerKart.controlsEnabled = false; // Locked until lights out!
 
       // Position all AI karts on starting grid
       racers.forEach(r => {
         r.completedLaps = 0;
         r.finished = false;
+        r.retired = false;
+        r.gridLaunchCrossingHandled = false;
         r.postRaceStopped = false;
         r.postFinishStartProgress = undefined;
         r.tyreLife = 100.0;
@@ -3428,47 +3577,48 @@
       playerKart.pitAutopilot !== true &&
       playerKart.inPitLane !== true;
 
-    if (startingSequenceTime < 4.0) {
-      if (formationCameraAllowed) {
-        // 🎥 Camera Flyby Sweep view (Panning along the 16 karts grid)
-        const progress = startingSequenceTime / 4.0;
-        const camOffset = (1.0 - 0.075 * (1.0 - progress)) % 1.0;
-        const camPt = trackCurve.getPointAt(camOffset);
-        
-        if (typeof window.claimCameraOwner === 'function') {
-          window.claimCameraOwner("GRID_FLYBY_SWEEP");
-        }
-        camera.position.copy(camPt.clone().add(new THREE.Vector3(0, 3.5, 4.0)));
-        camera.lookAt(playerKart.mesh.position);
-      }
-      
-      document.getElementById('lights-banner-title').innerText = "GRID FORMATION";
-      
-      // Rev engines slightly
-      if (Math.random() < 0.05) {
-        window.ApexAudio.updateEnginePitch(0.3 + Math.random() * 0.15);
-      }
-    } else if (startingSequenceTime < 9.0 + (window.randomLightsOutHold || 1.2)) {
-      if (formationCameraAllowed) {
-        // 🚦 Camera Focus on starting lights gantry (behind the player kart looking forward)
-        const pPos = playerKart.mesh.position;
-        const tangent = trackCurve.getTangentAt(playerKart.currentOffset);
-        if (typeof window.claimCameraOwner === 'function') {
-          window.claimCameraOwner("GRID_LIGHTS_FOCUS");
-        }
-        camera.position.copy(pPos.clone().add(tangent.clone().multiplyScalar(-6.5)));
-        camera.position.y = 3.0;
-        camera.lookAt(pPos.clone().add(tangent.clone().multiplyScalar(4.0)));
-      }
+    if (window.randomLightsOutHold === undefined) {
+      window.randomLightsOutHold = 1.0 + Math.random() * 1.5;
+    }
 
-      document.getElementById('lights-banner-title').innerText = "PREPARE TO LAUNCH";
+    if (formationCameraAllowed) {
+      // 🚦 Camera Focus on starting lights gantry (behind the player kart looking forward)
+      const pPos = playerKart.mesh.position;
+      const tangent = trackCurve.getTangentAt(playerKart.currentOffset);
+      if (typeof window.claimCameraOwner === 'function') {
+        window.claimCameraOwner("GRID_LIGHTS_FOCUS");
+      }
+      camera.position.copy(pPos.clone().add(tangent.clone().multiplyScalar(-6.5)));
+      camera.position.y = 3.0;
+      camera.lookAt(pPos.clone().add(tangent.clone().multiplyScalar(4.0)));
+    }
+
+    const bannerTitle = document.getElementById('lights-banner-title');
+
+    if (startingSequenceTime < 1.0) {
+      // Initial grid formation pause (bulbs dark)
+      if (bannerTitle) bannerTitle.innerText = "GRID FORMATION";
+      if (Math.random() < 0.05 && window.ApexAudio) {
+        window.ApexAudio.updateEnginePitch(0.35 + Math.random() * 0.15);
+      }
+      for (let i = 0; i < 10; i++) {
+        const el = document.getElementById(`light-red-${i}`);
+        if (el) {
+          el.style.background = "#1f2937";
+          el.style.boxShadow = "inset 0 2px 4px rgba(0,0,0,0.6)";
+        }
+      }
+    } else if (startingSequenceTime < 6.0 + window.randomLightsOutHold) {
+      if (bannerTitle) bannerTitle.innerText = "PREPARE TO LAUNCH";
 
       // Rev engines high during starting hold
-      window.ApexAudio.updateEnginePitch(0.72 + Math.sin(clock.getElapsedTime() * 16.0) * 0.04);
+      if (window.ApexAudio) {
+        window.ApexAudio.updateEnginePitch(0.72 + Math.sin(clock.getElapsedTime() * 16.0) * 0.04);
+      }
 
-      // Bulbs check one-by-one (every 1.0s)
-      const elapsedLights = startingSequenceTime - 4.0; // 0 to 5 seconds
-      const bulbCols = Math.floor(elapsedLights);
+      // 5 Red Lights turn on column-by-column every 1.0s (1.0s, 2.0s, 3.0s, 4.0s, 5.0s)
+      const elapsedLights = startingSequenceTime - 1.0; // 0.0 to 5.0
+      const bulbCols = Math.min(4, Math.floor(elapsedLights));
 
       for (let c = 0; c < 5; c++) {
         const glow = c <= bulbCols;
@@ -3478,7 +3628,7 @@
           if (el) {
             if (glow) {
               el.style.background = "#ef4444";
-              el.style.boxShadow = "0 0 18px #ef4444, inset 0 2px 4px rgba(255,255,255,0.65)";
+              el.style.boxShadow = "0 0 22px #ef4444, inset 0 2px 4px rgba(255,255,255,0.75)";
             } else {
               el.style.background = "#1f2937";
               el.style.boxShadow = "inset 0 2px 4px rgba(0,0,0,0.6)";
@@ -3486,12 +3636,12 @@
           }
         }
         if (glow && c > lastLightSoundIndex) {
-          window.ApexAudio.playPickup(); // Beep chimes
+          if (window.ApexAudio) window.ApexAudio.playPickup(); // Audio beep chime per column
           lastLightSoundIndex = c;
         }
       }
     } else {
-      // 🟢 Lights Out!
+      // 🟢 ALL 5 LIGHTS OUT AT ONCE! Away we go!
       for (let i = 0; i < 10; i++) {
         const el = document.getElementById(`light-red-${i}`);
         if (el) {
@@ -3500,13 +3650,19 @@
         }
       }
 
-      const overlay = document.getElementById('f1-starting-lights-overlay');
-      if (overlay) {
-        overlay.classList.add('hidden');
-        overlay.style.display = 'none'; // Direct style override
+      if (bannerTitle) {
+        bannerTitle.innerHTML = '<span style="color:#22c55e; text-shadow:0 0 20px #22c55e; letter-spacing:3px;">LIGHTS OUT AND AWAY WE GO!</span>';
       }
 
-      window.ApexAudio.playBoost();
+      const overlay = document.getElementById('f1-starting-lights-overlay');
+      if (overlay) {
+        setTimeout(() => {
+          overlay.classList.add('hidden');
+          overlay.style.display = 'none';
+        }, 1200);
+      }
+
+      if (window.ApexAudio) window.ApexAudio.playBoost();
       window.enterNormalRaceMode();
       startTime = clock.getElapsedTime(); // Start race clock
       speakEngineerRadio("Green light! Lights out and away we go!");
@@ -6276,15 +6432,15 @@
   }
 
   // ─── AI Braking Zones ──────────────────────────────────
-  // Raised maxSpeed values so AI carries more corner speed (was: 22-36, now: 30-46)
+  // Authentic high-downforce F1 cornering speeds (keeps AI within competitive gap of player)
   const AI_BRAKING_ZONES = [
-    { from: 0.06,  to: 0.10,  maxSpeed: 40.0 },
-    { from: 0.17,  to: 0.21,  maxSpeed: 34.0 },
-    { from: 0.29,  to: 0.33,  maxSpeed: 30.0 },
-    { from: 0.44,  to: 0.48,  maxSpeed: 44.0 },
-    { from: 0.57,  to: 0.61,  maxSpeed: 36.0 },
-    { from: 0.72,  to: 0.76,  maxSpeed: 38.0 },
-    { from: 0.85,  to: 0.89,  maxSpeed: 42.0 }
+    { from: 0.06,  to: 0.10,  maxSpeed: 62.0 }, // Turn 1-2 fast sweeper
+    { from: 0.17,  to: 0.21,  maxSpeed: 52.0 }, // Turn 3-4 chicane
+    { from: 0.29,  to: 0.33,  maxSpeed: 45.0 }, // Turn 5 hairpin
+    { from: 0.44,  to: 0.48,  maxSpeed: 64.0 }, // Turn 6-7 high-speed bend
+    { from: 0.57,  to: 0.61,  maxSpeed: 54.0 }, // Turn 8 medium curve
+    { from: 0.72,  to: 0.76,  maxSpeed: 50.0 }, // Turn 9-10 chicane
+    { from: 0.85,  to: 0.89,  maxSpeed: 60.0 }  // Turn 11-12 final sweeping bend
   ];
 
   // ─── Penalty Display Timer ─────────────────────────────────────
@@ -6593,30 +6749,30 @@
       }
     }
 
-    if (isRaceActive || (postRaceActive && postRaceState === "FINISHING")) {
+    if (isStartingSequence || isRaceActive || (postRaceActive && postRaceState === "FINISHING")) {
       if (isStartingSequence) {
         updateStartingSequence(delta);
       } else {
         if (isRaceActive) updateRaceTimer(delta);
       }
 
-        if (isRaceActive) {
-          updatePlayerPhysics(delta);
-          updateAIPysics(delta);
-          
-          // Update tyre wear for all cars
-          racers.forEach(car => calculateTyreWear(car, delta));
+      if (isRaceActive && !isStartingSequence) {
+        updatePlayerPhysics(delta);
+        updateAIPysics(delta);
+        
+        // Update tyre wear for all cars
+        racers.forEach(car => calculateTyreWear(car, delta));
 
-          racers.forEach(car => {
-            const inGarage = car.qualifyingState === "GARAGE";
-            const isTimingActive = !isStartingSequence && !inGarage;
-            if (isTimingActive) {
-              car.lapTimeElapsed = (car.lapTimeElapsed || 0.0) + delta;
-            }
-          });
+        racers.forEach(car => {
+          const inGarage = car.qualifyingState === "GARAGE";
+          const isTimingActive = !isStartingSequence && !inGarage;
+          if (isTimingActive) {
+            car.lapTimeElapsed = (car.lapTimeElapsed || 0.0) + delta;
+          }
+        });
 
-          racers.forEach(car => updateCarLap(car, delta));
-        }
+        racers.forEach(car => updateCarLap(car, delta));
+      }
 
       // Unified position sorting
       updateRacePositions();
@@ -7159,8 +7315,8 @@
     const throttleInput = Math.min(1.0, Math.max(keys.w || keys.ArrowUp ? 1.0 : 0.0, gpThrottle, phoneThrottle));
     const brakeInput = Math.min(1.0, Math.max(keys.s || keys.ArrowDown ? 1.0 : 0.0, gpBrake, phoneBrake));
 
-    // Lock player speed & gear in starting sequence countdown or grid waiting states
-    if (isStartingSequence || window.raceState === "RACE_GRID_WAIT" || window.raceState === "RACE_LIGHTS") {
+    // Lock player speed & gear in starting sequence countdown, grid waiting states, or when retired/disabled
+    if (isStartingSequence || playerKart.retired || !playerKart.controlsEnabled || window.raceState === "RACE_GRID_WAIT" || window.raceState === "RACE_LIGHTS") {
       playerKart.speed = 0.0;
       currentGear = 0; // Lock to Neutral!
       currentRPM = 1000 + Math.random() * 150; // Idle revs
@@ -9543,9 +9699,9 @@
 
     // Boosted AI top speeds to match player top speed potential (player base = 75 m/s)
 
-    // Boosted AI top speeds to match realistic F1 player speeds (player max ~88-92 m/s, ~315-330 km/h)
-    // Easy:74, Normal:84, Hard:89, Expert:93
-    const baseSpeed = [74.0, 84.0, 89.0, 93.0][activeDifficulty] || 84.0;
+    // Realistic modern F1 AI speeds: player max ~88-92 m/s (~315-330 km/h) on straights
+    // Easy: 82 m/s (~295 km/h), Normal: 89 m/s (~320 km/h), Hard: 93 m/s (~335 km/h), Expert: 97 m/s (~350 km/h)
+    const baseSpeed = [82.0, 89.0, 93.0, 97.0][activeDifficulty] || 89.0;
 
     // Per-racer pace calculation using driver + car performance profiles
     function calculateAIPace(racer, base) {
@@ -9559,13 +9715,13 @@
       // Combined potential: car 45%, driver 55%
       const combined = carFactor * 0.45 + driverFactor * 0.55;
 
-      // Difficulty utilisation: Easy 88-94%, Normal 95-101%, Hard 99-105%, Expert 102-108%
+      // Difficulty utilisation: Easy 94-98%, Normal 98-102%, Hard 101-106%, Expert 104-110%
       const utilRange = [
-        [0.88, 0.94],  // Easy (~250-265 km/h)
-        [0.95, 1.01],  // Normal (~290-305 km/h)
-        [0.99, 1.05],  // Hard (~315-335 km/h)
-        [1.02, 1.08]   // Expert (~340-360 km/h)
-      ][activeDifficulty] || [0.95, 1.01];
+        [0.94, 0.98],  // Easy (~280-295 km/h)
+        [0.98, 1.02],  // Normal (~315-325 km/h)
+        [1.01, 1.06],  // Hard (~330-345 km/h)
+        [1.04, 1.10]   // Expert (~345-360 km/h)
+      ][activeDifficulty] || [0.98, 1.02];
 
       const utilFactor = THREE.MathUtils.lerp(utilRange[0], utilRange[1], combined);
       return base * utilFactor;
@@ -9985,13 +10141,13 @@
 
         const DIFFICULTY_CONFIG = {
 
-          0: { brakingMargin: 0.045, paceError: 0.12, overtakeAggression: 0.35, baseSpeedMult: 0.82 },
+          0: { brakingMargin: 0.040, paceError: 0.08, overtakeAggression: 0.45, baseSpeedMult: 0.95 },
 
-          1: { brakingMargin: 0.036, paceError: 0.06, overtakeAggression: 0.55, baseSpeedMult: 1.0 },
+          1: { brakingMargin: 0.033, paceError: 0.04, overtakeAggression: 0.65, baseSpeedMult: 1.0 },
 
-          2: { brakingMargin: 0.031, paceError: 0.025, overtakeAggression: 0.78, baseSpeedMult: 1.12 },
+          2: { brakingMargin: 0.029, paceError: 0.015, overtakeAggression: 0.85, baseSpeedMult: 1.04 },
 
-          3: { brakingMargin: 0.027, paceError: 0.008, overtakeAggression: 0.94, baseSpeedMult: 1.25 }
+          3: { brakingMargin: 0.025, paceError: 0.005, overtakeAggression: 0.96, baseSpeedMult: 1.08 }
 
         };
 
@@ -10118,6 +10274,9 @@
         let minGapAhead = Infinity;
         avoidanceOffset = 0.0;
 
+        // Enhanced lookahead: speed-dependent distance (detects obstacles well in advance)
+        const lookaheadDist = Math.max(75.0, racer.speed * 1.5);
+
         racers.forEach(other => {
           if (other === racer) return;
           if (other.isTrackActive === false || other.qualifyingState === "GARAGE") return;
@@ -10127,7 +10286,7 @@
           if (myInPit !== otherInPit) return;
 
           const gap = getSignedTrackGap(racer, other);
-          if (gap > 0.0 && gap < 35.0) {
+          if (gap > 0.0 && gap < lookaheadDist) {
             if (gap < minGapAhead) {
               minGapAhead = gap;
               closestAhead = other;
@@ -10135,27 +10294,54 @@
           }
         });
 
-        if (closestAhead) {
-          const pred = predictCollision(racer, closestAhead);
-          const risk = getCollisionRisk(pred);
+        let emergencyBrake = false;
 
-          if (risk === "CAUTION") {
-            target = Math.min(target, closestAhead.speed * 0.95);
-          } else if (risk === "HIGH") {
-            target = Math.min(target, closestAhead.speed * 0.82);
-            if (racer.avoidanceCommitTimer === undefined) racer.avoidanceCommitTimer = 0.0;
-            if (racer.avoidanceSide === undefined || racer.avoidanceSide === "NONE") {
-              racer.avoidanceSide = (closestAhead.sideOffset > 0) ? "LEFT" : "RIGHT";
-              racer.avoidanceCommitTimer = 0.8;
+        if (closestAhead) {
+          const latDiff = Math.abs(racer.sideOffset - closestAhead.sideOffset);
+          const isHazardStopped = (closestAhead.speed < 15.0);
+
+          if (isHazardStopped) {
+            // 🛑 STATIONARY / CRASHED OBSTACLE AVOIDANCE & EMERGENCY BRAKING
+            // Steer decisively toward the clear side of the track
+            const clearSide = (closestAhead.sideOffset >= 0) ? -4.5 : 4.5;
+            avoidanceOffset = clearSide;
+            racer.avoidanceSide = (closestAhead.sideOffset >= 0) ? "LEFT" : "RIGHT";
+            racer.avoidanceCommitTimer = 1.2;
+
+            if (minGapAhead < 45.0 && latDiff < 3.2) {
+              // Lane is directly obstructed ahead: slam emergency brakes to avoid rear-ending!
+              target = 0.0;
+              emergencyBrake = true;
+            } else if (minGapAhead < 25.0) {
+              target = Math.min(target, 12.0);
+              emergencyBrake = true;
+            } else if (minGapAhead < 60.0) {
+              target = Math.min(target, 35.0);
             }
-            avoidanceOffset = racer.avoidanceSide === "LEFT" ? -1.5 : 1.5;
-          } else if (risk === "EMERGENCY") {
-            target = Math.min(target, closestAhead.speed * 0.50);
-            if (racer.avoidanceCommitTimer === undefined || racer.avoidanceSide === "NONE") {
-              racer.avoidanceSide = (closestAhead.sideOffset > 0) ? "LEFT" : "RIGHT";
-              racer.avoidanceCommitTimer = 0.8;
+          } else {
+            // Normal dynamic following and collision avoidance
+            const pred = predictCollision(racer, closestAhead);
+            const risk = getCollisionRisk(pred);
+
+            if (risk === "CAUTION") {
+              target = Math.min(target, closestAhead.speed * 0.98);
+            } else if (risk === "HIGH") {
+              target = Math.min(target, closestAhead.speed * 0.88);
+              if (racer.avoidanceCommitTimer === undefined) racer.avoidanceCommitTimer = 0.0;
+              if (racer.avoidanceSide === undefined || racer.avoidanceSide === "NONE") {
+                racer.avoidanceSide = (closestAhead.sideOffset > 0) ? "LEFT" : "RIGHT";
+                racer.avoidanceCommitTimer = 0.8;
+              }
+              avoidanceOffset = racer.avoidanceSide === "LEFT" ? -2.2 : 2.2;
+            } else if (risk === "EMERGENCY") {
+              target = Math.min(target, closestAhead.speed * 0.70);
+              emergencyBrake = true;
+              if (racer.avoidanceCommitTimer === undefined || racer.avoidanceSide === "NONE") {
+                racer.avoidanceSide = (closestAhead.sideOffset > 0) ? "LEFT" : "RIGHT";
+                racer.avoidanceCommitTimer = 0.8;
+              }
+              avoidanceOffset = racer.avoidanceSide === "LEFT" ? -3.8 : 3.8;
             }
-            avoidanceOffset = racer.avoidanceSide === "LEFT" ? -3.0 : 3.0;
           }
 
           if (racer.avoidanceCommitTimer > 0.0) {
@@ -10169,26 +10355,17 @@
         let accel = aiAccel * accelerationFactor;
 
         // Add progressive ERS boost
-
         accel += (racer.ersPower * ersAccelBoost) * accelerationFactor;
 
         if (racer.speed < target) {
-
           racer.speed = Math.min(target, racer.speed + accel * delta);
-
         } else {
-
           // Decelerate (braking/coasting)
-          let decelRate = (target < racer.speed * 0.9) ? 35.0 : 20.0;
-          if (closestAhead) {
-            const pred = predictCollision(racer, closestAhead);
-            if (getCollisionRisk(pred) === "EMERGENCY") {
-              decelRate = 95.0; // EMERGENCY BRAKING!
-            }
+          let decelRate = (target < racer.speed * 0.9) ? 42.0 : 25.0;
+          if (emergencyBrake) {
+            decelRate = 125.0; // FULL EMERGENCY BRAKING — stops before collision!
           }
-
           racer.speed = Math.max(target, racer.speed - decelRate * delta);
-
         }
 
       } else {
@@ -10795,7 +10972,8 @@
       }
 
       if (racer.sideOffset === undefined) racer.sideOffset = 0.0;
-      racer.sideOffset = THREE.MathUtils.lerp(racer.sideOffset, racer.targetSideOffset, delta * 3.5);
+      const steerRate = (avoidanceOffset !== 0.0) ? 9.5 : 3.8;
+      racer.sideOffset = THREE.MathUtils.lerp(racer.sideOffset, racer.targetSideOffset, delta * steerRate);
 
       point.add(normal.multiplyScalar(racer.sideOffset));
 
@@ -11309,6 +11487,31 @@
 
   function updateCameraFollow() {
     if (postRaceActive || isStartingSequence) return;
+
+    // Live Spectator Broadcast POV for retired/DNF player
+    if (window.spectatorModeActive && window.spectatorTargetCar && window.spectatorTargetCar.mesh) {
+      camera.up.set(0, 1, 0);
+      if (typeof window.claimCameraOwner === 'function') {
+        window.claimCameraOwner("SPECTATOR_POV");
+      }
+      const tCar = window.spectatorTargetCar;
+      const tPos = tCar.mesh.position;
+      const rotY = tCar.mesh.rotation.y;
+      const forward = new THREE.Vector3(Math.sin(rotY), 0, Math.cos(rotY)).normalize();
+      
+      const camPos = tPos.clone()
+        .add(forward.clone().multiplyScalar(-5.4))
+        .add(new THREE.Vector3(0, 2.1, 0));
+      camera.position.lerp(camPos, 0.12);
+      camera.lookAt(tPos.clone().add(new THREE.Vector3(0, 0.65, 0)));
+      camera.updateProjectionMatrix();
+
+      if (typeof updateSpectatorHUD === 'function') {
+        updateSpectatorHUD();
+      }
+      return;
+    }
+
     const pPos = playerKart.mesh.position;
     
     // Cinematic on-board rollout camera inside garage and exiting through doors (Zero Wall Clipping!)
@@ -13523,10 +13726,15 @@
       // Rebuild inner contents dynamically (keeps DOM transitions intact!)
       row.innerHTML = '';
 
-      // F1 Position badge (P1, P2, P3...)
+      // F1 Position badge (P1, P2, P3... or DNF)
       const posEl = document.createElement('span');
-      posEl.innerText = `P${pos}`;
-      posEl.style.cssText = `font-weight: 900; width: 26px; ${racer.isPlayer ? 'color: var(--neon-cyan);' : 'color: rgba(255,255,255,0.65);'}`;
+      if (racer.retired) {
+        posEl.innerText = "DNF";
+        posEl.style.cssText = "font-weight: 900; width: 28px; color: #ef4444; font-size: 0.65rem;";
+      } else {
+        posEl.innerText = `P${pos}`;
+        posEl.style.cssText = `font-weight: 900; width: 26px; ${racer.isPlayer ? 'color: var(--neon-cyan);' : 'color: rgba(255,255,255,0.65);'}`;
+      }
       row.appendChild(posEl);
 
       // Gained/Lost Place Indicator Badge relative to starting grid slot!
@@ -13566,7 +13774,10 @@
       // Pit status or Gap / Lap time
       let isPittingNow = racer.isPlayer ? isPitting : (racer.isPitting || false);
       const gapEl = document.createElement('span');
-      if (isPittingNow) {
+      if (racer.retired) {
+        gapEl.innerText = "DNF";
+        gapEl.style.cssText = "font-weight: 900; color: #ef4444; background: rgba(239,68,68,0.18); padding: 1px 5px; border-radius: 3px; font-size: 0.6rem;";
+      } else if (isPittingNow) {
         gapEl.innerText = "PIT";
         gapEl.style.cssText = "font-weight: 900; color: #22c55e; background: rgba(34,197,94,0.15); padding: 1px 5px; border-radius: 3px; font-size: 0.6rem; letter-spacing: 0.5px;";
       } else if (currentSessionIndex === 0 || currentSessionIndex === 1) {
@@ -13581,15 +13792,26 @@
         gapEl.innerText = timeText;
         gapEl.style.cssText = `font-weight: 700; font-size: 0.65rem; font-family: monospace; ${racer.isPlayer ? 'color: #facc15;' : 'color: rgba(255,255,255,0.7);'}`;
       } else {
-        // Race: show gap to leader
+        // Race: show gap to leader or lapped indicator
         let gapText = "";
         if (idx === 0) {
           gapText = "LEADER";
         } else {
-          const score = getRacerScore(racer);
-          const diffScore = leaderScore - score;
-          const gapSecs = diffScore * 20.0;
-          gapText = `+${gapSecs.toFixed(3)}`;
+          const leaderLaps = sorted[0].completedLaps || 0;
+          const racerLaps = racer.completedLaps || 0;
+          const lapDiff = leaderLaps - racerLaps;
+
+          if (lapDiff > 1) {
+            gapText = `+${lapDiff} LAPS`;
+          } else if (lapDiff === 1) {
+            gapText = `+1 LAP`;
+          } else {
+            const leaderOffset = sorted[0].currentOffset || 0.0;
+            const racerOffset = racer.currentOffset || 0.0;
+            const offsetDiff = (leaderOffset - racerOffset + 1.0) % 1.0;
+            const gapSecs = offsetDiff * (1800.0 / Math.max(20.0, racer.speed || 80.0));
+            gapText = `+${gapSecs.toFixed(2)}s`;
+          }
         }
         gapEl.innerText = gapText;
         gapEl.style.cssText = `font-weight: 700; font-size: 0.65rem; ${racer.isPlayer ? 'color: #fff;' : 'color: rgba(255,255,255,0.7);'}`;

@@ -319,8 +319,8 @@
     const throttleInput = Math.min(1.0, Math.max(keys.w || keys.ArrowUp ? 1.0 : 0.0, gpThrottle, phoneThrottle));
     const brakeInput = Math.min(1.0, Math.max(keys.s || keys.ArrowDown ? 1.0 : 0.0, gpBrake, phoneBrake));
 
-    // Lock player speed & gear in starting sequence countdown or grid waiting states
-    if (isStartingSequence || window.raceState === "RACE_GRID_WAIT" || window.raceState === "RACE_LIGHTS") {
+    // Lock player speed & gear in starting sequence countdown, grid waiting states, or when retired/disabled
+    if (isStartingSequence || playerKart.retired || !playerKart.controlsEnabled || window.raceState === "RACE_GRID_WAIT" || window.raceState === "RACE_LIGHTS") {
       playerKart.speed = 0.0;
       currentGear = 0; // Lock to Neutral!
       currentRPM = 1000 + Math.random() * 150; // Idle revs
