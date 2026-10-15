@@ -1642,6 +1642,41 @@
   </div>
 
   <div id="hud-layer">
+    <!-- Official F1 Broadcast PIT LANE Tracker HUD (Matching Reference Image 1, 2, 3) -->
+    <div id="hud-pit-lane-card" class="hidden" style="position: absolute; top: 22px; left: 50%; transform: translateX(-50%); z-index: 65; pointer-events: none; display: none; font-family: 'Orbitron', 'Inter', sans-serif;">
+      <div style="background: rgba(11,15,25,0.92); border: 1.5px solid rgba(56,189,248,0.55); border-radius: 8px; box-shadow: 0 12px 32px rgba(0,0,0,0.7), 0 0 20px rgba(6,182,212,0.25); overflow: hidden; min-width: 250px; backdrop-filter: blur(10px);">
+        <!-- Broadcast Header -->
+        <div style="background: linear-gradient(90deg, rgba(6,182,212,0.2), rgba(14,165,233,0.45), rgba(6,182,212,0.2)); padding: 4px 16px; text-align: center; font-size: 0.70rem; font-weight: 900; letter-spacing: 2.5px; color: #38bdf8; border-bottom: 1px solid rgba(56,189,248,0.3); text-shadow: 0 0 8px rgba(56,189,248,0.5);">
+          PIT LANE
+        </div>
+        <!-- Time Columns -->
+        <div style="display: flex; justify-content: space-around; align-items: center; padding: 6px 16px; gap: 18px;">
+          <div style="display: flex; flex-direction: column; align-items: center;">
+            <span style="font-size: 0.58rem; color: rgba(255,255,255,0.45); font-family: 'Inter', sans-serif; font-weight: 700; letter-spacing: 1px;">PIT</span>
+            <span id="hud-pit-time-val" style="font-size: 1.30rem; font-weight: 900; color: #ffffff; letter-spacing: 1px;">0.0</span>
+          </div>
+          <div style="width: 1px; height: 26px; background: rgba(255,255,255,0.12);"></div>
+          <div style="display: flex; flex-direction: column; align-items: center;">
+            <span style="font-size: 0.58rem; color: rgba(255,255,255,0.45); font-family: 'Inter', sans-serif; font-weight: 700; letter-spacing: 1px;">STOP TIME</span>
+            <span id="hud-pit-stop-val" style="font-size: 1.30rem; font-weight: 900; color: #38bdf8; letter-spacing: 1px;">--.--</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Official F1 3D Turn-In Reaction / Rating HUD (Matching Reference Image 1 & 2) -->
+    <div id="hud-turnin-prompt" class="hidden" style="position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); z-index: 70; pointer-events: none; display: none; text-align: center; font-family: 'Orbitron', sans-serif;">
+      <div id="hud-turnin-header" style="font-size: 0.75rem; font-weight: 900; letter-spacing: 3px; color: #38bdf8; text-shadow: 0 0 12px rgba(56,189,248,0.8); text-transform: uppercase;">
+        TURN-IN
+      </div>
+      <div id="hud-turnin-value" style="font-size: 2.2rem; font-weight: 900; color: #ffffff; text-shadow: 0 0 20px rgba(56,189,248,0.9); margin: 2px 0;">
+        0.8
+      </div>
+      <div id="hud-turnin-sub" style="font-size: 0.68rem; font-weight: 700; color: rgba(255,255,255,0.7); letter-spacing: 1px; font-family: 'Inter', sans-serif;">
+        AIM FOR PIT BOX ENTRY (X)
+      </div>
+    </div>
+
     <!-- Telemetry Toggle Button Container (Bottom Right) -->
     <div class="telemetry-btn-container" style="position: absolute; bottom: 24px; right: 24px; z-index: 60; pointer-events: auto; display: flex; flex-direction: column; align-items: center;">
       <button class="telemetry-circle-btn" id="hud-telemetry-btn" onclick="toggleTelemetryPanel()">📊</button>

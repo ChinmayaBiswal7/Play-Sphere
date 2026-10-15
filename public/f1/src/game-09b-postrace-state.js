@@ -326,9 +326,16 @@
     const crewColor = parseInt(F1_TEAMS[selectedTeamIndex].color.replace('#', ''), 16);
     const crewMat = new THREE.MeshStandardMaterial({ color: crewColor, roughness: 0.5 });
     
-    const pPos = playerKart.mesh.position;
-    const tang = pitCurve.getTangentAt(pitProgress).normalize();
+    const totalBoxes = F1_TEAMS.length;
+    const T_START = 0.26;
+    const T_END = 0.74;
+    const TEAM_STEP = (T_END - T_START) / totalBoxes;
+    const pBoxT = T_START + (selectedTeamIndex + 0.5) * TEAM_STEP;
+
+    const pt = pitCurve.getPointAt(pBoxT);
+    const tang = pitCurve.getTangentAt(pBoxT).normalize();
     const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
+    const pPos = pt.clone().add(norm.clone().multiplyScalar(9.5));
 
     // Compound colors for fresh tires
     const compoundColors = {
@@ -344,22 +351,22 @@
 
     // 10-person pit crew: 4 gunners, 4 tire carriers, 2 jack mechanics
     const crewTargets = [
-      // Left side wheel gunners
-      { pos: pPos.clone().add(norm.clone().multiplyScalar(1.3)).add(tang.clone().multiplyScalar(1.2)), role: 'wheel_gun_fl' },
-      { pos: pPos.clone().add(norm.clone().multiplyScalar(1.3)).add(tang.clone().multiplyScalar(-1.2)), role: 'wheel_gun_rl' },
+      // Left side wheel gunners (facing inwards towards wheels)
+      { pos: pPos.clone().add(norm.clone().multiplyScalar(1.5)).add(tang.clone().multiplyScalar(1.4)), role: 'wheel_gun_fl' },
+      { pos: pPos.clone().add(norm.clone().multiplyScalar(1.5)).add(tang.clone().multiplyScalar(-1.4)), role: 'wheel_gun_rl' },
       // Right side wheel gunners
-      { pos: pPos.clone().add(norm.clone().multiplyScalar(-1.3)).add(tang.clone().multiplyScalar(1.2)), role: 'wheel_gun_fr' },
-      { pos: pPos.clone().add(norm.clone().multiplyScalar(-1.3)).add(tang.clone().multiplyScalar(-1.2)), role: 'wheel_gun_rr' },
-      // Left side tyre carriers (bringing new tyres to the car)
-      { pos: pPos.clone().add(norm.clone().multiplyScalar(2.1)).add(tang.clone().multiplyScalar(1.2)), role: 'carrier_fl' },
-      { pos: pPos.clone().add(norm.clone().multiplyScalar(2.1)).add(tang.clone().multiplyScalar(-1.2)), role: 'carrier_rl' },
-      // Right side tyre carriers (bringing new tyres to the car)
-      { pos: pPos.clone().add(norm.clone().multiplyScalar(-2.1)).add(tang.clone().multiplyScalar(1.2)), role: 'carrier_fr' },
-      { pos: pPos.clone().add(norm.clone().multiplyScalar(-2.1)).add(tang.clone().multiplyScalar(-1.2)), role: 'carrier_rr' },
-      // Front Jack mechanic
-      { pos: pPos.clone().add(tang.clone().multiplyScalar(2.6)), role: 'jack_front' },
+      { pos: pPos.clone().add(norm.clone().multiplyScalar(-1.5)).add(tang.clone().multiplyScalar(1.4)), role: 'wheel_gun_fr' },
+      { pos: pPos.clone().add(norm.clone().multiplyScalar(-1.5)).add(tang.clone().multiplyScalar(-1.4)), role: 'wheel_gun_rr' },
+      // Left side tyre carriers (holding fresh tyres ready)
+      { pos: pPos.clone().add(norm.clone().multiplyScalar(2.6)).add(tang.clone().multiplyScalar(1.4)), role: 'carrier_fl' },
+      { pos: pPos.clone().add(norm.clone().multiplyScalar(2.6)).add(tang.clone().multiplyScalar(-1.4)), role: 'carrier_rl' },
+      // Right side tyre carriers
+      { pos: pPos.clone().add(norm.clone().multiplyScalar(-2.6)).add(tang.clone().multiplyScalar(1.4)), role: 'carrier_fr' },
+      { pos: pPos.clone().add(norm.clone().multiplyScalar(-2.6)).add(tang.clone().multiplyScalar(-1.4)), role: 'carrier_rr' },
+      // Front Jack mechanic (facing oncoming car)
+      { pos: pPos.clone().add(tang.clone().multiplyScalar(2.8)), role: 'jack_front' },
       // Rear Jack mechanic
-      { pos: pPos.clone().add(tang.clone().multiplyScalar(-2.6)), role: 'jack_rear' }
+      { pos: pPos.clone().add(tang.clone().multiplyScalar(-2.8)), role: 'jack_rear' }
     ];
 
     crewTargets.forEach((item, idx) => {

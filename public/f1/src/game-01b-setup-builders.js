@@ -920,6 +920,97 @@
     entryBlend.position.y = 0.04;
     scene.add(entryBlend);
 
+    // 4. Glowing Cyan Pit Lane Centerline Guidance Dashes (Matching Reference Image 1 & 3)
+    const dashMat = new THREE.MeshBasicMaterial({ color: 0x06b6d4, transparent: true, opacity: 0.85 });
+    for (let d = 0.04; d <= 0.94; d += 0.02) {
+      const dPt = pitCurve.getPointAt(d);
+      const dTang = pitCurve.getTangentAt(d).normalize();
+      const dash = new THREE.Mesh(new THREE.PlaneGeometry(0.32, 1.8), dashMat);
+      dash.position.copy(dPt);
+      dash.position.y = 0.04;
+      dash.lookAt(dPt.clone().add(dTang));
+      dash.rotateX(-Math.PI / 2);
+      scene.add(dash);
+    }
+
+    // ── 3D Holographic Turn-In Target Gate (Matching Reference Image 1 & 2) ──
+    window.buildTurnInHologram = function(teamIdx) {
+      if (window.turnInHologram) {
+        scene.remove(window.turnInHologram);
+        window.turnInHologram = null;
+      }
+      if (!pitCurve) return;
+
+      const totalBoxes = F1_TEAMS.length;
+      const T_START = 0.26;
+      const T_END = 0.74;
+      const TEAM_STEP = (T_END - T_START) / totalBoxes;
+      const pBoxT = T_START + (teamIdx + 0.5) * TEAM_STEP;
+      const turnInT = Math.max(0.12, pBoxT - 0.026);
+
+      const pt = pitCurve.getPointAt(turnInT);
+      const tang = pitCurve.getTangentAt(turnInT).normalize();
+      const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
+      
+      const gateGroup = new THREE.Group();
+      gateGroup.turnInT = turnInT;
+      gateGroup.pBoxT = pBoxT;
+      gateGroup.rated = false;
+
+      // Position gate at right edge of fast lane entering apron (+4.2m offset)
+      const gatePos = pt.clone().add(norm.clone().multiplyScalar(4.2));
+      gateGroup.position.copy(gatePos);
+      gateGroup.lookAt(gatePos.clone().add(tang));
+
+      // Holographic cyan glowing portal brackets
+      const holoMat = new THREE.MeshBasicMaterial({ color: 0x06b6d4, transparent: true, opacity: 0.85 });
+      const glowMat = new THREE.MeshStandardMaterial({ color: 0x06b6d4, emissive: 0x06b6d4, emissiveIntensity: 1.6, transparent: true, opacity: 0.9 });
+
+      // Left & Right vertical laser beams
+      [-2.2, 2.2].forEach(gx => {
+        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 3.2, 8), glowMat);
+        post.position.set(gx, 1.6, 0);
+        gateGroup.add(post);
+
+        // Corner bracket caps
+        const cap = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.08, 0.08), glowMat);
+        cap.position.set(gx > 0 ? (gx - 0.16) : (gx + 0.16), 3.2, 0);
+        gateGroup.add(cap);
+      });
+
+      // Top glowing laser crossbar
+      const topBar = new THREE.Mesh(new THREE.BoxGeometry(4.4, 0.04, 0.04), glowMat);
+      topBar.position.set(0, 3.2, 0);
+      gateGroup.add(topBar);
+
+      // Floating crosshair target ring (X) in center of gate (y = 1.4m)
+      const reticleRing = new THREE.Mesh(new THREE.RingGeometry(0.38, 0.44, 24), holoMat);
+      reticleRing.position.set(0, 1.4, 0);
+      gateGroup.add(reticleRing);
+
+      // Target X crosshair struts
+      [-0.25, 0.25].forEach(ang => {
+        const cross = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 0.05), holoMat);
+        cross.position.set(0, 1.4, 0.01);
+        cross.rotation.z = ang * Math.PI;
+        gateGroup.add(cross);
+      });
+
+      // Road chevron arrows leading diagonally from gate into pit box
+      for (let ch = 1; ch <= 4; ch++) {
+        const chFrac = ch / 4;
+        const chPos = new THREE.Vector3(chFrac * 4.8, 0.04, chFrac * 6.5);
+        const arrow = new THREE.Mesh(new THREE.PlaneGeometry(0.35, 1.2), holoMat);
+        arrow.rotation.x = -Math.PI / 2;
+        arrow.rotation.z = Math.PI / 5;
+        arrow.position.copy(chPos);
+        gateGroup.add(arrow);
+      }
+
+      scene.add(gateGroup);
+      window.turnInHologram = gateGroup;
+    };
+
     // ── PitComplexBuilder — garages + buildings
     const pitBuilder = new PitComplexBuilder(F1_TEAMS);
     pitBuilder.buildAlongCurve(pitCurve, scene);

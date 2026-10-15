@@ -1251,13 +1251,94 @@
       }
       playerKart.speed = Math.min(playerKart.speed, collisionSpeedLimit);
 
-      // Stop at green pit box on pit lane apron (Never teleport into garage during pit stop!)
+      // ── F1 Broadcast PIT LANE Tracker HUD & Ahead-of-Time Crew Spawn (Images 1, 2, 3) ──
+      const pitLaneCard = document.getElementById('hud-pit-lane-card');
+      const pitTimeVal = document.getElementById('hud-pit-time-val');
+      const pitStopVal = document.getElementById('hud-pit-stop-val');
+      const turnInPrompt = document.getElementById('hud-turnin-prompt');
+      const turnInHeader = document.getElementById('hud-turnin-header');
+      const turnInVal = document.getElementById('hud-turnin-value');
+      const turnInSub = document.getElementById('hud-turnin-sub');
+
+      if (!playerKart.isExitingGarage && playerKart.qualifyingState !== "GARAGE") {
+        if (pitLaneCard) {
+          pitLaneCard.classList.remove('hidden');
+          pitLaneCard.style.display = 'block';
+        }
+        window.pitLaneTimer = (window.pitLaneTimer || 0.0) + delta;
+        if (pitTimeVal) pitTimeVal.innerText = `${window.pitLaneTimer.toFixed(1)}`;
+      }
+
+      // Pre-spawn pit crew standing ready at pit box as soon as car enters pit lane
+      if (!isPitStopActive && !hasStoppedAtPitBox && !playerKart.isExitingGarage) {
+        if ((typeof pitCrew === 'undefined' || pitCrew.length === 0) && typeof spawnPitCrewBoxes === 'function') {
+          spawnPitCrewBoxes();
+        }
+        if (!window.turnInHologram && typeof window.buildTurnInHologram === 'function') {
+          window.buildTurnInHologram(selectedTeamIndex);
+        }
+      }
+
+      // ── Stop at green pit box on pit lane apron ──
       if (!isPitStopActive && !hasStoppedAtPitBox) {
         const pBoxT = 0.26 + (selectedTeamIndex + 0.5) * (0.74 - 0.26) / totalBoxes;
         const pos = pitCurve.getPointAt(pBoxT);
         const tang = pitCurve.getTangentAt(pBoxT).normalize();
         const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
         const boxPos = pos.clone().add(norm.clone().multiplyScalar(9.5));
+
+        // 3D Turn-In Countdown & Rating Evaluation (Matching Reference Images 1 & 2)
+        const turnInDist = (pBoxT - 0.026 - pitProgress) * 450;
+        if (turnInDist > -12.0 && turnInDist < 35.0 && !playerKart.isExitingGarage) {
+          if (turnInPrompt) {
+            turnInPrompt.classList.remove('hidden');
+            turnInPrompt.style.display = 'block';
+          }
+          if (!window.turnInRated) {
+            if (turnInDist > 0.0) {
+              if (turnInHeader) {
+                turnInHeader.innerText = "TURN-IN";
+                turnInHeader.style.color = "#38bdf8";
+              }
+              if (turnInVal) {
+                turnInVal.innerText = (turnInDist / 14.0).toFixed(1);
+                turnInVal.style.color = "#ffffff";
+              }
+              if (turnInSub) turnInSub.innerText = "AIM FOR PIT BOX ENTRY (X)";
+            }
+            // Trigger turn-in rating when driver steers right towards box or crosses the turn-in point
+            if (playerKart.filteredSteeringInput > 0.08 || keys.d || turnInDist <= 0.0) {
+              window.turnInRated = true;
+              let rating = "OPTIMAL";
+              let ratingColor = "#c084fc"; // Purple glow (matching Image 2)
+              let estTime = 2.4;
+              if (Math.abs(turnInDist) <= 5.0) {
+                rating = "OPTIMAL";
+                ratingColor = "#c084fc";
+                estTime = 2.3;
+              } else if (Math.abs(turnInDist) <= 12.0) {
+                rating = "GOOD";
+                ratingColor = "#22c55e";
+                estTime = 2.8;
+              } else if (turnInDist > 12.0) {
+                rating = "EARLY";
+                ratingColor = "#fbbf24";
+                estTime = 3.6;
+              } else {
+                rating = "LATE";
+                ratingColor = "#ef4444";
+                estTime = 4.4;
+              }
+              if (turnInHeader) turnInHeader.innerText = "TURN-IN";
+              if (turnInVal) {
+                turnInVal.innerText = rating;
+                turnInVal.style.color = ratingColor;
+              }
+              if (turnInSub) turnInSub.innerText = `Estimated stop time: ${estTime}s`;
+              if (window.ApexAudio) window.ApexAudio.playClick();
+            }
+          }
+        }
 
         const distToBox = playerKart.mesh.position.distanceTo(boxPos);
         const isNearBox = (distToBox < 4.5 && Math.abs(playerKart.speed) < 14.0 && !playerKart.isExitingGarage);
@@ -1272,12 +1353,26 @@
           playerKart.heading = Math.atan2(tang.x, tang.z);
           playerKart.mesh.rotation.y = playerKart.heading;
           playerKart.speed = 0.0;
+          if (turnInPrompt) {
+            turnInPrompt.classList.add('hidden');
+            turnInPrompt.style.display = 'none';
+          }
+          window.pitStopTime = 0.0;
 
           // Always trigger authentic F1 outside pit stop in ALL sessions (Practice, Qualifying, Race)
           triggerPitStop();
         }
+      } else if (isPitStopActive) {
+        // Increment stop time counter during active tyre change (matching Image 2 & 3)
+        window.pitStopTime = (window.pitStopTime || 0.0) + delta;
+        if (pitStopVal) pitStopVal.innerText = `${window.pitStopTime.toFixed(1)}`;
       } else if (!isPitStopActive && hasStoppedAtPitBox) {
-        // Post-pit stop exit logic
+        // Post-pit stop exit logic (STOP TIME remains displayed on broadcast HUD card as in Image 3)
+        if (turnInPrompt) {
+          turnInPrompt.classList.add('hidden');
+          turnInPrompt.style.display = 'none';
+        }
+
         if (pitProgress >= 0.98) {
           playerKart.inPitLane = false;
           isPitting = false;
@@ -1302,6 +1397,21 @@
           rdShowMessage('PIT EXIT // TRACK CLEAR // GO GO GO!', 3.0, '#38bdf8');
           speakEngineerRadio("Pit exit clear. Push hard!", 40);
           console.log("[PIT EXIT] MANUAL CONTROL RESTORED");
+
+          // Clean up turn-in hologram and fade out pit lane card after 4 seconds
+          if (window.turnInHologram) {
+            scene.remove(window.turnInHologram);
+            window.turnInHologram = null;
+          }
+          window.turnInRated = false;
+          setTimeout(() => {
+            if (pitLaneCard && !playerKart.inPitLane) {
+              pitLaneCard.classList.add('hidden');
+              pitLaneCard.style.display = 'none';
+              window.pitLaneTimer = 0.0;
+              window.pitStopTime = 0.0;
+            }
+          }, 4000);
         }
       }
     }

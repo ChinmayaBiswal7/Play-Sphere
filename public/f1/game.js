@@ -3726,6 +3726,97 @@
     entryBlend.position.y = 0.04;
     scene.add(entryBlend);
 
+    // 4. Glowing Cyan Pit Lane Centerline Guidance Dashes (Matching Reference Image 1 & 3)
+    const dashMat = new THREE.MeshBasicMaterial({ color: 0x06b6d4, transparent: true, opacity: 0.85 });
+    for (let d = 0.04; d <= 0.94; d += 0.02) {
+      const dPt = pitCurve.getPointAt(d);
+      const dTang = pitCurve.getTangentAt(d).normalize();
+      const dash = new THREE.Mesh(new THREE.PlaneGeometry(0.32, 1.8), dashMat);
+      dash.position.copy(dPt);
+      dash.position.y = 0.04;
+      dash.lookAt(dPt.clone().add(dTang));
+      dash.rotateX(-Math.PI / 2);
+      scene.add(dash);
+    }
+
+    // ── 3D Holographic Turn-In Target Gate (Matching Reference Image 1 & 2) ──
+    window.buildTurnInHologram = function(teamIdx) {
+      if (window.turnInHologram) {
+        scene.remove(window.turnInHologram);
+        window.turnInHologram = null;
+      }
+      if (!pitCurve) return;
+
+      const totalBoxes = F1_TEAMS.length;
+      const T_START = 0.26;
+      const T_END = 0.74;
+      const TEAM_STEP = (T_END - T_START) / totalBoxes;
+      const pBoxT = T_START + (teamIdx + 0.5) * TEAM_STEP;
+      const turnInT = Math.max(0.12, pBoxT - 0.026);
+
+      const pt = pitCurve.getPointAt(turnInT);
+      const tang = pitCurve.getTangentAt(turnInT).normalize();
+      const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
+      
+      const gateGroup = new THREE.Group();
+      gateGroup.turnInT = turnInT;
+      gateGroup.pBoxT = pBoxT;
+      gateGroup.rated = false;
+
+      // Position gate at right edge of fast lane entering apron (+4.2m offset)
+      const gatePos = pt.clone().add(norm.clone().multiplyScalar(4.2));
+      gateGroup.position.copy(gatePos);
+      gateGroup.lookAt(gatePos.clone().add(tang));
+
+      // Holographic cyan glowing portal brackets
+      const holoMat = new THREE.MeshBasicMaterial({ color: 0x06b6d4, transparent: true, opacity: 0.85 });
+      const glowMat = new THREE.MeshStandardMaterial({ color: 0x06b6d4, emissive: 0x06b6d4, emissiveIntensity: 1.6, transparent: true, opacity: 0.9 });
+
+      // Left & Right vertical laser beams
+      [-2.2, 2.2].forEach(gx => {
+        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 3.2, 8), glowMat);
+        post.position.set(gx, 1.6, 0);
+        gateGroup.add(post);
+
+        // Corner bracket caps
+        const cap = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.08, 0.08), glowMat);
+        cap.position.set(gx > 0 ? (gx - 0.16) : (gx + 0.16), 3.2, 0);
+        gateGroup.add(cap);
+      });
+
+      // Top glowing laser crossbar
+      const topBar = new THREE.Mesh(new THREE.BoxGeometry(4.4, 0.04, 0.04), glowMat);
+      topBar.position.set(0, 3.2, 0);
+      gateGroup.add(topBar);
+
+      // Floating crosshair target ring (X) in center of gate (y = 1.4m)
+      const reticleRing = new THREE.Mesh(new THREE.RingGeometry(0.38, 0.44, 24), holoMat);
+      reticleRing.position.set(0, 1.4, 0);
+      gateGroup.add(reticleRing);
+
+      // Target X crosshair struts
+      [-0.25, 0.25].forEach(ang => {
+        const cross = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 0.05), holoMat);
+        cross.position.set(0, 1.4, 0.01);
+        cross.rotation.z = ang * Math.PI;
+        gateGroup.add(cross);
+      });
+
+      // Road chevron arrows leading diagonally from gate into pit box
+      for (let ch = 1; ch <= 4; ch++) {
+        const chFrac = ch / 4;
+        const chPos = new THREE.Vector3(chFrac * 4.8, 0.04, chFrac * 6.5);
+        const arrow = new THREE.Mesh(new THREE.PlaneGeometry(0.35, 1.2), holoMat);
+        arrow.rotation.x = -Math.PI / 2;
+        arrow.rotation.z = Math.PI / 5;
+        arrow.position.copy(chPos);
+        gateGroup.add(arrow);
+      }
+
+      scene.add(gateGroup);
+      window.turnInHologram = gateGroup;
+    };
+
     // ── PitComplexBuilder — garages + buildings
     const pitBuilder = new PitComplexBuilder(F1_TEAMS);
     pitBuilder.buildAlongCurve(pitCurve, scene);
@@ -7633,13 +7724,94 @@
       }
       playerKart.speed = Math.min(playerKart.speed, collisionSpeedLimit);
 
-      // Stop at green pit box on pit lane apron (Never teleport into garage during pit stop!)
+      // ── F1 Broadcast PIT LANE Tracker HUD & Ahead-of-Time Crew Spawn (Images 1, 2, 3) ──
+      const pitLaneCard = document.getElementById('hud-pit-lane-card');
+      const pitTimeVal = document.getElementById('hud-pit-time-val');
+      const pitStopVal = document.getElementById('hud-pit-stop-val');
+      const turnInPrompt = document.getElementById('hud-turnin-prompt');
+      const turnInHeader = document.getElementById('hud-turnin-header');
+      const turnInVal = document.getElementById('hud-turnin-value');
+      const turnInSub = document.getElementById('hud-turnin-sub');
+
+      if (!playerKart.isExitingGarage && playerKart.qualifyingState !== "GARAGE") {
+        if (pitLaneCard) {
+          pitLaneCard.classList.remove('hidden');
+          pitLaneCard.style.display = 'block';
+        }
+        window.pitLaneTimer = (window.pitLaneTimer || 0.0) + delta;
+        if (pitTimeVal) pitTimeVal.innerText = `${window.pitLaneTimer.toFixed(1)}`;
+      }
+
+      // Pre-spawn pit crew standing ready at pit box as soon as car enters pit lane
+      if (!isPitStopActive && !hasStoppedAtPitBox && !playerKart.isExitingGarage) {
+        if ((typeof pitCrew === 'undefined' || pitCrew.length === 0) && typeof spawnPitCrewBoxes === 'function') {
+          spawnPitCrewBoxes();
+        }
+        if (!window.turnInHologram && typeof window.buildTurnInHologram === 'function') {
+          window.buildTurnInHologram(selectedTeamIndex);
+        }
+      }
+
+      // ── Stop at green pit box on pit lane apron ──
       if (!isPitStopActive && !hasStoppedAtPitBox) {
         const pBoxT = 0.26 + (selectedTeamIndex + 0.5) * (0.74 - 0.26) / totalBoxes;
         const pos = pitCurve.getPointAt(pBoxT);
         const tang = pitCurve.getTangentAt(pBoxT).normalize();
         const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
         const boxPos = pos.clone().add(norm.clone().multiplyScalar(9.5));
+
+        // 3D Turn-In Countdown & Rating Evaluation (Matching Reference Images 1 & 2)
+        const turnInDist = (pBoxT - 0.026 - pitProgress) * 450;
+        if (turnInDist > -12.0 && turnInDist < 35.0 && !playerKart.isExitingGarage) {
+          if (turnInPrompt) {
+            turnInPrompt.classList.remove('hidden');
+            turnInPrompt.style.display = 'block';
+          }
+          if (!window.turnInRated) {
+            if (turnInDist > 0.0) {
+              if (turnInHeader) {
+                turnInHeader.innerText = "TURN-IN";
+                turnInHeader.style.color = "#38bdf8";
+              }
+              if (turnInVal) {
+                turnInVal.innerText = (turnInDist / 14.0).toFixed(1);
+                turnInVal.style.color = "#ffffff";
+              }
+              if (turnInSub) turnInSub.innerText = "AIM FOR PIT BOX ENTRY (X)";
+            }
+            // Trigger turn-in rating when driver steers right towards box or crosses the turn-in point
+            if (playerKart.filteredSteeringInput > 0.08 || keys.d || turnInDist <= 0.0) {
+              window.turnInRated = true;
+              let rating = "OPTIMAL";
+              let ratingColor = "#c084fc"; // Purple glow (matching Image 2)
+              let estTime = 2.4;
+              if (Math.abs(turnInDist) <= 5.0) {
+                rating = "OPTIMAL";
+                ratingColor = "#c084fc";
+                estTime = 2.3;
+              } else if (Math.abs(turnInDist) <= 12.0) {
+                rating = "GOOD";
+                ratingColor = "#22c55e";
+                estTime = 2.8;
+              } else if (turnInDist > 12.0) {
+                rating = "EARLY";
+                ratingColor = "#fbbf24";
+                estTime = 3.6;
+              } else {
+                rating = "LATE";
+                ratingColor = "#ef4444";
+                estTime = 4.4;
+              }
+              if (turnInHeader) turnInHeader.innerText = "TURN-IN";
+              if (turnInVal) {
+                turnInVal.innerText = rating;
+                turnInVal.style.color = ratingColor;
+              }
+              if (turnInSub) turnInSub.innerText = `Estimated stop time: ${estTime}s`;
+              if (window.ApexAudio) window.ApexAudio.playClick();
+            }
+          }
+        }
 
         const distToBox = playerKart.mesh.position.distanceTo(boxPos);
         const isNearBox = (distToBox < 4.5 && Math.abs(playerKart.speed) < 14.0 && !playerKart.isExitingGarage);
@@ -7654,12 +7826,26 @@
           playerKart.heading = Math.atan2(tang.x, tang.z);
           playerKart.mesh.rotation.y = playerKart.heading;
           playerKart.speed = 0.0;
+          if (turnInPrompt) {
+            turnInPrompt.classList.add('hidden');
+            turnInPrompt.style.display = 'none';
+          }
+          window.pitStopTime = 0.0;
 
           // Always trigger authentic F1 outside pit stop in ALL sessions (Practice, Qualifying, Race)
           triggerPitStop();
         }
+      } else if (isPitStopActive) {
+        // Increment stop time counter during active tyre change (matching Image 2 & 3)
+        window.pitStopTime = (window.pitStopTime || 0.0) + delta;
+        if (pitStopVal) pitStopVal.innerText = `${window.pitStopTime.toFixed(1)}`;
       } else if (!isPitStopActive && hasStoppedAtPitBox) {
-        // Post-pit stop exit logic
+        // Post-pit stop exit logic (STOP TIME remains displayed on broadcast HUD card as in Image 3)
+        if (turnInPrompt) {
+          turnInPrompt.classList.add('hidden');
+          turnInPrompt.style.display = 'none';
+        }
+
         if (pitProgress >= 0.98) {
           playerKart.inPitLane = false;
           isPitting = false;
@@ -7684,6 +7870,21 @@
           rdShowMessage('PIT EXIT // TRACK CLEAR // GO GO GO!', 3.0, '#38bdf8');
           speakEngineerRadio("Pit exit clear. Push hard!", 40);
           console.log("[PIT EXIT] MANUAL CONTROL RESTORED");
+
+          // Clean up turn-in hologram and fade out pit lane card after 4 seconds
+          if (window.turnInHologram) {
+            scene.remove(window.turnInHologram);
+            window.turnInHologram = null;
+          }
+          window.turnInRated = false;
+          setTimeout(() => {
+            if (pitLaneCard && !playerKart.inPitLane) {
+              pitLaneCard.classList.add('hidden');
+              pitLaneCard.style.display = 'none';
+              window.pitLaneTimer = 0.0;
+              window.pitStopTime = 0.0;
+            }
+          }, 4000);
         }
       }
     }
@@ -11577,9 +11778,16 @@
     const crewColor = parseInt(F1_TEAMS[selectedTeamIndex].color.replace('#', ''), 16);
     const crewMat = new THREE.MeshStandardMaterial({ color: crewColor, roughness: 0.5 });
     
-    const pPos = playerKart.mesh.position;
-    const tang = pitCurve.getTangentAt(pitProgress).normalize();
+    const totalBoxes = F1_TEAMS.length;
+    const T_START = 0.26;
+    const T_END = 0.74;
+    const TEAM_STEP = (T_END - T_START) / totalBoxes;
+    const pBoxT = T_START + (selectedTeamIndex + 0.5) * TEAM_STEP;
+
+    const pt = pitCurve.getPointAt(pBoxT);
+    const tang = pitCurve.getTangentAt(pBoxT).normalize();
     const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
+    const pPos = pt.clone().add(norm.clone().multiplyScalar(9.5));
 
     // Compound colors for fresh tires
     const compoundColors = {
@@ -11595,22 +11803,22 @@
 
     // 10-person pit crew: 4 gunners, 4 tire carriers, 2 jack mechanics
     const crewTargets = [
-      // Left side wheel gunners
-      { pos: pPos.clone().add(norm.clone().multiplyScalar(1.3)).add(tang.clone().multiplyScalar(1.2)), role: 'wheel_gun_fl' },
-      { pos: pPos.clone().add(norm.clone().multiplyScalar(1.3)).add(tang.clone().multiplyScalar(-1.2)), role: 'wheel_gun_rl' },
+      // Left side wheel gunners (facing inwards towards wheels)
+      { pos: pPos.clone().add(norm.clone().multiplyScalar(1.5)).add(tang.clone().multiplyScalar(1.4)), role: 'wheel_gun_fl' },
+      { pos: pPos.clone().add(norm.clone().multiplyScalar(1.5)).add(tang.clone().multiplyScalar(-1.4)), role: 'wheel_gun_rl' },
       // Right side wheel gunners
-      { pos: pPos.clone().add(norm.clone().multiplyScalar(-1.3)).add(tang.clone().multiplyScalar(1.2)), role: 'wheel_gun_fr' },
-      { pos: pPos.clone().add(norm.clone().multiplyScalar(-1.3)).add(tang.clone().multiplyScalar(-1.2)), role: 'wheel_gun_rr' },
-      // Left side tyre carriers (bringing new tyres to the car)
-      { pos: pPos.clone().add(norm.clone().multiplyScalar(2.1)).add(tang.clone().multiplyScalar(1.2)), role: 'carrier_fl' },
-      { pos: pPos.clone().add(norm.clone().multiplyScalar(2.1)).add(tang.clone().multiplyScalar(-1.2)), role: 'carrier_rl' },
-      // Right side tyre carriers (bringing new tyres to the car)
-      { pos: pPos.clone().add(norm.clone().multiplyScalar(-2.1)).add(tang.clone().multiplyScalar(1.2)), role: 'carrier_fr' },
-      { pos: pPos.clone().add(norm.clone().multiplyScalar(-2.1)).add(tang.clone().multiplyScalar(-1.2)), role: 'carrier_rr' },
-      // Front Jack mechanic
-      { pos: pPos.clone().add(tang.clone().multiplyScalar(2.6)), role: 'jack_front' },
+      { pos: pPos.clone().add(norm.clone().multiplyScalar(-1.5)).add(tang.clone().multiplyScalar(1.4)), role: 'wheel_gun_fr' },
+      { pos: pPos.clone().add(norm.clone().multiplyScalar(-1.5)).add(tang.clone().multiplyScalar(-1.4)), role: 'wheel_gun_rr' },
+      // Left side tyre carriers (holding fresh tyres ready)
+      { pos: pPos.clone().add(norm.clone().multiplyScalar(2.6)).add(tang.clone().multiplyScalar(1.4)), role: 'carrier_fl' },
+      { pos: pPos.clone().add(norm.clone().multiplyScalar(2.6)).add(tang.clone().multiplyScalar(-1.4)), role: 'carrier_rl' },
+      // Right side tyre carriers
+      { pos: pPos.clone().add(norm.clone().multiplyScalar(-2.6)).add(tang.clone().multiplyScalar(1.4)), role: 'carrier_fr' },
+      { pos: pPos.clone().add(norm.clone().multiplyScalar(-2.6)).add(tang.clone().multiplyScalar(-1.4)), role: 'carrier_rr' },
+      // Front Jack mechanic (facing oncoming car)
+      { pos: pPos.clone().add(tang.clone().multiplyScalar(2.8)), role: 'jack_front' },
       // Rear Jack mechanic
-      { pos: pPos.clone().add(tang.clone().multiplyScalar(-2.6)), role: 'jack_rear' }
+      { pos: pPos.clone().add(tang.clone().multiplyScalar(-2.8)), role: 'jack_rear' }
     ];
 
     crewTargets.forEach((item, idx) => {
