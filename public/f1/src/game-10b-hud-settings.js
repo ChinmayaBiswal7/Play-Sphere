@@ -153,8 +153,22 @@
         row.style.padding = '6px 12px';
       }
 
-      // Highlight player row - strong neon cyan left stripe + background glow
-      if (racer.isPlayer) {
+      // Make row clickable to switch camera to that racer
+      row.style.cursor = 'pointer';
+      row.title = `Click to spectate ${racer.name}`;
+      row.onclick = () => {
+        if (typeof window.spectateSpecificRacer === 'function') {
+          window.spectateSpecificRacer(racer);
+        }
+      };
+
+      const isBeingSpectated = (window.spectatorModeActive && window.spectatorTargetCar === racer);
+      if (isBeingSpectated) {
+        row.style.background = "linear-gradient(90deg, rgba(239, 68, 68, 0.45) 0%, rgba(239, 68, 68, 0.15) 100%)";
+        row.style.boxShadow = "inset 3px 0 0 0 #ef4444, inset 0 0 14px rgba(239, 68, 68, 0.35)";
+        row.style.color = "#ffffff";
+        row.style.borderRadius = "0px";
+      } else if (racer.isPlayer) {
         row.style.background = "linear-gradient(90deg, rgba(6, 182, 212, 0.35) 0%, rgba(6, 182, 212, 0.10) 100%)";
         row.style.boxShadow = "inset 3px 0 0 0 #06b6d4, inset 0 0 14px rgba(6, 182, 212, 0.25)";
         row.style.color = "#ffffff";
@@ -173,6 +187,9 @@
       if (racer.retired) {
         posEl.innerText = "DNF";
         posEl.style.cssText = "font-weight: 900; width: 28px; color: #ef4444; font-size: 0.65rem;";
+      } else if (isBeingSpectated) {
+        posEl.innerHTML = `<span style="color:#ef4444;font-size:0.55rem;margin-right:2px;">●</span>P${pos}`;
+        posEl.style.cssText = "font-weight: 900; width: 28px; color: #fff; font-size: 0.68rem;";
       } else {
         posEl.innerText = `P${pos}`;
         posEl.style.cssText = `font-weight: 900; width: 26px; ${racer.isPlayer ? 'color: var(--neon-cyan);' : 'color: rgba(255,255,255,0.65);'}`;

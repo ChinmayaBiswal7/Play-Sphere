@@ -638,16 +638,27 @@
         .rotateY(-Math.PI / 2), mat, [x, 0, 0]);
     }
 
-    // ── Front Wing Assembly
+    // ── Front Wing Assembly (Authentic Modern F1 Scale & Forward Projection)
     const frontWingGroup = new THREE.Group();
     frontWingGroup.name = "frontWing";
-    add(foil(2.0, 0.42, 0.045, M.carbon, [0, 0.10, 2.50], -0.02), frontWingGroup);
-    add(foil(1.94, 0.30, 0.040, M.body, [0, 0.18, 2.38], 0.25), frontWingGroup);
-    add(foil(1.88, 0.22, 0.035, M.accent, [0, 0.25, 2.28], 0.42), frontWingGroup);
+
+    // Main lower blade (Wide 2.40m carbon blade extending in front of nose at z = 2.95)
+    add(foil(2.40, 0.52, 0.055, M.carbon, [0, 0.15, 2.95], -0.02), frontWingGroup);
+    // Flap element 2 (Team body color aerodynamic cascade)
+    add(foil(2.32, 0.38, 0.045, M.body, [0, 0.22, 2.85], 0.22), frontWingGroup);
+    // Flap element 3 (Team accent color upper cascade)
+    add(foil(2.24, 0.30, 0.040, M.accent, [0, 0.28, 2.76], 0.38), frontWingGroup);
+
+    // Endplates & Outer Outwash Dive Planes (x = ±1.22m)
     for (const s of [-1, 1]) {
-      add(plate([[2.76, 0.04], [2.10, 0.04], [2.05, 0.42], [2.40, 0.46], [2.74, 0.22]], M.body, s * 1.0, 0.03), frontWingGroup);
-      add(plate([[2.64, 0.05], [2.30, 0.05], [2.30, 0.075], [2.64, 0.075]], M.carbon, s * 0.9, 0.10), frontWingGroup);
-      add(strut([s * 0.1, 0.2, 2.45], [s * 0.09, 0.26, 2.25], 0.012, M.carbon), frontWingGroup);
+      // Main endplate (spanning from z = 2.55m to 3.35m)
+      add(plate([[3.35, 0.06], [2.55, 0.06], [2.50, 0.44], [2.90, 0.48], [3.32, 0.26]], M.body, s * 1.22, 0.035), frontWingGroup);
+      // Secondary carbon strake / footplate
+      add(plate([[3.25, 0.06], [2.70, 0.06], [2.70, 0.10], [3.25, 0.10]], M.carbon, s * 1.14, 0.08), frontWingGroup);
+      // Outward aerodynamic dive plane
+      add(mesh(new THREE.BoxGeometry(0.18, 0.025, 0.32), M.accent, [s * 1.30, 0.28, 2.95], [0, 0, s * 0.20]), frontWingGroup);
+      // Nose-to-wing structural mounting pylons
+      add(strut([s * 0.12, 0.24, 2.70], [s * 0.10, 0.15, 2.92], 0.016, M.carbon), frontWingGroup);
     }
     car.add(frontWingGroup);
     car.frontWing = frontWingGroup;

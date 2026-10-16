@@ -237,11 +237,14 @@ class AIDriverBrain {
     optimalLine = THREE.MathUtils.clamp(optimalLine, -5.2, 5.2);
     targetOffset = optimalLine + this.lineBias;
 
-    // 2. Cornering Deceleration vs Straightaway Top Speed
+    // 2. Cornering Deceleration vs Straightaway Top Speed (F1 High-Downforce Aero Model)
     const absCurvature = Math.abs(upcomingCurvature);
-    if (absCurvature > 0.003) {
-      // Braking zone: calculate corner grip limit based on curvature & downforce
-      const cornerLimit = Math.max(17.5, (1.0 / Math.pow(absCurvature, 0.48)) * 1.55);
+    if (absCurvature > 0.035) {
+      // Modern high-downforce F1 cornering limits:
+      // Gentle sweepers (c ~ 0.06): ~310 km/h (86 m/s)
+      // Medium bends (c ~ 0.15): ~260 km/h (72 m/s)
+      // Hairpins/Chicanes (c ~ 0.40): ~130 km/h (36 m/s)
+      const cornerLimit = Math.max(34.0, targetSpeed - (absCurvature - 0.035) * 145.0);
       targetSpeed = Math.min(targetSpeed, cornerLimit * (0.97 + this.personality.cons * 0.06));
     }
 

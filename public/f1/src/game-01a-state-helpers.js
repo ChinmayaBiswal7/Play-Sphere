@@ -1153,10 +1153,28 @@
     if (specHud) {
       specHud.style.display = 'flex';
     }
+    const speedo = document.querySelector('.speedo-console');
+    if (speedo) speedo.style.display = 'none';
+
     updateSpectatorHUD();
+    if (typeof updateLeaderboardHUD === 'function') updateLeaderboardHUD();
     if (typeof speakEngineerRadio === 'function') {
       speakEngineerRadio("Switched to onboard broadcast spectator feed.", 80, true);
     }
+  };
+
+  window.spectateSpecificRacer = (target) => {
+    if (!target) return;
+    if (window.ApexAudio) window.ApexAudio.playClick();
+    if (!window.spectatorModeActive) {
+      window.startSpectatorMode();
+    }
+    window.spectatorTargetCar = target;
+    const activeAI = racers.filter(r => !r.isPlayer && !r.retired);
+    const idx = activeAI.indexOf(target);
+    if (idx !== -1) window.spectatorCarIndex = idx;
+    updateSpectatorHUD();
+    if (typeof updateLeaderboardHUD === 'function') updateLeaderboardHUD();
   };
 
   window.cycleSpectatorCar = (dir) => {
@@ -1166,6 +1184,7 @@
     window.spectatorCarIndex = (window.spectatorCarIndex + dir + activeCars.length) % activeCars.length;
     window.spectatorTargetCar = activeCars[window.spectatorCarIndex];
     updateSpectatorHUD();
+    if (typeof updateLeaderboardHUD === 'function') updateLeaderboardHUD();
   };
 
   function updateSpectatorHUD() {
@@ -1175,6 +1194,7 @@
     const teamEl = document.getElementById('spectator-driver-team');
     const posEl = document.getElementById('spectator-driver-pos');
     const lapEl = document.getElementById('spectator-driver-lap');
+    const speedEl = document.getElementById('spectator-driver-speed');
 
     if (nameEl) nameEl.innerText = car.name || "DRIVER";
     if (teamEl) {
@@ -1184,6 +1204,7 @@
     }
     if (posEl) posEl.innerText = `P${car.posRank || 1}`;
     if (lapEl) lapEl.innerText = `LAP ${Math.min(maxLaps, (car.completedLaps || 0) + 1)}/${maxLaps}`;
+    if (speedEl) speedEl.innerText = Math.round(Math.abs(car.speed || 0) * 3.6);
   }
 
   window.retireAndEndSession = () => {
@@ -1192,6 +1213,8 @@
     if (overlay) overlay.style.display = 'none';
     const specHud = document.getElementById('f1-spectator-hud');
     if (specHud) specHud.style.display = 'none';
+    const speedo = document.querySelector('.speedo-console');
+    if (speedo) speedo.style.display = 'flex';
 
     window.spectatorModeActive = false;
 

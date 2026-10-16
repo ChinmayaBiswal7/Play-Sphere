@@ -2199,26 +2199,33 @@
     </div>
   </div>
 
-  <!-- Broadcast Spectator HUD Overlay -->
-  <div id="f1-spectator-hud" style="display:none; position:absolute; top:20px; left:50%; transform:translateX(-50%); z-index:9998; align-items:center; gap:16px; background:rgba(11,15,25,0.92); border:1.5px solid rgba(239,68,68,0.55); border-radius:10px; padding:10px 20px; box-shadow:0 8px 30px rgba(0,0,0,0.8), 0 0 20px rgba(239,68,68,0.25); backdrop-filter:blur(10px); font-family:'Orbitron',sans-serif; pointer-events:auto;">
+  <!-- Broadcast Spectator HUD Overlay (Docked cleanly at bottom center in place of player MFD) -->
+  <div id="f1-spectator-hud" style="display:none; position:absolute; bottom:16px; left:50%; transform:translateX(-50%); z-index:9998; align-items:center; gap:14px; background:rgba(9,13,22,0.92); border:1.5px solid rgba(239,68,68,0.55); border-radius:8px; padding:8px 18px; box-shadow:0 8px 30px rgba(0,0,0,0.8), 0 0 20px rgba(239,68,68,0.25); backdrop-filter:blur(10px); font-family:'Orbitron',sans-serif; pointer-events:auto;">
+    <div style="display:flex; align-items:center; gap:6px;">
+      <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#ef4444; box-shadow:0 0 8px #ef4444; animation:pulse 1s infinite alternate;"></span>
+      <span style="font-size:0.68rem; font-weight:900; color:#ef4444; letter-spacing:1px;">LIVE ONBOARD</span>
+    </div>
+    <div style="width:1px; height:20px; background:rgba(255,255,255,0.15);"></div>
     <div style="display:flex; align-items:center; gap:8px;">
-      <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#ef4444; animation:pulse 1s infinite alternate;"></span>
-      <span style="font-size:0.72rem; font-weight:900; color:#ef4444; letter-spacing:1.5px;">LIVE BROADCAST POV</span>
+      <span id="spectator-driver-pos" style="color:#fff; background:#ef4444; font-weight:900; padding:2px 8px; border-radius:4px; font-size:0.75rem;">P1</span>
+      <div style="display:flex; flex-direction:column;">
+        <span id="spectator-driver-name" style="font-size:0.88rem; font-weight:900; color:#fff; letter-spacing:0.5px;">VERSTAPPEN</span>
+        <span id="spectator-driver-team" style="font-size:0.62rem; color:#facc15; font-family:'Inter',sans-serif; font-weight:700;">Red Bull Racing</span>
+      </div>
+      <span id="spectator-driver-lap" style="font-size:0.65rem; color:rgba(255,255,255,0.5); font-family:monospace; margin-left:8px;">LAP 1/5</span>
     </div>
-    <div style="width:1px; height:24px; background:rgba(255,255,255,0.15);"></div>
-    <div style="display:flex; align-items:center; gap:8px; font-size:0.78rem; font-weight:800; color:#fff;">
-      <span id="spectator-driver-pos" style="color:var(--neon-cyan); background:rgba(6,182,212,0.15); padding:2px 6px; border-radius:4px;">P1</span>
-      <span id="spectator-driver-name" style="letter-spacing:1px;">VER</span>
-      <span id="spectator-driver-team" style="font-size:0.65rem; opacity:0.8; font-family:'Inter',sans-serif;">Red Bull</span>
-      <span id="spectator-driver-lap" style="font-size:0.65rem; color:rgba(255,255,255,0.5); font-family:monospace; margin-left:6px;">LAP 1/5</span>
+    <div style="width:1px; height:20px; background:rgba(255,255,255,0.15);"></div>
+    <div style="display:flex; align-items:baseline; gap:3px;">
+      <span id="spectator-driver-speed" style="font-family:'Orbitron',sans-serif; font-weight:900; font-size:1.15rem; color:#fff;">0</span>
+      <span style="font-size:0.52rem; color:rgba(255,255,255,0.5); font-weight:700;">KM/H</span>
     </div>
-    <div style="width:1px; height:24px; background:rgba(255,255,255,0.15);"></div>
+    <div style="width:1px; height:20px; background:rgba(255,255,255,0.15);"></div>
     <div style="display:flex; gap:6px;">
-      <button onclick="window.cycleSpectatorCar(-1)" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:4px; padding:6px 10px; font-family:inherit; font-size:0.65rem; font-weight:700; cursor:pointer;">&lt; PREV</button>
-      <button onclick="window.cycleSpectatorCar(1)" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:4px; padding:6px 10px; font-family:inherit; font-size:0.65rem; font-weight:700; cursor:pointer;">NEXT &gt;</button>
+      <button onclick="window.cycleSpectatorCar(-1)" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:4px; padding:5px 9px; font-family:inherit; font-size:0.65rem; font-weight:700; cursor:pointer;">◀ PREV</button>
+      <button onclick="window.cycleSpectatorCar(1)" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:4px; padding:5px 9px; font-family:inherit; font-size:0.65rem; font-weight:700; cursor:pointer;">NEXT ▶</button>
     </div>
-    <button onclick="window.retireAndEndSession()" style="background:linear-gradient(135deg, #e10600 0%, #b91c1c 100%); border:none; color:#fff; border-radius:4px; padding:7px 14px; font-family:inherit; font-size:0.68rem; font-weight:900; cursor:pointer; letter-spacing:1px; box-shadow:0 0 12px rgba(225,6,0,0.4);">
-      🏁 END SESSION &amp; RESULTS
+    <button onclick="window.retireAndEndSession()" style="background:linear-gradient(135deg, #e10600 0%, #b91c1c 100%); border:none; color:#fff; border-radius:4px; padding:6px 12px; font-family:inherit; font-size:0.66rem; font-weight:800; cursor:pointer; letter-spacing:0.5px; box-shadow:0 0 10px rgba(225,6,0,0.4);">
+      🏁 END SESSION
     </button>
   </div>
 

@@ -869,33 +869,23 @@
 
         const brakingConfidence = THREE.MathUtils.lerp(0.90, 1.12, brakingSkillVal);
 
-        for (const corner of AI_BRAKING_ZONES) {
-
-          const distToStart = ((corner.from - racer.currentOffset) + 1.0) % 1.0;
-
-          const brakingDist = config.brakingMargin;
-
-          if (distToStart < brakingDist) {
-
-            const factor = distToStart / brakingDist; // 1.0 down to 0.0
-
-            const cornerLimit = corner.maxSpeed * brakingConfidence * (1.0 + (activeDifficulty - 1) * 0.04);
-
-            const interpolatedLimit = THREE.MathUtils.lerp(cornerLimit, target, factor);
-
-            cornerSpeedLimit = Math.min(cornerSpeedLimit, interpolatedLimit);
-
-          } else if (racer.currentOffset >= corner.from && racer.currentOffset <= corner.to) {
-
-            const cornerLimit = corner.maxSpeed * brakingConfidence * (1.0 + (activeDifficulty - 1) * 0.04);
-
-            cornerSpeedLimit = Math.min(cornerSpeedLimit, cornerLimit);
-
+        // Apply legacy braking zones only on track 2; real circuits use dynamic spline curvature in ECU
+        if (activeTrack === 2) {
+          for (const corner of AI_BRAKING_ZONES) {
+            const distToStart = ((corner.from - racer.currentOffset) + 1.0) % 1.0;
+            const brakingDist = config.brakingMargin;
+            if (distToStart < brakingDist) {
+              const factor = distToStart / brakingDist; // 1.0 down to 0.0
+              const cornerLimit = corner.maxSpeed * brakingConfidence * (1.0 + (activeDifficulty - 1) * 0.04);
+              const interpolatedLimit = THREE.MathUtils.lerp(cornerLimit, target, factor);
+              cornerSpeedLimit = Math.min(cornerSpeedLimit, interpolatedLimit);
+            } else if (racer.currentOffset >= corner.from && racer.currentOffset <= corner.to) {
+              const cornerLimit = corner.maxSpeed * brakingConfidence * (1.0 + (activeDifficulty - 1) * 0.04);
+              cornerSpeedLimit = Math.min(cornerSpeedLimit, cornerLimit);
+            }
           }
-
+          target = Math.min(target, cornerSpeedLimit);
         }
-
-        target = Math.min(target, cornerSpeedLimit);
 
         // Safety Car speed limit
 

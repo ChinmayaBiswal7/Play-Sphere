@@ -1161,10 +1161,28 @@
     if (specHud) {
       specHud.style.display = 'flex';
     }
+    const speedo = document.querySelector('.speedo-console');
+    if (speedo) speedo.style.display = 'none';
+
     updateSpectatorHUD();
+    if (typeof updateLeaderboardHUD === 'function') updateLeaderboardHUD();
     if (typeof speakEngineerRadio === 'function') {
       speakEngineerRadio("Switched to onboard broadcast spectator feed.", 80, true);
     }
+  };
+
+  window.spectateSpecificRacer = (target) => {
+    if (!target) return;
+    if (window.ApexAudio) window.ApexAudio.playClick();
+    if (!window.spectatorModeActive) {
+      window.startSpectatorMode();
+    }
+    window.spectatorTargetCar = target;
+    const activeAI = racers.filter(r => !r.isPlayer && !r.retired);
+    const idx = activeAI.indexOf(target);
+    if (idx !== -1) window.spectatorCarIndex = idx;
+    updateSpectatorHUD();
+    if (typeof updateLeaderboardHUD === 'function') updateLeaderboardHUD();
   };
 
   window.cycleSpectatorCar = (dir) => {
@@ -1174,6 +1192,7 @@
     window.spectatorCarIndex = (window.spectatorCarIndex + dir + activeCars.length) % activeCars.length;
     window.spectatorTargetCar = activeCars[window.spectatorCarIndex];
     updateSpectatorHUD();
+    if (typeof updateLeaderboardHUD === 'function') updateLeaderboardHUD();
   };
 
   function updateSpectatorHUD() {
@@ -1183,6 +1202,7 @@
     const teamEl = document.getElementById('spectator-driver-team');
     const posEl = document.getElementById('spectator-driver-pos');
     const lapEl = document.getElementById('spectator-driver-lap');
+    const speedEl = document.getElementById('spectator-driver-speed');
 
     if (nameEl) nameEl.innerText = car.name || "DRIVER";
     if (teamEl) {
@@ -1192,6 +1212,7 @@
     }
     if (posEl) posEl.innerText = `P${car.posRank || 1}`;
     if (lapEl) lapEl.innerText = `LAP ${Math.min(maxLaps, (car.completedLaps || 0) + 1)}/${maxLaps}`;
+    if (speedEl) speedEl.innerText = Math.round(Math.abs(car.speed || 0) * 3.6);
   }
 
   window.retireAndEndSession = () => {
@@ -1200,6 +1221,8 @@
     if (overlay) overlay.style.display = 'none';
     const specHud = document.getElementById('f1-spectator-hud');
     if (specHud) specHud.style.display = 'none';
+    const speedo = document.querySelector('.speedo-console');
+    if (speedo) speedo.style.display = 'flex';
 
     window.spectatorModeActive = false;
 
@@ -4758,38 +4781,50 @@
     ground.position.y = -0.10;
     scene.add(ground);
 
-    // 2. 3D Trees planted at safe spline offsets outside the barriers (160 tree clusters along 5.28km track)
+    // 2. 3D Trees planted at safe spline offsets outside the barriers (240 trees along 5.28km track)
     const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5c3a21, roughness: 0.9 });
     const foliageMat1 = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.8 });
     const foliageMat2 = new THREE.MeshStandardMaterial({ color: 0x166534, roughness: 0.85 });
+    const foliageMat3 = new THREE.MeshStandardMaterial({ color: 0x22543d, roughness: 0.82 });
 
-    const treeSteps = 160;
+    const treeSteps = 240;
     for (let i = 0; i < treeSteps; i++) {
       const t = (i / treeSteps);
       const pt = trackCurve.getPointAt(t);
       const tang = trackCurve.getTangentAt(t).normalize();
       const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
 
-      // Place trees on both outer sides safely 24m to 38m away from track center
+      // Place trees on both outer sides safely 24m to 42m away from track center
       [-1, 1].forEach((side) => {
         if (side === 1 && (t >= 0.95 || t <= 0.08)) return; // skip pit building side
-        const treePos = pt.clone().add(norm.clone().multiplyScalar(side * (24.0 + (i % 4) * 4.5)));
+        const treePos = pt.clone().add(norm.clone().multiplyScalar(side * (24.0 + (i % 5) * 4.2)));
 
         const treeGroup = new THREE.Group();
         treeGroup.name = "tree_scenery";
-        const treeScale = 0.9 + (i % 3) * 0.25;
-        const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.35 * treeScale, 0.5 * treeScale, 3.8 * treeScale, 6), trunkMat);
-        trunk.position.y = (3.8 * treeScale) / 2;
+        const treeScale = 0.85 + (i % 4) * 0.22;
+        const trunkH = 3.6 * treeScale;
+        const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.35 * treeScale, 0.5 * treeScale, trunkH, 6), trunkMat);
+        trunk.position.y = trunkH / 2;
         treeGroup.add(trunk);
 
-        const fMat = i % 2 === 0 ? foliageMat1 : foliageMat2;
-        const c1 = new THREE.Mesh(new THREE.ConeGeometry(2.6 * treeScale, 4.0 * treeScale, 6), fMat);
-        c1.position.y = 4.2 * treeScale;
-        treeGroup.add(c1);
-
-        const c2 = new THREE.Mesh(new THREE.ConeGeometry(1.8 * treeScale, 3.0 * treeScale, 6), fMat);
-        c2.position.y = 6.4 * treeScale;
-        treeGroup.add(c2);
+        const fMat = (i % 3 === 0) ? foliageMat1 : ((i % 3 === 1) ? foliageMat2 : foliageMat3);
+        if (i % 2 === 0) {
+          // Layered Australian gum tree (broad leafy canopy)
+          const sphere1 = new THREE.Mesh(new THREE.SphereGeometry(2.4 * treeScale, 8, 6), fMat);
+          sphere1.position.y = trunkH + 1.6 * treeScale;
+          treeGroup.add(sphere1);
+          const sphere2 = new THREE.Mesh(new THREE.SphereGeometry(1.8 * treeScale, 7, 5), fMat);
+          sphere2.position.set(0.6 * treeScale, trunkH + 2.8 * treeScale, 0.3 * treeScale);
+          treeGroup.add(sphere2);
+        } else {
+          // Conical pine / cypress tree
+          const c1 = new THREE.Mesh(new THREE.ConeGeometry(2.6 * treeScale, 4.0 * treeScale, 6), fMat);
+          c1.position.y = trunkH + 2.0 * treeScale;
+          treeGroup.add(c1);
+          const c2 = new THREE.Mesh(new THREE.ConeGeometry(1.8 * treeScale, 3.0 * treeScale, 6), fMat);
+          c2.position.y = trunkH + 4.2 * treeScale;
+          treeGroup.add(c2);
+        }
 
         treeGroup.position.copy(treePos);
         scene.add(treeGroup);
@@ -4798,7 +4833,7 @@
 
     // 🌊 WATER FEATURES PER TRACK
     if (activeTrack === 0) {
-      // Albert Park Lake (Melbourne inland lake centerpiece inside track perimeter)
+      // 1. Albert Park Lake (Melbourne inland lake centerpiece inside track perimeter)
       const waterGeo = new THREE.PlaneGeometry(1600, 1100);
       const waterMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.15, metalness: 0.85 });
       const lake = new THREE.Mesh(waterGeo, waterMat);
@@ -4806,6 +4841,66 @@
       lake.rotation.x = -Math.PI / 2;
       lake.position.set(-150, -0.2, 50);
       scene.add(lake);
+
+      // 2. Lake Shoreline Wooden Piers & Mooring Jetties
+      const pierMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.85 });
+      [[-220, 120, -0.3], [-100, -80, 0.5], [-80, 240, 0.1]].forEach(([px, pz, rot]) => {
+        const pier = new THREE.Mesh(new THREE.BoxGeometry(10, 0.4, 45), pierMat);
+        pier.position.set(px, 0.05, pz);
+        pier.rotation.y = rot;
+        scene.add(pier);
+      });
+
+      // 3. Sailing Yachts / Catamarans on Albert Park Lake
+      const hullMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.4 });
+      const sailMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3, side: THREE.DoubleSide });
+      [[-260, 80, 0.6], [-150, -160, -0.4], [-60, 150, 1.2], [-180, 300, 0.8], [-320, -60, -1.0]].forEach(([bx, bz, rot]) => {
+        const boatGroup = new THREE.Group();
+        const hull = new THREE.Mesh(new THREE.BoxGeometry(4.0, 1.2, 10.0), hullMat);
+        hull.position.y = 0.2;
+        boatGroup.add(hull);
+        const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 12.0, 6), pierMat);
+        mast.position.set(0, 6.0, 0);
+        boatGroup.add(mast);
+        const sail = new THREE.Mesh(new THREE.BufferGeometry(), sailMat);
+        const sailPts = new Float32Array([0, 1.5, 0,  0, 11.5, 0,  0, 1.8, -4.5]);
+        sail.setAttribute('position', new THREE.BufferAttribute(sailPts, 3));
+        sail.computeVertexNormals();
+        boatGroup.add(sail);
+        boatGroup.position.set(bx, 0.0, bz);
+        boatGroup.rotation.y = rot;
+        scene.add(boatGroup);
+      });
+
+      // 4. Infield Sports Ovals & Sand Bunkers (Iconic Albert Park Parkland)
+      const ovalCanvas = document.createElement('canvas');
+      ovalCanvas.width = 256; ovalCanvas.height = 256;
+      const octx = ovalCanvas.getContext('2d');
+      octx.fillStyle = '#15803d'; octx.fillRect(0, 0, 256, 256);
+      octx.strokeStyle = '#ffffff'; octx.lineWidth = 4;
+      octx.beginPath(); octx.ellipse(128, 128, 115, 80, 0, 0, Math.PI * 2); octx.stroke();
+      const ovalTex = new THREE.CanvasTexture(ovalCanvas);
+      const ovalGeo = new THREE.PlaneGeometry(160, 120);
+      const ovalMat = new THREE.MeshStandardMaterial({ map: ovalTex, roughness: 0.9 });
+      
+      const oval1 = new THREE.Mesh(ovalGeo, ovalMat);
+      oval1.rotation.x = -Math.PI / 2;
+      oval1.position.set(120, -0.05, 420);
+      scene.add(oval1);
+
+      const oval2 = new THREE.Mesh(ovalGeo, ovalMat);
+      oval2.rotation.x = -Math.PI / 2;
+      oval2.position.set(-440, -0.05, -120);
+      scene.add(oval2);
+
+      // Golf sand bunkers on the parkland
+      const bunkerMat = new THREE.MeshStandardMaterial({ color: 0xfde047, roughness: 0.95 });
+      [[-360, 320, 28, 18], [240, 200, 24, 16], [-520, 140, 32, 20]].forEach(([gx, gz, gw, gd]) => {
+        const bunker = new THREE.Mesh(new THREE.PlaneGeometry(gw, gd), bunkerMat);
+        bunker.rotation.x = -Math.PI / 2;
+        bunker.position.set(gx, -0.06, gz);
+        scene.add(bunker);
+      });
     } else if (activeTrack === 1) {
       // Yas Marina Harbor & Yacht Basin (Abu Dhabi)
       const waterGeo = new THREE.PlaneGeometry(1400, 900);
@@ -4826,34 +4921,83 @@
       scene.add(water);
     }
 
-    // 🏙️ MELBOURNE CBD SKYLINE (Sector 1 & 2 Background across Albert Park Lake)
+    // 🏙️ MELBOURNE CITY SKYLINE ENCIRCLING THE CIRCUIT (Matching Real-World Reference Images)
     if (activeTrack === 0) {
       const cityGroup = new THREE.Group();
-      cityGroup.name = "melbourne_cbd_skyline";
+      cityGroup.name = "melbourne_city_skyline";
       const bldgMat1 = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.6, metalness: 0.4 });
       const bldgMat2 = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.5, metalness: 0.6 });
-      const glassMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.2, metalness: 0.8 });
+      const bldgMat3 = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.55, metalness: 0.5 });
+      const glassMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.2, metalness: 0.85 });
+      const warmBldgMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.7, metalness: 0.2 });
 
-      // Skyscraper clusters in Melbourne CBD north of the park (x: -600 to 600, z: -1200 to -1600)
-      for (let b = 0; b < 28; b++) {
-        const bx = -600 + (b * 45) + (b % 3) * 12;
-        const bz = -1300 - (b % 4) * 80;
-        const bw = 28 + (b % 5) * 8;
-        const bd = 28 + (b % 3) * 10;
-        const bh = 80 + (b % 7) * 35;
+      // A. NORTH SKYLINE: Melbourne Central Business District (Tall Skyscrapers, Towers & Spires)
+      for (let b = 0; b < 44; b++) {
+        const bx = -700 + (b * 32) + (b % 3) * 14;
+        const bz = -1200 - (b % 5) * 90;
+        const bw = 26 + (b % 4) * 8;
+        const bd = 26 + (b % 3) * 10;
+        const bh = 85 + (b % 8) * 38;
 
-        const bMat = (b % 3 === 0) ? glassMat : ((b % 2 === 0) ? bldgMat1 : bldgMat2);
+        const bMat = (b % 4 === 0) ? glassMat : ((b % 3 === 0) ? warmBldgMat : ((b % 2 === 0) ? bldgMat1 : bldgMat2));
         const bldg = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), bMat);
         bldg.position.set(bx, bh / 2, bz);
         cityGroup.add(bldg);
 
-        // Architectural spire / antenna on prominent towers
         if (b % 4 === 0) {
-          const spire = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 1.6, 26, 6), bldgMat2);
-          spire.position.set(bx, bh + 13, bz);
+          const spire = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 1.8, 28, 6), bldgMat2);
+          spire.position.set(bx, bh + 14, bz);
           cityGroup.add(spire);
         }
       }
+
+      // B. EAST SKYLINE: St Kilda Road & Queens Road High-Rise Avenue (Flanking Turns 1 - 6)
+      for (let b = 0; b < 52; b++) {
+        const bx = 900 + (b % 4) * 55;
+        const bz = -400 + (b * 26) + (b % 3) * 12;
+        const bw = 30 + (b % 4) * 7;
+        const bd = 28 + (b % 3) * 8;
+        const bh = 55 + (b % 6) * 26;
+
+        const bMat = (b % 3 === 0) ? glassMat : ((b % 2 === 0) ? bldgMat3 : warmBldgMat);
+        const bldg = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), bMat);
+        bldg.position.set(bx, bh / 2, bz);
+        cityGroup.add(bldg);
+
+        // Modern rooftop mechanical penthouse / balcony features
+        const roofBox = new THREE.Mesh(new THREE.BoxGeometry(bw * 0.5, 4.0, bd * 0.5), bldgMat2);
+        roofBox.position.set(bx, bh + 2.0, bz);
+        cityGroup.add(roofBox);
+      }
+
+      // C. SOUTH SKYLINE: St Kilda Beachside Hotel & Apartment Towers
+      for (let b = 0; b < 28; b++) {
+        const bx = -450 + (b * 44);
+        const bz = 1050 + (b % 3) * 60;
+        const bw = 32 + (b % 3) * 8;
+        const bd = 26 + (b % 4) * 8;
+        const bh = 48 + (b % 5) * 22;
+
+        const bMat = (b % 2 === 0) ? warmBldgMat : bldgMat1;
+        const bldg = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), bMat);
+        bldg.position.set(bx, bh / 2, bz);
+        cityGroup.add(bldg);
+      }
+
+      // D. WEST SKYLINE: South Melbourne & Port Phillip Promenade
+      for (let b = 0; b < 32; b++) {
+        const bx = -960 - (b % 3) * 60;
+        const bz = -550 + (b * 42);
+        const bw = 28 + (b % 4) * 8;
+        const bd = 28 + (b % 3) * 8;
+        const bh = 45 + (b % 5) * 20;
+
+        const bMat = (b % 3 === 0) ? glassMat : bldgMat2;
+        const bldg = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), bMat);
+        bldg.position.set(bx, bh / 2, bz);
+        cityGroup.add(bldg);
+      }
+
       scene.add(cityGroup);
     }
   }
@@ -5756,16 +5900,27 @@
         .rotateY(-Math.PI / 2), mat, [x, 0, 0]);
     }
 
-    // ── Front Wing Assembly
+    // ── Front Wing Assembly (Authentic Modern F1 Scale & Forward Projection)
     const frontWingGroup = new THREE.Group();
     frontWingGroup.name = "frontWing";
-    add(foil(2.0, 0.42, 0.045, M.carbon, [0, 0.10, 2.50], -0.02), frontWingGroup);
-    add(foil(1.94, 0.30, 0.040, M.body, [0, 0.18, 2.38], 0.25), frontWingGroup);
-    add(foil(1.88, 0.22, 0.035, M.accent, [0, 0.25, 2.28], 0.42), frontWingGroup);
+
+    // Main lower blade (Wide 2.40m carbon blade extending in front of nose at z = 2.95)
+    add(foil(2.40, 0.52, 0.055, M.carbon, [0, 0.15, 2.95], -0.02), frontWingGroup);
+    // Flap element 2 (Team body color aerodynamic cascade)
+    add(foil(2.32, 0.38, 0.045, M.body, [0, 0.22, 2.85], 0.22), frontWingGroup);
+    // Flap element 3 (Team accent color upper cascade)
+    add(foil(2.24, 0.30, 0.040, M.accent, [0, 0.28, 2.76], 0.38), frontWingGroup);
+
+    // Endplates & Outer Outwash Dive Planes (x = ±1.22m)
     for (const s of [-1, 1]) {
-      add(plate([[2.76, 0.04], [2.10, 0.04], [2.05, 0.42], [2.40, 0.46], [2.74, 0.22]], M.body, s * 1.0, 0.03), frontWingGroup);
-      add(plate([[2.64, 0.05], [2.30, 0.05], [2.30, 0.075], [2.64, 0.075]], M.carbon, s * 0.9, 0.10), frontWingGroup);
-      add(strut([s * 0.1, 0.2, 2.45], [s * 0.09, 0.26, 2.25], 0.012, M.carbon), frontWingGroup);
+      // Main endplate (spanning from z = 2.55m to 3.35m)
+      add(plate([[3.35, 0.06], [2.55, 0.06], [2.50, 0.44], [2.90, 0.48], [3.32, 0.26]], M.body, s * 1.22, 0.035), frontWingGroup);
+      // Secondary carbon strake / footplate
+      add(plate([[3.25, 0.06], [2.70, 0.06], [2.70, 0.10], [3.25, 0.10]], M.carbon, s * 1.14, 0.08), frontWingGroup);
+      // Outward aerodynamic dive plane
+      add(mesh(new THREE.BoxGeometry(0.18, 0.025, 0.32), M.accent, [s * 1.30, 0.28, 2.95], [0, 0, s * 0.20]), frontWingGroup);
+      // Nose-to-wing structural mounting pylons
+      add(strut([s * 0.12, 0.24, 2.70], [s * 0.10, 0.15, 2.92], 0.016, M.carbon), frontWingGroup);
     }
     car.add(frontWingGroup);
     car.frontWing = frontWingGroup;
@@ -10304,11 +10459,14 @@ class AIDriverBrain {
     optimalLine = THREE.MathUtils.clamp(optimalLine, -5.2, 5.2);
     targetOffset = optimalLine + this.lineBias;
 
-    // 2. Cornering Deceleration vs Straightaway Top Speed
+    // 2. Cornering Deceleration vs Straightaway Top Speed (F1 High-Downforce Aero Model)
     const absCurvature = Math.abs(upcomingCurvature);
-    if (absCurvature > 0.003) {
-      // Braking zone: calculate corner grip limit based on curvature & downforce
-      const cornerLimit = Math.max(17.5, (1.0 / Math.pow(absCurvature, 0.48)) * 1.55);
+    if (absCurvature > 0.035) {
+      // Modern high-downforce F1 cornering limits:
+      // Gentle sweepers (c ~ 0.06): ~310 km/h (86 m/s)
+      // Medium bends (c ~ 0.15): ~260 km/h (72 m/s)
+      // Hairpins/Chicanes (c ~ 0.40): ~130 km/h (36 m/s)
+      const cornerLimit = Math.max(34.0, targetSpeed - (absCurvature - 0.035) * 145.0);
       targetSpeed = Math.min(targetSpeed, cornerLimit * (0.97 + this.personality.cons * 0.06));
     }
 
@@ -11545,33 +11703,23 @@ window.AIBrainManager = {
 
         const brakingConfidence = THREE.MathUtils.lerp(0.90, 1.12, brakingSkillVal);
 
-        for (const corner of AI_BRAKING_ZONES) {
-
-          const distToStart = ((corner.from - racer.currentOffset) + 1.0) % 1.0;
-
-          const brakingDist = config.brakingMargin;
-
-          if (distToStart < brakingDist) {
-
-            const factor = distToStart / brakingDist; // 1.0 down to 0.0
-
-            const cornerLimit = corner.maxSpeed * brakingConfidence * (1.0 + (activeDifficulty - 1) * 0.04);
-
-            const interpolatedLimit = THREE.MathUtils.lerp(cornerLimit, target, factor);
-
-            cornerSpeedLimit = Math.min(cornerSpeedLimit, interpolatedLimit);
-
-          } else if (racer.currentOffset >= corner.from && racer.currentOffset <= corner.to) {
-
-            const cornerLimit = corner.maxSpeed * brakingConfidence * (1.0 + (activeDifficulty - 1) * 0.04);
-
-            cornerSpeedLimit = Math.min(cornerSpeedLimit, cornerLimit);
-
+        // Apply legacy braking zones only on track 2; real circuits use dynamic spline curvature in ECU
+        if (activeTrack === 2) {
+          for (const corner of AI_BRAKING_ZONES) {
+            const distToStart = ((corner.from - racer.currentOffset) + 1.0) % 1.0;
+            const brakingDist = config.brakingMargin;
+            if (distToStart < brakingDist) {
+              const factor = distToStart / brakingDist; // 1.0 down to 0.0
+              const cornerLimit = corner.maxSpeed * brakingConfidence * (1.0 + (activeDifficulty - 1) * 0.04);
+              const interpolatedLimit = THREE.MathUtils.lerp(cornerLimit, target, factor);
+              cornerSpeedLimit = Math.min(cornerSpeedLimit, interpolatedLimit);
+            } else if (racer.currentOffset >= corner.from && racer.currentOffset <= corner.to) {
+              const cornerLimit = corner.maxSpeed * brakingConfidence * (1.0 + (activeDifficulty - 1) * 0.04);
+              cornerSpeedLimit = Math.min(cornerSpeedLimit, cornerLimit);
+            }
           }
-
+          target = Math.min(target, cornerSpeedLimit);
         }
-
-        target = Math.min(target, cornerSpeedLimit);
 
         // Safety Car speed limit
 
@@ -15188,8 +15336,22 @@ window.AIBrainManager = {
         row.style.padding = '6px 12px';
       }
 
-      // Highlight player row - strong neon cyan left stripe + background glow
-      if (racer.isPlayer) {
+      // Make row clickable to switch camera to that racer
+      row.style.cursor = 'pointer';
+      row.title = `Click to spectate ${racer.name}`;
+      row.onclick = () => {
+        if (typeof window.spectateSpecificRacer === 'function') {
+          window.spectateSpecificRacer(racer);
+        }
+      };
+
+      const isBeingSpectated = (window.spectatorModeActive && window.spectatorTargetCar === racer);
+      if (isBeingSpectated) {
+        row.style.background = "linear-gradient(90deg, rgba(239, 68, 68, 0.45) 0%, rgba(239, 68, 68, 0.15) 100%)";
+        row.style.boxShadow = "inset 3px 0 0 0 #ef4444, inset 0 0 14px rgba(239, 68, 68, 0.35)";
+        row.style.color = "#ffffff";
+        row.style.borderRadius = "0px";
+      } else if (racer.isPlayer) {
         row.style.background = "linear-gradient(90deg, rgba(6, 182, 212, 0.35) 0%, rgba(6, 182, 212, 0.10) 100%)";
         row.style.boxShadow = "inset 3px 0 0 0 #06b6d4, inset 0 0 14px rgba(6, 182, 212, 0.25)";
         row.style.color = "#ffffff";
@@ -15208,6 +15370,9 @@ window.AIBrainManager = {
       if (racer.retired) {
         posEl.innerText = "DNF";
         posEl.style.cssText = "font-weight: 900; width: 28px; color: #ef4444; font-size: 0.65rem;";
+      } else if (isBeingSpectated) {
+        posEl.innerHTML = `<span style="color:#ef4444;font-size:0.55rem;margin-right:2px;">●</span>P${pos}`;
+        posEl.style.cssText = "font-weight: 900; width: 28px; color: #fff; font-size: 0.68rem;";
       } else {
         posEl.innerText = `P${pos}`;
         posEl.style.cssText = `font-weight: 900; width: 26px; ${racer.isPlayer ? 'color: var(--neon-cyan);' : 'color: rgba(255,255,255,0.65);'}`;
