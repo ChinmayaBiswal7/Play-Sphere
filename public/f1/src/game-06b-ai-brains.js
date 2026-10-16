@@ -185,9 +185,8 @@ class AIDriverBrain {
       let gap = (otherProgress - myProgress);
       // Handle lap wraparound
       if (gap < -0.5) gap += 100;
-      else if (gap > 50) gap -= 100;
-
-      const gapMeters = gap * 1800.0;
+      const tLen = (typeof trackCurve !== 'undefined' && trackCurve) ? trackCurve.getLength() : 5280.0;
+      const gapMeters = gap * tLen;
 
       // Detect Car Ahead (forward cone up to 55m)
       if (gapMeters > 0.0 && gapMeters < 55.0) {

@@ -27,60 +27,51 @@ window.YAS_MARINA = {
     { detect: 0.52, activate: 0.58 }  // Marina Straight
   ],
   trackPoints: [
-    // Start / Finish Straight (Sector 1, Red) heading South
-    new THREE.Vector3(0, 0.1, -50),
-    new THREE.Vector3(0, 0.1, 10),
-    new THREE.Vector3(0, 0.1, 70),
-    new THREE.Vector3(0, 0.1, 120),  // T1 Braking point
-    
-    // Turn 1 (Sharp 90 Left) & Esses
-    new THREE.Vector3(25, 0.1, 140), // T1 Left Apex
-    new THREE.Vector3(65, 0.1, 140), // T2 Right
-    new THREE.Vector3(115, 0.1, 100),// T3 Hill sweep
-    new THREE.Vector3(165, 0.1, 115),// T4 Curve
-    new THREE.Vector3(230, 0.1, 115),// T5 Hairpin entry
-    new THREE.Vector3(255, 0.1, 85), // T5 Hairpin apex
-    
-    // Sector 2 (Cyan): Massive 1.2km Diagonal Back Straight with Speed Trap
-    new THREE.Vector3(210, 0.1, 20),
-    new THREE.Vector3(150, 0.1, -45),
-    new THREE.Vector3(85, 0.1, -110), // Speed Trap
-    new THREE.Vector3(15, 0.1, -170),
-    new THREE.Vector3(-30, 0.1, -215),// T6/T7 Chicane braking zone
-    new THREE.Vector3(-55, 0.1, -200),// T6 Left
-    new THREE.Vector3(-50, 0.1, -170),// T7 Right
-    
-    // Banked Marina Sweeping Hairpin (Turns 8 & 9)
-    new THREE.Vector3(-90, 0.1, -135),
-    new THREE.Vector3(-145, 0.1, -60),
-    new THREE.Vector3(-170, 0.1, 20),
-    new THREE.Vector3(-145, 0.1, 95),  // T8/T9 Sweeping banked hairpin
-    
-    // Sector 3 (Yellow): Hotel & Yacht Club Marina Complex
-    new THREE.Vector3(-110, 0.1, 55),  // T10
-    new THREE.Vector3(-85, 0.1, 25),   // T11
-    new THREE.Vector3(-60, 0.1, 40),   // T12 Under Yas Hotel
-    new THREE.Vector3(-45, 0.1, 65),   // T13
-    new THREE.Vector3(-25, 0.1, 65),   // T14 Marina exit
-    new THREE.Vector3(-25, 0.1, 10),   // T15 Fast right
-    new THREE.Vector3(-15, 0.1, -30)   // T16 Final right connecting to main straight
+    new THREE.Vector3(-144.2, 0.1, -42.4),
+    new THREE.Vector3(-144.2, 0.1, 161.1),
+    new THREE.Vector3(-144.2, 0.1, 364.6),
+    new THREE.Vector3(-144.2, 0.1, 534.2),
+    new THREE.Vector3(-59.4, 0.1, 602),
+    new THREE.Vector3(76.3, 0.1, 602),
+    new THREE.Vector3(245.9, 0.1, 466.4),
+    new THREE.Vector3(415.5, 0.1, 517.2),
+    new THREE.Vector3(636, 0.1, 517.2),
+    new THREE.Vector3(720.8, 0.1, 415.5),
+    new THREE.Vector3(568.1, 0.1, 195),
+    new THREE.Vector3(364.6, 0.1, -25.4),
+    new THREE.Vector3(144.2, 0.1, -245.9),
+    new THREE.Vector3(-93.3, 0.1, -449.4),
+    new THREE.Vector3(-245.9, 0.1, -602),
+    new THREE.Vector3(-330.7, 0.1, -551.2),
+    new THREE.Vector3(-313.7, 0.1, -449.4),
+    new THREE.Vector3(-449.4, 0.1, -330.7),
+    new THREE.Vector3(-636, 0.1, -76.3),
+    new THREE.Vector3(-720.8, 0.1, 195),
+    new THREE.Vector3(-636, 0.1, 449.4),
+    new THREE.Vector3(-517.2, 0.1, 313.7),
+    new THREE.Vector3(-432.5, 0.1, 212),
+    new THREE.Vector3(-347.7, 0.1, 262.9),
+    new THREE.Vector3(-296.8, 0.1, 347.7),
+    new THREE.Vector3(-228.9, 0.1, 347.7),
+    new THREE.Vector3(-228.9, 0.1, 161.1),
+    new THREE.Vector3(-195, 0.1, 25.4)
   ],
   corners: [
     { name: "T1", type: "Sharp 90 Left", speed: 135 },
     { name: "T2", type: "Esses Entry", speed: 210 },
-    { name: "T3", type: "Sweeper", speed: 250 },
-    { name: "T4", type: "Downhill Curve", speed: 195 },
-    { name: "T5", type: "Tight Hairpin", speed: 75 },
-    { name: "T6", type: "Chicane Left", speed: 110 },
-    { name: "T7", type: "Chicane Right", speed: 125 },
-    { name: "T8", type: "Banked Entry", speed: 185 },
-    { name: "T9", type: "Marina Hairpin", speed: 145 },
-    { name: "T10", type: "Marina Left", speed: 155 },
-    { name: "T11", type: "Marina Right", speed: 140 },
-    { name: "T12", type: "Hotel Left", speed: 120 },
-    { name: "T13", type: "Hotel Right", speed: 115 },
-    { name: "T14", type: "Hotel Exit", speed: 125 },
-    { name: "T15", type: "Fast Right", speed: 190 },
-    { name: "T16", type: "Final Corner", speed: 215 }
+    { name: "T3", type: "Hill Sweep", speed: 245 },
+    { name: "T4", type: "Crest Flick", speed: 220 },
+    { name: "T5", type: "North Hairpin Entry", speed: 85 },
+    { name: "T6", type: "Back Straight Chicane Left", speed: 130 },
+    { name: "T7", type: "Chicane Right Exit", speed: 145 },
+    { name: "T8", type: "Marina Sweeper Entry", speed: 230 },
+    { name: "T9", type: "Banked Sweeper Apex", speed: 250 },
+    { name: "T10", type: "Marina Fast Bend", speed: 220 },
+    { name: "T11", type: "Hotel Left Entry", speed: 155 },
+    { name: "T12", type: "Under Yas Hotel Arch", speed: 125 },
+    { name: "T13", type: "Yacht Club Right", speed: 140 },
+    { name: "T14", type: "Marina Exit Left", speed: 160 },
+    { name: "T15", type: "Fast Right Bend", speed: 210 },
+    { name: "T16", type: "Final Corner onto Main Straight", speed: 180 }
   ]
 };

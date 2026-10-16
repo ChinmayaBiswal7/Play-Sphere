@@ -27,48 +27,35 @@ window.ALBERT_PARK = {
     { detect: 0.68, activate: 0.74 }  // Back Sweeper DRS Zone
   ],
   trackPoints: [
-    // Start / Finish Main Straight (South) heading East
-    new THREE.Vector3(-80, 0.1, 180),
-    new THREE.Vector3(-30, 0.1, 180), // Speed Trap
-    new THREE.Vector3(20, 0.1, 180),
-    new THREE.Vector3(70, 0.1, 180),
-    
-    // Turn 1 & 2 (Jones / Brabham Chicane)
-    new THREE.Vector3(120, 0.1, 180),
-    new THREE.Vector3(150, 0.1, 155), // T1 Right
-    new THREE.Vector3(145, 0.1, 120), // T2 Left
-    
-    // Sector 1: Run up to Turn 3 & 4
-    new THREE.Vector3(130, 0.1, 75),
-    new THREE.Vector3(105, 0.1, 35),
-    new THREE.Vector3(80, 0.1, 5),    // T3 Sharp 90 Right
-    new THREE.Vector3(50, 0.1, -15),  // T4 Left flick
-    new THREE.Vector3(15, 0.1, -40),  // T5 Fast right sweep
-    
-    // Sector 2: Turn 6 & 7 into Lakeside Sweep
-    new THREE.Vector3(-25, 0.1, -75), // T6 Right
-    new THREE.Vector3(-55, 0.1, -110),// T7 Fast left entry
-    
-    // High-Speed Lakeside Curve (Turns 8, 9, 10)
-    new THREE.Vector3(-80, 0.1, -155),
-    new THREE.Vector3(-120, 0.1, -195),
-    new THREE.Vector3(-165, 0.1, -220),// Peak North curve along Albert Park Lake
-    new THREE.Vector3(-215, 0.1, -205),// T9/10 flat-out sweep
-    
-    // Sector 3: Run down to Waite Chicane (Turn 11 & 12)
-    new THREE.Vector3(-240, 0.1, -150),
-    new THREE.Vector3(-235, 0.1, -80),
-    new THREE.Vector3(-205, 0.1, -5),  // T11 Left
-    new THREE.Vector3(-180, 0.1, 45),  // T12 Right exit
-    
-    // Infield to Turn 13 & 14
-    new THREE.Vector3(-145, 0.1, 95),
-    new THREE.Vector3(-115, 0.1, 135), // T13 90 Right
-    new THREE.Vector3(-95, 0.1, 175)   // T14 Final 90 Right onto straight
+    new THREE.Vector3(-148.6, 0.1, 848.9),
+    new THREE.Vector3(63.7, 0.1, 848.9),
+    new THREE.Vector3(275.9, 0.1, 848.9),
+    new THREE.Vector3(488.1, 0.1, 848.9),
+    new THREE.Vector3(700.4, 0.1, 848.9),
+    new THREE.Vector3(827.7, 0.1, 742.8),
+    new THREE.Vector3(806.5, 0.1, 594.3),
+    new THREE.Vector3(742.8, 0.1, 403.2),
+    new THREE.Vector3(636.7, 0.1, 233.5),
+    new THREE.Vector3(530.6, 0.1, 106.1),
+    new THREE.Vector3(403.2, 0.1, 21.2),
+    new THREE.Vector3(254.7, 0.1, -84.9),
+    new THREE.Vector3(84.9, 0.1, -233.5),
+    new THREE.Vector3(-42.4, 0.1, -382),
+    new THREE.Vector3(-148.6, 0.1, -573),
+    new THREE.Vector3(-318.4, 0.1, -742.8),
+    new THREE.Vector3(-509.4, 0.1, -848.9),
+    new THREE.Vector3(-721.6, 0.1, -785.3),
+    new THREE.Vector3(-827.7, 0.1, -551.8),
+    new THREE.Vector3(-806.5, 0.1, -254.7),
+    new THREE.Vector3(-679.2, 0.1, 63.7),
+    new THREE.Vector3(-573, 0.1, 275.9),
+    new THREE.Vector3(-424.5, 0.1, 488.1),
+    new THREE.Vector3(-297.1, 0.1, 657.9),
+    new THREE.Vector3(-212.2, 0.1, 827.7)
   ],
   corners: [
-    { name: "T1", type: "Fast Right", speed: 220 },
-    { name: "T2", type: "Medium Left", speed: 175 },
+    { name: "T1", type: "Fast Right (Jones)", speed: 220 },
+    { name: "T2", type: "Medium Left (Brabham)", speed: 175 },
     { name: "T3", type: "Sharp 90 Right", speed: 95 },
     { name: "T4", type: "Left Flick", speed: 180 },
     { name: "T5", type: "Fast Right Sweep", speed: 235 },
@@ -77,9 +64,9 @@ window.ALBERT_PARK = {
     { name: "T8", type: "Lakeside Kink", speed: 285 },
     { name: "T9", type: "High Speed Sweep", speed: 260 },
     { name: "T10", type: "Lakeside Exit", speed: 275 },
-    { name: "T11", type: "Waite Left", speed: 225 },
-    { name: "T12", type: "Waite Right", speed: 230 },
-    { name: "T13", type: "90 Right", speed: 110 },
-    { name: "T14", type: "Final Corner", speed: 125 }
+    { name: "T11", type: "Waite Left Chicane", speed: 225 },
+    { name: "T12", type: "Waite Right Chicane", speed: 230 },
+    { name: "T13", type: "90 Right Ascari", speed: 110 },
+    { name: "T14", type: "Final Corner to Straight", speed: 125 }
   ]
 };

@@ -35,7 +35,8 @@
 
         // Only evaluate if the car is behind the player (0.80 to 1.00 of the loop behind)
         if (normDiff > 0.80 && normDiff <= 1.0) {
-          const distBehind = (1.0 - normDiff) * 1800;
+          const tLen = trackCurve ? trackCurve.getLength() : 5280.0;
+          const distBehind = (1.0 - normDiff) * tLen;
           if (distBehind < nearestCarDist) {
             nearestCarDist = distBehind;
             nearestCarBehind = racer;

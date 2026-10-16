@@ -14,7 +14,8 @@
       playerKart.speed = THREE.MathUtils.lerp(playerKart.speed, 18.0, delta * 3.0);
       playerKart.sideOffset = THREE.MathUtils.lerp(playerKart.sideOffset, 0.0, delta * 2.0);
       
-      const stepSize = (playerKart.speed * delta) / 1800;
+      const tLen = trackCurve ? trackCurve.getLength() : 5280.0;
+      const stepSize = (playerKart.speed * delta) / tLen;
       playerKart.currentOffset = (playerKart.currentOffset + stepSize + 1.0) % 1.0;
 
       const point = trackCurve.getPointAt(playerKart.currentOffset);

@@ -28,7 +28,7 @@
     let skyTopColor = 0x0284c7;    // Albert Park: Sunny Melbourne blue sky
     let skyBottomColor = 0xe0f2fe;
     let fogColor = 0xe0f2fe;
-    let fogDensity = 0.0018;
+    let fogDensity = 0.0006;
     let ambientColor = 0xf0f9ff;
     let lightColor = 0xffffff;
     let hemiSky = 0xbae6fd;
@@ -39,7 +39,7 @@
       skyTopColor = 0x1e1b4b;
       skyBottomColor = 0xf59e0b;
       fogColor = 0x1e1b4b;
-      fogDensity = 0.0020;
+      fogDensity = 0.0006;
       ambientColor = 0xfde68a;
       lightColor = 0xffedd5;
       hemiSky = 0x38bdf8;
@@ -49,7 +49,7 @@
       skyTopColor = 0xff9a5a;
       skyBottomColor = 0xffe8c9;
       fogColor = 0xffb98a;
-      fogDensity = 0.0022;
+      fogDensity = 0.0008;
       ambientColor = 0xffedd5;
       lightColor = 0xfeb080;
       hemiSky = 0xffdca8;
@@ -59,7 +59,7 @@
       skyTopColor = 0x0369a1;
       skyBottomColor = 0xf0f9ff;
       fogColor = 0xf0f9ff;
-      fogDensity = 0.0035;
+      fogDensity = 0.0012;
       ambientColor = 0xf0f9ff;
       lightColor = 0xffffff;
       hemiSky = 0xbae6fd;
@@ -71,8 +71,8 @@
     scene.background = new THREE.Color(skyBottomColor);
     scene.fog = new THREE.FogExp2(fogColor, fogDensity);
 
-    // Camera
-    camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
+    // Camera (expanded to 3000m for full-scale 5.28km circuits)
+    camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 3000);
 
     renderer.setSize(window.innerWidth, window.innerHeight);
     container.appendChild(renderer.domElement);
@@ -621,11 +621,11 @@
     if (typeof updateLeaderboardHUD === 'function') updateLeaderboardHUD();
 
     setTimeout(() => {
-      if (!window.timingTowerManuallyToggled && isRaceActive) {
+      if (!window.timingTowerManuallyToggled) {
         window.timingTowerCollapsed = true;
         if (typeof updateLeaderboardHUD === 'function') updateLeaderboardHUD();
       }
-    }, 8000);
+    }, 6000);
   };
 
 
@@ -926,8 +926,12 @@
       polygonOffsetUnits: -5
     });
 
+    const tLen = trackCurve ? trackCurve.getLength() : 5280.0;
+    const gridStep = 8.0 / tLen;
+    const poleOffset = 16.0 / tLen;
+
     for (let slot = 0; slot < 20; slot++) {
-      const slotOffset = (1.0 - 0.003 - (slot * 0.0045) + 1.0) % 1.0;
+      const slotOffset = (1.0 - poleOffset - (slot * gridStep) + 1.0) % 1.0;
       const side = (slot % 2 === 0) ? -2.0 : 2.0;
 
       const p = trackCurve.getPointAt(slotOffset);
@@ -1581,13 +1585,14 @@
       return standGroup;
     };
 
-    // A. Main Pit Straight Grandstand (opposite the pit lane)
-    const tMain = 0.01;
+    // A. Main Pit Straight Grandstand (opposite the pit lane along the main straight)
+    const tMain = 0.045; // Safe straight segment away from Turn 14 corner
     const pMain = trackCurve.getPointAt(tMain);
     const tngMain = trackCurve.getTangentAt(tMain).normalize();
     const nrmMain = new THREE.Vector3(-tngMain.z, 0, tngMain.x).normalize();
     const mainStand = createGrandstand(70, 6);
-    mainStand.position.copy(pMain).add(nrmMain.clone().multiplyScalar(-18.5));
+    mainStand.name = "grandstand_main";
+    mainStand.position.copy(pMain).add(nrmMain.clone().multiplyScalar(-28.0));
     mainStand.lookAt(mainStand.position.clone().add(nrmMain));
     scene.add(mainStand);
 
@@ -1597,12 +1602,14 @@
     const tngT1 = trackCurve.getTangentAt(tT1).normalize();
     const nrmT1 = new THREE.Vector3(-tngT1.z, 0, tngT1.x).normalize();
     const t1Stand = createGrandstand(50, 5);
-    t1Stand.position.copy(pT1).add(nrmT1.clone().multiplyScalar(-19.0));
+    t1Stand.name = "grandstand_t1";
+    t1Stand.position.copy(pT1).add(nrmT1.clone().multiplyScalar(-28.0));
     t1Stand.lookAt(t1Stand.position.clone().add(nrmT1));
     scene.add(t1Stand);
 
     // 2. Portimao VIP Circular Architectural Control Tower (User Reference Image 4)
     const towerGroup = new THREE.Group();
+    towerGroup.name = "tower_vip";
     const glassMat = new THREE.MeshStandardMaterial({ color: 0x06b6d4, metalness: 0.9, roughness: 0.1, transparent: true, opacity: 0.75 });
     const concreteWhite = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.6 });
 
@@ -1630,10 +1637,10 @@
     towerGroup.add(mast);
 
     // Position VIP Tower near main straight / pit entrance
-    const tTower = 0.93;
+    const tTower = 0.97;
     const pTower = trackCurve.getPointAt(tTower);
     const nrmTower = new THREE.Vector3(-trackCurve.getTangentAt(tTower).z, 0, trackCurve.getTangentAt(tTower).x).normalize();
-    towerGroup.position.copy(pTower).add(nrmTower.clone().multiplyScalar(-24.0));
+    towerGroup.position.copy(pTower).add(nrmTower.clone().multiplyScalar(-28.0));
     scene.add(towerGroup);
 
     // 3. Brake Distance Marker Boards (150m, 100m, 50m before braking zones)

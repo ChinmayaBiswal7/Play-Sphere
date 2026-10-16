@@ -2,8 +2,8 @@
     const points = TRACK_POINTS[activeTrack];
     trackCurve = new THREE.CatmullRomCurve3(points, true, "centripetal");
 
-    // 🌌 Gradient Sky Dome
-    const skyGeo = new THREE.SphereGeometry(500, 32, 32);
+    // 🌌 Gradient Sky Dome (sized for full-scale 5.28km official F1 circuits)
+    const skyGeo = new THREE.SphereGeometry(3000, 32, 32);
     
     let skyTopColor = 0x0284c7;    // Track 0: Albert Park (Melbourne sunny sky)
     let skyBottomColor = 0xe0f2fe;
@@ -108,6 +108,10 @@
   function createRacers() {
     racers = [];
 
+    const tLen = trackCurve ? trackCurve.getLength() : 5280.0;
+    const gridStep = 8.0 / tLen;
+    const poleOffset = 16.0 / tLen;
+
     const activeTeam = F1_TEAMS[selectedTeamIndex];
     const playerDriver = activeTeam.drivers[activeDriver];
 
@@ -130,7 +134,7 @@
       bonus: activeDriver === 0 ? "acceleration" : "topSpeed",
       mesh: pKartSetup.mesh,
       wheels: pKartSetup.wheels,
-      currentOffset: 1.0 - 0.003,
+      currentOffset: (1.0 - poleOffset + 1.0) % 1.0,
       sideOffset: -2.0, // Left side P1 grid box position
       speed: 0.0,
       targetSpeed: 0.0,
@@ -145,7 +149,7 @@
       posRank: 1,
       teamIndex: selectedTeamIndex,
       completedLaps: 0,
-      previousTrackProgress: 1.0 - 0.003,
+      previousTrackProgress: (1.0 - poleOffset + 1.0) % 1.0,
       isPitting: false,
       pitProgress: 0.0,
       finished: false,
@@ -244,7 +248,7 @@
       bonus: "handling",
       mesh: mateKartSetup.mesh,
       wheels: mateKartSetup.wheels,
-      currentOffset: 1.0 - 0.003 - (1 * 0.0045), // P2 Grid slot
+      currentOffset: (1.0 - poleOffset - (1 * gridStep) + 1.0) % 1.0, // P2 Grid slot
       sideOffset: 2.0, // Right side P2 grid position
       speed: 0.0,
       boostTime: 0.0,
@@ -253,7 +257,7 @@
       posRank: 2,
       teamIndex: selectedTeamIndex,
       completedLaps: 0,
-      previousTrackProgress: 1.0 - 0.003 - (1 * 0.0045),
+      previousTrackProgress: (1.0 - poleOffset - (1 * gridStep) + 1.0) % 1.0,
       isPitting: false,
       pitProgress: 0.0,
       finished: false,
@@ -287,7 +291,7 @@
           
           const aiKartSetup = createProceduralKart(parseInt(team.color.replace('#', ''), 16), false);
           const sideOffset = gridSlot % 2 === 0 ? -2.0 : 2.0;
-          const currentOffset = 1.0 - 0.003 - (gridSlot * 0.0045);
+          const currentOffset = (1.0 - poleOffset - (gridSlot * gridStep) + 1.0) % 1.0;
 
           const aiRacer = {
             isPlayer: false,
@@ -358,7 +362,7 @@
       }
 
       const sideOffset = gridIndex % 2 === 0 ? -2.0 : 2.0;
-      const currentOffset = (1.0 - 0.003 - (gridIndex * 0.0045) + 1.0) % 1.0;
+      const currentOffset = (1.0 - poleOffset - (gridIndex * gridStep) + 1.0) % 1.0;
 
       r.currentOffset = currentOffset;
       r.previousTrackProgress = currentOffset;

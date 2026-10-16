@@ -2870,8 +2870,42 @@
       const grid = document.getElementById('gp-circuits-grid');
       grid.innerHTML = '';
       const tracks = [
-        { id: 0, name: "Sunset Coast Circuit", icon: "🌅", desc: "Marina Bay style street track. 1,800m lap length. Heavy traction corners, scenic seaside runoffs." },
-        { id: 1, name: "Alpine Heights", icon: "🏔️", desc: "High-altitude fast-flowing track. Dramatic mountain peaks, gondola sweeps, and extreme high-speed downforce corners." }
+        { 
+          id: 0, 
+          name: "Albert Park Circuit", 
+          icon: "🇦🇺", 
+          km: "5.278 km", 
+          corners: "14 Corners",
+          record: "1:19.813 (Leclerc)",
+          desc: "Official Australian Grand Prix street course around Albert Park Lake. High-speed sweeps, heavy braking zones, and 4 DRS sectors." 
+        },
+        { 
+          id: 1, 
+          name: "Yas Marina Circuit", 
+          icon: "🇦🇪", 
+          km: "5.281 km", 
+          corners: "16 Corners",
+          record: "1:25.637 (Magnussen)",
+          desc: "Official Abu Dhabi season finale twilight circuit. Long 1.2km back straight, iconic hotel sector, and Marina hairpin." 
+        },
+        { 
+          id: 2, 
+          name: "Sunset Coast Circuit", 
+          icon: "🌅", 
+          km: "4.860 km", 
+          corners: "12 Corners",
+          record: "1:22.450 (Verstappen)",
+          desc: "Marina Bay style coastal street track. High traction technical corners, scenic seaside runoffs, and illuminated barriers." 
+        },
+        { 
+          id: 3, 
+          name: "Alpine Heights", 
+          icon: "🏔️", 
+          km: "4.318 km", 
+          corners: "16 Corners",
+          record: "1:14.280 (Hamilton)",
+          desc: "High-altitude fast-flowing track. Dramatic mountain peaks, extreme elevation changes, and high-speed downforce curves." 
+        }
       ];
       tracks.forEach((track) => {
         const card = document.createElement('div');
@@ -2879,11 +2913,18 @@
         if (track.id === window.weekendConfig.selectedTrackId) card.classList.add('selected');
         
         card.innerHTML = `
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
             <h3 style="font-size: 0.95rem; font-weight: 800; color: #fff; margin: 0;">${track.name}</h3>
             <span style="font-size: 1.4rem;">${track.icon}</span>
           </div>
-          <div class="gp-card-meta" style="margin-top: 10px; font-family: 'Inter', sans-serif; font-size: 0.72rem; color: #8c94a3; line-height: 1.4;">
+          <div style="display: flex; gap: 8px; margin-bottom: 8px; font-family: 'Orbitron', monospace; font-size: 0.68rem; color: var(--neon-cyan);">
+            <span>📏 ${track.km}</span>
+            <span>🏁 ${track.corners}</span>
+          </div>
+          <div style="font-family: 'Inter', sans-serif; font-size: 0.68rem; color: #e2e8f0; margin-bottom: 6px;">
+            <strong style="color: #facc15;">Record:</strong> ${track.record}
+          </div>
+          <div class="gp-card-meta" style="font-family: 'Inter', sans-serif; font-size: 0.72rem; color: #8c94a3; line-height: 1.4;">
             ${track.desc}
           </div>
         `;
@@ -2915,7 +2956,13 @@
     else if (step === 4) {
       const team = F1_TEAMS[window.weekendConfig.selectedTeamId];
       const drv = team.drivers[window.weekendConfig.selectedDriverId];
-      const trackName = window.weekendConfig.selectedTrackId === 0 ? "Sunset Coast Circuit 🌅" : "Alpine Heights 🏔️";
+      const trackLabels = [
+        "🇦🇺 Albert Park Circuit (5.278 km)",
+        "🇦🇪 Yas Marina Circuit (5.281 km)",
+        "🌅 Sunset Coast Circuit (4.860 km)",
+        "🏔️ Alpine Heights (4.318 km)"
+      ];
+      const trackName = trackLabels[window.weekendConfig.selectedTrackId] || trackLabels[0];
       const difficulties = ["EASY", "NORMAL", "HARD", "EXPERT"];
       
       document.getElementById('gp-conf-team').innerText = team.name;
@@ -2930,7 +2977,8 @@
     const currentTeam = F1_TEAMS[window.weekendConfig.selectedTeamId];
     document.getElementById('db-gp-team').innerText = currentTeam ? currentTeam.name : 'NONE';
     document.getElementById('db-gp-driver').innerText = currentTeam ? currentTeam.drivers[window.weekendConfig.selectedDriverId].name : 'NONE';
-    document.getElementById('db-gp-track').innerText = window.weekendConfig.selectedTrackId === 0 ? 'Sunset Coast' : 'Alpine Heights';
+    const trackShortNames = ["Albert Park", "Yas Marina", "Sunset Coast", "Alpine Heights"];
+    document.getElementById('db-gp-track').innerText = trackShortNames[window.weekendConfig.selectedTrackId] || 'Albert Park';
     document.getElementById('db-gp-laps').innerText = window.weekendConfig.raceLaps;
     const diffNames = ["EASY", "NORMAL", "HARD", "EXPERT"];
     document.getElementById('db-gp-diff').innerText = diffNames[window.weekendConfig.difficulty];
@@ -3248,7 +3296,7 @@
     let skyTopColor = 0x0284c7;    // Albert Park: Sunny Melbourne blue sky
     let skyBottomColor = 0xe0f2fe;
     let fogColor = 0xe0f2fe;
-    let fogDensity = 0.0018;
+    let fogDensity = 0.0006;
     let ambientColor = 0xf0f9ff;
     let lightColor = 0xffffff;
     let hemiSky = 0xbae6fd;
@@ -3259,7 +3307,7 @@
       skyTopColor = 0x1e1b4b;
       skyBottomColor = 0xf59e0b;
       fogColor = 0x1e1b4b;
-      fogDensity = 0.0020;
+      fogDensity = 0.0006;
       ambientColor = 0xfde68a;
       lightColor = 0xffedd5;
       hemiSky = 0x38bdf8;
@@ -3269,7 +3317,7 @@
       skyTopColor = 0xff9a5a;
       skyBottomColor = 0xffe8c9;
       fogColor = 0xffb98a;
-      fogDensity = 0.0022;
+      fogDensity = 0.0008;
       ambientColor = 0xffedd5;
       lightColor = 0xfeb080;
       hemiSky = 0xffdca8;
@@ -3279,7 +3327,7 @@
       skyTopColor = 0x0369a1;
       skyBottomColor = 0xf0f9ff;
       fogColor = 0xf0f9ff;
-      fogDensity = 0.0035;
+      fogDensity = 0.0012;
       ambientColor = 0xf0f9ff;
       lightColor = 0xffffff;
       hemiSky = 0xbae6fd;
@@ -3291,8 +3339,8 @@
     scene.background = new THREE.Color(skyBottomColor);
     scene.fog = new THREE.FogExp2(fogColor, fogDensity);
 
-    // Camera
-    camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
+    // Camera (expanded to 3000m for full-scale 5.28km circuits)
+    camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 3000);
 
     renderer.setSize(window.innerWidth, window.innerHeight);
     container.appendChild(renderer.domElement);
@@ -3841,11 +3889,11 @@
     if (typeof updateLeaderboardHUD === 'function') updateLeaderboardHUD();
 
     setTimeout(() => {
-      if (!window.timingTowerManuallyToggled && isRaceActive) {
+      if (!window.timingTowerManuallyToggled) {
         window.timingTowerCollapsed = true;
         if (typeof updateLeaderboardHUD === 'function') updateLeaderboardHUD();
       }
-    }, 8000);
+    }, 6000);
   };
 
 
@@ -4146,8 +4194,12 @@
       polygonOffsetUnits: -5
     });
 
+    const tLen = trackCurve ? trackCurve.getLength() : 5280.0;
+    const gridStep = 8.0 / tLen;
+    const poleOffset = 16.0 / tLen;
+
     for (let slot = 0; slot < 20; slot++) {
-      const slotOffset = (1.0 - 0.003 - (slot * 0.0045) + 1.0) % 1.0;
+      const slotOffset = (1.0 - poleOffset - (slot * gridStep) + 1.0) % 1.0;
       const side = (slot % 2 === 0) ? -2.0 : 2.0;
 
       const p = trackCurve.getPointAt(slotOffset);
@@ -4801,13 +4853,14 @@
       return standGroup;
     };
 
-    // A. Main Pit Straight Grandstand (opposite the pit lane)
-    const tMain = 0.01;
+    // A. Main Pit Straight Grandstand (opposite the pit lane along the main straight)
+    const tMain = 0.045; // Safe straight segment away from Turn 14 corner
     const pMain = trackCurve.getPointAt(tMain);
     const tngMain = trackCurve.getTangentAt(tMain).normalize();
     const nrmMain = new THREE.Vector3(-tngMain.z, 0, tngMain.x).normalize();
     const mainStand = createGrandstand(70, 6);
-    mainStand.position.copy(pMain).add(nrmMain.clone().multiplyScalar(-18.5));
+    mainStand.name = "grandstand_main";
+    mainStand.position.copy(pMain).add(nrmMain.clone().multiplyScalar(-28.0));
     mainStand.lookAt(mainStand.position.clone().add(nrmMain));
     scene.add(mainStand);
 
@@ -4817,12 +4870,14 @@
     const tngT1 = trackCurve.getTangentAt(tT1).normalize();
     const nrmT1 = new THREE.Vector3(-tngT1.z, 0, tngT1.x).normalize();
     const t1Stand = createGrandstand(50, 5);
-    t1Stand.position.copy(pT1).add(nrmT1.clone().multiplyScalar(-19.0));
+    t1Stand.name = "grandstand_t1";
+    t1Stand.position.copy(pT1).add(nrmT1.clone().multiplyScalar(-28.0));
     t1Stand.lookAt(t1Stand.position.clone().add(nrmT1));
     scene.add(t1Stand);
 
     // 2. Portimao VIP Circular Architectural Control Tower (User Reference Image 4)
     const towerGroup = new THREE.Group();
+    towerGroup.name = "tower_vip";
     const glassMat = new THREE.MeshStandardMaterial({ color: 0x06b6d4, metalness: 0.9, roughness: 0.1, transparent: true, opacity: 0.75 });
     const concreteWhite = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.6 });
 
@@ -4850,10 +4905,10 @@
     towerGroup.add(mast);
 
     // Position VIP Tower near main straight / pit entrance
-    const tTower = 0.93;
+    const tTower = 0.97;
     const pTower = trackCurve.getPointAt(tTower);
     const nrmTower = new THREE.Vector3(-trackCurve.getTangentAt(tTower).z, 0, trackCurve.getTangentAt(tTower).x).normalize();
-    towerGroup.position.copy(pTower).add(nrmTower.clone().multiplyScalar(-24.0));
+    towerGroup.position.copy(pTower).add(nrmTower.clone().multiplyScalar(-28.0));
     scene.add(towerGroup);
 
     // 3. Brake Distance Marker Boards (150m, 100m, 50m before braking zones)
@@ -4989,8 +5044,8 @@
     const points = TRACK_POINTS[activeTrack];
     trackCurve = new THREE.CatmullRomCurve3(points, true, "centripetal");
 
-    // 🌌 Gradient Sky Dome
-    const skyGeo = new THREE.SphereGeometry(500, 32, 32);
+    // 🌌 Gradient Sky Dome (sized for full-scale 5.28km official F1 circuits)
+    const skyGeo = new THREE.SphereGeometry(3000, 32, 32);
     
     let skyTopColor = 0x0284c7;    // Track 0: Albert Park (Melbourne sunny sky)
     let skyBottomColor = 0xe0f2fe;
@@ -5095,6 +5150,10 @@
   function createRacers() {
     racers = [];
 
+    const tLen = trackCurve ? trackCurve.getLength() : 5280.0;
+    const gridStep = 8.0 / tLen;
+    const poleOffset = 16.0 / tLen;
+
     const activeTeam = F1_TEAMS[selectedTeamIndex];
     const playerDriver = activeTeam.drivers[activeDriver];
 
@@ -5117,7 +5176,7 @@
       bonus: activeDriver === 0 ? "acceleration" : "topSpeed",
       mesh: pKartSetup.mesh,
       wheels: pKartSetup.wheels,
-      currentOffset: 1.0 - 0.003,
+      currentOffset: (1.0 - poleOffset + 1.0) % 1.0,
       sideOffset: -2.0, // Left side P1 grid box position
       speed: 0.0,
       targetSpeed: 0.0,
@@ -5132,7 +5191,7 @@
       posRank: 1,
       teamIndex: selectedTeamIndex,
       completedLaps: 0,
-      previousTrackProgress: 1.0 - 0.003,
+      previousTrackProgress: (1.0 - poleOffset + 1.0) % 1.0,
       isPitting: false,
       pitProgress: 0.0,
       finished: false,
@@ -5231,7 +5290,7 @@
       bonus: "handling",
       mesh: mateKartSetup.mesh,
       wheels: mateKartSetup.wheels,
-      currentOffset: 1.0 - 0.003 - (1 * 0.0045), // P2 Grid slot
+      currentOffset: (1.0 - poleOffset - (1 * gridStep) + 1.0) % 1.0, // P2 Grid slot
       sideOffset: 2.0, // Right side P2 grid position
       speed: 0.0,
       boostTime: 0.0,
@@ -5240,7 +5299,7 @@
       posRank: 2,
       teamIndex: selectedTeamIndex,
       completedLaps: 0,
-      previousTrackProgress: 1.0 - 0.003 - (1 * 0.0045),
+      previousTrackProgress: (1.0 - poleOffset - (1 * gridStep) + 1.0) % 1.0,
       isPitting: false,
       pitProgress: 0.0,
       finished: false,
@@ -5274,7 +5333,7 @@
           
           const aiKartSetup = createProceduralKart(parseInt(team.color.replace('#', ''), 16), false);
           const sideOffset = gridSlot % 2 === 0 ? -2.0 : 2.0;
-          const currentOffset = 1.0 - 0.003 - (gridSlot * 0.0045);
+          const currentOffset = (1.0 - poleOffset - (gridSlot * gridStep) + 1.0) % 1.0;
 
           const aiRacer = {
             isPlayer: false,
@@ -5345,7 +5404,7 @@
       }
 
       const sideOffset = gridIndex % 2 === 0 ? -2.0 : 2.0;
-      const currentOffset = (1.0 - 0.003 - (gridIndex * 0.0045) + 1.0) % 1.0;
+      const currentOffset = (1.0 - poleOffset - (gridIndex * gridStep) + 1.0) % 1.0;
 
       r.currentOffset = currentOffset;
       r.previousTrackProgress = currentOffset;
@@ -6391,7 +6450,8 @@
 
         // Only evaluate if the car is behind the player (0.80 to 1.00 of the loop behind)
         if (normDiff > 0.80 && normDiff <= 1.0) {
-          const distBehind = (1.0 - normDiff) * 1800;
+          const tLen = trackCurve ? trackCurve.getLength() : 5280.0;
+          const distBehind = (1.0 - normDiff) * tLen;
           if (distBehind < nearestCarDist) {
             nearestCarDist = distBehind;
             nearestCarBehind = racer;
@@ -6916,7 +6976,8 @@
 
     // Safety Car movement & flashing lights loop
     if (safetyCarActive && safetyCarMesh) {
-      const scStep = (15.5 * delta) / 1800;
+      const tLen = trackCurve ? trackCurve.getLength() : 5280.0;
+      const scStep = (35.0 * delta) / tLen;
       safetyCarOffset = (safetyCarOffset + scStep) % 1.0;
       
       const scPt = trackCurve.getPointAt(safetyCarOffset);
@@ -7197,7 +7258,8 @@
       playerKart.speed = THREE.MathUtils.lerp(playerKart.speed, 18.0, delta * 3.0);
       playerKart.sideOffset = THREE.MathUtils.lerp(playerKart.sideOffset, 0.0, delta * 2.0);
       
-      const stepSize = (playerKart.speed * delta) / 1800;
+      const tLen = trackCurve ? trackCurve.getLength() : 5280.0;
+      const stepSize = (playerKart.speed * delta) / tLen;
       playerKart.currentOffset = (playerKart.currentOffset + stepSize + 1.0) % 1.0;
 
       const point = trackCurve.getPointAt(playerKart.currentOffset);
@@ -9705,9 +9767,8 @@ class AIDriverBrain {
       let gap = (otherProgress - myProgress);
       // Handle lap wraparound
       if (gap < -0.5) gap += 100;
-      else if (gap > 50) gap -= 100;
-
-      const gapMeters = gap * 1800.0;
+      const tLen = (typeof trackCurve !== 'undefined' && trackCurve) ? trackCurve.getLength() : 5280.0;
+      const gapMeters = gap * tLen;
 
       // Detect Car Ahead (forward cone up to 55m)
       if (gapMeters > 0.0 && gapMeters < 55.0) {
@@ -10130,8 +10191,8 @@ window.AIBrainManager = {
 // ═══ game-06-ai-physics.js ═══
   function getSignedTrackGap(carA, carB) {
     const diff = carB.currentOffset - carA.currentOffset;
-    const normDiff = (((diff + 0.5) % 1.0 + 1.0) % 1.0) - 0.5;
-    return normDiff * 1800.0;
+    const tLen = trackCurve ? trackCurve.getLength() : 5280.0;
+    return normDiff * tLen;
   }
 
   function getNearbyCars(car, range) {
@@ -10160,7 +10221,10 @@ window.AIBrainManager = {
 
   window.getGridSlotTransform = (gridIndex) => {
     const side = gridIndex % 2 === 0 ? -2.0 : 2.0;
-    const progress = (1.0 - 0.003 - (gridIndex * 0.0045) + 1.0) % 1.0;
+    const tLen = trackCurve ? trackCurve.getLength() : 5280.0;
+    const gridStep = 8.0 / tLen;
+    const poleOffset = 16.0 / tLen;
+    const progress = (1.0 - poleOffset - (gridIndex * gridStep) + 1.0) % 1.0;
     
     const pt = trackCurve.getPointAt(progress);
     const tang = trackCurve.getTangentAt(progress).normalize();
@@ -10459,13 +10523,15 @@ window.AIBrainManager = {
         if (ahead && !ahead.gridPositioned) {
           const diff = ahead.currentOffset - racer.currentOffset;
           const normDiff = ((diff + 0.5) % 1.0) - 0.5;
-          const distAhead = normDiff * 1800;
+          const tLen = trackCurve ? trackCurve.getLength() : 5280.0;
+          const distAhead = normDiff * tLen;
           if (distAhead > 0.0 && distAhead < 18.0) {
             target = Math.min(target, ahead.speed * 0.9);
           }
         }
         racer.speed = THREE.MathUtils.lerp(racer.speed, target, delta * 3.0);
-        const step = (racer.speed * delta) / 1800;
+        const tLen = trackCurve ? trackCurve.getLength() : 5280.0;
+        const step = (racer.speed * delta) / tLen;
         const fSafeOff = Math.max(0.0, Math.min(1.0, racer.currentOffset));
         racer.currentOffset = (fSafeOff + step + 1.0) % 1.0;
         if (racer.mesh && trackCurve) {
@@ -10665,7 +10731,8 @@ window.AIBrainManager = {
 
         const currentP = racer.currentOffset;
 
-        let distTravelled = ((currentP - startP + 1.0) % 1.0) * 1800; // in meters/units
+        const tLen = trackCurve ? trackCurve.getLength() : 5280.0;
+        let distTravelled = ((currentP - startP + 1.0) % 1.0) * tLen; // in meters/units
 
         if (distTravelled > 150.0) {
 
@@ -10689,7 +10756,7 @@ window.AIBrainManager = {
 
         // Move the car forward along the track
 
-        const aiStep = (racer.speed * delta) / 1800;
+        const aiStep = (racer.speed * delta) / tLen;
 
         racer.currentOffset = (racer.currentOffset + aiStep + 1.0) % 1.0;
 
@@ -10813,7 +10880,7 @@ window.AIBrainManager = {
 
           const scoreDiff = otherScore - myScore;
 
-          const distBehind = scoreDiff * 1800;
+          const distBehind = scoreDiff * trackLen;
 
           if (distBehind > 0.0 && distBehind < 28.0) {
 
@@ -11553,7 +11620,7 @@ window.AIBrainManager = {
 
       }
 
-      const step = (racer.speed * delta) / 1800;
+      const step = (racer.speed * delta) / trackLen;
 
       const oldOffset = racer.currentOffset;
 
@@ -11668,7 +11735,7 @@ window.AIBrainManager = {
           }
         });
 
-        const gapMeters = gapAhead * 1800;
+        const gapMeters = gapAhead * trackLen;
         const baseAttackRange = 35.0;
         const attackRange = baseAttackRange * (0.8 + aggression * 0.4);
 
@@ -11695,7 +11762,7 @@ window.AIBrainManager = {
               const otherInPit = other.inPitLane || other.isPitting;
               if (myInPit !== otherInPit) return;
 
-              const otherDist = Math.abs((other.completedLaps + other.currentOffset - myProgress) * 1800);
+              const otherDist = Math.abs((other.completedLaps + other.currentOffset - myProgress) * trackLen);
               if (otherDist < 12.0) {
                 if (leftSafe && Math.abs(other.sideOffset - leftTarget) < 1.8) {
                   leftSafe = false;
@@ -11757,7 +11824,7 @@ window.AIBrainManager = {
           }
         });
 
-        const gapBehindMeters = gapBehind * 1800;
+        const gapBehindMeters = gapBehind * trackLen;
         const defenceRange = 36.0; // Defend when opponent closes within 36 meters
 
         if (carBehind && gapBehindMeters < defenceRange && overtakeOffset === 0.0) {
@@ -13271,7 +13338,8 @@ window.AIBrainManager = {
         }
         const startP = playerKart.postFinishStartProgress;
         const currentP = playerKart.currentOffset;
-        let distTravelled = ((currentP - startP + 1.0) % 1.0) * 1800;
+        const tLen = (typeof trackCurve !== 'undefined' && trackCurve) ? trackCurve.getLength() : 5280.0;
+        let distTravelled = ((currentP - startP + 1.0) % 1.0) * tLen;
         
         if (distTravelled > 180.0) {
           playerKart.speed = 0.0;
@@ -13280,7 +13348,7 @@ window.AIBrainManager = {
           playerKart.speed = slowdownFactor * 18.0;
         }
 
-        const stepSize = (playerKart.speed * delta) / 1800;
+        const stepSize = (playerKart.speed * delta) / tLen;
         playerKart.currentOffset = (playerKart.currentOffset + stepSize + 1.0) % 1.0;
         playerKart.sideOffset = THREE.MathUtils.lerp(playerKart.sideOffset, 0.0, delta * 2.0);
 
@@ -14727,7 +14795,8 @@ window.AIBrainManager = {
             const leaderOffset = sorted[0].currentOffset || 0.0;
             const racerOffset = racer.currentOffset || 0.0;
             const offsetDiff = (leaderOffset - racerOffset + 1.0) % 1.0;
-            const gapSecs = offsetDiff * (1800.0 / Math.max(20.0, racer.speed || 80.0));
+            const tLen = (typeof trackCurve !== 'undefined' && trackCurve) ? trackCurve.getLength() : 5280.0;
+            const gapSecs = offsetDiff * (tLen / Math.max(20.0, racer.speed || 80.0));
             gapText = `+${gapSecs.toFixed(2)}s`;
           }
         }

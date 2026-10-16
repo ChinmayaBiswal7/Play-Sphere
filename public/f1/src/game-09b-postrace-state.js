@@ -9,7 +9,8 @@
         }
         const startP = playerKart.postFinishStartProgress;
         const currentP = playerKart.currentOffset;
-        let distTravelled = ((currentP - startP + 1.0) % 1.0) * 1800;
+        const tLen = (typeof trackCurve !== 'undefined' && trackCurve) ? trackCurve.getLength() : 5280.0;
+        let distTravelled = ((currentP - startP + 1.0) % 1.0) * tLen;
         
         if (distTravelled > 180.0) {
           playerKart.speed = 0.0;
@@ -18,7 +19,7 @@
           playerKart.speed = slowdownFactor * 18.0;
         }
 
-        const stepSize = (playerKart.speed * delta) / 1800;
+        const stepSize = (playerKart.speed * delta) / tLen;
         playerKart.currentOffset = (playerKart.currentOffset + stepSize + 1.0) % 1.0;
         playerKart.sideOffset = THREE.MathUtils.lerp(playerKart.sideOffset, 0.0, delta * 2.0);
 

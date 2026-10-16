@@ -1,7 +1,7 @@
   function getSignedTrackGap(carA, carB) {
     const diff = carB.currentOffset - carA.currentOffset;
-    const normDiff = (((diff + 0.5) % 1.0 + 1.0) % 1.0) - 0.5;
-    return normDiff * 1800.0;
+    const tLen = trackCurve ? trackCurve.getLength() : 5280.0;
+    return normDiff * tLen;
   }
 
   function getNearbyCars(car, range) {
@@ -30,7 +30,10 @@
 
   window.getGridSlotTransform = (gridIndex) => {
     const side = gridIndex % 2 === 0 ? -2.0 : 2.0;
-    const progress = (1.0 - 0.003 - (gridIndex * 0.0045) + 1.0) % 1.0;
+    const tLen = trackCurve ? trackCurve.getLength() : 5280.0;
+    const gridStep = 8.0 / tLen;
+    const poleOffset = 16.0 / tLen;
+    const progress = (1.0 - poleOffset - (gridIndex * gridStep) + 1.0) % 1.0;
     
     const pt = trackCurve.getPointAt(progress);
     const tang = trackCurve.getTangentAt(progress).normalize();
@@ -329,13 +332,15 @@
         if (ahead && !ahead.gridPositioned) {
           const diff = ahead.currentOffset - racer.currentOffset;
           const normDiff = ((diff + 0.5) % 1.0) - 0.5;
-          const distAhead = normDiff * 1800;
+          const tLen = trackCurve ? trackCurve.getLength() : 5280.0;
+          const distAhead = normDiff * tLen;
           if (distAhead > 0.0 && distAhead < 18.0) {
             target = Math.min(target, ahead.speed * 0.9);
           }
         }
         racer.speed = THREE.MathUtils.lerp(racer.speed, target, delta * 3.0);
-        const step = (racer.speed * delta) / 1800;
+        const tLen = trackCurve ? trackCurve.getLength() : 5280.0;
+        const step = (racer.speed * delta) / tLen;
         const fSafeOff = Math.max(0.0, Math.min(1.0, racer.currentOffset));
         racer.currentOffset = (fSafeOff + step + 1.0) % 1.0;
         if (racer.mesh && trackCurve) {
@@ -535,7 +540,8 @@
 
         const currentP = racer.currentOffset;
 
-        let distTravelled = ((currentP - startP + 1.0) % 1.0) * 1800; // in meters/units
+        const tLen = trackCurve ? trackCurve.getLength() : 5280.0;
+        let distTravelled = ((currentP - startP + 1.0) % 1.0) * tLen; // in meters/units
 
         if (distTravelled > 150.0) {
 
@@ -559,7 +565,7 @@
 
         // Move the car forward along the track
 
-        const aiStep = (racer.speed * delta) / 1800;
+        const aiStep = (racer.speed * delta) / tLen;
 
         racer.currentOffset = (racer.currentOffset + aiStep + 1.0) % 1.0;
 
@@ -683,7 +689,7 @@
 
           const scoreDiff = otherScore - myScore;
 
-          const distBehind = scoreDiff * 1800;
+          const distBehind = scoreDiff * trackLen;
 
           if (distBehind > 0.0 && distBehind < 28.0) {
 
@@ -1423,7 +1429,7 @@
 
       }
 
-      const step = (racer.speed * delta) / 1800;
+      const step = (racer.speed * delta) / trackLen;
 
       const oldOffset = racer.currentOffset;
 
@@ -1538,7 +1544,7 @@
           }
         });
 
-        const gapMeters = gapAhead * 1800;
+        const gapMeters = gapAhead * trackLen;
         const baseAttackRange = 35.0;
         const attackRange = baseAttackRange * (0.8 + aggression * 0.4);
 
@@ -1565,7 +1571,7 @@
               const otherInPit = other.inPitLane || other.isPitting;
               if (myInPit !== otherInPit) return;
 
-              const otherDist = Math.abs((other.completedLaps + other.currentOffset - myProgress) * 1800);
+              const otherDist = Math.abs((other.completedLaps + other.currentOffset - myProgress) * trackLen);
               if (otherDist < 12.0) {
                 if (leftSafe && Math.abs(other.sideOffset - leftTarget) < 1.8) {
                   leftSafe = false;
@@ -1627,7 +1633,7 @@
           }
         });
 
-        const gapBehindMeters = gapBehind * 1800;
+        const gapBehindMeters = gapBehind * trackLen;
         const defenceRange = 36.0; // Defend when opponent closes within 36 meters
 
         if (carBehind && gapBehindMeters < defenceRange && overtakeOffset === 0.0) {

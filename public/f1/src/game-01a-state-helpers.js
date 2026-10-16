@@ -2862,8 +2862,42 @@
       const grid = document.getElementById('gp-circuits-grid');
       grid.innerHTML = '';
       const tracks = [
-        { id: 0, name: "Sunset Coast Circuit", icon: "🌅", desc: "Marina Bay style street track. 1,800m lap length. Heavy traction corners, scenic seaside runoffs." },
-        { id: 1, name: "Alpine Heights", icon: "🏔️", desc: "High-altitude fast-flowing track. Dramatic mountain peaks, gondola sweeps, and extreme high-speed downforce corners." }
+        { 
+          id: 0, 
+          name: "Albert Park Circuit", 
+          icon: "🇦🇺", 
+          km: "5.278 km", 
+          corners: "14 Corners",
+          record: "1:19.813 (Leclerc)",
+          desc: "Official Australian Grand Prix street course around Albert Park Lake. High-speed sweeps, heavy braking zones, and 4 DRS sectors." 
+        },
+        { 
+          id: 1, 
+          name: "Yas Marina Circuit", 
+          icon: "🇦🇪", 
+          km: "5.281 km", 
+          corners: "16 Corners",
+          record: "1:25.637 (Magnussen)",
+          desc: "Official Abu Dhabi season finale twilight circuit. Long 1.2km back straight, iconic hotel sector, and Marina hairpin." 
+        },
+        { 
+          id: 2, 
+          name: "Sunset Coast Circuit", 
+          icon: "🌅", 
+          km: "4.860 km", 
+          corners: "12 Corners",
+          record: "1:22.450 (Verstappen)",
+          desc: "Marina Bay style coastal street track. High traction technical corners, scenic seaside runoffs, and illuminated barriers." 
+        },
+        { 
+          id: 3, 
+          name: "Alpine Heights", 
+          icon: "🏔️", 
+          km: "4.318 km", 
+          corners: "16 Corners",
+          record: "1:14.280 (Hamilton)",
+          desc: "High-altitude fast-flowing track. Dramatic mountain peaks, extreme elevation changes, and high-speed downforce curves." 
+        }
       ];
       tracks.forEach((track) => {
         const card = document.createElement('div');
@@ -2871,11 +2905,18 @@
         if (track.id === window.weekendConfig.selectedTrackId) card.classList.add('selected');
         
         card.innerHTML = `
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
             <h3 style="font-size: 0.95rem; font-weight: 800; color: #fff; margin: 0;">${track.name}</h3>
             <span style="font-size: 1.4rem;">${track.icon}</span>
           </div>
-          <div class="gp-card-meta" style="margin-top: 10px; font-family: 'Inter', sans-serif; font-size: 0.72rem; color: #8c94a3; line-height: 1.4;">
+          <div style="display: flex; gap: 8px; margin-bottom: 8px; font-family: 'Orbitron', monospace; font-size: 0.68rem; color: var(--neon-cyan);">
+            <span>📏 ${track.km}</span>
+            <span>🏁 ${track.corners}</span>
+          </div>
+          <div style="font-family: 'Inter', sans-serif; font-size: 0.68rem; color: #e2e8f0; margin-bottom: 6px;">
+            <strong style="color: #facc15;">Record:</strong> ${track.record}
+          </div>
+          <div class="gp-card-meta" style="font-family: 'Inter', sans-serif; font-size: 0.72rem; color: #8c94a3; line-height: 1.4;">
             ${track.desc}
           </div>
         `;
@@ -2907,7 +2948,13 @@
     else if (step === 4) {
       const team = F1_TEAMS[window.weekendConfig.selectedTeamId];
       const drv = team.drivers[window.weekendConfig.selectedDriverId];
-      const trackName = window.weekendConfig.selectedTrackId === 0 ? "Sunset Coast Circuit 🌅" : "Alpine Heights 🏔️";
+      const trackLabels = [
+        "🇦🇺 Albert Park Circuit (5.278 km)",
+        "🇦🇪 Yas Marina Circuit (5.281 km)",
+        "🌅 Sunset Coast Circuit (4.860 km)",
+        "🏔️ Alpine Heights (4.318 km)"
+      ];
+      const trackName = trackLabels[window.weekendConfig.selectedTrackId] || trackLabels[0];
       const difficulties = ["EASY", "NORMAL", "HARD", "EXPERT"];
       
       document.getElementById('gp-conf-team').innerText = team.name;
@@ -2922,7 +2969,8 @@
     const currentTeam = F1_TEAMS[window.weekendConfig.selectedTeamId];
     document.getElementById('db-gp-team').innerText = currentTeam ? currentTeam.name : 'NONE';
     document.getElementById('db-gp-driver').innerText = currentTeam ? currentTeam.drivers[window.weekendConfig.selectedDriverId].name : 'NONE';
-    document.getElementById('db-gp-track').innerText = window.weekendConfig.selectedTrackId === 0 ? 'Sunset Coast' : 'Alpine Heights';
+    const trackShortNames = ["Albert Park", "Yas Marina", "Sunset Coast", "Alpine Heights"];
+    document.getElementById('db-gp-track').innerText = trackShortNames[window.weekendConfig.selectedTrackId] || 'Albert Park';
     document.getElementById('db-gp-laps').innerText = window.weekendConfig.raceLaps;
     const diffNames = ["EASY", "NORMAL", "HARD", "EXPERT"];
     document.getElementById('db-gp-diff').innerText = diffNames[window.weekendConfig.difficulty];

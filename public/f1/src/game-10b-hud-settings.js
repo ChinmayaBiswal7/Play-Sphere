@@ -251,7 +251,8 @@
             const leaderOffset = sorted[0].currentOffset || 0.0;
             const racerOffset = racer.currentOffset || 0.0;
             const offsetDiff = (leaderOffset - racerOffset + 1.0) % 1.0;
-            const gapSecs = offsetDiff * (1800.0 / Math.max(20.0, racer.speed || 80.0));
+            const tLen = (typeof trackCurve !== 'undefined' && trackCurve) ? trackCurve.getLength() : 5280.0;
+            const gapSecs = offsetDiff * (tLen / Math.max(20.0, racer.speed || 80.0));
             gapText = `+${gapSecs.toFixed(2)}s`;
           }
         }

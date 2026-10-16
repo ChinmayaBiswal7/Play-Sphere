@@ -165,7 +165,8 @@
 
     // Safety Car movement & flashing lights loop
     if (safetyCarActive && safetyCarMesh) {
-      const scStep = (15.5 * delta) / 1800;
+      const tLen = trackCurve ? trackCurve.getLength() : 5280.0;
+      const scStep = (35.0 * delta) / tLen;
       safetyCarOffset = (safetyCarOffset + scStep) % 1.0;
       
       const scPt = trackCurve.getPointAt(safetyCarOffset);
