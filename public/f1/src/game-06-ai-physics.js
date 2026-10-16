@@ -419,6 +419,7 @@
 
       racer.blueFlagActive = false;
       let avoidanceOffset = 0.0;
+      let brainDecision = null;
 
       // Handle Practice & Qualifying Garage Release Stagger
 
@@ -935,7 +936,7 @@
 
         // 🧠 Individual Driver Brain & ECU Execution
         let driverBrain = (typeof window.AIBrainManager !== 'undefined') ? window.AIBrainManager.getBrainForRacer(racer) : null;
-        let brainDecision = null;
+        brainDecision = null;
         let emergencyBrake = false;
 
         if (driverBrain) {

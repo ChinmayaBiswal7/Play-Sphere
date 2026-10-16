@@ -5,11 +5,20 @@
     // 🌌 Gradient Sky Dome
     const skyGeo = new THREE.SphereGeometry(500, 32, 32);
     
-    let skyTopColor = 0xff9a5a;
-    let skyBottomColor = 0xffe8c9;
+    let skyTopColor = 0x0284c7;    // Track 0: Albert Park (Melbourne sunny sky)
+    let skyBottomColor = 0xe0f2fe;
     if (activeTrack === 1) {
-      skyTopColor = 0x0284c7;
-      skyBottomColor = 0xe0f2fe;
+      // Track 1: Yas Marina (Abu Dhabi twilight sunset)
+      skyTopColor = 0x1e1b4b;
+      skyBottomColor = 0xf59e0b;
+    } else if (activeTrack === 2) {
+      // Track 2: Sunset Coast (Golden hour beach)
+      skyTopColor = 0xff9a5a;
+      skyBottomColor = 0xffe8c9;
+    } else if (activeTrack === 3) {
+      // Track 3: Alpine Heights (Cool mountain blue)
+      skyTopColor = 0x0369a1;
+      skyBottomColor = 0xf0f9ff;
     }
 
     const skyMat = new THREE.ShaderMaterial({

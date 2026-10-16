@@ -25,25 +25,45 @@
     container.innerHTML = "";
 
     // Theme-specific environment settings
-    let skyTopColor = 0xff9a5a;
-    let skyBottomColor = 0xffe8c9;
-    let fogColor = 0xffb98a;
-    let fogDensity = 0.0022;
-    let ambientColor = 0xffedd5;
-    let lightColor = 0xfeb080;
-    let hemiSky = 0xffdca8;
-    let hemiGround = 0x14532d;
+    let skyTopColor = 0x0284c7;    // Albert Park: Sunny Melbourne blue sky
+    let skyBottomColor = 0xe0f2fe;
+    let fogColor = 0xe0f2fe;
+    let fogDensity = 0.0018;
+    let ambientColor = 0xf0f9ff;
+    let lightColor = 0xffffff;
+    let hemiSky = 0xbae6fd;
+    let hemiGround = 0x14532d;     // Parkland grass
 
     if (activeTrack === 1) {
-      // Alpine Heights theme
-      skyTopColor = 0x0284c7;    // Cool sky blue
-      skyBottomColor = 0xe0f2fe; // Light fog blue/white
-      fogColor = 0xe0f2fe;
+      // Yas Marina Circuit: Twilight Abu Dhabi Sunset / Gold
+      skyTopColor = 0x1e1b4b;
+      skyBottomColor = 0xf59e0b;
+      fogColor = 0x1e1b4b;
+      fogDensity = 0.0020;
+      ambientColor = 0xfde68a;
+      lightColor = 0xffedd5;
+      hemiSky = 0x38bdf8;
+      hemiGround = 0x0f172a;
+    } else if (activeTrack === 2) {
+      // Sunset Coast: Golden Hour Beach
+      skyTopColor = 0xff9a5a;
+      skyBottomColor = 0xffe8c9;
+      fogColor = 0xffb98a;
+      fogDensity = 0.0022;
+      ambientColor = 0xffedd5;
+      lightColor = 0xfeb080;
+      hemiSky = 0xffdca8;
+      hemiGround = 0x14532d;
+    } else if (activeTrack === 3) {
+      // Alpine Heights: Mountain snow and cool blue
+      skyTopColor = 0x0369a1;
+      skyBottomColor = 0xf0f9ff;
+      fogColor = 0xf0f9ff;
       fogDensity = 0.0035;
       ambientColor = 0xf0f9ff;
       lightColor = 0xffffff;
       hemiSky = 0xbae6fd;
-      hemiGround = 0x1e3a8a;    // Mountain snow reflecting
+      hemiGround = 0x1e3a8a;
     }
 
     // 3D Scene Setup
@@ -1462,8 +1482,25 @@
       });
     }
 
-    // 🌊 OCEAN PROMENADE WATER (Sunset Coast)
+    // 🌊 WATER FEATURES PER TRACK
     if (activeTrack === 0) {
+      // Albert Park Lake (Melbourne inland lake centerpiece)
+      const waterGeo = new THREE.PlaneGeometry(350, 240);
+      const waterMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.18, metalness: 0.80 });
+      const lake = new THREE.Mesh(waterGeo, waterMat);
+      lake.rotation.x = -Math.PI / 2;
+      lake.position.set(-110, -0.2, -60);
+      scene.add(lake);
+    } else if (activeTrack === 1) {
+      // Yas Marina Harbor & Yacht Basin (Abu Dhabi)
+      const waterGeo = new THREE.PlaneGeometry(420, 260);
+      const waterMat = new THREE.MeshStandardMaterial({ color: 0x0369a1, roughness: 0.12, metalness: 0.92 });
+      const marina = new THREE.Mesh(waterGeo, waterMat);
+      marina.rotation.x = -Math.PI / 2;
+      marina.position.set(-80, -0.2, -30);
+      scene.add(marina);
+    } else if (activeTrack === 2) {
+      // Sunset Coast Ocean Promenade
       const waterGeo = new THREE.PlaneGeometry(1200, 500);
       const waterMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.15, metalness: 0.85 });
       const water = new THREE.Mesh(waterGeo, waterMat);

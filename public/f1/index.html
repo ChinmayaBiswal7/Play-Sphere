@@ -1615,19 +1615,57 @@
     <div class="glass-card" style="width: 550px; padding: 30px; text-align: center; background: rgba(30,41,59,0.85); border: 2px solid #374151; border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.6);">
       <h2 style="font-family: 'Orbitron', sans-serif; font-size: 2.2rem; font-weight: 900; margin-bottom: 25px; color: var(--f1-red); letter-spacing: 2px; text-shadow: 0 0 10px rgba(225,6,0,0.3);">SELECT CIRCUIT</h2>
       
-      <div style="display: flex; gap: 20px; justify-content: center; margin-bottom: 30px;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; width: 100%;">
+        <!-- Albert Park (Official F1) -->
+        <div class="track-card selected" id="track-card-0" onclick="chooseTrackIndex(0)" style="background: rgba(17,24,39,0.7); border: 2px solid var(--neon-cyan); border-radius: 12px; padding: 16px; cursor: pointer; transition: all 0.2s; text-align: left;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="font-family: 'Orbitron', sans-serif; font-size: 1.05rem; font-weight: 800; margin: 0; color: #fff;">ALBERT PARK</h3>
+            <span style="font-size: 1rem;">🇦🇺</span>
+          </div>
+          <span style="font-size: 0.62rem; color: #38bdf8; letter-spacing: 1px; text-transform: uppercase; font-weight: 700;">Melbourne • Official F1</span>
+          <div style="font-size: 0.70rem; color: rgba(255,255,255,0.6); margin-top: 8px; line-height: 1.4;">
+            Length: <strong>5.278 km</strong> • 14 Corners<br>
+            Lap Record: 1:19.813 (Leclerc)
+          </div>
+        </div>
+        
+        <!-- Yas Marina (Official F1) -->
+        <div class="track-card" id="track-card-1" onclick="chooseTrackIndex(1)" style="background: rgba(17,24,39,0.7); border: 2px solid rgba(255,255,255,0.15); border-radius: 12px; padding: 16px; cursor: pointer; transition: all 0.2s; text-align: left;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="font-family: 'Orbitron', sans-serif; font-size: 1.05rem; font-weight: 800; margin: 0; color: #fff;">YAS MARINA</h3>
+            <span style="font-size: 1rem;">🇦🇪</span>
+          </div>
+          <span style="font-size: 0.62rem; color: #f59e0b; letter-spacing: 1px; text-transform: uppercase; font-weight: 700;">Abu Dhabi • Official F1</span>
+          <div style="font-size: 0.70rem; color: rgba(255,255,255,0.6); margin-top: 8px; line-height: 1.4;">
+            Length: <strong>5.281 km</strong> • 16 Corners<br>
+            Lap Record: 1:25.637 (Magnussen)
+          </div>
+        </div>
+
         <!-- Sunset Coast -->
-        <div class="track-card selected" id="track-card-0" onclick="chooseTrackIndex(0)" style="width: 220px; background: rgba(17,24,39,0.7); border: 2px solid var(--neon-cyan); border-radius: 12px; padding: 20px; cursor: pointer; transition: all 0.2s; text-align: left;">
-          <h3 style="font-family: 'Orbitron', sans-serif; font-size: 1.2rem; font-weight: 800; margin: 0 0 8px 0; color: #fff;">SUNSET COAST</h3>
-          <span style="font-size: 0.65rem; color: var(--neon-cyan); letter-spacing: 1px; text-transform: uppercase; font-weight: 700;">Beach & Palms</span>
-          <div style="font-size: 0.72rem; color: rgba(255,255,255,0.5); margin-top: 10px; line-height: 1.4;">Length: 4.82 km<br>Laps: 2 Laps<br>High Speed</div>
+        <div class="track-card" id="track-card-2" onclick="chooseTrackIndex(2)" style="background: rgba(17,24,39,0.7); border: 2px solid rgba(255,255,255,0.15); border-radius: 12px; padding: 16px; cursor: pointer; transition: all 0.2s; text-align: left;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="font-family: 'Orbitron', sans-serif; font-size: 1.05rem; font-weight: 800; margin: 0; color: #fff;">SUNSET COAST</h3>
+            <span style="font-size: 1rem;">🌅</span>
+          </div>
+          <span style="font-size: 0.62rem; color: var(--neon-cyan); letter-spacing: 1px; text-transform: uppercase; font-weight: 700;">Beach & Promenade</span>
+          <div style="font-size: 0.70rem; color: rgba(255,255,255,0.6); margin-top: 8px; line-height: 1.4;">
+            Length: 4.860 km • 12 Corners<br>
+            Coastal Street Circuit
+          </div>
         </div>
         
         <!-- Alpine Heights -->
-        <div class="track-card" id="track-card-1" onclick="chooseTrackIndex(1)" style="width: 220px; background: rgba(17,24,39,0.7); border: 2px solid rgba(255,255,255,0.15); border-radius: 12px; padding: 20px; cursor: pointer; transition: all 0.2s; text-align: left;">
-          <h3 style="font-family: 'Orbitron', sans-serif; font-size: 1.2rem; font-weight: 800; margin: 0 0 8px 0; color: #fff;">ALPINE HEIGHTS</h3>
-          <span style="font-size: 0.65rem; color: rgba(255,255,255,0.4); letter-spacing: 1px; text-transform: uppercase; font-weight: 700;">Mountain & Pines</span>
-          <div style="font-size: 0.72rem; color: rgba(255,255,255,0.5); margin-top: 10px; line-height: 1.4;">Length: 3.12 km<br>Laps: 2 Laps<br>Winding Elevation</div>
+        <div class="track-card" id="track-card-3" onclick="chooseTrackIndex(3)" style="background: rgba(17,24,39,0.7); border: 2px solid rgba(255,255,255,0.15); border-radius: 12px; padding: 16px; cursor: pointer; transition: all 0.2s; text-align: left;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="font-family: 'Orbitron', sans-serif; font-size: 1.05rem; font-weight: 800; margin: 0; color: #fff;">ALPINE HEIGHTS</h3>
+            <span style="font-size: 1rem;">🏔️</span>
+          </div>
+          <span style="font-size: 0.62rem; color: rgba(255,255,255,0.5); letter-spacing: 1px; text-transform: uppercase; font-weight: 700;">Mountain & Elevation</span>
+          <div style="font-size: 0.70rem; color: rgba(255,255,255,0.6); margin-top: 8px; line-height: 1.4;">
+            Length: 3.120 km • 16 Corners<br>
+            Winding Elevation Drops
+          </div>
         </div>
       </div>
       
@@ -3002,21 +3040,53 @@
         
         <div class="ws-track-card selected" id="ws-track-card-0" onclick="selectWeekendTrack(0)">
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <strong style="font-size: 0.95rem; color: #fff;">Sunset Coast Circuit</strong>
-            <span style="font-size: 0.8rem;">🌅</span>
+            <strong style="font-size: 0.95rem; color: #fff;">Albert Park Circuit</strong>
+            <span style="font-size: 0.85rem;">🇦🇺</span>
           </div>
-          <div style="font-size: 0.68rem; color: rgba(255,255,255,0.5); line-height: 1.3; margin-top: 4px;">
-            Marina Bay style street track. 1,800m lap length. Heavy traction corners, scenic seaside runoffs.
+          <div style="font-size: 0.68rem; color: #38bdf8; font-weight: bold; margin-top: 2px;">
+            Melbourne • Official F1 (5.278 km)
+          </div>
+          <div style="font-size: 0.65rem; color: rgba(255,255,255,0.5); line-height: 1.3; margin-top: 3px;">
+            14 corners, lakeside high-speed chicane, 3 DRS zones. Lap record: 1:19.813.
           </div>
         </div>
 
         <div class="ws-track-card" id="ws-track-card-1" onclick="selectWeekendTrack(1)">
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <strong style="font-size: 0.95rem; color: #fff;">Alpine Heights</strong>
-            <span style="font-size: 0.8rem;">🏔️</span>
+            <strong style="font-size: 0.95rem; color: #fff;">Yas Marina Circuit</strong>
+            <span style="font-size: 0.85rem;">🇦🇪</span>
           </div>
-          <div style="font-size: 0.68rem; color: rgba(255,255,255,0.5); line-height: 1.3; margin-top: 4px;">
-            High-altitude fast-flowing track. Dramatic mountain peaks, gondola sweeps, and extreme high-speed downforce corners.
+          <div style="font-size: 0.68rem; color: #f59e0b; font-weight: bold; margin-top: 2px;">
+            Abu Dhabi • Official F1 (5.281 km)
+          </div>
+          <div style="font-size: 0.65rem; color: rgba(255,255,255,0.5); line-height: 1.3; margin-top: 3px;">
+            16 corners, massive 1.2km back straight, marina twilight harbor. Lap record: 1:25.637.
+          </div>
+        </div>
+
+        <div class="ws-track-card" id="ws-track-card-2" onclick="selectWeekendTrack(2)">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 0.95rem; color: #fff;">Sunset Coast Circuit</strong>
+            <span style="font-size: 0.85rem;">🌅</span>
+          </div>
+          <div style="font-size: 0.68rem; color: var(--neon-cyan); font-weight: bold; margin-top: 2px;">
+            Beach Promenade (4.860 km)
+          </div>
+          <div style="font-size: 0.65rem; color: rgba(255,255,255,0.5); line-height: 1.3; margin-top: 3px;">
+            12 corners, heavy traction curves, seaside runoffs and palms.
+          </div>
+        </div>
+
+        <div class="ws-track-card" id="ws-track-card-3" onclick="selectWeekendTrack(3)">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 0.95rem; color: #fff;">Alpine Heights</strong>
+            <span style="font-size: 0.85rem;">🏔️</span>
+          </div>
+          <div style="font-size: 0.68rem; color: #cbd5e1; font-weight: bold; margin-top: 2px;">
+            Mountain Elevation (3.120 km)
+          </div>
+          <div style="font-size: 0.65rem; color: rgba(255,255,255,0.5); line-height: 1.3; margin-top: 3px;">
+            16 corners, dramatic mountain peaks, downhill sweeps and high-speed downforce.
           </div>
         </div>
       </div>
@@ -3358,6 +3428,8 @@
   <!-- Audio synthesizers -->
   <script src="audio.js"></script>
   <!-- Map layout metadata -->
+  <script src="../maps/albert_park/layout.js"></script>
+  <script src="../maps/yas_marina/layout.js"></script>
   <script src="../maps/sunset_coast/layout.js"></script>
   <!-- Environment, Road, and Pit Complex builders -->
   <script src="EnvironmentManager.js?v=6.0"></script>
@@ -3366,7 +3438,7 @@
   <!-- Static F1 team, driver, and AI personality data (must load before game.js) -->
   <script src="f1-data.js?v=6.0"></script>
   <!-- Main physics and game logic -->
-  <script src="game.js?v=6.9"></script>
+  <script src="game.js?v=7.0"></script>
   <script src="f1_pvp.js"></script>
   <script src="/js/ps_multiplayer.js"></script>
   <script>

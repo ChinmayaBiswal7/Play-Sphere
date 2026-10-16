@@ -936,8 +936,10 @@
   // F1_TEAMS come from f1-data.js (window.F1_TEAMS)
   const F1_TEAMS = window.F1_TEAMS;
 
-  // TRACKS with F1 3D Elevation (Sunset Coast Circuit & Alpine Heights)
+  // Official F1 TRACKS & Circuits
   const TRACK_POINTS = [
+    (window.ALBERT_PARK && window.ALBERT_PARK.trackPoints) || window.SUNSET_COAST.trackPoints,
+    (window.YAS_MARINA && window.YAS_MARINA.trackPoints) || window.SUNSET_COAST.trackPoints,
     window.SUNSET_COAST.trackPoints,
     [
       // Alpine Heights
@@ -1276,7 +1278,7 @@
     }
 
     const sessionTitle = sessionNames[currentSessionIndex];
-    const trackNames = ["Sunset Coast Circuit", "Alpine Heights"];
+    const trackNames = ["Albert Park Circuit", "Yas Marina Circuit", "Sunset Coast Circuit", "Alpine Heights"];
     window.triggerLoadingScreen(sessionTitle, trackNames[activeTrack], () => {
       setupGame();
     });
@@ -2360,8 +2362,10 @@
 
   function updateWeekendTrackUI() {
     const idx = window.weekendConfig.selectedTrackId;
-    document.getElementById('ws-track-card-0').classList.toggle('selected', idx === 0);
-    document.getElementById('ws-track-card-1').classList.toggle('selected', idx === 1);
+    for (let i = 0; i < 4; i++) {
+      const card = document.getElementById(`ws-track-card-${i}`);
+      if (card) card.classList.toggle('selected', idx === i);
+    }
   }
 
   window.selectWeekendLaps = (laps) => {
@@ -2429,7 +2433,7 @@
 
     const sessionNames = ["PRACTICE", "QUALIFYING", "MAIN GP RACE"];
     const sessionTitle = sessionNames[currentSessionIndex];
-    const trackNames = ["Sunset Coast Circuit", "Alpine Heights"];
+    const trackNames = ["Albert Park Circuit", "Yas Marina Circuit", "Sunset Coast Circuit", "Alpine Heights"];
 
     window.triggerLoadingScreen(sessionTitle, trackNames[activeTrack], () => {
       setupGame();
@@ -3028,7 +3032,7 @@
     // Hide GP setup screen
     document.getElementById('grandPrixSetupScreen').style.display = 'none';
 
-    const trackNames = ["Sunset Coast Circuit", "Alpine Heights"];
+    const trackNames = ["Albert Park Circuit", "Yas Marina Circuit", "Sunset Coast Circuit", "Alpine Heights"];
     window.triggerLoadingScreen("GRAND PRIX RACE", trackNames[activeTrack], () => {
       setupGame();
     });
@@ -3055,7 +3059,7 @@
     // Hide GP setup screen
     document.getElementById('grandPrixSetupScreen').style.display = 'none';
 
-    const trackNames = ["Sunset Coast Circuit", "Alpine Heights"];
+    const trackNames = ["Albert Park Circuit", "Yas Marina Circuit", "Sunset Coast Circuit", "Alpine Heights"];
     window.triggerLoadingScreen("PRACTICE SESSION", trackNames[activeTrack] + " — Pit Lane", () => {
       setupGame();
     });
@@ -3241,25 +3245,45 @@
     container.innerHTML = "";
 
     // Theme-specific environment settings
-    let skyTopColor = 0xff9a5a;
-    let skyBottomColor = 0xffe8c9;
-    let fogColor = 0xffb98a;
-    let fogDensity = 0.0022;
-    let ambientColor = 0xffedd5;
-    let lightColor = 0xfeb080;
-    let hemiSky = 0xffdca8;
-    let hemiGround = 0x14532d;
+    let skyTopColor = 0x0284c7;    // Albert Park: Sunny Melbourne blue sky
+    let skyBottomColor = 0xe0f2fe;
+    let fogColor = 0xe0f2fe;
+    let fogDensity = 0.0018;
+    let ambientColor = 0xf0f9ff;
+    let lightColor = 0xffffff;
+    let hemiSky = 0xbae6fd;
+    let hemiGround = 0x14532d;     // Parkland grass
 
     if (activeTrack === 1) {
-      // Alpine Heights theme
-      skyTopColor = 0x0284c7;    // Cool sky blue
-      skyBottomColor = 0xe0f2fe; // Light fog blue/white
-      fogColor = 0xe0f2fe;
+      // Yas Marina Circuit: Twilight Abu Dhabi Sunset / Gold
+      skyTopColor = 0x1e1b4b;
+      skyBottomColor = 0xf59e0b;
+      fogColor = 0x1e1b4b;
+      fogDensity = 0.0020;
+      ambientColor = 0xfde68a;
+      lightColor = 0xffedd5;
+      hemiSky = 0x38bdf8;
+      hemiGround = 0x0f172a;
+    } else if (activeTrack === 2) {
+      // Sunset Coast: Golden Hour Beach
+      skyTopColor = 0xff9a5a;
+      skyBottomColor = 0xffe8c9;
+      fogColor = 0xffb98a;
+      fogDensity = 0.0022;
+      ambientColor = 0xffedd5;
+      lightColor = 0xfeb080;
+      hemiSky = 0xffdca8;
+      hemiGround = 0x14532d;
+    } else if (activeTrack === 3) {
+      // Alpine Heights: Mountain snow and cool blue
+      skyTopColor = 0x0369a1;
+      skyBottomColor = 0xf0f9ff;
+      fogColor = 0xf0f9ff;
       fogDensity = 0.0035;
       ambientColor = 0xf0f9ff;
       lightColor = 0xffffff;
       hemiSky = 0xbae6fd;
-      hemiGround = 0x1e3a8a;    // Mountain snow reflecting
+      hemiGround = 0x1e3a8a;
     }
 
     // 3D Scene Setup
@@ -4678,8 +4702,25 @@
       });
     }
 
-    // 🌊 OCEAN PROMENADE WATER (Sunset Coast)
+    // 🌊 WATER FEATURES PER TRACK
     if (activeTrack === 0) {
+      // Albert Park Lake (Melbourne inland lake centerpiece)
+      const waterGeo = new THREE.PlaneGeometry(350, 240);
+      const waterMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.18, metalness: 0.80 });
+      const lake = new THREE.Mesh(waterGeo, waterMat);
+      lake.rotation.x = -Math.PI / 2;
+      lake.position.set(-110, -0.2, -60);
+      scene.add(lake);
+    } else if (activeTrack === 1) {
+      // Yas Marina Harbor & Yacht Basin (Abu Dhabi)
+      const waterGeo = new THREE.PlaneGeometry(420, 260);
+      const waterMat = new THREE.MeshStandardMaterial({ color: 0x0369a1, roughness: 0.12, metalness: 0.92 });
+      const marina = new THREE.Mesh(waterGeo, waterMat);
+      marina.rotation.x = -Math.PI / 2;
+      marina.position.set(-80, -0.2, -30);
+      scene.add(marina);
+    } else if (activeTrack === 2) {
+      // Sunset Coast Ocean Promenade
       const waterGeo = new THREE.PlaneGeometry(1200, 500);
       const waterMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.15, metalness: 0.85 });
       const water = new THREE.Mesh(waterGeo, waterMat);
@@ -4951,11 +4992,20 @@
     // 🌌 Gradient Sky Dome
     const skyGeo = new THREE.SphereGeometry(500, 32, 32);
     
-    let skyTopColor = 0xff9a5a;
-    let skyBottomColor = 0xffe8c9;
+    let skyTopColor = 0x0284c7;    // Track 0: Albert Park (Melbourne sunny sky)
+    let skyBottomColor = 0xe0f2fe;
     if (activeTrack === 1) {
-      skyTopColor = 0x0284c7;
-      skyBottomColor = 0xe0f2fe;
+      // Track 1: Yas Marina (Abu Dhabi twilight sunset)
+      skyTopColor = 0x1e1b4b;
+      skyBottomColor = 0xf59e0b;
+    } else if (activeTrack === 2) {
+      // Track 2: Sunset Coast (Golden hour beach)
+      skyTopColor = 0xff9a5a;
+      skyBottomColor = 0xffe8c9;
+    } else if (activeTrack === 3) {
+      // Track 3: Alpine Heights (Cool mountain blue)
+      skyTopColor = 0x0369a1;
+      skyBottomColor = 0xf0f9ff;
     }
 
     const skyMat = new THREE.ShaderMaterial({
@@ -10499,6 +10549,7 @@ window.AIBrainManager = {
 
       racer.blueFlagActive = false;
       let avoidanceOffset = 0.0;
+      let brainDecision = null;
 
       // Handle Practice & Qualifying Garage Release Stagger
 
@@ -11015,7 +11066,7 @@ window.AIBrainManager = {
 
         // 🧠 Individual Driver Brain & ECU Execution
         let driverBrain = (typeof window.AIBrainManager !== 'undefined') ? window.AIBrainManager.getBrainForRacer(racer) : null;
-        let brainDecision = null;
+        brainDecision = null;
         let emergencyBrake = false;
 
         if (driverBrain) {
@@ -14429,6 +14480,29 @@ window.AIBrainManager = {
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, 90, 90);
 
+    if (!trackCurve) return;
+
+    // Cache dynamic bounding box per track
+    if (!window._trackBounds || window._trackBounds.track !== activeTrack) {
+      let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+      for (let i = 0; i <= 80; i++) {
+        const pt = trackCurve.getPointAt(i / 80);
+        if (pt) {
+          if (pt.x < minX) minX = pt.x;
+          if (pt.x > maxX) maxX = pt.x;
+          if (pt.z < minZ) minZ = pt.z;
+          if (pt.z > maxZ) maxZ = pt.z;
+        }
+      }
+      const spanX = Math.max(20, maxX - minX);
+      const spanZ = Math.max(20, maxZ - minZ);
+      const midX = (minX + maxX) / 2;
+      const midZ = (minZ + maxZ) / 2;
+      const scale = 68.0 / Math.max(spanX, spanZ);
+      window._trackBounds = { midX, midZ, scale, track: activeTrack };
+    }
+    const b = window._trackBounds;
+
     // Draw track path layout sector by sector to highlight yellow flag zones
     const sectors = typeof sectorFlags !== 'undefined' ? sectorFlags.length : 6;
     const pointsPerSector = 15;
@@ -14437,15 +14511,15 @@ window.AIBrainManager = {
       ctx.beginPath();
       const sFlag = (typeof sectorFlags !== 'undefined') ? sectorFlags[s] : 'green';
       const isYellow = sFlag === 'yellow' || safetyCarActive || vscActive;
-      ctx.strokeStyle = isYellow ? "#f59e0b" : "rgba(255, 255, 255, 0.65)"; // Brighter track, prominent yellow highlight
-      ctx.lineWidth = isYellow ? 6.5 : 3.5;
+      ctx.strokeStyle = isYellow ? "#f59e0b" : "rgba(255, 255, 255, 0.65)";
+      ctx.lineWidth = isYellow ? 5.5 : 3.0;
 
       for (let i = 0; i <= pointsPerSector; i++) {
         const t = (s + i / pointsPerSector) / sectors;
         const pt = trackCurve.getPointAt(t % 1.0);
         if (pt) {
-          const cx = 45 + (pt.x / 250) * 38;
-          const cy = 45 + (pt.z / 150) * 38;
+          const cx = 45 + (pt.x - b.midX) * b.scale;
+          const cy = 45 + (pt.z - b.midZ) * b.scale;
           if (i === 0) ctx.moveTo(cx, cy);
           else ctx.lineTo(cx, cy);
         }
@@ -14457,12 +14531,12 @@ window.AIBrainManager = {
     racers.forEach(r => {
       if (!r.mesh) return;
       const pt = r.mesh.position;
-      const cx = 45 + (pt.x / 250) * 38;
-      const cy = 45 + (pt.z / 150) * 38;
+      const cx = 45 + (pt.x - b.midX) * b.scale;
+      const cy = 45 + (pt.z - b.midZ) * b.scale;
 
       ctx.beginPath();
-      ctx.arc(cx, cy, r.isPlayer ? 4.5 : 3.5, 0, Math.PI * 2);
-      ctx.fillStyle = r.isPlayer ? "#ef4444" : "#22d3ee"; // Red for player, Cyan for AI
+      ctx.arc(cx, cy, r.isPlayer ? 4.5 : 3.0, 0, Math.PI * 2);
+      ctx.fillStyle = r.isPlayer ? "#ef4444" : "#22d3ee";
       ctx.fill();
 
       if (r.isPlayer) {
@@ -14685,10 +14759,13 @@ window.AIBrainManager = {
     window.ApexAudio.playClick();
     tempTrackSelection = idx;
     
-    document.getElementById('track-card-0').style.borderColor = idx === 0 ? 'var(--neon-cyan)' : 'rgba(255,255,255,0.15)';
-    document.getElementById('track-card-0').classList.toggle('selected', idx === 0);
-    document.getElementById('track-card-1').style.borderColor = idx === 1 ? 'var(--neon-cyan)' : 'rgba(255,255,255,0.15)';
-    document.getElementById('track-card-1').classList.toggle('selected', idx === 1);
+    for (let i = 0; i < 4; i++) {
+      const card = document.getElementById(`track-card-${i}`);
+      if (card) {
+        card.style.borderColor = idx === i ? 'var(--neon-cyan)' : 'rgba(255,255,255,0.15)';
+        card.classList.toggle('selected', idx === i);
+      }
+    }
   };
 
   window.closeTrackSelection = () => {
@@ -14718,7 +14795,7 @@ window.AIBrainManager = {
     
     const sessionNames = ["PRACTICE", "QUALIFYING", "MAIN GP RACE"];
     const sessionTitle = isCareerSession ? sessionNames[currentSessionIndex] : "EXHIBITION GP";
-    const trackNames = ["Sunset Coast Circuit", "Alpine Heights"];
+    const trackNames = ["Albert Park Circuit", "Yas Marina Circuit", "Sunset Coast Circuit", "Alpine Heights"];
     
     window.triggerLoadingScreen(sessionTitle, trackNames[activeTrack], () => {
       setupGame();

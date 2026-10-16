@@ -4,6 +4,29 @@
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, 90, 90);
 
+    if (!trackCurve) return;
+
+    // Cache dynamic bounding box per track
+    if (!window._trackBounds || window._trackBounds.track !== activeTrack) {
+      let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+      for (let i = 0; i <= 80; i++) {
+        const pt = trackCurve.getPointAt(i / 80);
+        if (pt) {
+          if (pt.x < minX) minX = pt.x;
+          if (pt.x > maxX) maxX = pt.x;
+          if (pt.z < minZ) minZ = pt.z;
+          if (pt.z > maxZ) maxZ = pt.z;
+        }
+      }
+      const spanX = Math.max(20, maxX - minX);
+      const spanZ = Math.max(20, maxZ - minZ);
+      const midX = (minX + maxX) / 2;
+      const midZ = (minZ + maxZ) / 2;
+      const scale = 68.0 / Math.max(spanX, spanZ);
+      window._trackBounds = { midX, midZ, scale, track: activeTrack };
+    }
+    const b = window._trackBounds;
+
     // Draw track path layout sector by sector to highlight yellow flag zones
     const sectors = typeof sectorFlags !== 'undefined' ? sectorFlags.length : 6;
     const pointsPerSector = 15;
@@ -12,15 +35,15 @@
       ctx.beginPath();
       const sFlag = (typeof sectorFlags !== 'undefined') ? sectorFlags[s] : 'green';
       const isYellow = sFlag === 'yellow' || safetyCarActive || vscActive;
-      ctx.strokeStyle = isYellow ? "#f59e0b" : "rgba(255, 255, 255, 0.65)"; // Brighter track, prominent yellow highlight
-      ctx.lineWidth = isYellow ? 6.5 : 3.5;
+      ctx.strokeStyle = isYellow ? "#f59e0b" : "rgba(255, 255, 255, 0.65)";
+      ctx.lineWidth = isYellow ? 5.5 : 3.0;
 
       for (let i = 0; i <= pointsPerSector; i++) {
         const t = (s + i / pointsPerSector) / sectors;
         const pt = trackCurve.getPointAt(t % 1.0);
         if (pt) {
-          const cx = 45 + (pt.x / 250) * 38;
-          const cy = 45 + (pt.z / 150) * 38;
+          const cx = 45 + (pt.x - b.midX) * b.scale;
+          const cy = 45 + (pt.z - b.midZ) * b.scale;
           if (i === 0) ctx.moveTo(cx, cy);
           else ctx.lineTo(cx, cy);
         }
@@ -32,12 +55,12 @@
     racers.forEach(r => {
       if (!r.mesh) return;
       const pt = r.mesh.position;
-      const cx = 45 + (pt.x / 250) * 38;
-      const cy = 45 + (pt.z / 150) * 38;
+      const cx = 45 + (pt.x - b.midX) * b.scale;
+      const cy = 45 + (pt.z - b.midZ) * b.scale;
 
       ctx.beginPath();
-      ctx.arc(cx, cy, r.isPlayer ? 4.5 : 3.5, 0, Math.PI * 2);
-      ctx.fillStyle = r.isPlayer ? "#ef4444" : "#22d3ee"; // Red for player, Cyan for AI
+      ctx.arc(cx, cy, r.isPlayer ? 4.5 : 3.0, 0, Math.PI * 2);
+      ctx.fillStyle = r.isPlayer ? "#ef4444" : "#22d3ee";
       ctx.fill();
 
       if (r.isPlayer) {
@@ -260,10 +283,13 @@
     window.ApexAudio.playClick();
     tempTrackSelection = idx;
     
-    document.getElementById('track-card-0').style.borderColor = idx === 0 ? 'var(--neon-cyan)' : 'rgba(255,255,255,0.15)';
-    document.getElementById('track-card-0').classList.toggle('selected', idx === 0);
-    document.getElementById('track-card-1').style.borderColor = idx === 1 ? 'var(--neon-cyan)' : 'rgba(255,255,255,0.15)';
-    document.getElementById('track-card-1').classList.toggle('selected', idx === 1);
+    for (let i = 0; i < 4; i++) {
+      const card = document.getElementById(`track-card-${i}`);
+      if (card) {
+        card.style.borderColor = idx === i ? 'var(--neon-cyan)' : 'rgba(255,255,255,0.15)';
+        card.classList.toggle('selected', idx === i);
+      }
+    }
   };
 
   window.closeTrackSelection = () => {
@@ -293,7 +319,7 @@
     
     const sessionNames = ["PRACTICE", "QUALIFYING", "MAIN GP RACE"];
     const sessionTitle = isCareerSession ? sessionNames[currentSessionIndex] : "EXHIBITION GP";
-    const trackNames = ["Sunset Coast Circuit", "Alpine Heights"];
+    const trackNames = ["Albert Park Circuit", "Yas Marina Circuit", "Sunset Coast Circuit", "Alpine Heights"];
     
     window.triggerLoadingScreen(sessionTitle, trackNames[activeTrack], () => {
       setupGame();

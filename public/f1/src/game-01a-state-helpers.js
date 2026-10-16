@@ -928,8 +928,10 @@
   // F1_TEAMS come from f1-data.js (window.F1_TEAMS)
   const F1_TEAMS = window.F1_TEAMS;
 
-  // TRACKS with F1 3D Elevation (Sunset Coast Circuit & Alpine Heights)
+  // Official F1 TRACKS & Circuits
   const TRACK_POINTS = [
+    (window.ALBERT_PARK && window.ALBERT_PARK.trackPoints) || window.SUNSET_COAST.trackPoints,
+    (window.YAS_MARINA && window.YAS_MARINA.trackPoints) || window.SUNSET_COAST.trackPoints,
     window.SUNSET_COAST.trackPoints,
     [
       // Alpine Heights
@@ -1268,7 +1270,7 @@
     }
 
     const sessionTitle = sessionNames[currentSessionIndex];
-    const trackNames = ["Sunset Coast Circuit", "Alpine Heights"];
+    const trackNames = ["Albert Park Circuit", "Yas Marina Circuit", "Sunset Coast Circuit", "Alpine Heights"];
     window.triggerLoadingScreen(sessionTitle, trackNames[activeTrack], () => {
       setupGame();
     });
@@ -2352,8 +2354,10 @@
 
   function updateWeekendTrackUI() {
     const idx = window.weekendConfig.selectedTrackId;
-    document.getElementById('ws-track-card-0').classList.toggle('selected', idx === 0);
-    document.getElementById('ws-track-card-1').classList.toggle('selected', idx === 1);
+    for (let i = 0; i < 4; i++) {
+      const card = document.getElementById(`ws-track-card-${i}`);
+      if (card) card.classList.toggle('selected', idx === i);
+    }
   }
 
   window.selectWeekendLaps = (laps) => {
@@ -2421,7 +2425,7 @@
 
     const sessionNames = ["PRACTICE", "QUALIFYING", "MAIN GP RACE"];
     const sessionTitle = sessionNames[currentSessionIndex];
-    const trackNames = ["Sunset Coast Circuit", "Alpine Heights"];
+    const trackNames = ["Albert Park Circuit", "Yas Marina Circuit", "Sunset Coast Circuit", "Alpine Heights"];
 
     window.triggerLoadingScreen(sessionTitle, trackNames[activeTrack], () => {
       setupGame();
@@ -3020,7 +3024,7 @@
     // Hide GP setup screen
     document.getElementById('grandPrixSetupScreen').style.display = 'none';
 
-    const trackNames = ["Sunset Coast Circuit", "Alpine Heights"];
+    const trackNames = ["Albert Park Circuit", "Yas Marina Circuit", "Sunset Coast Circuit", "Alpine Heights"];
     window.triggerLoadingScreen("GRAND PRIX RACE", trackNames[activeTrack], () => {
       setupGame();
     });
@@ -3047,7 +3051,7 @@
     // Hide GP setup screen
     document.getElementById('grandPrixSetupScreen').style.display = 'none';
 
-    const trackNames = ["Sunset Coast Circuit", "Alpine Heights"];
+    const trackNames = ["Albert Park Circuit", "Yas Marina Circuit", "Sunset Coast Circuit", "Alpine Heights"];
     window.triggerLoadingScreen("PRACTICE SESSION", trackNames[activeTrack] + " — Pit Lane", () => {
       setupGame();
     });
