@@ -58,6 +58,7 @@
     buildGrandstandsAndSponsors();
 
     // Validate placement of all decorative scene objects to ensure none are on the racing surface
+    const objectsToRemove = [];
     function validateTrackObjectPlacement(object) {
       if (!object) return;
       const worldPosition = new THREE.Vector3();
@@ -69,8 +70,8 @@
 
       // Track half width is 8.0 meters
       if (Math.abs(projection.lateralOffset) < 8.0) {
-        console.error(
-          "[OBJECT ON RACING SURFACE]",
+        console.warn(
+          "[OBJECT ON RACING SURFACE REMOVED]",
           {
             name: object.name,
             uuid: object.uuid,
@@ -78,8 +79,7 @@
             position: worldPosition
           }
         );
-        // Remove it from the scene so it doesn't block the road!
-        scene.remove(object);
+        objectsToRemove.push(object);
       }
     }
 
@@ -111,6 +111,16 @@
         validateTrackObjectPlacement(object);
       }
     });
+
+    // Safely remove encroaching objects after traversal completes
+    for (let i = 0; i < objectsToRemove.length; i++) {
+      const obj = objectsToRemove[i];
+      if (obj.parent) {
+        obj.parent.remove(obj);
+      } else {
+        scene.remove(obj);
+      }
+    }
   }
 
   // Old buildTrack removed

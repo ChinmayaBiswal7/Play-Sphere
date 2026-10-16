@@ -1521,54 +1521,56 @@
     ground.position.y = -0.10;
     scene.add(ground);
 
-    // 2. 3D Trees planted at safe spline offsets outside the barriers (240 trees along 5.28km track)
-    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5c3a21, roughness: 0.9 });
-    const foliageMat1 = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.8 });
-    const foliageMat2 = new THREE.MeshStandardMaterial({ color: 0x166534, roughness: 0.85 });
-    const foliageMat3 = new THREE.MeshStandardMaterial({ color: 0x22543d, roughness: 0.82 });
+    // 2. 3D Trees planted at safe spline offsets outside the barriers (for permanent circuits, skip on street circuits like Monaco)
+    if (activeTrack !== 4) {
+      const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5c3a21, roughness: 0.9 });
+      const foliageMat1 = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.8 });
+      const foliageMat2 = new THREE.MeshStandardMaterial({ color: 0x166534, roughness: 0.85 });
+      const foliageMat3 = new THREE.MeshStandardMaterial({ color: 0x22543d, roughness: 0.82 });
 
-    const treeSteps = 240;
-    for (let i = 0; i < treeSteps; i++) {
-      const t = (i / treeSteps);
-      const pt = trackCurve.getPointAt(t);
-      const tang = trackCurve.getTangentAt(t).normalize();
-      const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
+      const treeSteps = 240;
+      for (let i = 0; i < treeSteps; i++) {
+        const t = (i / treeSteps);
+        const pt = trackCurve.getPointAt(t);
+        const tang = trackCurve.getTangentAt(t).normalize();
+        const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
 
-      // Place trees on both outer sides safely 24m to 42m away from track center
-      [-1, 1].forEach((side) => {
-        if (side === 1 && (t >= 0.95 || t <= 0.08)) return; // skip pit building side
-        const treePos = pt.clone().add(norm.clone().multiplyScalar(side * (24.0 + (i % 5) * 4.2)));
+        // Place trees on both outer sides safely 24m to 42m away from track center
+        [-1, 1].forEach((side) => {
+          if (side === 1 && (t >= 0.95 || t <= 0.08)) return; // skip pit building side
+          const treePos = pt.clone().add(norm.clone().multiplyScalar(side * (24.0 + (i % 5) * 4.2)));
 
-        const treeGroup = new THREE.Group();
-        treeGroup.name = "tree_scenery";
-        const treeScale = 0.85 + (i % 4) * 0.22;
-        const trunkH = 3.6 * treeScale;
-        const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.35 * treeScale, 0.5 * treeScale, trunkH, 6), trunkMat);
-        trunk.position.y = trunkH / 2;
-        treeGroup.add(trunk);
+          const treeGroup = new THREE.Group();
+          treeGroup.name = "tree_scenery";
+          const treeScale = 0.85 + (i % 4) * 0.22;
+          const trunkH = 3.6 * treeScale;
+          const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.35 * treeScale, 0.5 * treeScale, trunkH, 6), trunkMat);
+          trunk.position.y = trunkH / 2;
+          treeGroup.add(trunk);
 
-        const fMat = (i % 3 === 0) ? foliageMat1 : ((i % 3 === 1) ? foliageMat2 : foliageMat3);
-        if (i % 2 === 0) {
-          // Layered Australian gum tree (broad leafy canopy)
-          const sphere1 = new THREE.Mesh(new THREE.SphereGeometry(2.4 * treeScale, 8, 6), fMat);
-          sphere1.position.y = trunkH + 1.6 * treeScale;
-          treeGroup.add(sphere1);
-          const sphere2 = new THREE.Mesh(new THREE.SphereGeometry(1.8 * treeScale, 7, 5), fMat);
-          sphere2.position.set(0.6 * treeScale, trunkH + 2.8 * treeScale, 0.3 * treeScale);
-          treeGroup.add(sphere2);
-        } else {
-          // Conical pine / cypress tree
-          const c1 = new THREE.Mesh(new THREE.ConeGeometry(2.6 * treeScale, 4.0 * treeScale, 6), fMat);
-          c1.position.y = trunkH + 2.0 * treeScale;
-          treeGroup.add(c1);
-          const c2 = new THREE.Mesh(new THREE.ConeGeometry(1.8 * treeScale, 3.0 * treeScale, 6), fMat);
-          c2.position.y = trunkH + 4.2 * treeScale;
-          treeGroup.add(c2);
-        }
+          const fMat = (i % 3 === 0) ? foliageMat1 : ((i % 3 === 1) ? foliageMat2 : foliageMat3);
+          if (i % 2 === 0) {
+            // Layered Australian gum tree (broad leafy canopy)
+            const sphere1 = new THREE.Mesh(new THREE.SphereGeometry(2.4 * treeScale, 8, 6), fMat);
+            sphere1.position.y = trunkH + 1.6 * treeScale;
+            treeGroup.add(sphere1);
+            const sphere2 = new THREE.Mesh(new THREE.SphereGeometry(1.8 * treeScale, 7, 5), fMat);
+            sphere2.position.set(0.6 * treeScale, trunkH + 2.8 * treeScale, 0.3 * treeScale);
+            treeGroup.add(sphere2);
+          } else {
+            // Conical pine / cypress tree
+            const c1 = new THREE.Mesh(new THREE.ConeGeometry(2.6 * treeScale, 4.0 * treeScale, 6), fMat);
+            c1.position.y = trunkH + 2.0 * treeScale;
+            treeGroup.add(c1);
+            const c2 = new THREE.Mesh(new THREE.ConeGeometry(1.8 * treeScale, 3.0 * treeScale, 6), fMat);
+            c2.position.y = trunkH + 4.2 * treeScale;
+            treeGroup.add(c2);
+          }
 
-        treeGroup.position.copy(treePos);
-        scene.add(treeGroup);
-      });
+          treeGroup.position.copy(treePos);
+          scene.add(treeGroup);
+        });
+      }
     }
 
     // 🌊 WATER FEATURES PER TRACK
@@ -1687,22 +1689,22 @@
       const poolGroup = new THREE.Group();
       poolGroup.name = "monaco_swimming_pool";
       const poolDeckMat = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.8 });
-      const poolDeck = new THREE.Mesh(new THREE.BoxGeometry(68, 0.4, 34), poolDeckMat);
-      poolDeck.position.set(-415, 0.15, 35);
+      const poolDeck = new THREE.Mesh(new THREE.BoxGeometry(22, 0.4, 48), poolDeckMat);
+      poolDeck.position.set(-406, 0.15, 35);
       poolGroup.add(poolDeck);
 
       const poolWaterMat = new THREE.MeshStandardMaterial({ color: 0x06b6d4, roughness: 0.05, metalness: 0.95 });
-      const poolWater = new THREE.Mesh(new THREE.PlaneGeometry(60, 26), poolWaterMat);
+      const poolWater = new THREE.Mesh(new THREE.PlaneGeometry(16, 40), poolWaterMat);
       poolWater.rotation.x = -Math.PI / 2;
-      poolWater.position.set(-415, 0.38, 35);
+      poolWater.position.set(-406, 0.38, 35);
       poolGroup.add(poolWater);
 
       const diveTowerMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.4 });
-      const diveTower = new THREE.Mesh(new THREE.BoxGeometry(3, 14, 4), diveTowerMat);
-      diveTower.position.set(-440, 7.0, 35);
+      const diveTower = new THREE.Mesh(new THREE.BoxGeometry(3, 12, 4), diveTowerMat);
+      diveTower.position.set(-406, 6.0, 48);
       poolGroup.add(diveTower);
-      const diveBoard = new THREE.Mesh(new THREE.BoxGeometry(8, 0.4, 2.5), diveTowerMat);
-      diveBoard.position.set(-436, 12.0, 35);
+      const diveBoard = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.4, 6), diveTowerMat);
+      diveBoard.position.set(-406, 10.0, 44);
       poolGroup.add(diveBoard);
       scene.add(poolGroup);
 
