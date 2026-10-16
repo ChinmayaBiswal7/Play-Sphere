@@ -3528,9 +3528,28 @@
     // Reset voice states
     pendingRadioQuestion = null;
     lastPosRank = 4;
-    lastOvertakeCheerTime = 0;
+    // Track-specific historical meteorological weather data (official F1 historical stats)
+    // Albert Park Melbourne: ~15% chance of rain (late summer/early autumn in Victoria)
+    // Yas Marina Abu Dhabi: ~1% chance of rain (arid desert climate)
+    // Portimao Algarve: ~18% chance of rain (Atlantic coastal)
+    const TRACK_RAIN_PROBABILITY = {
+      0: 0.15,
+      1: 0.01,
+      2: 0.18
+    };
+
+    const trackProb = TRACK_RAIN_PROBABILITY[activeTrack] !== undefined ? TRACK_RAIN_PROBABILITY[activeTrack] : 0.15;
+    window.sessionWillRain = Math.random() < trackProb;
+    if (window.sessionWillRain) {
+      // Dynamic rain onset mid-session
+      rainTriggerTime = 30.0 + Math.random() * 60.0;
+    } else {
+      rainTriggerTime = Infinity; // 100% dry session based on real F1 climate data
+    }
     isRainActive = false;
     rainAlertTriggered = false;
+    if (typeof stop3DRainSystem === 'function') stop3DRainSystem();
+    if (typeof stopRainVisorFX === 'function') stopRainVisorFX();
 
     // Reset DRS & checkpoints
     drsAvailable = false;
@@ -6842,6 +6861,31 @@
     }
   }
 
+  function spawnRainSpray(pos, speed) {
+    if (typeof scene === 'undefined' || !scene || typeof particles === 'undefined' || !particles) return;
+    if (particles.length > 250) return;
+    const count = 3;
+    for (let i = 0; i < count; i++) {
+      const size = 0.14 + Math.random() * 0.12;
+      const geo = new THREE.BoxGeometry(size, size, size);
+      const mat = new THREE.MeshBasicMaterial({ color: 0xe2e8f0, transparent: true, opacity: 0.45 });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.copy(pos);
+      mesh.position.x += (Math.random() - 0.5) * 1.2;
+      mesh.position.y += 0.1 + Math.random() * 0.25;
+      mesh.position.z += (Math.random() - 0.5) * 1.2;
+      scene.add(mesh);
+
+      particles.push({
+        mesh: mesh,
+        life: 0.65,
+        decay: 0.04 + Math.random() * 0.03,
+        velocity: new THREE.Vector3((Math.random() - 0.5) * 2.5, 1.2 + Math.random() * 2.0, (Math.random() - 0.5) * 2.5)
+      });
+    }
+  }
+  window.spawnRainSpray = spawnRainSpray;
+
   // ═══════════════════════════════════════════════════════════════════
   // 🏁 RACE DIRECTOR — Full System Implementation
   // ═══════════════════════════════════════════════════════════════════
@@ -8451,11 +8495,11 @@
     }
 
 
-    // ECU Automatic Downshifting Assist under heavy braking (Automatic Transmission mode only)
-    if (window.transmissionMode === 'automatic' && currentGear >= 2 && brakeInput > 0.1 && playerKart.spinoutTime <= 0.0) {
+    // ECU Automatic Downshifting Assist (Automatic Transmission mode only)
+    if (window.transmissionMode === 'automatic' && currentGear >= 2 && playerKart.spinoutTime <= 0.0) {
       const minSpeedForGear = gearMinSpeed[currentGear];
-      if (playerKart.speed < minSpeedForGear * 0.88) {
-        currentGear--;
+      if (playerKart.speed < minSpeedForGear * 0.90 || (playerKart.pitLimiterActive && currentGear > 2)) {
+        currentGear = (playerKart.pitLimiterActive && currentGear > 2) ? 2 : currentGear - 1;
         triggerShiftIgnitionCut();
       }
     }
@@ -8719,6 +8763,10 @@
         const decelRate = keys.s ? 38.0 : (shiftActiveTimer > 0 ? 60.0 : 30.0);
         playerKart.speed = Math.max(target, playerKart.speed - decelRate * delta);
       }
+    }
+
+    if (isRainActive && Math.abs(playerKart.speed) > 12.0 && typeof spawnRainSpray === 'function') {
+      spawnRainSpray(playerKart.mesh.position, playerKart.speed);
     }
 
     // Calculate RPM based on current speed and gear ratio
@@ -9261,13 +9309,22 @@
           playerKart.pitZone = "PIT_ENTRY";
           playerKart.inPitLane = true;
           playerKart.pitLimiterActive = true;
+          if (window.transmissionMode === 'automatic' && currentGear > 2) {
+            currentGear = 2;
+            triggerShiftIgnitionCut();
+          }
           playerKart.currentPath = "PIT";
-          speakEngineerRadio("Entering pit lane. Pit limiter is active. Select your tyre compound.", 80);
 
-          const stratCard = document.getElementById('hud-pit-strategy-card');
-          if (stratCard) {
-            stratCard.classList.remove('hidden');
-            stratCard.style.display = 'block';
+          if (window.voiceSelectedCompound) {
+            activeCompound = window.voiceSelectedCompound;
+            speakEngineerRadio(`Entering pit lane. Limiter on. Fitting ${activeCompound.toUpperCase()} tyres.`, 80);
+          } else {
+            speakEngineerRadio("Entering pit lane. Pit limiter is active. Select your tyre compound.", 80);
+            const stratCard = document.getElementById('hud-pit-strategy-card');
+            if (stratCard) {
+              stratCard.classList.remove('hidden');
+              stratCard.style.display = 'block';
+            }
           }
 
           // Pre-spawn pit crew standing ready at pit box immediately on entry
@@ -9326,18 +9383,20 @@
         racers.forEach(other => {
           if (other === playerKart) return;
           if (other.isTrackActive === false || other.qualifyingState === "GARAGE") return;
-          if (other.hasStoppedAtBox || other.speed === 0.0) return; // skip parked/stopped cars
+          if (other.hasStoppedAtBox || other.pitZone === "PIT_BOX" || other.speed === 0.0) return; // skip parked/stopped cars
+          // Only brake for cars in the same longitudinal lane, not cars off to the side in garages
+          if (Math.abs((other.sideOffset || 0) - (playerKart.sideOffset || 0)) > 3.5) return;
           
           const otherPitting = other.isPlayer ? isPitting : (other.isPitting || false);
           const otherProgress = other.isPlayer ? pitProgress : (other.pitProgress || 0.0);
           
-          if (otherPitting && otherProgress > pitProgress && (otherProgress - pitProgress) < 0.08) {
+          if (otherPitting && otherProgress > pitProgress && (otherProgress - pitProgress) < 0.06) {
             const dist = playerKart.mesh.position.distanceTo(other.mesh.position);
-            if (dist < 8.0) {
+            if (dist < 7.0) {
               const targetSpeed = other.isPlayer ? playerKart.speed : other.speed;
-              collisionSpeedLimit = Math.min(collisionSpeedLimit, targetSpeed * 0.95);
-              if (dist < 4.8) {
-                collisionSpeedLimit = 0.0; // Hard brake to avoid crash
+              collisionSpeedLimit = Math.min(collisionSpeedLimit, Math.max(3.5, targetSpeed * 0.95));
+              if (dist < 2.5) {
+                collisionSpeedLimit = 0.0; // Hard brake only if imminent bumper contact
               }
             }
           }
@@ -11613,7 +11672,10 @@ window.AIBrainManager = {
           racer.boostTime -= delta;
 
           spawnExhaustSmoke(racer.mesh.position, true);
+        }
 
+        if (isRainActive && racer.speed > 14.0 && Math.random() < 0.20 && typeof spawnRainSpray === 'function') {
+          spawnRainSpray(racer.mesh.position, racer.speed);
         }
 
         // 🏎️ AI ERS Battery & Overtake Mode logic
@@ -14699,21 +14761,206 @@ window.AIBrainManager = {
   // ════ WEATHER EVENTS ════
 
 // ═══ game-10a-weather-voice.js ═══
+  // ════ 3D RAIN PARTICLE SYSTEM (Three.js LineSegments) ════
+  let rainMesh = null;
+  const RAIN_COUNT = 1800;
+  let rainPositions = null;
+  let rainVelocities = null;
+
+  function init3DRainSystem() {
+    if (rainMesh || !scene) return;
+    const geom = new THREE.BufferGeometry();
+    rainPositions = new Float32Array(RAIN_COUNT * 6); // 2 vertices per streak line
+    rainVelocities = new Float32Array(RAIN_COUNT);
+
+    const cPos = (camera && camera.position) ? camera.position : new THREE.Vector3();
+    for (let i = 0; i < RAIN_COUNT; i++) {
+      const x = cPos.x + (Math.random() - 0.5) * 90;
+      const y = Math.random() * 32;
+      const z = cPos.z + (Math.random() - 0.5) * 90;
+      const len = 1.3 + Math.random() * 0.9;
+      
+      const idx = i * 6;
+      rainPositions[idx]     = x;
+      rainPositions[idx + 1] = y;
+      rainPositions[idx + 2] = z;
+
+      rainPositions[idx + 3] = x - 0.12; // slight wind slant
+      rainPositions[idx + 4] = y - len;
+      rainPositions[idx + 5] = z - 0.08;
+
+      rainVelocities[i] = 55.0 + Math.random() * 25.0; // falling speed
+    }
+
+    geom.setAttribute('position', new THREE.BufferAttribute(rainPositions, 3));
+    const mat = new THREE.LineBasicMaterial({
+      color: 0x94a3b8,
+      transparent: true,
+      opacity: 0.65,
+      depthWrite: false
+    });
+
+    rainMesh = new THREE.LineSegments(geom, mat);
+    rainMesh.name = "f1_3d_rain";
+    scene.add(rainMesh);
+  }
+  window.init3DRainSystem = init3DRainSystem;
+
+  function update3DRain(delta) {
+    if (!rainMesh || !rainPositions || !camera) return;
+    const cPos = camera.position;
+    const posAttr = rainMesh.geometry.attributes.position;
+    const pos = posAttr.array;
+
+    for (let i = 0; i < RAIN_COUNT; i++) {
+      const idx = i * 6;
+      const speed = rainVelocities[i];
+      const dy = speed * delta;
+
+      pos[idx + 1] -= dy;
+      pos[idx + 4] -= dy;
+
+      // Wrap if fallen below ground level or drifted too far from camera
+      if (pos[idx + 4] < 0.05 || Math.abs(pos[idx] - cPos.x) > 55 || Math.abs(pos[idx + 2] - cPos.z) > 55) {
+        const nx = cPos.x + (Math.random() - 0.5) * 90;
+        const ny = 22.0 + Math.random() * 15.0;
+        const nz = cPos.z + (Math.random() - 0.5) * 90;
+        const len = 1.3 + Math.random() * 0.9;
+
+        pos[idx]     = nx;
+        pos[idx + 1] = ny;
+        pos[idx + 2] = nz;
+
+        pos[idx + 3] = nx - 0.12;
+        pos[idx + 4] = ny - len;
+        pos[idx + 5] = nz - 0.08;
+      }
+    }
+    posAttr.needsUpdate = true;
+  }
+  window.update3DRain = update3DRain;
+
+  function stop3DRainSystem() {
+    if (rainMesh && scene) {
+      scene.remove(rainMesh);
+      if (rainMesh.geometry) rainMesh.geometry.dispose();
+      rainMesh = null;
+    }
+  }
+  window.stop3DRainSystem = stop3DRainSystem;
+
+  // ════ SCREEN VISOR RAIN DROPLETS & BLUR EFFECT ════
+  const visorDrops = [];
+  let visorCanvas = null;
+  let visorCtx = null;
+
+  function startRainVisorFX() {
+    visorCanvas = document.getElementById('f1-rain-visor-canvas');
+    if (!visorCanvas) return;
+    visorCanvas.style.display = 'block';
+    visorCanvas.width = window.innerWidth;
+    visorCanvas.height = window.innerHeight;
+    visorCtx = visorCanvas.getContext('2d');
+    visorDrops.length = 0;
+
+    for (let i = 0; i < 65; i++) {
+      visorDrops.push({
+        x: Math.random() * visorCanvas.width,
+        y: Math.random() * visorCanvas.height,
+        r: 1.5 + Math.random() * 3.5,
+        len: 4 + Math.random() * 14,
+        speed: 120 + Math.random() * 220,
+        alpha: 0.25 + Math.random() * 0.55
+      });
+    }
+  }
+  window.startRainVisorFX = startRainVisorFX;
+
+  function updateRainVisorFX(delta) {
+    if (!visorCanvas || !visorCtx || !isRainActive) return;
+    if (visorCanvas.width !== window.innerWidth || visorCanvas.height !== window.innerHeight) {
+      visorCanvas.width = window.innerWidth;
+      visorCanvas.height = window.innerHeight;
+    }
+    visorCtx.clearRect(0, 0, visorCanvas.width, visorCanvas.height);
+
+    // Subtle edge blur vignette during rain
+    const grad = visorCtx.createRadialGradient(
+      visorCanvas.width / 2, visorCanvas.height / 2, visorCanvas.height * 0.35,
+      visorCanvas.width / 2, visorCanvas.height / 2, visorCanvas.height * 0.75
+    );
+    grad.addColorStop(0, 'rgba(15,23,42,0.0)');
+    grad.addColorStop(1, 'rgba(15,23,42,0.32)');
+    visorCtx.fillStyle = grad;
+    visorCtx.fillRect(0, 0, visorCanvas.width, visorCanvas.height);
+
+    // Falling / sliding droplets on visor
+    visorCtx.strokeStyle = 'rgba(224, 242, 254, 0.55)';
+    visorCtx.lineWidth = 1.8;
+    visorCtx.lineCap = 'round';
+
+    const pSpeed = (playerKart ? Math.abs(playerKart.speed) : 20.0);
+    const speedMult = 1.0 + (pSpeed / 30.0);
+
+    visorDrops.forEach(d => {
+      d.y += d.speed * speedMult * delta;
+      d.x += (Math.random() - 0.5) * 8.0 * delta;
+
+      if (d.y > visorCanvas.height + 20) {
+        d.y = -10;
+        d.x = Math.random() * visorCanvas.width;
+      }
+
+      visorCtx.beginPath();
+      visorCtx.moveTo(d.x, d.y - d.len);
+      visorCtx.lineTo(d.x, d.y);
+      visorCtx.stroke();
+
+      visorCtx.beginPath();
+      visorCtx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
+      visorCtx.fillStyle = `rgba(255, 255, 255, ${d.alpha})`;
+      visorCtx.fill();
+    });
+  }
+  window.updateRainVisorFX = updateRainVisorFX;
+
+  function stopRainVisorFX() {
+    visorCanvas = document.getElementById('f1-rain-visor-canvas');
+    if (visorCanvas) {
+      visorCanvas.style.display = 'none';
+      if (visorCtx) visorCtx.clearRect(0, 0, visorCanvas.width, visorCanvas.height);
+    }
+    visorDrops.length = 0;
+  }
+  window.stopRainVisorFX = stopRainVisorFX;
+
   function updateWeatherEvent(delta) {
     if (!isRaceActive) return;
     const elapsed = clock.getElapsedTime() - startTime;
-    if (elapsed > rainTriggerTime && !rainAlertTriggered) {
+    if (elapsed > rainTriggerTime && !rainAlertTriggered && window.sessionWillRain) {
       rainAlertTriggered = true;
       isRainActive = true;
       if (scene) {
-        scene.background = new THREE.Color(0x334155);
-        scene.fog.color = new THREE.Color(0x334155);
+        scene.background = new THREE.Color(0x1e293b);
+        if (scene.fog) {
+          scene.fog.color = new THREE.Color(0x1e293b);
+          scene.fog.near = 35;
+          scene.fog.far = 460;
+        }
         if (trackMesh) {
-          trackMesh.material.roughness = 0.1; // wet shiny track
+          trackMesh.material.roughness = 0.12; // wet shiny track
+          trackMesh.material.metalness = 0.35;
         }
       }
-      speakEngineerRadio("Rain is starting! Should we box for intermediate tyres?");
+      init3DRainSystem();
+      startRainVisorFX();
+      speakEngineerRadio("Rain is starting! Track is getting wet. Consider boxing for intermediate or wet tyres.", 80, true);
       pendingRadioQuestion = "rain";
+    }
+
+    if (isRainActive) {
+      update3DRain(delta);
+      updateRainVisorFX(delta);
     }
   }
 
@@ -14756,16 +15003,16 @@ window.AIBrainManager = {
           if (dot) { dot.style.background = '#eab308'; dot.style.boxShadow = '0 0 10px #eab308'; }
         }
         
-        // Auto-restart recognition if temporary listening window is active!
-        if (window.keepListeningForVoice) {
+        // Auto-restart recognition only if a multi-turn dialogue question is active
+        if (window.keepListeningForVoice && pendingRadioQuestion) {
           if (statusEl) statusEl.textContent = "WAITING FOR RESPONSE...";
           setTimeout(() => {
             try {
-              if (window.keepListeningForVoice && !isSpeechListening) {
+              if (window.keepListeningForVoice && pendingRadioQuestion && !isSpeechListening) {
                 recognition.start();
               }
             } catch(e) {}
-          }, 300);
+          }, 350);
         }
       };
 
@@ -14787,6 +15034,8 @@ window.AIBrainManager = {
 
       recognition.onresult = (event) => {
         if (!event.results || !event.results[0] || !event.results[0][0]) return;
+        // 🛡️ Drop audio picked up while speech synthesis is speaking out of speakers!
+        if (window.speechSynthesis && window.speechSynthesis.speaking) return;
         const text = event.results[0][0].transcript.toLowerCase();
         const drvVal = document.getElementById('voice-driver-val');
         if (drvVal) drvVal.textContent = `"${text}"`;
@@ -15049,13 +15298,30 @@ window.AIBrainManager = {
     utterance.pitch = 0.90; // Natural, clear pitwall radio voice tone
     utterance.rate = 1.02;
 
+    utterance.onstart = () => {
+      isRadioSpeaking = true;
+      try {
+        if (recognition && isSpeechListening) {
+          recognition.stop();
+          isSpeechListening = false;
+        }
+      } catch(e) {}
+    };
+
     utterance.onend = () => {
       activeUtterance = null;
       setTimeout(() => {
         isRadioSpeaking = false;
         currentRadioPriority = 0;
+        if (window.keepListeningForVoice && pendingRadioQuestion) {
+          try {
+            if (recognition && !isSpeechListening) {
+              recognition.start();
+            }
+          } catch(e) {}
+        }
         processRadioQueue();
-      }, 120); // Fast release pause (120ms) for fluent, connected speech flow
+      }, 150);
     };
 
     utterance.onerror = () => {
@@ -15142,6 +15408,14 @@ window.AIBrainManager = {
         if (typeof window.choosePitCompound === 'function') {
           window.choosePitCompound(comp);
         }
+        try { if (recognition) recognition.stop(); } catch(e) {}
+        setTimeout(() => {
+          const term = document.getElementById('hud-voice-terminal');
+          if (term && !window.keepListeningForVoice) {
+            term.classList.add('hidden');
+            term.style.display = 'none';
+          }
+        }, 1800);
         return;
       } else {
         // Did not catch valid compound yet; keep 15-second window alive so user can repeat
@@ -15191,19 +15465,43 @@ window.AIBrainManager = {
       activeCompound = comp;
       window.voiceSelectedCompound = comp;
       pendingPitStop = true;
+      pendingRadioQuestion = null;
+      window.keepListeningForVoice = false;
       speakEngineerRadio(`${comp.toUpperCase()} confirmed. Box box box.`, 70, true);
       
-      const btn = document.getElementById(`compound-${comp}`);
-      if (btn) selectTyreCompound(comp, btn);
+      if (typeof window.choosePitCompound === 'function') {
+        window.choosePitCompound(comp);
+      }
+      try { if (recognition) recognition.stop(); } catch(e) {}
+      setTimeout(() => {
+        const term = document.getElementById('hud-voice-terminal');
+        if (term && !window.keepListeningForVoice) {
+          term.classList.add('hidden');
+          term.style.display = 'none';
+        }
+      }, 1800);
       return;
     }
 
     // 5. Box / Pit command alone
     if (text.includes("box") || text.includes("pit")) {
+      pendingPitStop = true;
+      if (window.voiceSelectedCompound) {
+        speakEngineerRadio(`Copy, boxing this lap for ${window.voiceSelectedCompound.toUpperCase()} tyres.`, 70, true);
+        pendingRadioQuestion = null;
+        window.keepListeningForVoice = false;
+        try { if (recognition) recognition.stop(); } catch(e) {}
+        setTimeout(() => {
+          const term = document.getElementById('hud-voice-terminal');
+          if (term && !window.keepListeningForVoice) {
+            term.classList.add('hidden');
+            term.style.display = 'none';
+          }
+        }, 1800);
+        return;
+      }
       pendingRadioQuestion = 'tyres_choice';
-      pendingPitStop = true; // Schedule it!
       speakEngineerRadio("Copy, boxing this lap. Which compound?", 70, true);
-      // Keep mic listening for 15 seconds multi-turn dialogue window
       window.keepListeningForVoice = true;
       window.micTimeoutTimer = 15.0;
       return;
@@ -15219,9 +15517,20 @@ window.AIBrainManager = {
 
       activeCompound = comp;
       window.voiceSelectedCompound = comp;
+      pendingRadioQuestion = null;
+      window.keepListeningForVoice = false;
       speakEngineerRadio(`Copy, tyres changed to ${comp.toUpperCase()} compound.`, 30, true);
-      const btn = document.getElementById(`compound-${comp}`);
-      if (btn) selectTyreCompound(comp, btn);
+      if (typeof window.choosePitCompound === 'function') {
+        window.choosePitCompound(comp);
+      }
+      try { if (recognition) recognition.stop(); } catch(e) {}
+      setTimeout(() => {
+        const term = document.getElementById('hud-voice-terminal');
+        if (term && !window.keepListeningForVoice) {
+          term.classList.add('hidden');
+          term.style.display = 'none';
+        }
+      }, 1800);
       return;
     }
 

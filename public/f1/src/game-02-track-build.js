@@ -1519,6 +1519,31 @@
     }
   }
 
+  function spawnRainSpray(pos, speed) {
+    if (typeof scene === 'undefined' || !scene || typeof particles === 'undefined' || !particles) return;
+    if (particles.length > 250) return;
+    const count = 3;
+    for (let i = 0; i < count; i++) {
+      const size = 0.14 + Math.random() * 0.12;
+      const geo = new THREE.BoxGeometry(size, size, size);
+      const mat = new THREE.MeshBasicMaterial({ color: 0xe2e8f0, transparent: true, opacity: 0.45 });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.copy(pos);
+      mesh.position.x += (Math.random() - 0.5) * 1.2;
+      mesh.position.y += 0.1 + Math.random() * 0.25;
+      mesh.position.z += (Math.random() - 0.5) * 1.2;
+      scene.add(mesh);
+
+      particles.push({
+        mesh: mesh,
+        life: 0.65,
+        decay: 0.04 + Math.random() * 0.03,
+        velocity: new THREE.Vector3((Math.random() - 0.5) * 2.5, 1.2 + Math.random() * 2.0, (Math.random() - 0.5) * 2.5)
+      });
+    }
+  }
+  window.spawnRainSpray = spawnRainSpray;
+
   // ═══════════════════════════════════════════════════════════════════
   // 🏁 RACE DIRECTOR — Full System Implementation
   // ═══════════════════════════════════════════════════════════════════

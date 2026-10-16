@@ -513,11 +513,11 @@
     }
 
 
-    // ECU Automatic Downshifting Assist under heavy braking (Automatic Transmission mode only)
-    if (window.transmissionMode === 'automatic' && currentGear >= 2 && brakeInput > 0.1 && playerKart.spinoutTime <= 0.0) {
+    // ECU Automatic Downshifting Assist (Automatic Transmission mode only)
+    if (window.transmissionMode === 'automatic' && currentGear >= 2 && playerKart.spinoutTime <= 0.0) {
       const minSpeedForGear = gearMinSpeed[currentGear];
-      if (playerKart.speed < minSpeedForGear * 0.88) {
-        currentGear--;
+      if (playerKart.speed < minSpeedForGear * 0.90 || (playerKart.pitLimiterActive && currentGear > 2)) {
+        currentGear = (playerKart.pitLimiterActive && currentGear > 2) ? 2 : currentGear - 1;
         triggerShiftIgnitionCut();
       }
     }
@@ -781,6 +781,10 @@
         const decelRate = keys.s ? 38.0 : (shiftActiveTimer > 0 ? 60.0 : 30.0);
         playerKart.speed = Math.max(target, playerKart.speed - decelRate * delta);
       }
+    }
+
+    if (isRainActive && Math.abs(playerKart.speed) > 12.0 && typeof spawnRainSpray === 'function') {
+      spawnRainSpray(playerKart.mesh.position, playerKart.speed);
     }
 
     // Calculate RPM based on current speed and gear ratio
@@ -1323,13 +1327,22 @@
           playerKart.pitZone = "PIT_ENTRY";
           playerKart.inPitLane = true;
           playerKart.pitLimiterActive = true;
+          if (window.transmissionMode === 'automatic' && currentGear > 2) {
+            currentGear = 2;
+            triggerShiftIgnitionCut();
+          }
           playerKart.currentPath = "PIT";
-          speakEngineerRadio("Entering pit lane. Pit limiter is active. Select your tyre compound.", 80);
 
-          const stratCard = document.getElementById('hud-pit-strategy-card');
-          if (stratCard) {
-            stratCard.classList.remove('hidden');
-            stratCard.style.display = 'block';
+          if (window.voiceSelectedCompound) {
+            activeCompound = window.voiceSelectedCompound;
+            speakEngineerRadio(`Entering pit lane. Limiter on. Fitting ${activeCompound.toUpperCase()} tyres.`, 80);
+          } else {
+            speakEngineerRadio("Entering pit lane. Pit limiter is active. Select your tyre compound.", 80);
+            const stratCard = document.getElementById('hud-pit-strategy-card');
+            if (stratCard) {
+              stratCard.classList.remove('hidden');
+              stratCard.style.display = 'block';
+            }
           }
 
           // Pre-spawn pit crew standing ready at pit box immediately on entry
@@ -1388,18 +1401,20 @@
         racers.forEach(other => {
           if (other === playerKart) return;
           if (other.isTrackActive === false || other.qualifyingState === "GARAGE") return;
-          if (other.hasStoppedAtBox || other.speed === 0.0) return; // skip parked/stopped cars
+          if (other.hasStoppedAtBox || other.pitZone === "PIT_BOX" || other.speed === 0.0) return; // skip parked/stopped cars
+          // Only brake for cars in the same longitudinal lane, not cars off to the side in garages
+          if (Math.abs((other.sideOffset || 0) - (playerKart.sideOffset || 0)) > 3.5) return;
           
           const otherPitting = other.isPlayer ? isPitting : (other.isPitting || false);
           const otherProgress = other.isPlayer ? pitProgress : (other.pitProgress || 0.0);
           
-          if (otherPitting && otherProgress > pitProgress && (otherProgress - pitProgress) < 0.08) {
+          if (otherPitting && otherProgress > pitProgress && (otherProgress - pitProgress) < 0.06) {
             const dist = playerKart.mesh.position.distanceTo(other.mesh.position);
-            if (dist < 8.0) {
+            if (dist < 7.0) {
               const targetSpeed = other.isPlayer ? playerKart.speed : other.speed;
-              collisionSpeedLimit = Math.min(collisionSpeedLimit, targetSpeed * 0.95);
-              if (dist < 4.8) {
-                collisionSpeedLimit = 0.0; // Hard brake to avoid crash
+              collisionSpeedLimit = Math.min(collisionSpeedLimit, Math.max(3.5, targetSpeed * 0.95));
+              if (dist < 2.5) {
+                collisionSpeedLimit = 0.0; // Hard brake only if imminent bumper contact
               }
             }
           }

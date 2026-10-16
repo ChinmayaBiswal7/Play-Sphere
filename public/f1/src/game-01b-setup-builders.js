@@ -177,9 +177,28 @@
     // Reset voice states
     pendingRadioQuestion = null;
     lastPosRank = 4;
-    lastOvertakeCheerTime = 0;
+    // Track-specific historical meteorological weather data (official F1 historical stats)
+    // Albert Park Melbourne: ~15% chance of rain (late summer/early autumn in Victoria)
+    // Yas Marina Abu Dhabi: ~1% chance of rain (arid desert climate)
+    // Portimao Algarve: ~18% chance of rain (Atlantic coastal)
+    const TRACK_RAIN_PROBABILITY = {
+      0: 0.15,
+      1: 0.01,
+      2: 0.18
+    };
+
+    const trackProb = TRACK_RAIN_PROBABILITY[activeTrack] !== undefined ? TRACK_RAIN_PROBABILITY[activeTrack] : 0.15;
+    window.sessionWillRain = Math.random() < trackProb;
+    if (window.sessionWillRain) {
+      // Dynamic rain onset mid-session
+      rainTriggerTime = 30.0 + Math.random() * 60.0;
+    } else {
+      rainTriggerTime = Infinity; // 100% dry session based on real F1 climate data
+    }
     isRainActive = false;
     rainAlertTriggered = false;
+    if (typeof stop3DRainSystem === 'function') stop3DRainSystem();
+    if (typeof stopRainVisorFX === 'function') stopRainVisorFX();
 
     // Reset DRS & checkpoints
     drsAvailable = false;

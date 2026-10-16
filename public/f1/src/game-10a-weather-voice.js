@@ -1,18 +1,203 @@
+  // ════ 3D RAIN PARTICLE SYSTEM (Three.js LineSegments) ════
+  let rainMesh = null;
+  const RAIN_COUNT = 1800;
+  let rainPositions = null;
+  let rainVelocities = null;
+
+  function init3DRainSystem() {
+    if (rainMesh || !scene) return;
+    const geom = new THREE.BufferGeometry();
+    rainPositions = new Float32Array(RAIN_COUNT * 6); // 2 vertices per streak line
+    rainVelocities = new Float32Array(RAIN_COUNT);
+
+    const cPos = (camera && camera.position) ? camera.position : new THREE.Vector3();
+    for (let i = 0; i < RAIN_COUNT; i++) {
+      const x = cPos.x + (Math.random() - 0.5) * 90;
+      const y = Math.random() * 32;
+      const z = cPos.z + (Math.random() - 0.5) * 90;
+      const len = 1.3 + Math.random() * 0.9;
+      
+      const idx = i * 6;
+      rainPositions[idx]     = x;
+      rainPositions[idx + 1] = y;
+      rainPositions[idx + 2] = z;
+
+      rainPositions[idx + 3] = x - 0.12; // slight wind slant
+      rainPositions[idx + 4] = y - len;
+      rainPositions[idx + 5] = z - 0.08;
+
+      rainVelocities[i] = 55.0 + Math.random() * 25.0; // falling speed
+    }
+
+    geom.setAttribute('position', new THREE.BufferAttribute(rainPositions, 3));
+    const mat = new THREE.LineBasicMaterial({
+      color: 0x94a3b8,
+      transparent: true,
+      opacity: 0.65,
+      depthWrite: false
+    });
+
+    rainMesh = new THREE.LineSegments(geom, mat);
+    rainMesh.name = "f1_3d_rain";
+    scene.add(rainMesh);
+  }
+  window.init3DRainSystem = init3DRainSystem;
+
+  function update3DRain(delta) {
+    if (!rainMesh || !rainPositions || !camera) return;
+    const cPos = camera.position;
+    const posAttr = rainMesh.geometry.attributes.position;
+    const pos = posAttr.array;
+
+    for (let i = 0; i < RAIN_COUNT; i++) {
+      const idx = i * 6;
+      const speed = rainVelocities[i];
+      const dy = speed * delta;
+
+      pos[idx + 1] -= dy;
+      pos[idx + 4] -= dy;
+
+      // Wrap if fallen below ground level or drifted too far from camera
+      if (pos[idx + 4] < 0.05 || Math.abs(pos[idx] - cPos.x) > 55 || Math.abs(pos[idx + 2] - cPos.z) > 55) {
+        const nx = cPos.x + (Math.random() - 0.5) * 90;
+        const ny = 22.0 + Math.random() * 15.0;
+        const nz = cPos.z + (Math.random() - 0.5) * 90;
+        const len = 1.3 + Math.random() * 0.9;
+
+        pos[idx]     = nx;
+        pos[idx + 1] = ny;
+        pos[idx + 2] = nz;
+
+        pos[idx + 3] = nx - 0.12;
+        pos[idx + 4] = ny - len;
+        pos[idx + 5] = nz - 0.08;
+      }
+    }
+    posAttr.needsUpdate = true;
+  }
+  window.update3DRain = update3DRain;
+
+  function stop3DRainSystem() {
+    if (rainMesh && scene) {
+      scene.remove(rainMesh);
+      if (rainMesh.geometry) rainMesh.geometry.dispose();
+      rainMesh = null;
+    }
+  }
+  window.stop3DRainSystem = stop3DRainSystem;
+
+  // ════ SCREEN VISOR RAIN DROPLETS & BLUR EFFECT ════
+  const visorDrops = [];
+  let visorCanvas = null;
+  let visorCtx = null;
+
+  function startRainVisorFX() {
+    visorCanvas = document.getElementById('f1-rain-visor-canvas');
+    if (!visorCanvas) return;
+    visorCanvas.style.display = 'block';
+    visorCanvas.width = window.innerWidth;
+    visorCanvas.height = window.innerHeight;
+    visorCtx = visorCanvas.getContext('2d');
+    visorDrops.length = 0;
+
+    for (let i = 0; i < 65; i++) {
+      visorDrops.push({
+        x: Math.random() * visorCanvas.width,
+        y: Math.random() * visorCanvas.height,
+        r: 1.5 + Math.random() * 3.5,
+        len: 4 + Math.random() * 14,
+        speed: 120 + Math.random() * 220,
+        alpha: 0.25 + Math.random() * 0.55
+      });
+    }
+  }
+  window.startRainVisorFX = startRainVisorFX;
+
+  function updateRainVisorFX(delta) {
+    if (!visorCanvas || !visorCtx || !isRainActive) return;
+    if (visorCanvas.width !== window.innerWidth || visorCanvas.height !== window.innerHeight) {
+      visorCanvas.width = window.innerWidth;
+      visorCanvas.height = window.innerHeight;
+    }
+    visorCtx.clearRect(0, 0, visorCanvas.width, visorCanvas.height);
+
+    // Subtle edge blur vignette during rain
+    const grad = visorCtx.createRadialGradient(
+      visorCanvas.width / 2, visorCanvas.height / 2, visorCanvas.height * 0.35,
+      visorCanvas.width / 2, visorCanvas.height / 2, visorCanvas.height * 0.75
+    );
+    grad.addColorStop(0, 'rgba(15,23,42,0.0)');
+    grad.addColorStop(1, 'rgba(15,23,42,0.32)');
+    visorCtx.fillStyle = grad;
+    visorCtx.fillRect(0, 0, visorCanvas.width, visorCanvas.height);
+
+    // Falling / sliding droplets on visor
+    visorCtx.strokeStyle = 'rgba(224, 242, 254, 0.55)';
+    visorCtx.lineWidth = 1.8;
+    visorCtx.lineCap = 'round';
+
+    const pSpeed = (playerKart ? Math.abs(playerKart.speed) : 20.0);
+    const speedMult = 1.0 + (pSpeed / 30.0);
+
+    visorDrops.forEach(d => {
+      d.y += d.speed * speedMult * delta;
+      d.x += (Math.random() - 0.5) * 8.0 * delta;
+
+      if (d.y > visorCanvas.height + 20) {
+        d.y = -10;
+        d.x = Math.random() * visorCanvas.width;
+      }
+
+      visorCtx.beginPath();
+      visorCtx.moveTo(d.x, d.y - d.len);
+      visorCtx.lineTo(d.x, d.y);
+      visorCtx.stroke();
+
+      visorCtx.beginPath();
+      visorCtx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
+      visorCtx.fillStyle = `rgba(255, 255, 255, ${d.alpha})`;
+      visorCtx.fill();
+    });
+  }
+  window.updateRainVisorFX = updateRainVisorFX;
+
+  function stopRainVisorFX() {
+    visorCanvas = document.getElementById('f1-rain-visor-canvas');
+    if (visorCanvas) {
+      visorCanvas.style.display = 'none';
+      if (visorCtx) visorCtx.clearRect(0, 0, visorCanvas.width, visorCanvas.height);
+    }
+    visorDrops.length = 0;
+  }
+  window.stopRainVisorFX = stopRainVisorFX;
+
   function updateWeatherEvent(delta) {
     if (!isRaceActive) return;
     const elapsed = clock.getElapsedTime() - startTime;
-    if (elapsed > rainTriggerTime && !rainAlertTriggered) {
+    if (elapsed > rainTriggerTime && !rainAlertTriggered && window.sessionWillRain) {
       rainAlertTriggered = true;
       isRainActive = true;
       if (scene) {
-        scene.background = new THREE.Color(0x334155);
-        scene.fog.color = new THREE.Color(0x334155);
+        scene.background = new THREE.Color(0x1e293b);
+        if (scene.fog) {
+          scene.fog.color = new THREE.Color(0x1e293b);
+          scene.fog.near = 35;
+          scene.fog.far = 460;
+        }
         if (trackMesh) {
-          trackMesh.material.roughness = 0.1; // wet shiny track
+          trackMesh.material.roughness = 0.12; // wet shiny track
+          trackMesh.material.metalness = 0.35;
         }
       }
-      speakEngineerRadio("Rain is starting! Should we box for intermediate tyres?");
+      init3DRainSystem();
+      startRainVisorFX();
+      speakEngineerRadio("Rain is starting! Track is getting wet. Consider boxing for intermediate or wet tyres.", 80, true);
       pendingRadioQuestion = "rain";
+    }
+
+    if (isRainActive) {
+      update3DRain(delta);
+      updateRainVisorFX(delta);
     }
   }
 
@@ -55,16 +240,16 @@
           if (dot) { dot.style.background = '#eab308'; dot.style.boxShadow = '0 0 10px #eab308'; }
         }
         
-        // Auto-restart recognition if temporary listening window is active!
-        if (window.keepListeningForVoice) {
+        // Auto-restart recognition only if a multi-turn dialogue question is active
+        if (window.keepListeningForVoice && pendingRadioQuestion) {
           if (statusEl) statusEl.textContent = "WAITING FOR RESPONSE...";
           setTimeout(() => {
             try {
-              if (window.keepListeningForVoice && !isSpeechListening) {
+              if (window.keepListeningForVoice && pendingRadioQuestion && !isSpeechListening) {
                 recognition.start();
               }
             } catch(e) {}
-          }, 300);
+          }, 350);
         }
       };
 
@@ -86,6 +271,8 @@
 
       recognition.onresult = (event) => {
         if (!event.results || !event.results[0] || !event.results[0][0]) return;
+        // 🛡️ Drop audio picked up while speech synthesis is speaking out of speakers!
+        if (window.speechSynthesis && window.speechSynthesis.speaking) return;
         const text = event.results[0][0].transcript.toLowerCase();
         const drvVal = document.getElementById('voice-driver-val');
         if (drvVal) drvVal.textContent = `"${text}"`;
@@ -348,13 +535,30 @@
     utterance.pitch = 0.90; // Natural, clear pitwall radio voice tone
     utterance.rate = 1.02;
 
+    utterance.onstart = () => {
+      isRadioSpeaking = true;
+      try {
+        if (recognition && isSpeechListening) {
+          recognition.stop();
+          isSpeechListening = false;
+        }
+      } catch(e) {}
+    };
+
     utterance.onend = () => {
       activeUtterance = null;
       setTimeout(() => {
         isRadioSpeaking = false;
         currentRadioPriority = 0;
+        if (window.keepListeningForVoice && pendingRadioQuestion) {
+          try {
+            if (recognition && !isSpeechListening) {
+              recognition.start();
+            }
+          } catch(e) {}
+        }
         processRadioQueue();
-      }, 120); // Fast release pause (120ms) for fluent, connected speech flow
+      }, 150);
     };
 
     utterance.onerror = () => {
@@ -441,6 +645,14 @@
         if (typeof window.choosePitCompound === 'function') {
           window.choosePitCompound(comp);
         }
+        try { if (recognition) recognition.stop(); } catch(e) {}
+        setTimeout(() => {
+          const term = document.getElementById('hud-voice-terminal');
+          if (term && !window.keepListeningForVoice) {
+            term.classList.add('hidden');
+            term.style.display = 'none';
+          }
+        }, 1800);
         return;
       } else {
         // Did not catch valid compound yet; keep 15-second window alive so user can repeat
@@ -490,19 +702,43 @@
       activeCompound = comp;
       window.voiceSelectedCompound = comp;
       pendingPitStop = true;
+      pendingRadioQuestion = null;
+      window.keepListeningForVoice = false;
       speakEngineerRadio(`${comp.toUpperCase()} confirmed. Box box box.`, 70, true);
       
-      const btn = document.getElementById(`compound-${comp}`);
-      if (btn) selectTyreCompound(comp, btn);
+      if (typeof window.choosePitCompound === 'function') {
+        window.choosePitCompound(comp);
+      }
+      try { if (recognition) recognition.stop(); } catch(e) {}
+      setTimeout(() => {
+        const term = document.getElementById('hud-voice-terminal');
+        if (term && !window.keepListeningForVoice) {
+          term.classList.add('hidden');
+          term.style.display = 'none';
+        }
+      }, 1800);
       return;
     }
 
     // 5. Box / Pit command alone
     if (text.includes("box") || text.includes("pit")) {
+      pendingPitStop = true;
+      if (window.voiceSelectedCompound) {
+        speakEngineerRadio(`Copy, boxing this lap for ${window.voiceSelectedCompound.toUpperCase()} tyres.`, 70, true);
+        pendingRadioQuestion = null;
+        window.keepListeningForVoice = false;
+        try { if (recognition) recognition.stop(); } catch(e) {}
+        setTimeout(() => {
+          const term = document.getElementById('hud-voice-terminal');
+          if (term && !window.keepListeningForVoice) {
+            term.classList.add('hidden');
+            term.style.display = 'none';
+          }
+        }, 1800);
+        return;
+      }
       pendingRadioQuestion = 'tyres_choice';
-      pendingPitStop = true; // Schedule it!
       speakEngineerRadio("Copy, boxing this lap. Which compound?", 70, true);
-      // Keep mic listening for 15 seconds multi-turn dialogue window
       window.keepListeningForVoice = true;
       window.micTimeoutTimer = 15.0;
       return;
@@ -518,9 +754,20 @@
 
       activeCompound = comp;
       window.voiceSelectedCompound = comp;
+      pendingRadioQuestion = null;
+      window.keepListeningForVoice = false;
       speakEngineerRadio(`Copy, tyres changed to ${comp.toUpperCase()} compound.`, 30, true);
-      const btn = document.getElementById(`compound-${comp}`);
-      if (btn) selectTyreCompound(comp, btn);
+      if (typeof window.choosePitCompound === 'function') {
+        window.choosePitCompound(comp);
+      }
+      try { if (recognition) recognition.stop(); } catch(e) {}
+      setTimeout(() => {
+        const term = document.getElementById('hud-voice-terminal');
+        if (term && !window.keepListeningForVoice) {
+          term.classList.add('hidden');
+          term.style.display = 'none';
+        }
+      }, 1800);
       return;
     }
 

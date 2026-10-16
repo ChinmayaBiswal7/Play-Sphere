@@ -718,7 +718,10 @@
           racer.boostTime -= delta;
 
           spawnExhaustSmoke(racer.mesh.position, true);
+        }
 
+        if (isRainActive && racer.speed > 14.0 && Math.random() < 0.20 && typeof spawnRainSpray === 'function') {
+          spawnRainSpray(racer.mesh.position, racer.speed);
         }
 
         // 🏎️ AI ERS Battery & Overtake Mode logic
