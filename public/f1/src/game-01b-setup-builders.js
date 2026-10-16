@@ -452,14 +452,12 @@
     clock.getDelta();
     isRaceActive = true;
 
-    // Immediately show END SESSION button for Practice — don't wait for first timer tick
-    if (currentSessionIndex === 0) {
-      const epw = document.getElementById('end-practice-btn-wrap');
-      if (epw) epw.style.display = 'block';
+    // Immediately show END SESSION button for Practice / Qualifying — don't wait for first timer tick
+    if (typeof window.updateEndSessionBtnVisibility === 'function') {
+      window.updateEndSessionBtnVisibility();
     } else {
-      // Hide for qualifying / race
       const epw = document.getElementById('end-practice-btn-wrap');
-      if (epw) epw.style.display = 'none';
+      if (epw) epw.style.display = (currentSessionIndex === 0 || currentSessionIndex === 1) ? 'block' : 'none';
     }
 
     window.ApexAudio.startEngine();

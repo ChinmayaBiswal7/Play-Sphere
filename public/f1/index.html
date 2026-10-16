@@ -2203,7 +2203,7 @@
   </div>
 
   <!-- Broadcast Spectator HUD Overlay (Docked cleanly at bottom center in place of player MFD) -->
-  <div id="f1-spectator-hud" style="display:none; position:absolute; bottom:16px; left:50%; transform:translateX(-50%); z-index:9998; align-items:center; gap:14px; background:rgba(9,13,22,0.92); border:1.5px solid rgba(239,68,68,0.55); border-radius:8px; padding:8px 18px; box-shadow:0 8px 30px rgba(0,0,0,0.8), 0 0 20px rgba(239,68,68,0.25); backdrop-filter:blur(10px); font-family:'Orbitron',sans-serif; pointer-events:auto;">
+  <div id="f1-spectator-hud" style="display:none; position:fixed; bottom:16px; left:50%; transform:translateX(-50%); z-index:99999; align-items:center; gap:14px; background:rgba(9,13,22,0.92); border:1.5px solid rgba(239,68,68,0.55); border-radius:8px; padding:8px 18px; box-shadow:0 8px 30px rgba(0,0,0,0.8), 0 0 20px rgba(239,68,68,0.25); backdrop-filter:blur(10px); font-family:'Orbitron',sans-serif; pointer-events:auto;">
     <div style="display:flex; align-items:center; gap:6px;">
       <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#ef4444; box-shadow:0 0 8px #ef4444; animation:pulse 1s infinite alternate;"></span>
       <span style="font-size:0.68rem; font-weight:900; color:#ef4444; letter-spacing:1px;">LIVE ONBOARD</span>
@@ -2227,7 +2227,7 @@
       <button onclick="window.cycleSpectatorCar(-1)" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:4px; padding:5px 9px; font-family:inherit; font-size:0.65rem; font-weight:700; cursor:pointer;">◀ PREV</button>
       <button onclick="window.cycleSpectatorCar(1)" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:4px; padding:5px 9px; font-family:inherit; font-size:0.65rem; font-weight:700; cursor:pointer;">NEXT ▶</button>
     </div>
-    <button onclick="window.retireAndEndSession()" style="background:linear-gradient(135deg, #e10600 0%, #b91c1c 100%); border:none; color:#fff; border-radius:4px; padding:6px 12px; font-family:inherit; font-size:0.66rem; font-weight:800; cursor:pointer; letter-spacing:0.5px; box-shadow:0 0 10px rgba(225,6,0,0.4);">
+    <button id="btn-spectator-end-session" onclick="window.retireAndEndSession()" style="background:linear-gradient(135deg, #e10600 0%, #b91c1c 100%); border:none; color:#fff; border-radius:4px; padding:6px 12px; font-family:inherit; font-size:0.66rem; font-weight:800; cursor:pointer; letter-spacing:0.5px; box-shadow:0 0 10px rgba(225,6,0,0.4); pointer-events:auto; position:relative; z-index:100000;">
       🏁 END SESSION
     </button>
   </div>
@@ -3448,7 +3448,7 @@
   <!-- Static F1 team, driver, and AI personality data (must load before game.js) -->
   <script src="f1-data.js?v=6.0"></script>
   <!-- Main physics and game logic -->
-  <script src="game.js?v=7.6"></script>
+  <script src="game.js?v=7.7"></script>
   <script src="f1_pvp.js"></script>
   <script src="/js/ps_multiplayer.js"></script>
   <script>

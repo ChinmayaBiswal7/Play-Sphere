@@ -775,7 +775,11 @@
           car.allowedToFinishQualifyingLap = false;
           if (car.isPlayer) {
             speakEngineerRadio("Qualifying checker flag! Return to garage.", 90);
-            finishQualifying();
+            if (typeof window.finishQualifying === 'function') {
+              window.finishQualifying();
+            } else if (typeof finishQualifying === 'function') {
+              finishQualifying();
+            }
           }
         }
       } else {
@@ -1115,9 +1119,21 @@
       // Session is over (DNF/Retired). Player can spectate remaining session, end session, or restart.
       if (towBtn) towBtn.style.display = 'none';
       if (spectateBtn) spectateBtn.style.display = 'inline-block';
-      if (endBtn) endBtn.style.display = 'inline-block';
+      if (endBtn) {
+        endBtn.style.display = 'inline-block';
+        if (currentSessionIndex === 0) {
+          endBtn.innerHTML = "🏁 END PRACTICE SESSION";
+        } else if (currentSessionIndex === 1) {
+          endBtn.innerHTML = "🏁 END QUALIFYING & RESULTS";
+        } else {
+          endBtn.innerHTML = "🏁 RETIRE FROM RACE";
+        }
+      }
       if (restartBtn) restartBtn.style.display = 'inline-block';
     }
+
+    const epw = document.getElementById('end-practice-btn-wrap');
+    if (epw) epw.style.display = 'none';
 
     if (playerKart) {
       playerKart.speed = 0.0;
@@ -1144,6 +1160,8 @@
     window.spectatorModeActive = true;
     const overlay = document.getElementById('f1-terminal-damage-overlay');
     if (overlay) overlay.style.display = 'none';
+    const epw = document.getElementById('end-practice-btn-wrap');
+    if (epw) epw.style.display = 'none';
 
     if (playerKart) {
       playerKart.speed = 0.0;
@@ -1160,6 +1178,16 @@
     const specHud = document.getElementById('f1-spectator-hud');
     if (specHud) {
       specHud.style.display = 'flex';
+      const specEndBtn = document.getElementById('btn-spectator-end-session');
+      if (specEndBtn) {
+        if (currentSessionIndex === 0) {
+          specEndBtn.innerHTML = "🏁 END PRACTICE";
+        } else if (currentSessionIndex === 1) {
+          specEndBtn.innerHTML = "🏁 END QUALIFYING";
+        } else {
+          specEndBtn.innerHTML = "🏁 END RACE";
+        }
+      }
     }
     const speedo = document.querySelector('.speedo-console');
     if (speedo) speedo.style.display = 'none';
@@ -1215,7 +1243,7 @@
     if (speedEl) speedEl.innerText = Math.round(Math.abs(car.speed || 0) * 3.6);
   }
 
-  window.retireAndEndSession = () => {
+  function retireAndEndSession() {
     if (window.ApexAudio) window.ApexAudio.playClick();
     const overlay = document.getElementById('f1-terminal-damage-overlay');
     if (overlay) overlay.style.display = 'none';
@@ -1223,8 +1251,18 @@
     if (specHud) specHud.style.display = 'none';
     const speedo = document.querySelector('.speedo-console');
     if (speedo) speedo.style.display = 'flex';
+    const epw = document.getElementById('end-practice-btn-wrap');
+    if (epw) epw.style.display = 'none';
+    const epm = document.getElementById('end-practice-modal');
+    if (epm) epm.style.display = 'none';
+    const settingsOverlay = document.getElementById('f1-settings-overlay');
+    if (settingsOverlay) {
+      settingsOverlay.style.display = 'none';
+      settingsOverlay.classList.add('hidden');
+    }
 
     window.spectatorModeActive = false;
+    window.isGamePaused = false;
 
     if (playerKart) {
       playerKart.speed = 0.0;
@@ -1233,12 +1271,24 @@
       playerKart.finished = true;
     }
 
-    if (typeof showFinalResultsUI === 'function') {
-      showFinalResultsUI();
+    if (currentSessionIndex === 0) {
+      // Practice session: finish and return to workstation
+      window.endPracticeSession();
+    } else if (currentSessionIndex === 1) {
+      // Qualifying session: compute grid and show qualifying classification
+      window.finishQualifying();
     } else {
-      transitionToPostRaceState("RESULTS");
+      // Grand Prix race: trigger finish sequence / results
+      if (typeof skipPostRaceWatch === 'function') {
+        skipPostRaceWatch();
+      } else if (typeof showFinalResultsUI === 'function') {
+        showFinalResultsUI();
+      } else if (typeof transitionToPostRaceState === 'function') {
+        transitionToPostRaceState("RESULTS");
+      }
     }
-  };
+  }
+  window.retireAndEndSession = retireAndEndSession;
 
   window.towToGarageAndRepair = () => {
     const overlay = document.getElementById('f1-terminal-damage-overlay');
@@ -2525,7 +2575,7 @@
     setupMenuPreview();
   };
 
-  window.finishPractice = () => {
+  function finishPractice() {
     // Called when session timer hits 0. Just notify; do NOT auto-return to workstation.
     // Player must press END SESSION to confirm.
     if (currentSessionIndex !== 0) return;
@@ -2545,10 +2595,11 @@
       if (hudLayer) hudLayer.appendChild(notice);
       setTimeout(() => { if (notice.parentNode) notice.parentNode.removeChild(notice); }, 8000);
     }
-  };
+  }
+  window.finishPractice = finishPractice;
 
   // Called from the END SESSION button confirm flow
-  window.endPracticeSession = () => {
+  function endPracticeSession() {
     if (currentSessionIndex === 1) {
       // Hide modal
       const modal = document.getElementById('end-practice-modal');
@@ -2608,10 +2659,11 @@
       if (epw) epw.style.display = 'none';
       showCareerWorkstation(true); // return from session
     });
-  };
+  }
+  window.endPracticeSession = endPracticeSession;
 
   // Show END SESSION confirmation modal
-  window.confirmEndPractice = () => {
+  function confirmEndPractice() {
     if (currentSessionIndex !== 0 && currentSessionIndex !== 1) return;
     const isQual = (currentSessionIndex === 1);
     
@@ -2635,7 +2687,8 @@
     
     const modal = document.getElementById('end-practice-modal');
     if (modal) modal.style.display = 'flex';
-  };
+  }
+  window.confirmEndPractice = confirmEndPractice;
 
   window.cancelEndPractice = () => {
     const modal = document.getElementById('end-practice-modal');
@@ -2689,20 +2742,55 @@
   }
 
   // Show END SESSION button visibility based on session
-  window.updateEndSessionBtnVisibility = () => {
+  function updateEndSessionBtnVisibility() {
     const epw = document.getElementById('end-practice-btn-wrap');
     if (!epw) return;
-    epw.style.display = (currentSessionIndex === 0 && isRaceActive) ? 'block' : 'none';
-  };
+    const shouldShow = (currentSessionIndex === 0 || currentSessionIndex === 1) && isRaceActive && !window.spectatorModeActive;
+    epw.style.display = shouldShow ? 'block' : 'none';
+    if (shouldShow) {
+      const btn = document.getElementById('endPracticeSessionBtn');
+      if (btn) {
+        if (currentSessionIndex === 1) {
+          btn.innerHTML = "&#9632; END QUALIFYING SESSION";
+        } else {
+          btn.innerHTML = "&#9632; END PRACTICE SESSION";
+        }
+      }
+    }
+  }
+  window.updateEndSessionBtnVisibility = updateEndSessionBtnVisibility;
 
-  window.finishQualifying = () => {
+  function finishQualifying() {
     isRaceActive = false;
-    window.ApexAudio.stopEngine();
+    if (window.ApexAudio) {
+      if (typeof window.ApexAudio.resetAudio === 'function') {
+        window.ApexAudio.resetAudio();
+      } else {
+        window.ApexAudio.stopEngine();
+      }
+    }
     if (animationFrameId) cancelAnimationFrame(animationFrameId);
 
-    // Hide any banner warning
-    const overlay = document.getElementById('f1-starting-lights-overlay');
-    if (overlay) overlay.style.display = 'none';
+    // Hide any banner warnings or overlays
+    const lightsOverlay = document.getElementById('f1-starting-lights-overlay');
+    if (lightsOverlay) lightsOverlay.style.display = 'none';
+    const termOverlay = document.getElementById('f1-terminal-damage-overlay');
+    if (termOverlay) termOverlay.style.display = 'none';
+    const specHud = document.getElementById('f1-spectator-hud');
+    if (specHud) specHud.style.display = 'none';
+    const epw = document.getElementById('end-practice-btn-wrap');
+    if (epw) epw.style.display = 'none';
+    const epm = document.getElementById('end-practice-modal');
+    if (epm) epm.style.display = 'none';
+    const settingsOverlay = document.getElementById('f1-settings-overlay');
+    if (settingsOverlay) {
+      settingsOverlay.style.display = 'none';
+      settingsOverlay.classList.add('hidden');
+    }
+    window.spectatorModeActive = false;
+    window.isGamePaused = false;
+
+    if (!racers || racers.length === 0) return;
 
     // Verify and/or simulate qualifying times
     racers.forEach(r => {
@@ -2749,22 +2837,30 @@
     window.startingGrid = [...sorted];
 
     showQualifyingResultsUI(sorted);
-  };
+  }
+  window.finishQualifying = finishQualifying;
 
   function showQualifyingResultsUI(sorted) {
-    // Create results popup
+    // Remove existing popup if present
+    const existing = document.getElementById('qualifying-results-popup');
+    if (existing) existing.remove();
+
+    // Create results popup with fixed viewport positioning and top z-index
     const popup = document.createElement('div');
     popup.id = 'qualifying-results-popup';
-    popup.style.cssText = 'position:absolute; inset:0; background:rgba(10,15,26,0.95); z-index:20000; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#fff; font-family:"Orbitron",sans-serif; padding:20px;';
+    popup.style.cssText = 'position:fixed; inset:0; background:rgba(10,15,26,0.95); z-index:99999; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#fff; font-family:"Orbitron",sans-serif; padding:20px; pointer-events:auto;';
     
     const playerIdx = sorted.findIndex(r => r.isPlayer);
+    const playerPos = (playerIdx >= 0) ? (playerIdx + 1) : sorted.length;
     
     let rowsHTML = '';
     sorted.forEach((r, idx) => {
       const isPlayer = r.isPlayer ? 'color: var(--neon-cyan); font-weight: bold; background: rgba(6,182,212,0.08);' : '';
       const team = F1_TEAMS[r.teamIndex || 0] || { name: 'Unknown', color: '#fff' };
+      const avatarStr = r.avatar || '🏎️';
+      const nameStr = r.name || 'Driver';
       
-      let lapTimeStr = 'NO TIME';
+      let lapTimeStr = 'NO TIME (DNF)';
       let gapStr = '—';
       
       if (r.hasQualifyingLap) {
@@ -2775,7 +2871,7 @@
         
         if (idx === 0) {
           gapStr = 'POLE';
-        } else if (sorted[0].hasQualifyingLap) {
+        } else if (sorted[0] && sorted[0].hasQualifyingLap) {
           const gap = r.bestQualifyingLap - sorted[0].bestQualifyingLap;
           gapStr = `+${gap.toFixed(3)}`;
         }
@@ -2785,9 +2881,9 @@
         <div style="display:flex; justify-content:space-between; align-items:center; width:100%; max-width:500px; padding:10px 12px; border-bottom:1px solid rgba(255,255,255,0.08); font-size:0.8rem; box-sizing:border-box; ${isPlayer}">
           <div style="display:flex; align-items:center; gap:12px;">
             <span style="color:rgba(255,255,255,0.4); width:30px; font-weight:bold;">P${idx+1}</span>
-            <span>${r.avatar}</span>
+            <span>${avatarStr}</span>
             <div style="display:flex; flex-direction:column;">
-              <span style="font-weight:bold;">${r.name}</span>
+              <span style="font-weight:bold;">${nameStr}</span>
               <span style="font-size:0.65rem; color:${team.color};">${team.name.toUpperCase()}</span>
             </div>
           </div>
@@ -2803,28 +2899,38 @@
       <div style="text-align:center; margin-bottom:20px;">
         <span style="color:var(--neon-pink); font-size:0.8rem; letter-spacing:2px;">SESSION COMPLETED</span>
         <h2 style="font-size:1.8rem; margin:4px 0 0 0;">QUALIFYING RESULTS</h2>
-        <h3 style="color: var(--neon-cyan); margin: 6px 0 0 0; font-size: 1.1rem; text-shadow: 0 0 10px rgba(6,182,212,0.5); letter-spacing: 1px;">STARTING P${playerIdx + 1}</h3>
+        <h3 style="color: var(--neon-cyan); margin: 6px 0 0 0; font-size: 1.1rem; text-shadow: 0 0 10px rgba(6,182,212,0.5); letter-spacing: 1px;">STARTING P${playerPos}</h3>
       </div>
       <div style="width:100%; max-width:550px; background:rgba(30,41,59,0.5); padding:20px; border-radius:12px; border:1px solid rgba(255,255,255,0.1); max-height:60vh; overflow-y:auto; margin-bottom:20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
         ${rowsHTML}
       </div>
-      <button id="btn-qual-continue" class="ws-launch-btn" style="padding:12px 35px; font-size:0.9rem;">CONTINUE TO GRAND PRIX ➔</button>
+      <button id="btn-qual-continue" class="ws-launch-btn" style="padding:12px 35px; font-size:0.9rem; cursor:pointer;">CONTINUE TO GRAND PRIX ➔</button>
     `;
 
     document.body.appendChild(popup);
     
     document.getElementById('btn-qual-continue').onclick = () => {
+      if (window.ApexAudio) window.ApexAudio.playClick();
       popup.remove();
       completedSessions[1] = true;
       sessionStatuses[1] = 'COMPLETED';
       sessionStatuses[2] = 'AVAILABLE'; // Unlock Main Race!
       currentSessionIndex = 2; // Unlock Main Race!
       
-      document.getElementById('hud-layer').style.display = 'none';
+      const hudLayer = document.getElementById('hud-layer');
+      if (hudLayer) hudLayer.style.display = 'none';
       const leadCard = document.getElementById('f1-leaderboard-card');
       if (leadCard) leadCard.style.display = 'none';
+      const specHud = document.getElementById('f1-spectator-hud');
+      if (specHud) specHud.style.display = 'none';
+      const termOverlay = document.getElementById('f1-terminal-damage-overlay');
+      if (termOverlay) termOverlay.style.display = 'none';
+      const epw = document.getElementById('end-practice-btn-wrap');
+      if (epw) epw.style.display = 'none';
       
-      showCareerWorkstation(true); // return from qualifying
+      window.triggerLoadingScreen("QUALIFYING COMPLETED", "Returning to HQ...", () => {
+        showCareerWorkstation(true); // return from qualifying
+      });
     };
   }
 
@@ -3803,14 +3909,12 @@
     clock.getDelta();
     isRaceActive = true;
 
-    // Immediately show END SESSION button for Practice — don't wait for first timer tick
-    if (currentSessionIndex === 0) {
-      const epw = document.getElementById('end-practice-btn-wrap');
-      if (epw) epw.style.display = 'block';
+    // Immediately show END SESSION button for Practice / Qualifying — don't wait for first timer tick
+    if (typeof window.updateEndSessionBtnVisibility === 'function') {
+      window.updateEndSessionBtnVisibility();
     } else {
-      // Hide for qualifying / race
       const epw = document.getElementById('end-practice-btn-wrap');
-      if (epw) epw.style.display = 'none';
+      if (epw) epw.style.display = (currentSessionIndex === 0 || currentSessionIndex === 1) ? 'block' : 'none';
     }
 
     window.ApexAudio.startEngine();
@@ -7844,10 +7948,9 @@
         hudTimeEl.innerText = `${sessionLabel}: ${pad(minutes)}:${pad(seconds)}`;
       }
 
-      // Show END SESSION button during practice
-      if (currentSessionIndex === 0) {
-        const epw = document.getElementById('end-practice-btn-wrap');
-        if (epw && epw.style.display === 'none') epw.style.display = 'block';
+      // Show END SESSION button during practice / qualifying
+      if (typeof window.updateEndSessionBtnVisibility === 'function') {
+        window.updateEndSessionBtnVisibility();
       }
 
       // Check session expiry — only fire ONCE when timer first hits 0
@@ -7855,12 +7958,20 @@
         window._sessionExpiredFired = true;
         if (currentSessionIndex === 0) {
           // Practice: just notify, keep driving
-          finishPractice();
+          if (typeof window.finishPractice === 'function') {
+            window.finishPractice();
+          } else if (typeof finishPractice === 'function') {
+            finishPractice();
+          }
         } else {
           // Qualifying: check if any car is still on a timed lap
           const activeTimedCars = racers.filter(r => r.isOnTimedLap);
           if (activeTimedCars.length === 0) {
-            finishQualifying();
+            if (typeof window.finishQualifying === 'function') {
+              window.finishQualifying();
+            } else if (typeof finishQualifying === 'function') {
+              finishQualifying();
+            }
           } else {
             // Show HUD banner warning
             const warningEl = document.getElementById('lights-banner-title');

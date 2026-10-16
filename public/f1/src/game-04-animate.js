@@ -311,10 +311,9 @@
         hudTimeEl.innerText = `${sessionLabel}: ${pad(minutes)}:${pad(seconds)}`;
       }
 
-      // Show END SESSION button during practice
-      if (currentSessionIndex === 0) {
-        const epw = document.getElementById('end-practice-btn-wrap');
-        if (epw && epw.style.display === 'none') epw.style.display = 'block';
+      // Show END SESSION button during practice / qualifying
+      if (typeof window.updateEndSessionBtnVisibility === 'function') {
+        window.updateEndSessionBtnVisibility();
       }
 
       // Check session expiry — only fire ONCE when timer first hits 0
@@ -322,12 +321,20 @@
         window._sessionExpiredFired = true;
         if (currentSessionIndex === 0) {
           // Practice: just notify, keep driving
-          finishPractice();
+          if (typeof window.finishPractice === 'function') {
+            window.finishPractice();
+          } else if (typeof finishPractice === 'function') {
+            finishPractice();
+          }
         } else {
           // Qualifying: check if any car is still on a timed lap
           const activeTimedCars = racers.filter(r => r.isOnTimedLap);
           if (activeTimedCars.length === 0) {
-            finishQualifying();
+            if (typeof window.finishQualifying === 'function') {
+              window.finishQualifying();
+            } else if (typeof finishQualifying === 'function') {
+              finishQualifying();
+            }
           } else {
             // Show HUD banner warning
             const warningEl = document.getElementById('lights-banner-title');
