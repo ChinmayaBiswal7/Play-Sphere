@@ -305,7 +305,7 @@
 
   function detachPart(racer, partName) {
     let partMesh = null;
-    if (racer.mesh) {
+    if (racer && racer.mesh) {
       racer.mesh.traverse(child => {
         if (child.name === partName && child.visible) {
           partMesh = child;
@@ -314,40 +314,79 @@
     }
     if (partMesh) {
       partMesh.visible = false;
-      spawnDebris(partMesh, racer.mesh.position, racer.speed);
+      const cPos = (racer.mesh && racer.mesh.position) ? racer.mesh.position : (racer.position || new THREE.Vector3());
+      spawnDebris(partMesh, cPos, racer.speed || 0);
     }
   }
 
   function spawnDebris(sourceMesh, carPos, carSpeed) {
-    if (window.particlesEnabled === false) return;
-    const geom = sourceMesh.geometry.clone();
-    const mat = sourceMesh.material.clone();
-    const mesh = new THREE.Mesh(geom, mat);
-    
-    mesh.position.copy(carPos);
-    mesh.position.y += 0.4;
-    scene.add(mesh);
-    
-    const angle = Math.random() * Math.PI * 2;
-    const speed = Math.max(5.0, carSpeed * 0.4);
-    const vel = new THREE.Vector3(
-      Math.sin(angle) * 3.0,
-      5.0 + Math.random() * 5.0,
-      -Math.cos(angle) * speed
-    );
-    
-    const rotVel = new THREE.Vector3(
-      (Math.random() - 0.5) * 8,
-      (Math.random() - 0.5) * 8,
-      (Math.random() - 0.5) * 8
-    );
-    
-    debrisObjects.push({
-      mesh: mesh,
-      velocity: vel,
-      angularVelocity: rotVel,
-      life: 3.5
-    });
+    if (window.particlesEnabled === false || !sourceMesh) return;
+    try {
+      const meshesToSpawn = [];
+      if (sourceMesh.isMesh && sourceMesh.geometry) {
+        meshesToSpawn.push(sourceMesh);
+      } else if (sourceMesh.traverse) {
+        sourceMesh.traverse(child => {
+          if (child.isMesh && child.geometry && meshesToSpawn.length < 4) {
+            meshesToSpawn.push(child);
+          }
+        });
+      }
+
+      if (meshesToSpawn.length === 0) {
+        // Fallback: generic carbon aero debris
+        const fallbackGeo = new THREE.BoxGeometry(0.5, 0.08, 0.25);
+        const fallbackMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8 });
+        const fallbackMesh = new THREE.Mesh(fallbackGeo, fallbackMat);
+        meshesToSpawn.push(fallbackMesh);
+      }
+
+      meshesToSpawn.forEach(src => {
+        try {
+          if (!src.geometry) return;
+          const geom = src.geometry.clone();
+          let mat;
+          if (Array.isArray(src.material)) {
+            mat = src.material.map(m => (m && m.clone ? m.clone() : m));
+          } else if (src.material && src.material.clone) {
+            mat = src.material.clone();
+          } else {
+            mat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8 });
+          }
+          const mesh = new THREE.Mesh(geom, mat);
+
+          const spawnPos = carPos ? carPos.clone() : new THREE.Vector3();
+          mesh.position.copy(spawnPos);
+          mesh.position.y += 0.4 + Math.random() * 0.2;
+          scene.add(mesh);
+
+          const angle = Math.random() * Math.PI * 2;
+          const speed = Math.max(5.0, (carSpeed || 20) * 0.4);
+          const vel = new THREE.Vector3(
+            Math.sin(angle) * (3.0 + Math.random() * 3.0),
+            4.0 + Math.random() * 4.0,
+            -Math.cos(angle) * speed
+          );
+
+          const rotVel = new THREE.Vector3(
+            (Math.random() - 0.5) * 8,
+            (Math.random() - 0.5) * 8,
+            (Math.random() - 0.5) * 8
+          );
+
+          debrisObjects.push({
+            mesh: mesh,
+            velocity: vel,
+            angularVelocity: rotVel,
+            life: 3.5
+          });
+        } catch (innerErr) {
+          console.warn("Debris piece clone failed:", innerErr);
+        }
+      });
+    } catch (err) {
+      console.warn("spawnDebris failed gracefully:", err);
+    }
   }
 
   function updateDebris(delta) {

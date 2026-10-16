@@ -2048,9 +2048,12 @@
 
 
   // ════ CAREER WORKSTATION LOGIC ════
+  let wsAnimateRunning = false;
   function showCareerWorkstation(isReturnFromSession) {
-    document.getElementById('main-landing-screen').classList.add('hidden');
-    document.getElementById('f1-workstation-overlay').classList.remove('hidden');
+    const landing = document.getElementById('main-landing-screen');
+    if (landing) landing.classList.add('hidden');
+    const ws = document.getElementById('f1-workstation-overlay');
+    if (ws) ws.classList.remove('hidden');
 
     // Only reset weekend state if this is a fresh entry (not returning from a session mid-weekend)
     if (!isReturnFromSession) {
@@ -2059,71 +2062,123 @@
       completedSessions = [false, false, false];
       sessionStatuses = ['AVAILABLE', 'LOCKED', 'LOCKED'];
       window.practiceResults = null;
-      document.getElementById('btn-reveal-car').innerText = "REVEAL TEAM CAR";
-      document.getElementById('btn-reveal-car').style.display = "block";
+      const revBtn = document.getElementById('btn-reveal-car');
+      if (revBtn) {
+        revBtn.innerText = "REVEAL TEAM CAR";
+        revBtn.style.display = "block";
+      }
+    } else {
+      isCarRevealed = true;
+      const revBtn = document.getElementById('btn-reveal-car');
+      if (revBtn) revBtn.style.display = "none";
     }
 
-    document.getElementById('ws-team-label-text').innerText = F1_TEAMS[selectedTeamIndex].name;
-    document.getElementById('ws-resource-points').innerText = resourcePoints;
+    const team = F1_TEAMS[selectedTeamIndex || 0] || F1_TEAMS[0];
+    const teamLabel = document.getElementById('ws-team-label-text');
+    if (teamLabel) teamLabel.innerText = team.name;
+    const rpEl = document.getElementById('ws-resource-points');
+    if (rpEl) rpEl.innerText = resourcePoints;
 
-    // Hide end-session button when back at workstation
+    // Hide in-session HUD overlays when back at workstation
     const epw = document.getElementById('end-practice-btn-wrap');
     if (epw) epw.style.display = 'none';
+    const specHud = document.getElementById('f1-spectator-hud');
+    if (specHud) specHud.style.display = 'none';
 
     updateWorkstationSessionsList();
     updateRndUpgradesPanel();
-    if (!isReturnFromSession) setupWorkstationTurntable();
+    setupWorkstationTurntable(isReturnFromSession);
   }
 
-  function setupWorkstationTurntable() {
+  function setupWorkstationTurntable(isReturnFromSession) {
     const container = document.getElementById('ws-car-turntable-container');
     if (!container) return;
 
-    wsScene = new THREE.Scene();
-    wsCamera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
-    wsCamera.position.set(0, 1.8, 5.5);
-    wsCamera.lookAt(0, 0.4, 0);
+    const w = container.clientWidth > 0 ? container.clientWidth : 450;
+    const h = container.clientHeight > 0 ? container.clientHeight : 320;
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
-    wsScene.add(ambientLight);
+    if (!wsScene) {
+      wsScene = new THREE.Scene();
+      wsCamera = new THREE.PerspectiveCamera(45, w / h, 0.1, 100);
+      wsCamera.position.set(0, 1.8, 5.5);
+      wsCamera.lookAt(0, 0.4, 0);
 
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
-    dirLight.position.set(5, 8, 2);
-    wsScene.add(dirLight);
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+      wsScene.add(ambientLight);
 
-    // Covered sheet mesh (Grey cylinder covering the car)
-    const coverGeo = new THREE.CylinderGeometry(1.2, 1.4, 2.2, 16);
-    const coverMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.8, metalness: 0.1 });
-    wsCoverMesh = new THREE.Mesh(coverGeo, coverMat);
-    wsCoverMesh.rotation.x = Math.PI / 2;
-    wsCoverMesh.position.y = 0.5;
-    wsScene.add(wsCoverMesh);
+      const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+      dirLight.position.set(5, 8, 2);
+      wsScene.add(dirLight);
 
-    // Real kart underneath
-    const team = F1_TEAMS[selectedTeamIndex];
-    wsKartMesh = createProceduralKartMesh(parseInt(team.color.replace('#', ''), 16));
-    wsKartMesh.position.y = 0.0;
-    wsScene.add(wsKartMesh);
+      // Covered sheet mesh (Grey cylinder covering the car)
+      const coverGeo = new THREE.CylinderGeometry(1.2, 1.4, 2.2, 16);
+      const coverMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.8, metalness: 0.1 });
+      wsCoverMesh = new THREE.Mesh(coverGeo, coverMat);
+      wsCoverMesh.rotation.x = Math.PI / 2;
+      wsCoverMesh.position.y = 0.5;
+      wsScene.add(wsCoverMesh);
 
-    // Hide kart initially
-    wsKartMesh.visible = false;
-
-    renderer.setSize(container.clientWidth, container.clientHeight);
-    container.appendChild(renderer.domElement);
-
-    function wsAnimate() {
-      if (document.getElementById('f1-workstation-overlay').classList.contains('hidden') || isRaceActive) return;
-      requestAnimationFrame(wsAnimate);
-
-      if (wsCoverMesh && wsCoverMesh.visible) {
-        wsCoverMesh.rotation.y += 0.005;
-      }
-      if (wsKartMesh && wsKartMesh.visible) {
-        wsKartMesh.rotation.y += 0.008;
-      }
-      renderer.render(wsScene, wsCamera);
+      const team = F1_TEAMS[selectedTeamIndex || 0] || F1_TEAMS[0];
+      wsKartMesh = createProceduralKartMesh(parseInt(team.color.replace('#', ''), 16));
+      wsKartMesh.position.y = 0.0;
+      wsScene.add(wsKartMesh);
+    } else {
+      if (wsKartMesh) wsScene.remove(wsKartMesh);
+      const team = F1_TEAMS[selectedTeamIndex || 0] || F1_TEAMS[0];
+      wsKartMesh = createProceduralKartMesh(parseInt(team.color.replace('#', ''), 16));
+      wsKartMesh.position.y = 0.0;
+      wsScene.add(wsKartMesh);
     }
-    wsAnimate();
+
+    if (isReturnFromSession || isCarRevealed) {
+      if (wsCoverMesh) wsCoverMesh.visible = false;
+      if (wsKartMesh) wsKartMesh.visible = true;
+      const revBtn = document.getElementById('btn-reveal-car');
+      if (revBtn) revBtn.style.display = "none";
+    } else {
+      if (wsCoverMesh) {
+        wsCoverMesh.visible = true;
+        wsCoverMesh.scale.set(1, 1, 1);
+      }
+      if (wsKartMesh) wsKartMesh.visible = false;
+      const revBtn = document.getElementById('btn-reveal-car');
+      if (revBtn) revBtn.style.display = "block";
+    }
+
+    if (renderer) {
+      renderer.setSize(w, h);
+      if (renderer.domElement.parentElement !== container) {
+        container.appendChild(renderer.domElement);
+      }
+    }
+
+    if (wsCamera) {
+      wsCamera.aspect = w / h;
+      wsCamera.updateProjectionMatrix();
+    }
+
+    if (!wsAnimateRunning) {
+      wsAnimateRunning = true;
+      function wsAnimate() {
+        const wsOverlay = document.getElementById('f1-workstation-overlay');
+        if (!wsOverlay || wsOverlay.classList.contains('hidden') || isRaceActive) {
+          wsAnimateRunning = false;
+          return;
+        }
+        requestAnimationFrame(wsAnimate);
+
+        if (wsCoverMesh && wsCoverMesh.visible) {
+          wsCoverMesh.rotation.y += 0.005;
+        }
+        if (wsKartMesh && wsKartMesh.visible) {
+          wsKartMesh.rotation.y += 0.008;
+        }
+        if (renderer && wsScene && wsCamera) {
+          renderer.render(wsScene, wsCamera);
+        }
+      }
+      wsAnimate();
+    }
   }
 
   window.revealCarAction = () => {
@@ -2543,9 +2598,14 @@
     resetSessionLocalState();
 
     window.triggerLoadingScreen("PRACTICE COMPLETED", "Returning to HQ...", () => {
-      document.getElementById('hud-layer').style.display = 'none';
+      const hudLayer = document.getElementById('hud-layer');
+      if (hudLayer) hudLayer.style.display = 'none';
       const leadCard = document.getElementById('f1-leaderboard-card');
       if (leadCard) leadCard.style.display = 'none';
+      const specHud = document.getElementById('f1-spectator-hud');
+      if (specHud) specHud.style.display = 'none';
+      const epw = document.getElementById('end-practice-btn-wrap');
+      if (epw) epw.style.display = 'none';
       showCareerWorkstation(true); // return from session
     });
   };
@@ -2561,12 +2621,12 @@
     const epmEl = document.getElementById('epm-best-lap');
     if (epmEl) epmEl.innerText = blStr;
     
-    const modalTitle = document.querySelector('#end-practice-modal h2');
+    const modalTitle = document.getElementById('epm-title') || document.querySelector('#end-practice-modal h2');
     if (modalTitle) {
       modalTitle.innerText = isQual ? "RETIRE FROM QUALIFYING?" : "END PRACTICE?";
     }
     
-    const modalDesc = document.querySelector('#end-practice-modal div:nth-child(4)');
+    const modalDesc = document.getElementById('epm-desc') || document.querySelector('#end-practice-modal div:nth-child(4)');
     if (modalDesc) {
       modalDesc.innerHTML = isQual 
         ? 'Qualifying will be marked <span style="color:#10b981;">COMPLETED</span> and your best lap will decide your starting grid position.'
@@ -12902,7 +12962,7 @@ window.AIBrainManager = {
 
   function detachPart(racer, partName) {
     let partMesh = null;
-    if (racer.mesh) {
+    if (racer && racer.mesh) {
       racer.mesh.traverse(child => {
         if (child.name === partName && child.visible) {
           partMesh = child;
@@ -12911,40 +12971,79 @@ window.AIBrainManager = {
     }
     if (partMesh) {
       partMesh.visible = false;
-      spawnDebris(partMesh, racer.mesh.position, racer.speed);
+      const cPos = (racer.mesh && racer.mesh.position) ? racer.mesh.position : (racer.position || new THREE.Vector3());
+      spawnDebris(partMesh, cPos, racer.speed || 0);
     }
   }
 
   function spawnDebris(sourceMesh, carPos, carSpeed) {
-    if (window.particlesEnabled === false) return;
-    const geom = sourceMesh.geometry.clone();
-    const mat = sourceMesh.material.clone();
-    const mesh = new THREE.Mesh(geom, mat);
-    
-    mesh.position.copy(carPos);
-    mesh.position.y += 0.4;
-    scene.add(mesh);
-    
-    const angle = Math.random() * Math.PI * 2;
-    const speed = Math.max(5.0, carSpeed * 0.4);
-    const vel = new THREE.Vector3(
-      Math.sin(angle) * 3.0,
-      5.0 + Math.random() * 5.0,
-      -Math.cos(angle) * speed
-    );
-    
-    const rotVel = new THREE.Vector3(
-      (Math.random() - 0.5) * 8,
-      (Math.random() - 0.5) * 8,
-      (Math.random() - 0.5) * 8
-    );
-    
-    debrisObjects.push({
-      mesh: mesh,
-      velocity: vel,
-      angularVelocity: rotVel,
-      life: 3.5
-    });
+    if (window.particlesEnabled === false || !sourceMesh) return;
+    try {
+      const meshesToSpawn = [];
+      if (sourceMesh.isMesh && sourceMesh.geometry) {
+        meshesToSpawn.push(sourceMesh);
+      } else if (sourceMesh.traverse) {
+        sourceMesh.traverse(child => {
+          if (child.isMesh && child.geometry && meshesToSpawn.length < 4) {
+            meshesToSpawn.push(child);
+          }
+        });
+      }
+
+      if (meshesToSpawn.length === 0) {
+        // Fallback: generic carbon aero debris
+        const fallbackGeo = new THREE.BoxGeometry(0.5, 0.08, 0.25);
+        const fallbackMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8 });
+        const fallbackMesh = new THREE.Mesh(fallbackGeo, fallbackMat);
+        meshesToSpawn.push(fallbackMesh);
+      }
+
+      meshesToSpawn.forEach(src => {
+        try {
+          if (!src.geometry) return;
+          const geom = src.geometry.clone();
+          let mat;
+          if (Array.isArray(src.material)) {
+            mat = src.material.map(m => (m && m.clone ? m.clone() : m));
+          } else if (src.material && src.material.clone) {
+            mat = src.material.clone();
+          } else {
+            mat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8 });
+          }
+          const mesh = new THREE.Mesh(geom, mat);
+
+          const spawnPos = carPos ? carPos.clone() : new THREE.Vector3();
+          mesh.position.copy(spawnPos);
+          mesh.position.y += 0.4 + Math.random() * 0.2;
+          scene.add(mesh);
+
+          const angle = Math.random() * Math.PI * 2;
+          const speed = Math.max(5.0, (carSpeed || 20) * 0.4);
+          const vel = new THREE.Vector3(
+            Math.sin(angle) * (3.0 + Math.random() * 3.0),
+            4.0 + Math.random() * 4.0,
+            -Math.cos(angle) * speed
+          );
+
+          const rotVel = new THREE.Vector3(
+            (Math.random() - 0.5) * 8,
+            (Math.random() - 0.5) * 8,
+            (Math.random() - 0.5) * 8
+          );
+
+          debrisObjects.push({
+            mesh: mesh,
+            velocity: vel,
+            angularVelocity: rotVel,
+            life: 3.5
+          });
+        } catch (innerErr) {
+          console.warn("Debris piece clone failed:", innerErr);
+        }
+      });
+    } catch (err) {
+      console.warn("spawnDebris failed gracefully:", err);
+    }
   }
 
   function updateDebris(delta) {

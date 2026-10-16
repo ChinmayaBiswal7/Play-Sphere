@@ -2233,9 +2233,9 @@
   <div id="end-practice-modal" style="display:none; position:absolute; inset:0; background:rgba(5,8,18,0.88); z-index:99000; align-items:center; justify-content:center; font-family:'Orbitron',sans-serif; pointer-events:auto;">
     <div style="background:rgba(11,14,23,0.98); border:1px solid rgba(255,255,255,0.14); border-radius:6px; padding:32px 36px; width:340px; color:#fff; box-shadow:0 20px 60px rgba(0,0,0,0.8);">
       <div style="font-size:0.6rem; color:var(--neon-pink); letter-spacing:2px; margin-bottom:8px;">SESSION CONTROL</div>
-      <h2 style="margin:0 0 16px; font-size:1.25rem;">END PRACTICE?</h2>
+      <h2 id="epm-title" style="margin:0 0 16px; font-size:1.25rem;">END PRACTICE?</h2>
       <div style="font-size:0.7rem; color:rgba(255,255,255,0.5); font-family:'Inter',sans-serif; line-height:1.5; margin-bottom:8px;">Best lap: <span id="epm-best-lap" style="color:#facc15;">--:--.---</span></div>
-      <div style="font-size:0.7rem; color:rgba(255,255,255,0.5); font-family:'Inter',sans-serif; line-height:1.5; margin-bottom:24px;">Practice will be marked <span style="color:#10b981;">COMPLETED</span> and Qualifying will unlock.</div>
+      <div id="epm-desc" style="font-size:0.7rem; color:rgba(255,255,255,0.5); font-family:'Inter',sans-serif; line-height:1.5; margin-bottom:24px;">Practice will be marked <span style="color:#10b981;">COMPLETED</span> and Qualifying will unlock.</div>
       <div style="display:flex; gap:12px;">
         <button onclick="window.cancelEndPractice()" style="flex:1; font-family:'Orbitron',sans-serif; font-size:0.65rem; font-weight:700; letter-spacing:1px; padding:10px; background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.7); border:1px solid rgba(255,255,255,0.15); border-radius:3px; cursor:pointer;">CANCEL</button>
         <button onclick="window.endPracticeSession()" style="flex:2; font-family:'Orbitron',sans-serif; font-size:0.65rem; font-weight:800; letter-spacing:1px; padding:10px; background:rgba(239,68,68,0.2); color:#ef4444; border:1px solid rgba(239,68,68,0.5); border-radius:3px; cursor:pointer;">END SESSION</button>
@@ -3445,7 +3445,7 @@
   <!-- Static F1 team, driver, and AI personality data (must load before game.js) -->
   <script src="f1-data.js?v=6.0"></script>
   <!-- Main physics and game logic -->
-  <script src="game.js?v=7.4"></script>
+  <script src="game.js?v=7.5"></script>
   <script src="f1_pvp.js"></script>
   <script src="/js/ps_multiplayer.js"></script>
   <script>
