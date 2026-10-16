@@ -21,8 +21,8 @@
       skyBottomColor = 0xbae6fd;
     } else if (activeTrack === 4) {
       // Track 4: Circuit de Monaco (Vibrant Côte d'Azur Mediterranean blue)
-      skyTopColor = 0x0284c7;
-      skyBottomColor = 0xdbeafe;
+      skyTopColor = 0x0369a1;
+      skyBottomColor = 0x38bdf8;
     }
 
     const skyMat = new THREE.ShaderMaterial({
@@ -30,16 +30,15 @@
         topColor: { value: new THREE.Color(skyTopColor) },
         bottomColor: { value: new THREE.Color(skyBottomColor) }
       },
-      vertexShader: `varying vec3 vWorldPosition;
+      vertexShader: `varying vec3 vLocalPosition;
         void main() {
-          vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-          vWorldPosition = worldPosition.xyz;
+          vLocalPosition = position;
           gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
         }`,
-      fragmentShader: `varying vec3 vWorldPosition;
+      fragmentShader: `varying vec3 vLocalPosition;
         uniform vec3 topColor; uniform vec3 bottomColor;
         void main() {
-          float h = normalize(vWorldPosition).y;
+          float h = normalize(vLocalPosition).y;
           gl_FragColor = vec4(mix(bottomColor, topColor, max(h, 0.0)), 1.0);
         }`,
       side: THREE.BackSide,
@@ -106,7 +105,12 @@
         name.includes("grandstand") ||
         name.includes("billboard") ||
         name.includes("post") ||
-        parentName.includes("scenery")
+        name.includes("bldg") ||
+        name.includes("building") ||
+        name.includes("tower") ||
+        parentName.includes("scenery") ||
+        parentName.includes("city") ||
+        parentName.includes("monaco")
       ) {
         validateTrackObjectPlacement(object);
       }

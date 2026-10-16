@@ -69,16 +69,16 @@
       hemiSky = 0xbae6fd;
       hemiGround = 0x1e3a8a;
     } else if (activeTrack === 4) {
-      // Circuit de Monaco: Bright Côte d'Azur Mediterranean sunshine & azure sea light
-      skyTopColor = 0x0284c7;
-      skyBottomColor = 0xdbeafe;
-      fogColor = 0xdbeafe;
-      fogNear = 750;
-      fogFar = 3500;
-      ambientColor = 0xfffbeb;
-      lightColor = 0xfff7ed;
+      // Circuit de Monaco: Vibrant Côte d'Azur Mediterranean blue sky & crisp Riviera sunshine
+      skyTopColor = 0x0369a1;
+      skyBottomColor = 0x38bdf8;
+      fogColor = 0x38bdf8;
+      fogNear = 900;
+      fogFar = 4200;
+      ambientColor = 0xf0f9ff;
+      lightColor = 0xffffff;
       hemiSky = 0x38bdf8;
-      hemiGround = 0x0f172a;
+      hemiGround = 0x1e293b;
     }
 
     // 3D Scene Setup
@@ -1945,9 +1945,9 @@
         }
       }
 
-      // B. EAST SKYLINE: St Kilda Road & Queens Road High-Rise Avenue (Flanking Turns 1 - 6)
+      // B. EAST SKYLINE: St Kilda Road & Queens Road High-Rise Avenue (Safely Flanking Turns 1 - 6)
       for (let b = 0; b < 52; b++) {
-        const bx = 900 + (b % 4) * 55;
+        const bx = 1180 + (b % 4) * 55;
         const bz = -400 + (b * 26) + (b % 3) * 12;
         const bw = 30 + (b % 4) * 7;
         const bd = 28 + (b % 3) * 8;
@@ -1967,7 +1967,7 @@
       // C. SOUTH SKYLINE: St Kilda Beachside Hotel & Apartment Towers
       for (let b = 0; b < 28; b++) {
         const bx = -450 + (b * 44);
-        const bz = 1050 + (b % 3) * 60;
+        const bz = 1250 + (b % 3) * 60;
         const bw = 32 + (b % 3) * 8;
         const bd = 26 + (b % 4) * 8;
         const bh = 48 + (b % 5) * 22;

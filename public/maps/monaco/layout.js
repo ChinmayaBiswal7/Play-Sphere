@@ -17,9 +17,9 @@ window.MONACO = {
   roadWidth: 14.5,
   pitWidth: 6,
   theme: "riviera",
-  skyTopColor: 0x0284c7,
-  skyBottomColor: 0xbae6fd,
-  fogColor: 0xdbeafe,
+  skyTopColor: 0x0369a1,
+  skyBottomColor: 0x38bdf8,
+  fogColor: 0x38bdf8,
   startGrid: 16,
   drsZones: [
     { detect: 0.94, activate: 0.01 } // Main Straight DRS Zone

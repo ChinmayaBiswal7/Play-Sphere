@@ -442,16 +442,21 @@
       overlay.style.display = 'flex';
     }
     
+    window.raceLaunchGraceTimer = 3.5; // collision grace during restart
     racers.forEach((racer, idx) => {
-      const tPos = 0.0 - idx * 0.012;
-      racer.currentOffset = (tPos + 1.0) % 1.0;
+      const myGridIdx = window.startingGrid ? window.startingGrid.findIndex(g => g.name === racer.name) : idx;
+      const slotIdx = myGridIdx !== -1 ? myGridIdx : idx;
+      const slot = window.getGridSlotTransform(slotIdx);
+      racer.currentOffset = slot.progress;
+      racer.sideOffset = slot.sideOffset;
+      if (racer.mesh) {
+        racer.mesh.position.copy(slot.position);
+        racer.mesh.rotation.y = slot.heading;
+      }
       racer.speed = 0.0;
       racer.spinoutTime = 0.0;
       racer.spinAngle = 0.0;
       racer.spinoutVelocity = 0.0;
-      
-      const side = idx % 2 === 0 ? 1.8 : -1.8;
-      racer.sideOffset = side;
       
       if (racer.isPlayer) {
         currentGear = 0; // Neutral
