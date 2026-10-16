@@ -87,6 +87,13 @@ function initSocket() {
     if (layout) updateLayout(layout);
   });
 
+  socket.on('f1-telemetry', (data) => {
+    if (currentLayout !== 'f1' && currentLayout !== 'racing') {
+      updateLayout('f1');
+    }
+    updateF1WheelDisplay(data);
+  });
+
   socket.on('trigger-vibration', (data) => {
     const pattern = (data && data.pattern) ? data.pattern : 50;
     triggerHaptic(pattern);
@@ -132,13 +139,19 @@ function onJoinSuccess(code, initialLayout) {
   sessionStorage.setItem('activeRoomCode', code);
   
   if (ui.roomDisplay) ui.roomDisplay.innerText = `ROOM: ${code}`;
+  const f1RoomPill = document.getElementById('f1-room-pill');
+  if (f1RoomPill) f1RoomPill.innerText = `ROOM: ${code}`;
+
   if (ui.loader) {
     ui.loader.classList.add('hidden');
     ui.loader.style.display = 'none';
   }
   updateStatus('CONNECTED', '#10b981');
   
-  if (initialLayout) {
+  const gameParam = getUrlParam('game');
+  if (gameParam === 'f1' || initialLayout === 'f1' || initialLayout === 'racing') {
+    updateLayout('f1');
+  } else if (initialLayout) {
     updateLayout(initialLayout);
   } else {
     updateLayout('dashboard');
@@ -162,6 +175,9 @@ function updateLayout(layout) {
   currentLayout = layout;
   triggerHaptic([25, 15, 25]);
 
+  const isF1 = (layout === 'f1' || layout === 'racing');
+  updateF1LayoutUI(isF1);
+
   if (!ui.roleText) return;
 
   if (layout === 'bowling') {
@@ -170,8 +186,8 @@ function updateLayout(layout) {
   } else if (layout === 'batting') {
     ui.roleText.innerText = 'BATTING MODE';
     ui.roleText.style.color = '#10b981';
-  } else if (layout === 'racing' || layout === 'f1') {
-    ui.roleText.innerText = 'F1 RACING MODE';
+  } else if (isF1) {
+    ui.roleText.innerText = 'F1 STEERING WHEEL';
     ui.roleText.style.color = '#ef4444';
   } else {
     ui.roleText.innerText = 'DASHBOARD CONTROLLER';
@@ -476,6 +492,472 @@ function sendInput(type, payload) {
   if (!payload || typeof payload !== 'object') return;
   if (typeof type !== 'string') return;
   socket.emit('controller-input', { type, ...payload, roomCode });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FORMULA 1 VIRTUAL STEERING WHEEL COCKPIT CONTROLLER
+// ═══════════════════════════════════════════════════════════════
+const f1State = {
+  initialized: false,
+  gyroEnabled: true,
+  gyroZeroAngle: 0.0,
+  rawAngle: 0.0,
+  steer: 0.0,
+  throttle: 0.0,
+  brake: 0.0,
+  gearUp: false,
+  gearDown: false,
+  drs: false,
+  pitLimiter: false,
+  radio: false,
+  overtake: false,
+  drift: false,
+  status: false,
+  lastEmit: 0,
+  iosPermissionRequested: false
+};
+
+function updateF1LayoutUI(active) {
+  const f1Container = document.getElementById('f1-wheel-container');
+  const gamepadContainer = document.querySelector('.gamepad-container');
+  if (active) {
+    document.body.classList.add('f1-mode-active');
+    if (gamepadContainer) gamepadContainer.style.display = 'none';
+    if (f1Container) f1Container.style.display = 'flex';
+    initF1WheelController();
+    const pill = document.getElementById('f1-room-pill');
+    if (pill) pill.innerText = `ROOM: ${roomCode || '----'}`;
+  } else {
+    document.body.classList.remove('f1-mode-active');
+    if (gamepadContainer) gamepadContainer.style.display = '';
+    if (f1Container) f1Container.style.display = 'none';
+  }
+}
+
+function emitF1InputThrottled() {
+  const now = performance.now();
+  if (now - f1State.lastEmit < 16) return; // ~60fps
+  f1State.lastEmit = now;
+
+  sendInput('f1-input', {
+    steer: Number(f1State.steer.toFixed(3)),
+    throttle: f1State.throttle,
+    brake: f1State.brake,
+    gearUp: f1State.gearUp,
+    gearDown: f1State.gearDown,
+    drs: f1State.drs,
+    pitLimiter: f1State.pitLimiter,
+    radio: f1State.radio,
+    overtake: f1State.overtake,
+    drift: f1State.drift,
+    status: f1State.status
+  });
+}
+
+function handleDeviceOrientation(e) {
+  if (!f1State.gyroEnabled || currentLayout !== 'f1') return;
+
+  // In landscape mode: tilt left/right corresponds to gamma or beta depending on orientation angle.
+  let tilt = 0;
+  const orientAngle = (screen.orientation && screen.orientation.angle !== undefined)
+    ? screen.orientation.angle
+    : (window.orientation !== undefined ? window.orientation : 90);
+
+  if (orientAngle === 90) {
+    tilt = (e.beta !== null) ? e.beta : 0;
+  } else if (orientAngle === -90 || orientAngle === 270) {
+    tilt = (e.beta !== null) ? -e.beta : 0;
+  } else {
+    tilt = (e.gamma !== null) ? e.gamma : 0;
+  }
+
+  f1State.rawAngle = tilt;
+  const delta = tilt - f1State.gyroZeroAngle;
+
+  // Deadzone of 1.5° to avoid hand jitter
+  const deadzone = 1.5;
+  const maxTilt = 26.0; // 26° is full lock
+
+  let steerVal = 0.0;
+  if (Math.abs(delta) > deadzone) {
+    const sign = Math.sign(delta);
+    const mag = Math.min(1.0, (Math.abs(delta) - deadzone) / (maxTilt - deadzone));
+    steerVal = sign * Math.pow(mag, 1.15); // gentle progressive curve
+  }
+
+  f1State.steer = steerVal;
+
+  // Update needle on G-meter horizon
+  const needle = document.getElementById('f1-horizon-needle');
+  if (needle) {
+    const leftPercent = 50 + (steerVal * 44);
+    needle.style.left = `${leftPercent}%`;
+  }
+  const degEl = document.getElementById('f1-steer-degrees');
+  if (degEl) {
+    const degRound = Math.round(delta);
+    const arrow = degRound < -1 ? "◀ " : (degRound > 1 ? " ▶" : "");
+    degEl.innerText = `${arrow}${Math.abs(degRound)}°`;
+    degEl.style.color = (Math.abs(degRound) > 18) ? "#facc15" : "#06b6d4";
+  }
+
+  emitF1InputThrottled();
+}
+
+function initF1WheelController() {
+  if (f1State.initialized) return;
+  f1State.initialized = true;
+
+  // 1. Gyroscope Orientation Listener & iOS Permission Check
+  if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+    const permBtn = document.getElementById('f1-ios-gyro-btn');
+    if (permBtn && !f1State.iosPermissionRequested) {
+      permBtn.style.display = 'inline-block';
+      permBtn.onclick = () => {
+        DeviceOrientationEvent.requestPermission().then(res => {
+          if (res === 'granted') {
+            permBtn.style.display = 'none';
+            f1State.iosPermissionRequested = true;
+            window.addEventListener('deviceorientation', handleDeviceOrientation, true);
+            triggerHaptic([30, 20]);
+          }
+        }).catch(console.warn);
+      };
+    }
+  } else {
+    window.addEventListener('deviceorientation', handleDeviceOrientation, true);
+  }
+
+  // 2. Calibration & Gyro Toggle Buttons
+  const calibBtn = document.getElementById('f1-btn-calibrate');
+  if (calibBtn) {
+    calibBtn.onclick = () => {
+      f1State.gyroZeroAngle = f1State.rawAngle;
+      triggerHaptic([40, 20, 40]);
+      calibBtn.innerText = "✓ ZEROED";
+      setTimeout(() => { calibBtn.innerText = "🎯 CALIB"; }, 1200);
+    };
+  }
+
+  const gyroToggleBtn = document.getElementById('f1-btn-gyro-toggle');
+  const touchSteerZone = document.getElementById('f1-touch-steer-zone');
+  if (gyroToggleBtn) {
+    gyroToggleBtn.onclick = () => {
+      f1State.gyroEnabled = !f1State.gyroEnabled;
+      triggerHaptic(25);
+      gyroToggleBtn.classList.toggle('active', f1State.gyroEnabled);
+      gyroToggleBtn.innerText = f1State.gyroEnabled ? "🔄 GYRO ON" : "👆 TOUCH ON";
+      if (touchSteerZone) {
+        touchSteerZone.style.display = f1State.gyroEnabled ? "none" : "block";
+      }
+      const gyroStatusTxt = document.getElementById('f1-gyro-status-txt');
+      if (gyroStatusTxt) {
+        gyroStatusTxt.innerText = f1State.gyroEnabled 
+          ? "GYRO ACTIVE: Hold phone like a steering wheel & tilt to steer" 
+          : "TOUCH ACTIVE: Drag touch pad to steer left/right";
+      }
+      if (!f1State.gyroEnabled) {
+        f1State.steer = 0.0;
+        emitF1InputThrottled();
+      }
+    };
+  }
+
+  // 3. Fallback Touch Steering Pad
+  const touchTrack = document.getElementById('f1-touch-steer-track');
+  const touchKnob = document.getElementById('f1-touch-steer-knob');
+  if (touchTrack) {
+    let isTouchingTrack = false;
+    const updateTouchSteer = (clientX) => {
+      const rect = touchTrack.getBoundingClientRect();
+      const relX = (clientX - rect.left) / rect.width; // 0 to 1
+      const steer = Math.max(-1.0, Math.min(1.0, (relX - 0.5) * 2.0));
+      f1State.steer = steer;
+      if (touchKnob) {
+        touchKnob.style.transform = `translateX(${steer * (rect.width * 0.35)}px)`;
+      }
+      emitF1InputThrottled();
+    };
+    touchTrack.addEventListener('touchstart', (e) => {
+      isTouchingTrack = true;
+      updateTouchSteer(e.touches[0].clientX);
+    }, { passive: false });
+    touchTrack.addEventListener('touchmove', (e) => {
+      if (isTouchingTrack) {
+        e.preventDefault();
+        updateTouchSteer(e.touches[0].clientX);
+      }
+    }, { passive: false });
+    const endTouchTrack = () => {
+      if (isTouchingTrack) {
+        isTouchingTrack = false;
+        f1State.steer = 0.0;
+        if (touchKnob) touchKnob.style.transform = 'none';
+        emitF1InputThrottled();
+      }
+    };
+    touchTrack.addEventListener('touchend', endTouchTrack);
+    touchTrack.addEventListener('touchcancel', endTouchTrack);
+  }
+
+  // 4. Gear Shift Paddles (Large, Tactile, Haptic Feedback)
+  const btnGearUp = document.getElementById('f1-btn-gear-up');
+  if (btnGearUp) {
+    const onGearUp = (e) => {
+      e.preventDefault();
+      f1State.gearUp = true;
+      btnGearUp.classList.add('active');
+      triggerHaptic([45, 20]);
+      emitF1InputThrottled();
+      setTimeout(() => {
+        f1State.gearUp = false;
+        btnGearUp.classList.remove('active');
+        emitF1InputThrottled();
+      }, 120);
+    };
+    btnGearUp.addEventListener('touchstart', onGearUp, { passive: false });
+    btnGearUp.addEventListener('mousedown', onGearUp);
+  }
+
+  const btnGearDown = document.getElementById('f1-btn-gear-down');
+  if (btnGearDown) {
+    const onGearDown = (e) => {
+      e.preventDefault();
+      f1State.gearDown = true;
+      btnGearDown.classList.add('active');
+      triggerHaptic([45, 20]);
+      emitF1InputThrottled();
+      setTimeout(() => {
+        f1State.gearDown = false;
+        btnGearDown.classList.remove('active');
+        emitF1InputThrottled();
+      }, 120);
+    };
+    btnGearDown.addEventListener('touchstart', onGearDown, { passive: false });
+    btnGearDown.addEventListener('mousedown', onGearDown);
+  }
+
+  // 5. Throttle & Brake Giant Touch Triggers
+  const btnThrottle = document.getElementById('f1-btn-throttle');
+  if (btnThrottle) {
+    const onThrottleDown = (e) => {
+      e.preventDefault();
+      f1State.throttle = 1.0;
+      btnThrottle.classList.add('active');
+      triggerHaptic(20);
+      emitF1InputThrottled();
+    };
+    const onThrottleUp = (e) => {
+      e.preventDefault();
+      f1State.throttle = 0.0;
+      btnThrottle.classList.remove('active');
+      emitF1InputThrottled();
+    };
+    btnThrottle.addEventListener('touchstart', onThrottleDown, { passive: false });
+    btnThrottle.addEventListener('touchend', onThrottleUp, { passive: false });
+    btnThrottle.addEventListener('touchcancel', onThrottleUp, { passive: false });
+    btnThrottle.addEventListener('mousedown', onThrottleDown);
+    btnThrottle.addEventListener('mouseup', onThrottleUp);
+  }
+
+  const btnBrake = document.getElementById('f1-btn-brake');
+  if (btnBrake) {
+    const onBrakeDown = (e) => {
+      e.preventDefault();
+      f1State.brake = 1.0;
+      btnBrake.classList.add('active');
+      triggerHaptic(20);
+      emitF1InputThrottled();
+    };
+    const onBrakeUp = (e) => {
+      e.preventDefault();
+      f1State.brake = 0.0;
+      btnBrake.classList.remove('active');
+      emitF1InputThrottled();
+    };
+    btnBrake.addEventListener('touchstart', onBrakeDown, { passive: false });
+    btnBrake.addEventListener('touchend', onBrakeUp, { passive: false });
+    btnBrake.addEventListener('touchcancel', onBrakeUp, { passive: false });
+    btnBrake.addEventListener('mousedown', onBrakeDown);
+    btnBrake.addEventListener('mouseup', onBrakeUp);
+  }
+
+  // 6. Utility Functions for Buttons
+  function bindF1Toggle(id, stateKey, rumbleTime) {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.onclick = (e) => {
+      e.preventDefault();
+      f1State[stateKey] = !f1State[stateKey];
+      btn.classList.toggle('active', f1State[stateKey]);
+      triggerHaptic(rumbleTime);
+      emitF1InputThrottled();
+    };
+  }
+
+  function bindF1Momentary(id, stateKey, rumbleTime) {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    const onDown = (e) => {
+      e.preventDefault();
+      f1State[stateKey] = true;
+      btn.classList.add('active');
+      triggerHaptic(rumbleTime);
+      emitF1InputThrottled();
+    };
+    const onUp = (e) => {
+      e.preventDefault();
+      f1State[stateKey] = false;
+      btn.classList.remove('active');
+      emitF1InputThrottled();
+    };
+    btn.addEventListener('touchstart', onDown, { passive: false });
+    btn.addEventListener('touchend', onUp, { passive: false });
+    btn.addEventListener('touchcancel', onUp, { passive: false });
+    btn.addEventListener('mousedown', onDown);
+    btn.addEventListener('mouseup', onUp);
+  }
+
+  bindF1Toggle('f1-btn-drs', 'drs', 35);
+  bindF1Toggle('f1-btn-pit', 'pitLimiter', 35);
+  bindF1Momentary('f1-btn-radio', 'radio', 25);
+  bindF1Momentary('f1-btn-ot', 'overtake', 50);
+  bindF1Momentary('f1-btn-drift', 'drift', 20);
+
+  const btnStatus = document.getElementById('f1-btn-status');
+  if (btnStatus) {
+    btnStatus.onclick = () => {
+      f1State.status = true;
+      btnStatus.classList.add('active');
+      triggerHaptic(20);
+      emitF1InputThrottled();
+      setTimeout(() => {
+        f1State.status = false;
+        btnStatus.classList.remove('active');
+        emitF1InputThrottled();
+      }, 150);
+    };
+  }
+
+  const btnEsc = document.getElementById('f1-btn-esc');
+  if (btnEsc) {
+    btnEsc.onclick = () => {
+      triggerHaptic(25);
+      sendInput('f1-input', { pause: true });
+      setTimeout(() => { sendInput('f1-input', { pause: false }); }, 150);
+    };
+  }
+
+  // Periodic heartbeat emit
+  setInterval(() => {
+    if (currentLayout === 'f1') {
+      emitF1InputThrottled();
+    }
+  }, 100);
+}
+
+// 7. Live Telemetry & 15-Shift LED Display Updater
+function updateF1WheelDisplay(data) {
+  if (!data) return;
+
+  // Gear
+  const gearEl = document.getElementById('f1-dash-gear');
+  if (gearEl && data.gear !== undefined) {
+    gearEl.innerText = data.gear;
+    if (data.gear === 'R') gearEl.style.color = '#ef4444';
+    else if (data.gear === 'N') gearEl.style.color = '#eab308';
+    else gearEl.style.color = '#06b6d4';
+  }
+
+  // RPM
+  const rpmEl = document.getElementById('f1-dash-rpm');
+  if (rpmEl && data.rpm !== undefined) {
+    rpmEl.innerText = Number(data.rpm).toLocaleString();
+  }
+
+  // Speed
+  const speedEl = document.getElementById('f1-dash-speed');
+  if (speedEl && data.speed !== undefined) {
+    speedEl.innerText = data.speed;
+  }
+
+  // ERS Battery Bar
+  const ersBar = document.getElementById('f1-ers-bar');
+  const ersVal = document.getElementById('f1-dash-ers-val');
+  if (ersBar && data.ers !== undefined) {
+    ersBar.style.width = `${Math.min(100, Math.max(0, data.ers))}%`;
+  }
+  if (ersVal && data.ers !== undefined) {
+    ersVal.innerText = `${Math.round(data.ers)}%`;
+  }
+
+  // Lap count
+  const lapEl = document.getElementById('f1-dash-lap');
+  if (lapEl && data.lap !== undefined) {
+    lapEl.innerText = `LAP ${data.lap}/${data.maxLaps || 5}`;
+  }
+
+  // Delta
+  const deltaEl = document.getElementById('f1-dash-delta');
+  if (deltaEl && data.delta !== undefined) {
+    deltaEl.innerText = data.delta;
+    deltaEl.style.color = String(data.delta).startsWith('+') ? '#ef4444' : '#10b981';
+  }
+
+  // DRS status pill
+  const drsPill = document.getElementById('f1-dash-drs-pill');
+  if (drsPill) {
+    drsPill.classList.toggle('active-drs', !!data.drsAct || !!data.drsAvail);
+    if (data.drsAct) {
+      drsPill.style.color = '#06b6d4';
+      drsPill.innerText = 'DRS OPEN';
+    } else if (data.drsAvail) {
+      drsPill.style.color = '#10b981';
+      drsPill.innerText = 'DRS AVAIL';
+    } else {
+      drsPill.innerText = 'DRS';
+    }
+  }
+
+  // Pit Limiter pill
+  const pitPill = document.getElementById('f1-dash-pit-pill');
+  if (pitPill) {
+    pitPill.classList.toggle('active-pit', !!data.pitLim);
+  }
+
+  // 15 Shift LED Rev Lights
+  const rpm = Number(data.rpm) || 0;
+  const isRevLimit = rpm >= 13200;
+
+  for (let i = 0; i < 5; i++) {
+    const led = document.getElementById(`f1-led-${i}`);
+    if (led) {
+      const threshold = 7500 + i * 600;
+      const on = rpm >= threshold;
+      led.classList.toggle('lit-green', on);
+      led.classList.toggle('flashing', isRevLimit);
+    }
+  }
+
+  for (let i = 0; i < 5; i++) {
+    const led = document.getElementById(`f1-led-${5 + i}`);
+    if (led) {
+      const threshold = 10500 + i * 400;
+      const on = rpm >= threshold;
+      led.classList.toggle('lit-red', on);
+      led.classList.toggle('flashing', isRevLimit);
+    }
+  }
+
+  for (let i = 0; i < 5; i++) {
+    const led = document.getElementById(`f1-led-${10 + i}`);
+    if (led) {
+      const threshold = 12500 + i * 150;
+      const on = rpm >= threshold;
+      led.classList.toggle('lit-purple', on);
+      led.classList.toggle('flashing', isRevLimit);
+    }
+  }
 }
 
 // ── STARTUP ────────────────────────────────────────────────────

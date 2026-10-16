@@ -3355,7 +3355,7 @@
     }
 
     if (code && qrImg) {
-      const phoneUrl = `${window.location.origin}/controller.html?room=${code}`;
+      const phoneUrl = `${window.location.origin}/controller.html?room=${code}&game=f1`;
       qrImg.src = `/qrcode?text=${encodeURIComponent(phoneUrl)}`;
       qrImg.onload = () => {
         if (qrSpinner) qrSpinner.style.display = 'none';
@@ -3366,11 +3366,15 @@
       if (qrImg) qrImg.style.display = 'none';
     }
 
+    if (window.socket && window.socket.connected) {
+      window.socket.emit('layout-change', { layout: 'f1' });
+    }
+
     if (window.controllerConnected) {
       if (dot) { dot.style.background = '#10b981'; dot.style.boxShadow = '0 0 10px #10b981'; }
-      if (txt) { txt.innerText = 'Phone controller connected!'; txt.style.color = '#10b981'; }
+      if (txt) { txt.innerText = 'F1 Steering Wheel connected!'; txt.style.color = '#10b981'; }
       const footerTxt = document.getElementById('f1-footer-controller-text');
-      if (footerTxt) footerTxt.innerText = 'CONTROLLER: CONNECTED';
+      if (footerTxt) footerTxt.innerText = 'WHEEL: CONNECTED';
     } else {
       if (dot) { dot.style.background = '#ef4444'; dot.style.boxShadow = '0 0 8px #ef4444'; }
       if (txt) { txt.innerText = 'No phone controller linked'; txt.style.color = 'rgba(255,255,255,0.7)'; }
@@ -8078,6 +8082,34 @@
         progressEl.innerText = `LAP: ${Math.min(maxLaps, currentLap)} / ${maxLaps}`;
       }
     }
+
+    // 📡 Broadcast live telemetry to connected phone controller (20Hz)
+    const _now = performance.now();
+    if (!window._lastF1TelemetrySend || (_now - window._lastF1TelemetrySend) > 50) {
+      window._lastF1TelemetrySend = _now;
+      const sock = window.socket || (window.parent && window.parent.socket);
+      if (sock && sock.connected && playerKart) {
+        const gearDisplay = (typeof currentGear !== 'undefined') 
+          ? (currentGear === 0 ? "N" : (currentGear === -1 ? "R" : String(currentGear)))
+          : "N";
+        const rpmVal = typeof currentRPM !== 'undefined' ? Math.floor(currentRPM) : 0;
+        const kmh = Math.floor(Math.abs(playerKart.speed || 0) * 4);
+        const ersVal = typeof ersBattery !== 'undefined' ? ersBattery : (playerKart.ersBattery || 100);
+
+        sock.emit('f1-telemetry', {
+          gear: gearDisplay,
+          rpm: rpmVal,
+          speed: kmh,
+          ers: ersVal,
+          lap: (currentSessionIndex === 0 ? (playerKart.completedLaps || 0) : Math.min(maxLaps, currentLap)),
+          maxLaps: maxLaps,
+          delta: (document.getElementById('hud-delta') ? document.getElementById('hud-delta').innerText : "+0.000"),
+          drsAct: !!(typeof drsActive !== 'undefined' ? drsActive : playerKart.drsActive),
+          drsAvail: !!(typeof drsAvailable !== 'undefined' ? drsAvailable : playerKart.drsAvailable),
+          pitLim: !!(playerKart.pitLimiterActive || (typeof isPitLimiterActive !== 'undefined' && isPitLimiterActive))
+        });
+      }
+    }
   }
 
   function formatTimeMMSS(time) {
@@ -8310,13 +8342,50 @@
       if (ctrl.btnTriangle) {
         phoneDrsPressed = true;
       }
+      if (ctrl.steer !== undefined && Math.abs(ctrl.steer) > 0.005) {
+        phoneSteer = ctrl.steer;
+      }
+      if (ctrl.throttle !== undefined && ctrl.throttle > 0.01) {
+        phoneThrottle = Math.max(phoneThrottle, ctrl.throttle);
+      }
+      if (ctrl.brake !== undefined && ctrl.brake > 0.01) {
+        phoneBrake = Math.max(phoneBrake, ctrl.brake);
+      }
+      if (ctrl.gearUp) {
+        phoneUpshiftPressed = true;
+      }
+      if (ctrl.gearDown) {
+        phoneDownshiftPressed = true;
+      }
+      if (ctrl.drs) {
+        phoneDrsPressed = true;
+      }
+      if (ctrl.pitLimiter) {
+        if (!window._lastPhonePitLimiter) {
+          window._lastPhonePitLimiter = true;
+          if (typeof togglePitLimiterManual === 'function') togglePitLimiterManual();
+        }
+      } else {
+        window._lastPhonePitLimiter = false;
+      }
+      if (ctrl.radio) {
+        if (!window._lastPhoneRadio) {
+          window._lastPhoneRadio = true;
+          if (typeof window.toggleVoiceListening === 'function') window.toggleVoiceListening();
+        }
+      } else {
+        window._lastPhoneRadio = false;
+      }
+      if (ctrl.overtake && window.overtakeModeEligible && window.ersBatteryLevel > 5.0) {
+        window.overtakeModeActive = true;
+      }
       if (ctrl.btnR1) {
         phoneUpshiftPressed = true;
       }
       if (ctrl.btnL1) {
         phoneDownshiftPressed = true;
       }
-      if (ctrl.btnTouchpad || ctrl.btnOptions) {
+      if (ctrl.btnTouchpad || ctrl.btnOptions || ctrl.status) {
         phoneStatusPressed = true;
       }
     }

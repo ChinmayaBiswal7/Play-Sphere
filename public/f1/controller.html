@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Apex F1 Wireless Steering Controller</title>
+  <script>
+    (function() {
+      const currentUrl = new URL(window.location.href);
+      const params = new URLSearchParams(currentUrl.search);
+      if (!params.has('game')) {
+        params.set('game', 'f1');
+      }
+      window.location.replace('/controller.html?' + params.toString());
+    })();
+  </script>
+</head>
+<body style="background:#090d16; color:#fff; font-family:sans-serif; display:flex; align-items:center; justify-content:center; height:100vh; margin:0;">
+  <p>Connecting to Formula 1 Steering Controller...</p>
+</body>
+</html>

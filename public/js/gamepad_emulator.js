@@ -354,6 +354,60 @@
       else if (data.type === 'touchpad-click') {
         clickVirtualCursor();
       } 
+      else if (data.type === 'f1-input') {
+        if (!window.controllerInput) window.controllerInput = {};
+        if (data.steer !== undefined) window.controllerInput.steer = data.steer;
+        if (data.throttle !== undefined) window.controllerInput.throttle = data.throttle;
+        if (data.brake !== undefined) window.controllerInput.brake = data.brake;
+        if (data.gearUp !== undefined) window.controllerInput.gearUp = data.gearUp;
+        if (data.gearDown !== undefined) window.controllerInput.gearDown = data.gearDown;
+        if (data.drs !== undefined) window.controllerInput.drs = data.drs;
+        if (data.pitLimiter !== undefined) window.controllerInput.pitLimiter = data.pitLimiter;
+        if (data.radio !== undefined) window.controllerInput.radio = data.radio;
+        if (data.overtake !== undefined) window.controllerInput.overtake = data.overtake;
+        if (data.status !== undefined) window.controllerInput.status = data.status;
+
+        // Sync to active game iframe
+        const iframe = document.getElementById('game-session-iframe');
+        if (iframe && iframe.contentWindow) {
+          try { iframe.contentWindow.controllerInput = window.controllerInput; } catch(e) {}
+        }
+
+        // Emulate keyboard keys for games/components relying on key events
+        if (data.steer !== undefined) {
+          const dz = 0.08;
+          setKey('KeyA', data.steer < -dz);
+          setKey('ArrowLeft', data.steer < -dz);
+          setKey('KeyD', data.steer > dz);
+          setKey('ArrowRight', data.steer > dz);
+        }
+        if (data.throttle !== undefined) {
+          setKey('KeyW', data.throttle > 0.1);
+          setKey('ArrowUp', data.throttle > 0.1);
+        }
+        if (data.brake !== undefined) {
+          setKey('KeyS', data.brake > 0.1);
+          setKey('ArrowDown', data.brake > 0.1);
+        }
+        if (data.gearUp !== undefined) {
+          setKey('KeyE', !!data.gearUp);
+        }
+        if (data.gearDown !== undefined) {
+          setKey('KeyQ', !!data.gearDown);
+        }
+        if (data.drs !== undefined) {
+          setKey('ShiftLeft', !!data.drs);
+        }
+        if (data.radio !== undefined) {
+          setKey('KeyV', !!data.radio);
+        }
+        if (data.status !== undefined) {
+          setKey('KeyT', !!data.status);
+        }
+        if (data.pause !== undefined) {
+          setKey('Escape', !!data.pause);
+        }
+      } 
       else if (data.type === 'btnDown' || data.type === 'btnUp') {
         const isPressed = (data.type === 'btnDown');
         

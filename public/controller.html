@@ -119,7 +119,232 @@
     </div>
   </div>
 
+  <!-- 4. Dedicated Formula 1 Steering Wheel Cockpit Layout (Active in F1 Mode) -->
+  <div id="f1-wheel-container" class="f1-wheel-container" style="display:none;">
+    <!-- Wheel Outer Chassis Frame -->
+    <div class="f1-chassis">
+      
+      <!-- Top Dashboard Header: Shift LEDs & Status -->
+      <div class="f1-top-bar">
+        <!-- Top Left: Calibrate Gyro & Mode -->
+        <div class="f1-header-left">
+          <button id="f1-btn-calibrate" class="f1-util-btn" title="Reset steering center to current phone tilt">
+            🎯 CALIB
+          </button>
+          <button id="f1-btn-gyro-toggle" class="f1-util-btn active" title="Toggle Gyroscope Steering vs Touch">
+            🔄 GYRO ON
+          </button>
+        </div>
+
+        <!-- Center: 15-LED Formula Shift Array -->
+        <div class="f1-shift-lights">
+          <!-- 5 Green LEDs (Rev 8000-10500) -->
+          <div class="f1-led-group green">
+            <span class="f1-led" id="f1-led-0"></span>
+            <span class="f1-led" id="f1-led-1"></span>
+            <span class="f1-led" id="f1-led-2"></span>
+            <span class="f1-led" id="f1-led-3"></span>
+            <span class="f1-led" id="f1-led-4"></span>
+          </div>
+          <!-- 5 Red LEDs (Rev 10500-12500) -->
+          <div class="f1-led-group red">
+            <span class="f1-led" id="f1-led-5"></span>
+            <span class="f1-led" id="f1-led-6"></span>
+            <span class="f1-led" id="f1-led-7"></span>
+            <span class="f1-led" id="f1-led-8"></span>
+            <span class="f1-led" id="f1-led-9"></span>
+          </div>
+          <!-- 5 Purple/Blue LEDs (Rev 12500-13500) -->
+          <div class="f1-led-group purple">
+            <span class="f1-led" id="f1-led-10"></span>
+            <span class="f1-led" id="f1-led-11"></span>
+            <span class="f1-led" id="f1-led-12"></span>
+            <span class="f1-led" id="f1-led-13"></span>
+            <span class="f1-led" id="f1-led-14"></span>
+          </div>
+        </div>
+
+        <!-- Top Right: Room Code & ESC / Pause -->
+        <div class="f1-header-right">
+          <span id="f1-room-pill" class="f1-room-pill">ROOM: ----</span>
+          <button id="f1-btn-esc" class="f1-util-btn f1-esc-btn" title="Pause / Menu">
+            ESC
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Wheel Core: Left Grip | Central OLED Display | Right Grip -->
+      <div class="f1-main-wheel">
+
+        <!-- LEFT WHEEL GRIP CONTROLS -->
+        <div class="f1-grip f1-grip-left">
+          <!-- Upper Thumb Buttons: RADIO & PIT LIMITER -->
+          <div class="f1-grip-top-cluster">
+            <button id="f1-btn-radio" class="f1-round-btn f1-btn-radio" title="Team Radio (Hold/Tap to Speak)">
+              <span class="f1-btn-icon">🎙️</span>
+              <span class="f1-btn-label">RADIO</span>
+            </button>
+            <button id="f1-btn-pit" class="f1-round-btn f1-btn-pit" title="Pit Lane Speed Limiter (80 km/h)">
+              <span class="f1-btn-icon">⚠️</span>
+              <span class="f1-btn-label">PIT</span>
+            </button>
+          </div>
+
+          <!-- Secondary Left Buttons: DRS & BRAKE BIAS -->
+          <div class="f1-grip-mid-cluster">
+            <button id="f1-btn-drs" class="f1-round-btn f1-btn-drs" title="DRS Rear Wing Flap">
+              <span class="f1-btn-icon">⚡</span>
+              <span class="f1-btn-label">DRS</span>
+            </button>
+            <button id="f1-btn-bb-down" class="f1-round-btn f1-btn-sub" title="Brake Bias -">
+              <span class="f1-btn-label">BB −</span>
+            </button>
+          </div>
+
+          <!-- Prominent Left Shift Paddle: GEAR DOWN (-) -->
+          <div class="f1-paddle-container">
+            <button id="f1-btn-gear-down" class="f1-paddle-btn f1-paddle-down" title="Downshift (-)">
+              <span class="f1-paddle-symbol">−</span>
+              <span class="f1-paddle-text">GEAR DN</span>
+            </button>
+          </div>
+
+          <!-- Large Left Foot/Trigger: BRAKE -->
+          <div class="f1-trigger-container">
+            <button id="f1-btn-brake" class="f1-trigger-btn f1-trigger-brake" title="Brake / Reverse">
+              <span class="f1-trigger-label">BRAKE</span>
+              <div class="f1-trigger-indicator" id="f1-brake-meter"></div>
+            </button>
+          </div>
+
+          <!-- Fallback Touch Steering Pad (Used if Gyro is Off) -->
+          <div id="f1-touch-steer-zone" class="f1-touch-steer-zone" style="display:none;">
+            <div class="f1-touch-steer-track" id="f1-touch-steer-track">
+              <div class="f1-touch-steer-knob" id="f1-touch-steer-knob">◀ STEER ▶</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CENTRAL OLED TELEMETRY SCREEN (The Digital Dash) -->
+        <div class="f1-center-dash">
+          <div class="f1-oled-bezel">
+            <div class="f1-oled-screen">
+              
+              <!-- Screen Top Row: ERS Bar | Lap Count | RPM -->
+              <div class="f1-dash-row f1-dash-top">
+                <div class="f1-ers-cluster">
+                  <span class="f1-dash-sub">ERS</span>
+                  <div class="f1-ers-bar-outer">
+                    <div id="f1-ers-bar" class="f1-ers-bar" style="width: 75%;"></div>
+                  </div>
+                  <span id="f1-dash-ers-val" class="f1-dash-val-sm">75%</span>
+                </div>
+
+                <div class="f1-lap-cluster">
+                  <span id="f1-dash-lap" class="f1-dash-highlight">LAP 1/5</span>
+                </div>
+
+                <div class="f1-rpm-cluster">
+                  <span id="f1-dash-rpm" class="f1-dash-highlight">11,289</span>
+                  <span class="f1-dash-sub">RPM</span>
+                </div>
+              </div>
+
+              <!-- Screen Center: Giant Gear Indicator -->
+              <div class="f1-dash-center">
+                <div class="f1-gear-display" id="f1-dash-gear">N</div>
+                <div class="f1-dash-status-pills">
+                  <span id="f1-dash-drs-pill" class="f1-dash-pill">DRS</span>
+                  <span id="f1-dash-pit-pill" class="f1-dash-pill">PIT LIM</span>
+                </div>
+              </div>
+
+              <!-- Screen Bottom Row: Speed | Delta | Lap Time -->
+              <div class="f1-dash-row f1-dash-bottom">
+                <div class="f1-speed-cluster">
+                  <span id="f1-dash-speed" class="f1-dash-speed">0</span>
+                  <span class="f1-dash-sub">KM/H</span>
+                </div>
+
+                <div class="f1-delta-cluster">
+                  <span class="f1-dash-sub">DELTA</span>
+                  <span id="f1-dash-delta" class="f1-dash-delta">+0.000</span>
+                </div>
+
+                <div class="f1-time-cluster">
+                  <span class="f1-dash-sub">TIME</span>
+                  <span id="f1-dash-time" class="f1-dash-val-sm">00:00.0</span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Live Steering Horizon / G-Meter Bar below screen -->
+          <div class="f1-horizon-container">
+            <span class="f1-horizon-label">STEER</span>
+            <div class="f1-horizon-track">
+              <div class="f1-horizon-center-mark"></div>
+              <div class="f1-horizon-needle" id="f1-horizon-needle"></div>
+            </div>
+            <span id="f1-steer-degrees" class="f1-steer-degrees">0°</span>
+          </div>
+        </div>
+
+        <!-- RIGHT WHEEL GRIP CONTROLS -->
+        <div class="f1-grip f1-grip-right">
+          <!-- Upper Thumb Buttons: OVERTAKE (OT) & MFD / STATUS -->
+          <div class="f1-grip-top-cluster">
+            <button id="f1-btn-ot" class="f1-round-btn f1-btn-ot" title="Overtake ERS Maximum Power Boost">
+              <span class="f1-btn-icon">⚡</span>
+              <span class="f1-btn-label">OT</span>
+            </button>
+            <button id="f1-btn-status" class="f1-round-btn f1-btn-status" title="MFD Car Telemetry / Status">
+              <span class="f1-btn-icon">📊</span>
+              <span class="f1-btn-label">MFD</span>
+            </button>
+          </div>
+
+          <!-- Secondary Right Buttons: DRIFT / HANDBRAKE & BRAKE BIAS + -->
+          <div class="f1-grip-mid-cluster">
+            <button id="f1-btn-drift" class="f1-round-btn f1-btn-drift" title="Drift / Handbrake">
+              <span class="f1-btn-icon">💨</span>
+              <span class="f1-btn-label">DRIFT</span>
+            </button>
+            <button id="f1-btn-bb-up" class="f1-round-btn f1-btn-sub" title="Brake Bias +">
+              <span class="f1-btn-label">BB +</span>
+            </button>
+          </div>
+
+          <!-- Prominent Right Shift Paddle: GEAR UP (+) -->
+          <div class="f1-paddle-container">
+            <button id="f1-btn-gear-up" class="f1-paddle-btn f1-paddle-up" title="Upshift (+)">
+              <span class="f1-paddle-symbol">+</span>
+              <span class="f1-paddle-text">GEAR UP</span>
+            </button>
+          </div>
+
+          <!-- Large Right Foot/Trigger: THROTTLE -->
+          <div class="f1-trigger-container">
+            <button id="f1-btn-throttle" class="f1-trigger-btn f1-trigger-throttle" title="Throttle / Accelerate">
+              <span class="f1-trigger-label">THROTTLE</span>
+              <div class="f1-trigger-indicator" id="f1-throttle-meter"></div>
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Bottom Status & iOS Gyro Permission Bar -->
+      <div class="f1-bottom-bar">
+        <span id="f1-gyro-status-txt">GYRO ACTIVE: Hold phone like a steering wheel & tilt to steer</span>
+        <button id="f1-ios-gyro-btn" class="f1-ios-perm-btn" style="display:none;">ALLOW MOTION SENSORS</button>
+      </div>
+
+    </div>
+  </div>
+
   <!-- Gamepad Client Script -->
-  <script src="controller.js?v=85"></script>
+  <script src="controller.js?v=86"></script>
 </body>
 </html>

@@ -217,13 +217,50 @@
       if (ctrl.btnTriangle) {
         phoneDrsPressed = true;
       }
+      if (ctrl.steer !== undefined && Math.abs(ctrl.steer) > 0.005) {
+        phoneSteer = ctrl.steer;
+      }
+      if (ctrl.throttle !== undefined && ctrl.throttle > 0.01) {
+        phoneThrottle = Math.max(phoneThrottle, ctrl.throttle);
+      }
+      if (ctrl.brake !== undefined && ctrl.brake > 0.01) {
+        phoneBrake = Math.max(phoneBrake, ctrl.brake);
+      }
+      if (ctrl.gearUp) {
+        phoneUpshiftPressed = true;
+      }
+      if (ctrl.gearDown) {
+        phoneDownshiftPressed = true;
+      }
+      if (ctrl.drs) {
+        phoneDrsPressed = true;
+      }
+      if (ctrl.pitLimiter) {
+        if (!window._lastPhonePitLimiter) {
+          window._lastPhonePitLimiter = true;
+          if (typeof togglePitLimiterManual === 'function') togglePitLimiterManual();
+        }
+      } else {
+        window._lastPhonePitLimiter = false;
+      }
+      if (ctrl.radio) {
+        if (!window._lastPhoneRadio) {
+          window._lastPhoneRadio = true;
+          if (typeof window.toggleVoiceListening === 'function') window.toggleVoiceListening();
+        }
+      } else {
+        window._lastPhoneRadio = false;
+      }
+      if (ctrl.overtake && window.overtakeModeEligible && window.ersBatteryLevel > 5.0) {
+        window.overtakeModeActive = true;
+      }
       if (ctrl.btnR1) {
         phoneUpshiftPressed = true;
       }
       if (ctrl.btnL1) {
         phoneDownshiftPressed = true;
       }
-      if (ctrl.btnTouchpad || ctrl.btnOptions) {
+      if (ctrl.btnTouchpad || ctrl.btnOptions || ctrl.status) {
         phoneStatusPressed = true;
       }
     }

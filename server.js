@@ -325,6 +325,13 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('f1-telemetry', (data) => {
+    const targetRoom = socket.roomCode || (data && data.roomCode);
+    if (targetRoom) {
+      socket.to(targetRoom).emit('f1-telemetry', data);
+    }
+  });
+
   socket.on('controller-input', (data) => {
     const targetRoom = socket.roomCode || (data && data.roomCode);
     if (targetRoom) {

@@ -3347,7 +3347,7 @@
     }
 
     if (code && qrImg) {
-      const phoneUrl = `${window.location.origin}/controller.html?room=${code}`;
+      const phoneUrl = `${window.location.origin}/controller.html?room=${code}&game=f1`;
       qrImg.src = `/qrcode?text=${encodeURIComponent(phoneUrl)}`;
       qrImg.onload = () => {
         if (qrSpinner) qrSpinner.style.display = 'none';
@@ -3358,11 +3358,15 @@
       if (qrImg) qrImg.style.display = 'none';
     }
 
+    if (window.socket && window.socket.connected) {
+      window.socket.emit('layout-change', { layout: 'f1' });
+    }
+
     if (window.controllerConnected) {
       if (dot) { dot.style.background = '#10b981'; dot.style.boxShadow = '0 0 10px #10b981'; }
-      if (txt) { txt.innerText = 'Phone controller connected!'; txt.style.color = '#10b981'; }
+      if (txt) { txt.innerText = 'F1 Steering Wheel connected!'; txt.style.color = '#10b981'; }
       const footerTxt = document.getElementById('f1-footer-controller-text');
-      if (footerTxt) footerTxt.innerText = 'CONTROLLER: CONNECTED';
+      if (footerTxt) footerTxt.innerText = 'WHEEL: CONNECTED';
     } else {
       if (dot) { dot.style.background = '#ef4444'; dot.style.boxShadow = '0 0 8px #ef4444'; }
       if (txt) { txt.innerText = 'No phone controller linked'; txt.style.color = 'rgba(255,255,255,0.7)'; }

@@ -441,6 +441,34 @@
         progressEl.innerText = `LAP: ${Math.min(maxLaps, currentLap)} / ${maxLaps}`;
       }
     }
+
+    // 📡 Broadcast live telemetry to connected phone controller (20Hz)
+    const _now = performance.now();
+    if (!window._lastF1TelemetrySend || (_now - window._lastF1TelemetrySend) > 50) {
+      window._lastF1TelemetrySend = _now;
+      const sock = window.socket || (window.parent && window.parent.socket);
+      if (sock && sock.connected && playerKart) {
+        const gearDisplay = (typeof currentGear !== 'undefined') 
+          ? (currentGear === 0 ? "N" : (currentGear === -1 ? "R" : String(currentGear)))
+          : "N";
+        const rpmVal = typeof currentRPM !== 'undefined' ? Math.floor(currentRPM) : 0;
+        const kmh = Math.floor(Math.abs(playerKart.speed || 0) * 4);
+        const ersVal = typeof ersBattery !== 'undefined' ? ersBattery : (playerKart.ersBattery || 100);
+
+        sock.emit('f1-telemetry', {
+          gear: gearDisplay,
+          rpm: rpmVal,
+          speed: kmh,
+          ers: ersVal,
+          lap: (currentSessionIndex === 0 ? (playerKart.completedLaps || 0) : Math.min(maxLaps, currentLap)),
+          maxLaps: maxLaps,
+          delta: (document.getElementById('hud-delta') ? document.getElementById('hud-delta').innerText : "+0.000"),
+          drsAct: !!(typeof drsActive !== 'undefined' ? drsActive : playerKart.drsActive),
+          drsAvail: !!(typeof drsAvailable !== 'undefined' ? drsAvailable : playerKart.drsAvailable),
+          pitLim: !!(playerKart.pitLimiterActive || (typeof isPitLimiterActive !== 'undefined' && isPitLimiterActive))
+        });
+      }
+    }
   }
 
   function formatTimeMMSS(time) {
