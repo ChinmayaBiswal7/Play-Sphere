@@ -4862,10 +4862,11 @@
         const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 12.0, 6), pierMat);
         mast.position.set(0, 6.0, 0);
         boatGroup.add(mast);
-        const sail = new THREE.Mesh(new THREE.BufferGeometry(), sailMat);
+        const sailGeo = new THREE.BufferGeometry();
         const sailPts = new Float32Array([0, 1.5, 0,  0, 11.5, 0,  0, 1.8, -4.5]);
-        sail.setAttribute('position', new THREE.BufferAttribute(sailPts, 3));
-        sail.computeVertexNormals();
+        sailGeo.setAttribute('position', new THREE.BufferAttribute(sailPts, 3));
+        sailGeo.computeVertexNormals();
+        const sail = new THREE.Mesh(sailGeo, sailMat);
         boatGroup.add(sail);
         boatGroup.position.set(bx, 0.0, bz);
         boatGroup.rotation.y = rot;
