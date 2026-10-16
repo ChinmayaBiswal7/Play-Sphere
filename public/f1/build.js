@@ -22,7 +22,8 @@ const PARTS = [
   'game-03-blueflag-director.js',  //  ~261 lines  updateBlueFlag, updateRaceDirector
   'game-04-animate.js',            //  ~219 lines  animate loop
   'game-05-player-physics.js',     //  ~837 lines  updatePlayerPhysics, DRS, ERS, gear
-  'game-06-ai-physics.js',         //  ~534 lines  updateAIPysics, AI strategy, pit
+  'game-06b-ai-brains.js',         //  15 Driver Brains + Sequential ECU Powertrain Simulation
+  'game-06-ai-physics.js',         //  ~534 lines  updateAIPhysics, AI strategy, pit
   'game-07-hazards-collision.js',  //  ~316 lines  hazards, rockets, collision detection
   'game-08-particles-camera.js',   //  ~150 lines  particles, camera follow
   'game-09a-postrace-setup.js',    //  ~424 lines  postrace startup, cinematics, trophy

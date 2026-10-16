@@ -924,6 +924,31 @@
 
         // 🚀 AI Straightaway DRS Boost (matches player DRS straight advantage)
         const isAIStraightZone = (racer.currentOffset >= 0.90 || racer.currentOffset <= 0.05) || (racer.currentOffset >= 0.35 && racer.currentOffset <= 0.44);
+
+        function getUpcomingTrackCurvature(offset) {
+          if (!trackCurve) return 0.0;
+          const t1 = trackCurve.getTangentAt(offset % 1.0).normalize();
+          const t2 = trackCurve.getTangentAt((offset + 0.016) % 1.0).normalize();
+          return (t1.x * t2.z - t1.z * t2.x);
+        }
+        const upcomingCurvature = getUpcomingTrackCurvature(racer.currentOffset);
+
+        // 🧠 Individual Driver Brain & ECU Execution
+        let driverBrain = (typeof window.AIBrainManager !== 'undefined') ? window.AIBrainManager.getBrainForRacer(racer) : null;
+        let brainDecision = null;
+        let emergencyBrake = false;
+
+        if (driverBrain) {
+          brainDecision = driverBrain.think(racer, racers, baseSpeed, upcomingCurvature, isAIStraightZone, delta, clock.getElapsedTime());
+          target = Math.min(target, brainDecision.targetSpeed);
+          if (brainDecision.isEmergency) emergencyBrake = true;
+          racer.currentGear = brainDecision.gear;
+          racer.engineRPM = brainDecision.rpm;
+          racer.throttle = brainDecision.throttle;
+          racer.brake = brainDecision.brake;
+          racer.ersPower = brainDecision.ersPower;
+        }
+
         if (isAIStraightZone && !safetyCarActive && !redFlagActive && racer.qualifyingState !== "GARAGE") {
           target += 9.0; // Straightaway DRS boost
           if (racer.mesh && racer.mesh.drsFlap) {
@@ -943,127 +968,100 @@
         let aiAccel = 68.0;
 
         // ERS boost acceleration based on battery energy state
-
         let ersAccelBoost = 0.0;
-
         if (racer.overtakeModeActive) {
-
           ersAccelBoost = 42.0;
-
         } else if (racer.ersPower > 0.1) {
-
           ersAccelBoost = 18.0;
-
         }
 
         if (racer.ersBatteryLevel >= 60.0) {
-
           ersAccelBoost *= 1.0;
-
         } else if (racer.ersBatteryLevel >= 25.0) {
-
           ersAccelBoost *= 0.60;
-
         } else if (racer.ersBatteryLevel > 0.1) {
-
           ersAccelBoost *= 0.25;
-
         } else {
-
           ersAccelBoost = 0.0; // Empty battery
-
         }
 
-        // B8: AI Collision Avoidance (Moved up to apply speed limits correctly before physics update)
-        let closestAhead = null;
-        let minGapAhead = Infinity;
+        // B8: AI Collision Avoidance (Fallback if driver brain not present)
         avoidanceOffset = 0.0;
+        if (!brainDecision) {
+          let closestAhead = null;
+          let minGapAhead = Infinity;
+          const lookaheadDist = Math.max(75.0, racer.speed * 1.5);
 
-        // Enhanced lookahead: speed-dependent distance (detects obstacles well in advance)
-        const lookaheadDist = Math.max(75.0, racer.speed * 1.5);
+          racers.forEach(other => {
+            if (other === racer) return;
+            if (other.isTrackActive === false || other.qualifyingState === "GARAGE") return;
 
-        racers.forEach(other => {
-          if (other === racer) return;
-          if (other.isTrackActive === false || other.qualifyingState === "GARAGE") return;
+            const myInPit = racer.inPitLane || racer.isPitting;
+            const otherInPit = other.inPitLane || other.isPitting;
+            if (myInPit !== otherInPit) return;
 
-          const myInPit = racer.inPitLane || racer.isPitting;
-          const otherInPit = other.inPitLane || other.isPitting;
-          if (myInPit !== otherInPit) return;
-
-          const gap = getSignedTrackGap(racer, other);
-          if (gap > 0.0 && gap < lookaheadDist) {
-            if (gap < minGapAhead) {
-              minGapAhead = gap;
-              closestAhead = other;
-            }
-          }
-        });
-
-        let emergencyBrake = false;
-
-        if (closestAhead) {
-          const latDiff = Math.abs(racer.sideOffset - closestAhead.sideOffset);
-          const isHazardStopped = (closestAhead.speed < 15.0);
-
-          if (isHazardStopped) {
-            // 🛑 STATIONARY / CRASHED OBSTACLE AVOIDANCE & EMERGENCY BRAKING
-            // Steer decisively toward the clear side of the track
-            const clearSide = (closestAhead.sideOffset >= 0) ? -4.5 : 4.5;
-            avoidanceOffset = clearSide;
-            racer.avoidanceSide = (closestAhead.sideOffset >= 0) ? "LEFT" : "RIGHT";
-            racer.avoidanceCommitTimer = 1.2;
-
-            if (minGapAhead < 45.0 && latDiff < 3.2) {
-              // Lane is directly obstructed ahead: slam emergency brakes to avoid rear-ending!
-              target = 0.0;
-              emergencyBrake = true;
-            } else if (minGapAhead < 25.0) {
-              target = Math.min(target, 12.0);
-              emergencyBrake = true;
-            } else if (minGapAhead < 60.0) {
-              target = Math.min(target, 35.0);
-            }
-          } else {
-            // Authentic F1 Racecraft: Dynamic following, slipstream tow, and overtaking
-            // 1. Slipstream (Tow Boost) on straights & open track
-            if (minGapAhead > 4.5 && minGapAhead < 42.0) {
-              const towStrength = (1.0 - minGapAhead / 42.0) * 0.09;
-              target *= (1.0 + towStrength); // Up to +9% top speed boost in tow!
-
-              // Trigger overtake mode & aggressive ERS deployment
-              if (minGapAhead < 30.0) {
-                racer.overtakeModeActive = true;
-                racer.ersPower = 1.0;
+            const gap = getSignedTrackGap(racer, other);
+            if (gap > 0.0 && gap < lookaheadDist) {
+              if (gap < minGapAhead) {
+                minGapAhead = gap;
+                closestAhead = other;
               }
             }
+          });
 
-            // 2. Decisive Overtake Lane Selection
-            if (minGapAhead < 32.0) {
-              if (racer.avoidanceCommitTimer === undefined) racer.avoidanceCommitTimer = 0.0;
-              if (racer.avoidanceSide === undefined || racer.avoidanceSide === "NONE" || racer.avoidanceCommitTimer <= 0.0) {
-                // Steer decisively to whichever side has more room (or inside line)
-                racer.avoidanceSide = (closestAhead.sideOffset >= 0.0) ? "LEFT" : "RIGHT";
-                racer.avoidanceCommitTimer = 1.4;
-              }
-              avoidanceOffset = racer.avoidanceSide === "LEFT" ? -3.8 : 3.8;
-            }
+          if (closestAhead) {
+            const latDiff = Math.abs(racer.sideOffset - closestAhead.sideOffset);
+            const isHazardStopped = (closestAhead.speed < 15.0);
 
-            // 3. Speed Regulation: ONLY brake if directly blocked in same lateral lane (< 1.6m) and < 4.5m gap
-            if (latDiff < 1.6) {
-              if (minGapAhead < 4.0) {
-                // Too close to car directly ahead: match speed smoothly
-                target = Math.min(target, closestAhead.speed * 0.95);
+            if (isHazardStopped) {
+              const clearSide = (closestAhead.sideOffset >= 0) ? -4.5 : 4.5;
+              avoidanceOffset = clearSide;
+              racer.avoidanceSide = (closestAhead.sideOffset >= 0) ? "LEFT" : "RIGHT";
+              racer.avoidanceCommitTimer = 1.2;
+
+              if (minGapAhead < 45.0 && latDiff < 3.2) {
+                target = 0.0;
                 emergencyBrake = true;
-              } else if (minGapAhead < 7.5 && racer.speed > closestAhead.speed) {
-                target = Math.min(target, closestAhead.speed * 0.99);
+              } else if (minGapAhead < 25.0) {
+                target = Math.min(target, 12.0);
+                emergencyBrake = true;
+              } else if (minGapAhead < 60.0) {
+                target = Math.min(target, 35.0);
+              }
+            } else {
+              if (minGapAhead > 4.5 && minGapAhead < 42.0) {
+                const towStrength = (1.0 - minGapAhead / 42.0) * 0.09;
+                target *= (1.0 + towStrength);
+                if (minGapAhead < 30.0) {
+                  racer.overtakeModeActive = true;
+                  racer.ersPower = 1.0;
+                }
+              }
+
+              if (minGapAhead < 32.0) {
+                if (racer.avoidanceCommitTimer === undefined) racer.avoidanceCommitTimer = 0.0;
+                if (racer.avoidanceSide === undefined || racer.avoidanceSide === "NONE" || racer.avoidanceCommitTimer <= 0.0) {
+                  racer.avoidanceSide = (closestAhead.sideOffset >= 0.0) ? "LEFT" : "RIGHT";
+                  racer.avoidanceCommitTimer = 1.4;
+                }
+                avoidanceOffset = racer.avoidanceSide === "LEFT" ? -3.8 : 3.8;
+              }
+
+              if (latDiff < 2.0) {
+                if (minGapAhead < 5.5) {
+                  target = Math.min(target, closestAhead.speed * 0.90);
+                  emergencyBrake = true;
+                } else if (minGapAhead < 12.0 && racer.speed > closestAhead.speed) {
+                  target = Math.min(target, closestAhead.speed * 0.98);
+                }
               }
             }
-          }
 
-          if (racer.avoidanceCommitTimer > 0.0) {
-            racer.avoidanceCommitTimer -= delta;
-            if (racer.avoidanceCommitTimer <= 0.0) {
-              racer.avoidanceSide = "NONE";
+            if (racer.avoidanceCommitTimer > 0.0) {
+              racer.avoidanceCommitTimer -= delta;
+              if (racer.avoidanceCommitTimer <= 0.0) {
+                racer.avoidanceSide = "NONE";
+              }
             }
           }
         }
@@ -1678,8 +1676,12 @@
       let normalTargetOffset = optimalLineOffset + (driverBias + cleanAirHunt) * (racer.swayFadeFactor || 1.0);
 
       if (!racer.pitExitMergeHold) {
-        let finalTargetOffset = normalTargetOffset + overtakeOffset + defenceOffset + avoidanceOffset;
-        racer.targetSideOffset = THREE.MathUtils.clamp(finalTargetOffset, -7.4, 7.4);
+        if (brainDecision) {
+          racer.targetSideOffset = THREE.MathUtils.clamp(brainDecision.targetOffset, -7.4, 7.4);
+        } else {
+          let finalTargetOffset = normalTargetOffset + overtakeOffset + defenceOffset + avoidanceOffset;
+          racer.targetSideOffset = THREE.MathUtils.clamp(finalTargetOffset, -7.4, 7.4);
+        }
       }
 
       if (racer.sideOffset === undefined) racer.sideOffset = 0.0;

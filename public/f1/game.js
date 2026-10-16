@@ -3219,6 +3219,7 @@
     postRaceActive = false;
     postRaceState = "FINISHING";
     currentRaceId++;
+    if (window.AIBrainManager) window.AIBrainManager.resetAll();
     if (playerKart) playerKart.heading = undefined;
     const myRaceId = currentRaceId;
     // Prevent duplicate animate loops by canceling any running loop
@@ -9466,6 +9467,616 @@
     }
   };
 
+// ═══ game-06b-ai-brains.js ═══
+/**
+ * game-06b-ai-brains.js — 15 Individual AI Driver Brains & Sequential ECU Simulation
+ * 
+ * Provides:
+ * 1. AIEngineECU: 8-speed sequential transmission, RPM calculation (4,000-13,000), 
+ *    throttle/brake telemetry, ERS energy harvesting/deploy, and DRS actuator control.
+ * 2. 15 Dedicated AI Driver Brains:
+ *    - Max Verstappen: Hyper-aggressive, late braking, sharp apex attack, inside defense.
+ *    - Lewis Hamilton: V-line late apex for maximum exit drive, DRS tow mastery, patient stalker.
+ *    - Charles Leclerc: Blistering raw qualifying/apex pace, aggressive curb attack, high entry speed.
+ *    - Fernando Alonso: Tactical mastermind, 1-move defense, cuts corner exits for slipstream.
+ *    - Lando Norris: High minimum apex speed, smooth inputs, opportunistic slingshot passes.
+ *    - Carlos Sainz: "Smooth Operator", methodical braking points, disciplined tire conservation.
+ *    - Sergio Perez: "Minister of Defence", wide defensive positioning, excellent exit traction.
+ *    - George Russell: Assertive straight-line passes, proactive DRS overtaking, bold corner entry.
+ *    - Oscar Piastri: Calm, unflappable, clinical clean overtakes, disciplined lane holding.
+ *    - Pierre Gasly: Tenacious midfield fighter, late on brakes, stubborn battles.
+ *    - Esteban Ocon: Fierce defender, uncompromising inside line, refuses to yield easily.
+ *    - Nico Hulkenberg: Precise braking points, consistent lap times, clean racing.
+ *    - Kevin Magnussen: Ultra-aggressive wheel-to-wheel battles, bold defense.
+ *    - Alex Albon: Late braking specialist, excellent exit speed, spirited defense.
+ *    - Lance Stroll: Direct straight-line attacks, reactive defending.
+ *    (Plus dynamic fallback profiles for Bottas, Tsunoda, Zhou, Sargeant, Ricciardo).
+ * 3. Proactive Anti-Pileup Radar: Prevents multi-car pileups with safe following buffers,
+ *    closing-speed detection, emergency braking, and 2-wide racing room.
+ */
+
+// ── 1. Sequential 8-Speed ECU Powertrain Simulation ─────────────────────────
+class AIEngineECU {
+  constructor(driverName) {
+    this.driverName = driverName;
+    this.gear = 1;
+    this.rpm = 4200;
+    this.throttle = 0.0;
+    this.brake = 0.0;
+    this.ersEnergy = 100.0; // 0 - 100%
+    this.ersMode = "BALANCED"; // BALANCED, OVERTAKE, DEFEND, HARVEST
+    this.ersPower = 0.15;
+    this.drsOpen = false;
+    this.shiftTimer = 0.0;
+  }
+
+  reset() {
+    this.gear = 1;
+    this.rpm = 4200;
+    this.throttle = 0.0;
+    this.brake = 0.0;
+    this.ersEnergy = 100.0;
+    this.ersMode = "BALANCED";
+    this.ersPower = 0.15;
+    this.drsOpen = false;
+    this.shiftTimer = 0.0;
+  }
+
+  update(speed, targetSpeed, delta, canDRS, isEmergency) {
+    // F1 8-Speed Gearbox Speed Windows (m/s)
+    // 1st: 0-18 (0-65 km/h), 2nd: 18-28 (65-100 km/h), 3rd: 28-38 (100-137 km/h),
+    // 4th: 38-48 (137-173 km/h), 5th: 48-59 (173-212 km/h), 6th: 59-71 (212-255 km/h),
+    // 7th: 71-83 (255-300 km/h), 8th: 83+ (300-350+ km/h)
+    const gearMins = [0, 0, 18, 28, 38, 48, 59, 71, 83];
+    const gearMaxs = [0, 20, 31, 41, 51, 62, 74, 86, 115];
+
+    let g = Math.max(1, Math.min(8, this.gear));
+    const minS = gearMins[g];
+    const maxS = gearMaxs[g];
+    const fraction = Math.max(0.0, Math.min(1.0, (speed - minS) / Math.max(1.0, maxS - minS)));
+    this.rpm = Math.floor(4500 + fraction * 8300); // 4500 to 12800 RPM
+
+    // Automatic Sequential Shifting
+    if (this.shiftTimer > 0) {
+      this.shiftTimer -= delta;
+    } else {
+      if (this.rpm >= 12300 && g < 8) {
+        this.gear = g + 1;
+        this.shiftTimer = 0.06;
+        this.rpm = 9400; // Drop revs on upshift
+      } else if (this.rpm <= 6200 && g > 1 && speed < minS * 1.04) {
+        this.gear = g - 1;
+        this.shiftTimer = 0.06;
+        this.rpm = 10600; // Blip revs on downshift
+      }
+    }
+
+    // Throttle & Brake Modulation
+    if (isEmergency) {
+      this.throttle = 0.0;
+      this.brake = 1.0;
+    } else if (targetSpeed > speed + 0.5) {
+      this.throttle = Math.min(1.0, this.throttle + delta * 6.0);
+      this.brake = Math.max(0.0, this.brake - delta * 14.0);
+    } else if (targetSpeed < speed - 1.2) {
+      this.throttle = Math.max(0.0, this.throttle - delta * 10.0);
+      const intensity = Math.min(1.0, (speed - targetSpeed) / 10.0);
+      this.brake = Math.min(1.0, this.brake + delta * 8.0 * intensity);
+    } else {
+      this.throttle = THREE.MathUtils.lerp(this.throttle, 0.45, delta * 3.5);
+      this.brake = 0.0;
+    }
+
+    // ERS Harvesting & Deployment
+    if (this.brake > 0.15) {
+      // MGU-K regenerative braking recharge
+      this.ersEnergy = Math.min(100.0, this.ersEnergy + delta * 9.5 * this.brake);
+      this.ersPower = 0.0;
+    } else if (this.ersMode === "OVERTAKE" && this.ersEnergy > 2.0) {
+      this.ersPower = 1.0;
+      this.ersEnergy = Math.max(0.0, this.ersEnergy - delta * 5.0);
+    } else if (this.ersMode === "DEFEND" && this.ersEnergy > 2.0) {
+      this.ersPower = 0.75;
+      this.ersEnergy = Math.max(0.0, this.ersEnergy - delta * 3.5);
+    } else {
+      this.ersPower = 0.18; // Balanced baseline hybrid boost
+      if (this.throttle > 0.85 && this.ersEnergy > 5.0) {
+        this.ersEnergy = Math.max(0.0, this.ersEnergy - delta * 1.2);
+      }
+    }
+
+    // DRS Flap Deployment
+    this.drsOpen = canDRS;
+  }
+}
+
+// ── 2. Base AI Driver Brain ─────────────────────────────────────────────────
+class AIDriverBrain {
+  constructor(name, personality) {
+    this.name = name;
+    this.personality = personality || { speed: 0.85, aggr: 0.75, cons: 0.85, over: 0.80, def: 0.75, mistake: 0.10 };
+    this.ecu = new AIEngineECU(name);
+
+    // State Tracking
+    this.overtakeState = "NONE"; // NONE, PLANNING, PULL_OUT, DRAFTING
+    this.overtakeSide = 0; // -1 (left), 1 (right)
+    this.overtakeTimer = 0.0;
+
+    this.defendState = "NONE"; // NONE, COVER_INSIDE, BREAK_TOW
+    this.defendSide = 0;
+    this.defendTimer = 0.0;
+
+    this.mistakeTimer = 0.0;
+    this.mistakeOffset = 0.0;
+
+    // Driver Unique Racing Line Preferences
+    this.lineBias = 0.0; // Lateral preference (-1.5 to +1.5m)
+    this.apexAggression = 1.0; // Sharpness of corner turn-in
+    this.brakingBuffer = 0.0; // Offset on braking points
+    this.followDistance = 6.5; // Safe following buffer in meters
+  }
+
+  reset() {
+    this.ecu.reset();
+    this.overtakeState = "NONE";
+    this.overtakeSide = 0;
+    this.overtakeTimer = 0.0;
+    this.defendState = "NONE";
+    this.defendSide = 0;
+    this.defendTimer = 0.0;
+    this.mistakeTimer = 0.0;
+    this.mistakeOffset = 0.0;
+  }
+
+  // ── Proactive Radar: Anti-Pileup & Spatial Traffic Awareness ──
+  scanTraffic(racer, racers, trackCurve) {
+    let closestAhead = null;
+    let minGapAhead = Infinity;
+    let closestBehind = null;
+    let minGapBehind = Infinity;
+    let alongsideLeft = false;
+    let alongsideRight = false;
+
+    const myProgress = (racer.completedLaps || 0) + (racer.currentOffset || 0.0);
+    const myPos = racer.mesh ? racer.mesh.position : null;
+
+    for (let i = 0; i < racers.length; i++) {
+      const other = racers[i];
+      if (other === racer) continue;
+      if (!other.mesh || !other.mesh.visible) continue;
+      if (other.isTrackActive === false || other.qualifyingState === "GARAGE") continue;
+
+      // Both on track or both in pit (pit isolation)
+      const myInPit = racer.inPitLane || racer.isPitting;
+      const otherInPit = other.inPitLane || other.isPitting;
+      if (myInPit !== otherInPit) continue;
+
+      let otherProgress = (other.completedLaps || 0) + (other.currentOffset || 0.0);
+      let gap = (otherProgress - myProgress);
+      // Handle lap wraparound
+      if (gap < -0.5) gap += 100;
+      else if (gap > 50) gap -= 100;
+
+      const gapMeters = gap * 1800.0;
+
+      // Detect Car Ahead (forward cone up to 55m)
+      if (gapMeters > 0.0 && gapMeters < 55.0) {
+        if (gapMeters < minGapAhead) {
+          minGapAhead = gapMeters;
+          closestAhead = other;
+        }
+      }
+
+      // Detect Car Behind (rear cone up to 35m)
+      if (gapMeters < 0.0 && Math.abs(gapMeters) < 35.0) {
+        if (Math.abs(gapMeters) < minGapBehind) {
+          minGapBehind = Math.abs(gapMeters);
+          closestBehind = other;
+        }
+      }
+
+      // Detect Side-by-Side Traffic (Longitudinal < 5.0m, Lateral < 3.4m)
+      if (Math.abs(gapMeters) < 5.0) {
+        const sideDiff = other.sideOffset - racer.sideOffset;
+        if (sideDiff < -0.8 && sideDiff > -3.4) {
+          alongsideLeft = true;
+        } else if (sideDiff > 0.8 && sideDiff < 3.4) {
+          alongsideRight = true;
+        }
+      }
+    }
+
+    return {
+      closestAhead,
+      gapAhead: minGapAhead,
+      closestBehind,
+      gapBehind: minGapBehind,
+      alongsideLeft,
+      alongsideRight
+    };
+  }
+
+  // ── Core Update: Computes Target Speed, Offset, and ECU Inputs ──
+  think(racer, racers, baseSpeed, upcomingCurvature, isStraightZone, delta, clockTime) {
+    const radar = this.scanTraffic(racer, racers, null);
+    let targetSpeed = baseSpeed * (0.94 + this.personality.speed * 0.12);
+    let targetOffset = 0.0;
+    let isEmergency = false;
+
+    // 1. Unique Racing Line Calculation with Driver Bias
+    let optimalLine = -upcomingCurvature * 135.0 * this.apexAggression;
+    optimalLine = THREE.MathUtils.clamp(optimalLine, -5.2, 5.2);
+    targetOffset = optimalLine + this.lineBias;
+
+    // 2. Cornering Deceleration vs Straightaway Top Speed
+    const absCurvature = Math.abs(upcomingCurvature);
+    if (absCurvature > 0.003) {
+      // Braking zone: calculate corner grip limit based on curvature & downforce
+      const cornerLimit = Math.max(17.5, (1.0 / Math.pow(absCurvature, 0.48)) * 1.55);
+      targetSpeed = Math.min(targetSpeed, cornerLimit * (0.97 + this.personality.cons * 0.06));
+    }
+
+    // 3. Straightaway DRS Boost
+    const canDRS = isStraightZone && (radar.closestAhead && radar.gapAhead < 35.0);
+    if (isStraightZone) {
+      if (canDRS) {
+        targetSpeed += 8.5; // DRS straightaway top-end advantage
+      } else {
+        targetSpeed += 4.5;
+      }
+    }
+
+    // 4. Proactive Collision Avoidance & Safe Following Regulation
+    if (radar.closestAhead) {
+      const leader = radar.closestAhead;
+      const gap = radar.gapAhead;
+      const closingSpeed = racer.speed - leader.speed;
+      const latDiff = Math.abs(racer.sideOffset - leader.sideOffset);
+
+      // A. Emergency Rear-End Prevention Zone (< 5.5m & Same Corridor)
+      if (gap < 5.5 && latDiff < 2.0 && closingSpeed > -1.0) {
+        isEmergency = true;
+        targetSpeed = Math.min(targetSpeed, leader.speed * 0.85);
+        // Evade sideways to clear space
+        if (!radar.alongsideLeft && racer.sideOffset > -6.5) {
+          targetOffset = leader.sideOffset - 3.2;
+        } else if (!radar.alongsideRight && racer.sideOffset < 6.5) {
+          targetOffset = leader.sideOffset + 3.2;
+        }
+      }
+      // B. Following & Speed Matching Zone (5.5m - 14.0m)
+      else if (gap < 14.0 && latDiff < 2.2) {
+        if (closingSpeed > 0.5) {
+          // Smoothly match leader speed to maintain healthy racing gap
+          const targetGap = this.followDistance;
+          if (gap < targetGap) {
+            targetSpeed = Math.min(targetSpeed, leader.speed * 0.96);
+          } else {
+            targetSpeed = Math.min(targetSpeed, leader.speed * 1.01);
+          }
+        }
+      }
+
+      // C. Tactical Overtaking (Attack when within 32m on straights or corner exits)
+      const attackRange = 32.0 * (0.8 + this.personality.aggr * 0.4);
+      if (gap < attackRange && !isEmergency && Math.abs(closingSpeed) >= -2.0) {
+        if (this.overtakeTimer <= 0.0) {
+          // Check left & right corridors
+          const leftTarget = leader.sideOffset - 3.2;
+          const rightTarget = leader.sideOffset + 3.2;
+          const leftClear = !radar.alongsideLeft && leftTarget >= -7.2;
+          const rightClear = !radar.alongsideRight && rightTarget <= 7.2;
+
+          let chosenSide = 0;
+          if (leftClear && rightClear) {
+            // Pick inside of upcoming corner, or side with more track width
+            if (absCurvature > 0.002) {
+              chosenSide = (upcomingCurvature > 0) ? -1 : 1;
+            } else {
+              chosenSide = (leader.sideOffset >= 0) ? -1 : 1;
+            }
+          } else if (leftClear) {
+            chosenSide = -1;
+          } else if (rightClear) {
+            chosenSide = 1;
+          }
+
+          if (chosenSide !== 0) {
+            this.overtakeState = "PULL_OUT";
+            this.overtakeSide = chosenSide;
+            this.overtakeTimer = 1.6 + this.personality.aggr * 1.0;
+            this.ecu.ersMode = "OVERTAKE"; // Deploy full ERS boost!
+          }
+        } else {
+          this.overtakeTimer -= delta;
+          if (this.overtakeTimer <= 0.0) {
+            this.overtakeState = "NONE";
+            this.ecu.ersMode = "BALANCED";
+          }
+        }
+
+        if (this.overtakeState === "PULL_OUT") {
+          targetOffset = leader.sideOffset + this.overtakeSide * 3.4;
+          targetSpeed += 3.5; // Attacking acceleration push
+        }
+      }
+    }
+
+    // 5. Authentic FIA Article 33.4 Defensive Racecraft
+    if (radar.closestBehind && radar.gapBehind < 26.0 && this.overtakeState === "NONE") {
+      const pursuer = radar.closestBehind;
+      if (this.defendTimer <= 0.0) {
+        // FIA: Exactly 1 decisive move to cover the line
+        if (absCurvature > 0.003) {
+          // Defend inside apex of upcoming turn
+          this.defendSide = (upcomingCurvature > 0) ? -1 : 1;
+          this.defendTimer = 1.4;
+          this.defendState = "COVER_INSIDE";
+        } else {
+          // Straight: cover the attacker's lane to break slipstream tow
+          const sideDiff = pursuer.sideOffset - racer.sideOffset;
+          this.defendSide = (sideDiff >= 0) ? 1 : -1;
+          this.defendTimer = 1.1 + this.personality.def * 0.6;
+          this.defendState = "BREAK_TOW";
+        }
+
+        // Deploy ERS to defend track position
+        if (radar.gapBehind < 18.0) {
+          this.ecu.ersMode = "DEFEND";
+        }
+      } else {
+        this.defendTimer -= delta;
+        if (this.defendTimer <= 0.0) {
+          this.defendState = "NONE";
+          this.ecu.ersMode = "BALANCED";
+        }
+      }
+
+      if (this.defendState !== "NONE") {
+        targetOffset += this.defendSide * (2.8 * this.personality.def);
+      }
+    }
+
+    // 6. 2-Wide Racing Room Rule: Always leave 1 car width (> 2.4m) for cars alongside
+    if (radar.alongsideLeft && targetOffset < -3.8) {
+      targetOffset = -3.8; // Don't squeeze cars on left off track
+    }
+    if (radar.alongsideRight && targetOffset > 3.8) {
+      targetOffset = 3.8; // Don't squeeze cars on right off track
+    }
+
+    // 7. Human-like Driver Mistakes (Occasional lockup / wide line under pressure)
+    if (this.mistakeTimer <= 0.0) {
+      if (radar.closestBehind && radar.gapBehind < 12.0 && Math.random() < (this.personality.mistake * delta * 0.15)) {
+        this.mistakeOffset = (Math.random() < 0.5 ? -1 : 1) * (1.2 + Math.random() * 1.5);
+        this.mistakeTimer = 1.5;
+      }
+    } else {
+      this.mistakeTimer -= delta;
+      targetOffset += this.mistakeOffset;
+      if (this.mistakeTimer <= 0.0) this.mistakeOffset = 0.0;
+    }
+
+    // Clamp side offset to drivable track boundary
+    targetOffset = THREE.MathUtils.clamp(targetOffset, -7.2, 7.2);
+
+    // Update ECU
+    this.ecu.update(racer.speed, targetSpeed, delta, canDRS, isEmergency);
+
+    return {
+      targetSpeed,
+      targetOffset,
+      isEmergency,
+      gear: this.ecu.gear,
+      rpm: this.ecu.rpm,
+      throttle: this.ecu.throttle,
+      brake: this.ecu.brake,
+      ersPower: this.ecu.ersPower
+    };
+  }
+}
+
+// ── 3. 15 Dedicated Driver Brain Classes ────────────────────────────────────
+
+// 1. Max Verstappen: Ruthless late braking, razor apex, fierce inside defense
+class VerstappenBrain extends AIDriverBrain {
+  constructor() {
+    super("Max Verstappen", { speed: 0.98, aggr: 0.93, cons: 0.97, over: 0.97, def: 0.92, mistake: 0.03 });
+    this.lineBias = -0.4; // Tight inside line
+    this.apexAggression = 1.15;
+    this.followDistance = 5.2; // Aggressive tailgating
+  }
+}
+
+// 2. Sergio Perez: "Minister of Defence", tire preservation, wide defensive placement
+class PerezBrain extends AIDriverBrain {
+  constructor() {
+    super("Sergio Perez", { speed: 0.88, aggr: 0.72, cons: 0.85, over: 0.80, def: 0.88, mistake: 0.10 });
+    this.lineBias = 0.5;
+    this.apexAggression = 0.92;
+    this.followDistance = 6.8;
+  }
+}
+
+// 3. Charles Leclerc: Blistering raw qualifying & apex speed, high entry commitment
+class LeclercBrain extends AIDriverBrain {
+  constructor() {
+    super("Charles Leclerc", { speed: 0.94, aggr: 0.86, cons: 0.86, over: 0.89, def: 0.80, mistake: 0.12 });
+    this.lineBias = 0.0;
+    this.apexAggression = 1.12;
+    this.followDistance = 5.6;
+  }
+}
+
+// 4. Carlos Sainz: "Smooth Operator", methodical, tactical braking, disciplined racing
+class SainzBrain extends AIDriverBrain {
+  constructor() {
+    super("Carlos Sainz", { speed: 0.90, aggr: 0.76, cons: 0.91, over: 0.84, def: 0.83, mistake: 0.08 });
+    this.lineBias = 0.2;
+    this.apexAggression = 0.96;
+    this.followDistance = 6.4;
+  }
+}
+
+// 5. Lewis Hamilton: Master of racecraft, V-line corner exit drive, DRS tow perfection
+class HamiltonBrain extends AIDriverBrain {
+  constructor() {
+    super("Lewis Hamilton", { speed: 0.95, aggr: 0.82, cons: 0.95, over: 0.94, def: 0.89, mistake: 0.04 });
+    this.lineBias = 0.3; // Wide entry, sharp exit V-line
+    this.apexAggression = 1.05;
+    this.followDistance = 5.8;
+  }
+}
+
+// 6. George Russell: Bold straight-line overtakes, assertive corner entries
+class RussellBrain extends AIDriverBrain {
+  constructor() {
+    super("George Russell", { speed: 0.91, aggr: 0.80, cons: 0.89, over: 0.88, def: 0.82, mistake: 0.07 });
+    this.lineBias = -0.2;
+    this.apexAggression = 1.04;
+    this.followDistance = 6.0;
+  }
+}
+
+// 7. Fernando Alonso: Master tactician, 1-move defense, cuts corner exits for slipstream
+class AlonsoBrain extends AIDriverBrain {
+  constructor() {
+    super("Fernando Alonso", { speed: 0.92, aggr: 0.88, cons: 0.93, over: 0.93, def: 0.94, mistake: 0.05 });
+    this.lineBias = -0.5; // Hugs inside to block passes
+    this.apexAggression = 1.08;
+    this.followDistance = 5.4;
+  }
+}
+
+// 8. Lance Stroll: Direct straight-line attacks, reactive defending
+class StrollBrain extends AIDriverBrain {
+  constructor() {
+    super("Lance Stroll", { speed: 0.82, aggr: 0.65, cons: 0.75, over: 0.70, def: 0.68, mistake: 0.17 });
+    this.lineBias = 0.4;
+    this.apexAggression = 0.88;
+    this.followDistance = 7.2;
+  }
+}
+
+// 9. Lando Norris: High minimum apex speed, smooth inputs, slingshot overtakes
+class NorrisBrain extends AIDriverBrain {
+  constructor() {
+    super("Lando Norris", { speed: 0.93, aggr: 0.84, cons: 0.89, over: 0.90, def: 0.82, mistake: 0.07 });
+    this.lineBias = -0.1;
+    this.apexAggression = 1.06;
+    this.followDistance = 5.7;
+  }
+}
+
+// 10. Oscar Piastri: Calm, unflappable, clinical clean passes, disciplined lane holding
+class PiastriBrain extends AIDriverBrain {
+  constructor() {
+    super("Oscar Piastri", { speed: 0.89, aggr: 0.74, cons: 0.86, over: 0.84, def: 0.77, mistake: 0.09 });
+    this.lineBias = 0.1;
+    this.apexAggression = 0.98;
+    this.followDistance = 6.2;
+  }
+}
+
+// 11. Pierre Gasly: Hard midfield racer, late on brakes, stubborn battles
+class GaslyBrain extends AIDriverBrain {
+  constructor() {
+    super("Pierre Gasly", { speed: 0.85, aggr: 0.80, cons: 0.82, over: 0.81, def: 0.78, mistake: 0.12 });
+    this.lineBias = -0.3;
+    this.apexAggression = 1.02;
+    this.followDistance = 6.1;
+  }
+}
+
+// 12. Esteban Ocon: Fierce defender, uncompromising inside line, refuses to yield
+class OconBrain extends AIDriverBrain {
+  constructor() {
+    super("Esteban Ocon", { speed: 0.84, aggr: 0.78, cons: 0.81, over: 0.78, def: 0.84, mistake: 0.13 });
+    this.lineBias = -0.4;
+    this.apexAggression = 0.99;
+    this.followDistance = 6.2;
+  }
+}
+
+// 13. Nico Hulkenberg: Precise braking points, consistent lap times, clean racing
+class HulkenbergBrain extends AIDriverBrain {
+  constructor() {
+    super("Nico Hulkenberg", { speed: 0.83, aggr: 0.72, cons: 0.83, over: 0.77, def: 0.74, mistake: 0.11 });
+    this.lineBias = 0.0;
+    this.apexAggression = 0.95;
+    this.followDistance = 6.5;
+  }
+}
+
+// 14. Kevin Magnussen: Ultra-aggressive wheel-to-wheel battles, bold defense
+class MagnussenBrain extends AIDriverBrain {
+  constructor() {
+    super("Kevin Magnussen", { speed: 0.81, aggr: 0.90, cons: 0.75, over: 0.78, def: 0.86, mistake: 0.17 });
+    this.lineBias = 0.4;
+    this.apexAggression = 1.06;
+    this.followDistance = 5.5;
+  }
+}
+
+// 15. Alex Albon: Late braking specialist, excellent exit speed, spirited defense
+class AlbonBrain extends AIDriverBrain {
+  constructor() {
+    super("Alex Albon", { speed: 0.86, aggr: 0.75, cons: 0.84, over: 0.83, def: 0.76, mistake: 0.10 });
+    this.lineBias = -0.2;
+    this.apexAggression = 1.01;
+    this.followDistance = 6.3;
+  }
+}
+
+// ── 4. AI Brain Manager: Dispatches & Manages 15 Dedicated Driver Brains ────
+const BRAIN_REGISTRY = {
+  "Max Verstappen":   VerstappenBrain,
+  "Sergio Perez":     PerezBrain,
+  "Charles Leclerc":  LeclercBrain,
+  "Carlos Sainz":     SainzBrain,
+  "Lewis Hamilton":   HamiltonBrain,
+  "George Russell":   RussellBrain,
+  "Fernando Alonso":  AlonsoBrain,
+  "Lance Stroll":     StrollBrain,
+  "Lando Norris":     NorrisBrain,
+  "Oscar Piastri":    PiastriBrain,
+  "Pierre Gasly":     GaslyBrain,
+  "Esteban Ocon":     OconBrain,
+  "Nico Hulkenberg":  HulkenbergBrain,
+  "Kevin Magnussen":  MagnussenBrain,
+  "Alex Albon":       AlbonBrain,
+};
+
+window.AIBrainManager = {
+  driverBrains: new Map(),
+
+  getBrainForRacer(racer) {
+    if (!racer || racer.isPlayer) return null;
+    const name = racer.name || "AI Racer";
+    if (this.driverBrains.has(name)) {
+      return this.driverBrains.get(name);
+    }
+
+    const BrainClass = BRAIN_REGISTRY[name];
+    let brain;
+    if (BrainClass) {
+      brain = new BrainClass();
+    } else {
+      const personality = (window.AI_PERSONALITIES && window.AI_PERSONALITIES[name]) || {
+        speed: 0.82, aggr: 0.72, cons: 0.80, over: 0.76, def: 0.72, mistake: 0.13
+      };
+      brain = new AIDriverBrain(name, personality);
+    }
+
+    this.driverBrains.set(name, brain);
+    return brain;
+  },
+
+  resetAll() {
+    this.driverBrains.forEach(brain => brain.reset());
+  }
+};
+
 // ═══ game-06-ai-physics.js ═══
   function getSignedTrackGap(carA, carB) {
     const diff = carB.currentOffset - carA.currentOffset;
@@ -10393,6 +11004,31 @@
 
         // 🚀 AI Straightaway DRS Boost (matches player DRS straight advantage)
         const isAIStraightZone = (racer.currentOffset >= 0.90 || racer.currentOffset <= 0.05) || (racer.currentOffset >= 0.35 && racer.currentOffset <= 0.44);
+
+        function getUpcomingTrackCurvature(offset) {
+          if (!trackCurve) return 0.0;
+          const t1 = trackCurve.getTangentAt(offset % 1.0).normalize();
+          const t2 = trackCurve.getTangentAt((offset + 0.016) % 1.0).normalize();
+          return (t1.x * t2.z - t1.z * t2.x);
+        }
+        const upcomingCurvature = getUpcomingTrackCurvature(racer.currentOffset);
+
+        // 🧠 Individual Driver Brain & ECU Execution
+        let driverBrain = (typeof window.AIBrainManager !== 'undefined') ? window.AIBrainManager.getBrainForRacer(racer) : null;
+        let brainDecision = null;
+        let emergencyBrake = false;
+
+        if (driverBrain) {
+          brainDecision = driverBrain.think(racer, racers, baseSpeed, upcomingCurvature, isAIStraightZone, delta, clock.getElapsedTime());
+          target = Math.min(target, brainDecision.targetSpeed);
+          if (brainDecision.isEmergency) emergencyBrake = true;
+          racer.currentGear = brainDecision.gear;
+          racer.engineRPM = brainDecision.rpm;
+          racer.throttle = brainDecision.throttle;
+          racer.brake = brainDecision.brake;
+          racer.ersPower = brainDecision.ersPower;
+        }
+
         if (isAIStraightZone && !safetyCarActive && !redFlagActive && racer.qualifyingState !== "GARAGE") {
           target += 9.0; // Straightaway DRS boost
           if (racer.mesh && racer.mesh.drsFlap) {
@@ -10412,127 +11048,100 @@
         let aiAccel = 68.0;
 
         // ERS boost acceleration based on battery energy state
-
         let ersAccelBoost = 0.0;
-
         if (racer.overtakeModeActive) {
-
           ersAccelBoost = 42.0;
-
         } else if (racer.ersPower > 0.1) {
-
           ersAccelBoost = 18.0;
-
         }
 
         if (racer.ersBatteryLevel >= 60.0) {
-
           ersAccelBoost *= 1.0;
-
         } else if (racer.ersBatteryLevel >= 25.0) {
-
           ersAccelBoost *= 0.60;
-
         } else if (racer.ersBatteryLevel > 0.1) {
-
           ersAccelBoost *= 0.25;
-
         } else {
-
           ersAccelBoost = 0.0; // Empty battery
-
         }
 
-        // B8: AI Collision Avoidance (Moved up to apply speed limits correctly before physics update)
-        let closestAhead = null;
-        let minGapAhead = Infinity;
+        // B8: AI Collision Avoidance (Fallback if driver brain not present)
         avoidanceOffset = 0.0;
+        if (!brainDecision) {
+          let closestAhead = null;
+          let minGapAhead = Infinity;
+          const lookaheadDist = Math.max(75.0, racer.speed * 1.5);
 
-        // Enhanced lookahead: speed-dependent distance (detects obstacles well in advance)
-        const lookaheadDist = Math.max(75.0, racer.speed * 1.5);
+          racers.forEach(other => {
+            if (other === racer) return;
+            if (other.isTrackActive === false || other.qualifyingState === "GARAGE") return;
 
-        racers.forEach(other => {
-          if (other === racer) return;
-          if (other.isTrackActive === false || other.qualifyingState === "GARAGE") return;
+            const myInPit = racer.inPitLane || racer.isPitting;
+            const otherInPit = other.inPitLane || other.isPitting;
+            if (myInPit !== otherInPit) return;
 
-          const myInPit = racer.inPitLane || racer.isPitting;
-          const otherInPit = other.inPitLane || other.isPitting;
-          if (myInPit !== otherInPit) return;
-
-          const gap = getSignedTrackGap(racer, other);
-          if (gap > 0.0 && gap < lookaheadDist) {
-            if (gap < minGapAhead) {
-              minGapAhead = gap;
-              closestAhead = other;
-            }
-          }
-        });
-
-        let emergencyBrake = false;
-
-        if (closestAhead) {
-          const latDiff = Math.abs(racer.sideOffset - closestAhead.sideOffset);
-          const isHazardStopped = (closestAhead.speed < 15.0);
-
-          if (isHazardStopped) {
-            // 🛑 STATIONARY / CRASHED OBSTACLE AVOIDANCE & EMERGENCY BRAKING
-            // Steer decisively toward the clear side of the track
-            const clearSide = (closestAhead.sideOffset >= 0) ? -4.5 : 4.5;
-            avoidanceOffset = clearSide;
-            racer.avoidanceSide = (closestAhead.sideOffset >= 0) ? "LEFT" : "RIGHT";
-            racer.avoidanceCommitTimer = 1.2;
-
-            if (minGapAhead < 45.0 && latDiff < 3.2) {
-              // Lane is directly obstructed ahead: slam emergency brakes to avoid rear-ending!
-              target = 0.0;
-              emergencyBrake = true;
-            } else if (minGapAhead < 25.0) {
-              target = Math.min(target, 12.0);
-              emergencyBrake = true;
-            } else if (minGapAhead < 60.0) {
-              target = Math.min(target, 35.0);
-            }
-          } else {
-            // Authentic F1 Racecraft: Dynamic following, slipstream tow, and overtaking
-            // 1. Slipstream (Tow Boost) on straights & open track
-            if (minGapAhead > 4.5 && minGapAhead < 42.0) {
-              const towStrength = (1.0 - minGapAhead / 42.0) * 0.09;
-              target *= (1.0 + towStrength); // Up to +9% top speed boost in tow!
-
-              // Trigger overtake mode & aggressive ERS deployment
-              if (minGapAhead < 30.0) {
-                racer.overtakeModeActive = true;
-                racer.ersPower = 1.0;
+            const gap = getSignedTrackGap(racer, other);
+            if (gap > 0.0 && gap < lookaheadDist) {
+              if (gap < minGapAhead) {
+                minGapAhead = gap;
+                closestAhead = other;
               }
             }
+          });
 
-            // 2. Decisive Overtake Lane Selection
-            if (minGapAhead < 32.0) {
-              if (racer.avoidanceCommitTimer === undefined) racer.avoidanceCommitTimer = 0.0;
-              if (racer.avoidanceSide === undefined || racer.avoidanceSide === "NONE" || racer.avoidanceCommitTimer <= 0.0) {
-                // Steer decisively to whichever side has more room (or inside line)
-                racer.avoidanceSide = (closestAhead.sideOffset >= 0.0) ? "LEFT" : "RIGHT";
-                racer.avoidanceCommitTimer = 1.4;
-              }
-              avoidanceOffset = racer.avoidanceSide === "LEFT" ? -3.8 : 3.8;
-            }
+          if (closestAhead) {
+            const latDiff = Math.abs(racer.sideOffset - closestAhead.sideOffset);
+            const isHazardStopped = (closestAhead.speed < 15.0);
 
-            // 3. Speed Regulation: ONLY brake if directly blocked in same lateral lane (< 1.6m) and < 4.5m gap
-            if (latDiff < 1.6) {
-              if (minGapAhead < 4.0) {
-                // Too close to car directly ahead: match speed smoothly
-                target = Math.min(target, closestAhead.speed * 0.95);
+            if (isHazardStopped) {
+              const clearSide = (closestAhead.sideOffset >= 0) ? -4.5 : 4.5;
+              avoidanceOffset = clearSide;
+              racer.avoidanceSide = (closestAhead.sideOffset >= 0) ? "LEFT" : "RIGHT";
+              racer.avoidanceCommitTimer = 1.2;
+
+              if (minGapAhead < 45.0 && latDiff < 3.2) {
+                target = 0.0;
                 emergencyBrake = true;
-              } else if (minGapAhead < 7.5 && racer.speed > closestAhead.speed) {
-                target = Math.min(target, closestAhead.speed * 0.99);
+              } else if (minGapAhead < 25.0) {
+                target = Math.min(target, 12.0);
+                emergencyBrake = true;
+              } else if (minGapAhead < 60.0) {
+                target = Math.min(target, 35.0);
+              }
+            } else {
+              if (minGapAhead > 4.5 && minGapAhead < 42.0) {
+                const towStrength = (1.0 - minGapAhead / 42.0) * 0.09;
+                target *= (1.0 + towStrength);
+                if (minGapAhead < 30.0) {
+                  racer.overtakeModeActive = true;
+                  racer.ersPower = 1.0;
+                }
+              }
+
+              if (minGapAhead < 32.0) {
+                if (racer.avoidanceCommitTimer === undefined) racer.avoidanceCommitTimer = 0.0;
+                if (racer.avoidanceSide === undefined || racer.avoidanceSide === "NONE" || racer.avoidanceCommitTimer <= 0.0) {
+                  racer.avoidanceSide = (closestAhead.sideOffset >= 0.0) ? "LEFT" : "RIGHT";
+                  racer.avoidanceCommitTimer = 1.4;
+                }
+                avoidanceOffset = racer.avoidanceSide === "LEFT" ? -3.8 : 3.8;
+              }
+
+              if (latDiff < 2.0) {
+                if (minGapAhead < 5.5) {
+                  target = Math.min(target, closestAhead.speed * 0.90);
+                  emergencyBrake = true;
+                } else if (minGapAhead < 12.0 && racer.speed > closestAhead.speed) {
+                  target = Math.min(target, closestAhead.speed * 0.98);
+                }
               }
             }
-          }
 
-          if (racer.avoidanceCommitTimer > 0.0) {
-            racer.avoidanceCommitTimer -= delta;
-            if (racer.avoidanceCommitTimer <= 0.0) {
-              racer.avoidanceSide = "NONE";
+            if (racer.avoidanceCommitTimer > 0.0) {
+              racer.avoidanceCommitTimer -= delta;
+              if (racer.avoidanceCommitTimer <= 0.0) {
+                racer.avoidanceSide = "NONE";
+              }
             }
           }
         }
@@ -11147,8 +11756,12 @@
       let normalTargetOffset = optimalLineOffset + (driverBias + cleanAirHunt) * (racer.swayFadeFactor || 1.0);
 
       if (!racer.pitExitMergeHold) {
-        let finalTargetOffset = normalTargetOffset + overtakeOffset + defenceOffset + avoidanceOffset;
-        racer.targetSideOffset = THREE.MathUtils.clamp(finalTargetOffset, -7.4, 7.4);
+        if (brainDecision) {
+          racer.targetSideOffset = THREE.MathUtils.clamp(brainDecision.targetOffset, -7.4, 7.4);
+        } else {
+          let finalTargetOffset = normalTargetOffset + overtakeOffset + defenceOffset + avoidanceOffset;
+          racer.targetSideOffset = THREE.MathUtils.clamp(finalTargetOffset, -7.4, 7.4);
+        }
       }
 
       if (racer.sideOffset === undefined) racer.sideOffset = 0.0;
@@ -11285,6 +11898,10 @@
 
   function updateCollisionDetection() {
     // --- Authentic 3D F1 Vehicle-to-Vehicle Physics Collisions & Damage ---
+    const CAR_RADIUS = 1.05; // 2-circle capsule model covering 4.8m length x 2.1m width
+    const CIRCLE_DIST = 1.30;
+    const DIAMETER = CAR_RADIUS * 2.0;
+
     for (let i = 0; i < racers.length; i++) {
       for (let j = i + 1; j < racers.length; j++) {
         const racerI = racers[i];
@@ -11294,102 +11911,113 @@
         if (!racerI.mesh || !racerJ.mesh) continue;
         if (!racerI.mesh.visible || !racerJ.mesh.visible) continue;
         if (racerI.isTrackActive === false || racerJ.isTrackActive === false) continue;
-        if (racerI.qualifyingState === "GARAGE" || racerJ.qualifyingState === "GARAGE") continue;
+        // Skip only cars parked stationary inside garage bays
+        if ((racerI.qualifyingState === "GARAGE" && Math.abs(racerI.speed) < 0.1) || 
+            (racerJ.qualifyingState === "GARAGE" && Math.abs(racerJ.speed) < 0.1)) continue;
 
-        // Isolate pit lane and track traffic
-        const myInPit = racerI.inPitLane || racerI.isPitting;
-        const otherInPit = racerJ.inPitLane || racerJ.isPitting;
-        if (myInPit !== otherInPit) continue;
-
-        if (!racerI.mesh || !racerJ.mesh) continue;
         const posI = racerI.mesh.position;
         const posJ = racerJ.mesh.position;
         if (!posI || !posJ) continue;
-        const dist3D = posI.distanceTo(posJ);
 
-        // Authentic Oriented Bounding Box collision for F1 cars (Length 4.8m, Width 2.1m)
-        let tang = new THREE.Vector3(0, 0, 1);
-        let norm = new THREE.Vector3(1, 0, 0);
-        if (trackCurve) {
-          const trackT = (racerI.currentOffset !== undefined && !isNaN(racerI.currentOffset)) ? racerI.currentOffset : 0.0;
-          const safeT = ((trackT % 1.0) + 1.0) % 1.0;
-          tang = trackCurve.getTangentAt(safeT).normalize();
-          norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
+        // Fast rejection: F1 car length is 4.8m
+        const dist3D = posI.distanceTo(posJ);
+        if (dist3D > 5.5) continue;
+
+        // Get car forward orientations from mesh rotation/quaternion
+        let fwdI = new THREE.Vector3(0, 0, 1).applyQuaternion(racerI.mesh.quaternion).setY(0);
+        if (fwdI.lengthSq() > 0.001) fwdI.normalize();
+        else fwdI.set(0, 0, 1);
+
+        let fwdJ = new THREE.Vector3(0, 0, 1).applyQuaternion(racerJ.mesh.quaternion).setY(0);
+        if (fwdJ.lengthSq() > 0.001) fwdJ.normalize();
+        else fwdJ.set(0, 0, 1);
+
+        // 2-Circle capsule centers for Car I & Car J (front nose & rear axle)
+        const circlesI = [
+          posI.clone().addScaledVector(fwdI, CIRCLE_DIST),
+          posI.clone().addScaledVector(fwdI, -CIRCLE_DIST)
+        ];
+        const circlesJ = [
+          posJ.clone().addScaledVector(fwdJ, CIRCLE_DIST),
+          posJ.clone().addScaledVector(fwdJ, -CIRCLE_DIST)
+        ];
+
+        let maxOverlap = 0.0;
+        let colNormal = new THREE.Vector3(1, 0, 0);
+
+        // Check intersection across all 4 circle pairs
+        for (let cI = 0; cI < 2; cI++) {
+          for (let cJ = 0; cJ < 2; cJ++) {
+            const pI = circlesI[cI];
+            const pJ = circlesJ[cJ];
+            const delta2D = pI.clone().sub(pJ).setY(0);
+            const d = delta2D.length();
+            if (d < DIAMETER) {
+              const overlap = DIAMETER - d;
+              if (overlap > maxOverlap) {
+                maxOverlap = overlap;
+                colNormal = d > 0.0001 ? delta2D.normalize() : new THREE.Vector3(1, 0, 0);
+              }
+            }
+          }
         }
 
-        const deltaPos = posI.clone().sub(posJ);
-        deltaPos.y = 0; // horizontal collision plane
-        const longDist = deltaPos.dot(tang); // longitudinal separation along track (+ = I ahead, - = J ahead)
-        const latDist = deltaPos.dot(norm);   // lateral separation across track
+        if (maxOverlap > 0.0) {
+          // 1. SOLID RIGID SEPARATION (Cars physically bounce apart — CANNOT pass inside!)
+          const sep = colNormal.clone().multiplyScalar(maxOverlap * 0.53);
 
-        const CAR_LENGTH = 4.8;
-        const CAR_WIDTH = 2.1;
-
-        if (Math.abs(longDist) < CAR_LENGTH && Math.abs(latDist) < CAR_WIDTH) {
-          const longOverlap = CAR_LENGTH - Math.abs(longDist);
-          const latOverlap = CAR_WIDTH - Math.abs(latDist);
-
-          const isRearEnd = (Math.abs(latDist) < 1.7) || (longOverlap < latOverlap * 1.5);
-          const leadingCar = (longDist >= 0) ? racerI : racerJ;
-          const trailingCar = (longDist >= 0) ? racerJ : racerI;
-
-          // 1. SOLID PHYSICAL SEPARATION (Cars CANNOT pass inside each other!)
-          if (isRearEnd) {
-            // Trailing car is physically blocked from passing through leading car
-            const pushDir = (longDist >= 0) ? -1 : 1;
-            if (trailingCar.isPlayer) {
-              playerKart.mesh.position.addScaledVector(tang, pushDir * longOverlap * 1.05);
-              playerKart.speed = Math.min(playerKart.speed, leadingCar.speed * 0.70);
-            } else {
-              trailingCar.currentOffset += (pushDir * longOverlap * 1.05) / 1800.0;
-              trailingCar.speed = Math.min(trailingCar.speed, leadingCar.speed * 0.70);
-              if (trailingCar.mesh) trailingCar.mesh.position.addScaledVector(tang, pushDir * longOverlap * 1.05);
-            }
-
-            // Leading car gets a bump impulse forward
-            leadingCar.speed = Math.max(leadingCar.speed, leadingCar.speed + 3.2);
+          if (racerI.isPlayer) {
+            playerKart.mesh.position.add(sep);
           } else {
-            // Side-by-side wheel banging: bounce laterally apart along track normal
-            const sidePushI = latDist >= 0 ? 1 : -1;
-            const sidePushJ = -sidePushI;
-
-            if (racerI.isPlayer) {
-              playerKart.mesh.position.addScaledVector(norm, sidePushI * latOverlap * 0.65);
-              playerKart.sideOffset = (playerKart.sideOffset || 0) + sidePushI * latOverlap * 0.65;
-            } else {
-              racerI.sideOffset = (racerI.sideOffset || 0) + sidePushI * latOverlap * 0.65;
+            racerI.mesh.position.add(sep);
+            if (typeof window.findNearestTrackProjection === 'function') {
+              const proj = window.findNearestTrackProjection(racerI.mesh.position);
+              racerI.currentOffset = proj.progress;
+              racerI.sideOffset = THREE.MathUtils.clamp(proj.lateralOffset, -7.6, 7.6);
               racerI.targetSideOffset = racerI.sideOffset;
-              if (racerI.mesh) racerI.mesh.position.addScaledVector(norm, sidePushI * latOverlap * 0.65);
-            }
-
-            if (racerJ.isPlayer) {
-              playerKart.mesh.position.addScaledVector(norm, sidePushJ * latOverlap * 0.65);
-              playerKart.sideOffset = (playerKart.sideOffset || 0) + sidePushJ * latOverlap * 0.65;
-            } else {
-              racerJ.sideOffset = (racerJ.sideOffset || 0) + sidePushJ * latOverlap * 0.65;
-              racerJ.targetSideOffset = racerJ.sideOffset;
-              if (racerJ.mesh) racerJ.mesh.position.addScaledVector(norm, sidePushJ * latOverlap * 0.65);
             }
           }
 
-          // 2. Realistic Speed Exchange & Crash Impulse
+          if (racerJ.isPlayer) {
+            playerKart.mesh.position.sub(sep);
+          } else {
+            racerJ.mesh.position.sub(sep);
+            if (typeof window.findNearestTrackProjection === 'function') {
+              const proj = window.findNearestTrackProjection(racerJ.mesh.position);
+              racerJ.currentOffset = proj.progress;
+              racerJ.sideOffset = THREE.MathUtils.clamp(proj.lateralOffset, -7.6, 7.6);
+              racerJ.targetSideOffset = racerJ.sideOffset;
+            }
+          }
+
+          // 2. Realistic Speed Exchange & Inelastic Momentum Transfer
+          const deltaCenter = posI.clone().sub(posJ).setY(0);
+          const isRearEnd = Math.abs(colNormal.dot(fwdI)) > 0.60 || Math.abs(colNormal.dot(fwdJ)) > 0.60;
+          const carIAhead = deltaCenter.dot(fwdI) >= 0;
+          const leadingCar = carIAhead ? racerI : racerJ;
+          const trailingCar = carIAhead ? racerJ : racerI;
+
+          if (isRearEnd) {
+            // Trailing car cannot exceed leading car speed; momentum transfer
+            trailingCar.speed = Math.min(trailingCar.speed, leadingCar.speed * 0.72);
+            leadingCar.speed = Math.max(leadingCar.speed, leadingCar.speed + 2.8);
+          } else {
+            // Side-by-side wheel banging speed scrub
+            racerI.speed *= 0.95;
+            racerJ.speed *= 0.95;
+          }
+
           const speedDiff = racerI.speed - racerJ.speed;
-          const impact = Math.max(Math.abs(speedDiff), Math.max(longOverlap, latOverlap) * 8.5);
+          const impact = Math.max(Math.abs(speedDiff), maxOverlap * 14.0);
 
           // 3. F1 Component Damage Accumulation
-          const addedDamage = Math.max(3.5, impact * 1.45);
+          const addedDamage = Math.max(3.5, impact * 1.35);
           racerI.damage = Math.min(100.0, (racerI.damage || 0.0) + addedDamage);
           racerJ.damage = Math.min(100.0, (racerJ.damage || 0.0) + addedDamage);
 
-          if (racerI.isPlayer) {
-            carDamage = racerI.damage;
-            updateDamageHUD();
-            if (typeof window.triggerGamepadRumble === 'function') {
-              window.triggerGamepadRumble(160, 0.85, 0.6);
-            }
-          }
-          if (racerJ.isPlayer) {
-            carDamage = racerJ.damage;
+          if (racerI.isPlayer || racerJ.isPlayer) {
+            const pKart = racerI.isPlayer ? racerI : racerJ;
+            carDamage = pKart.damage;
             updateDamageHUD();
             if (typeof window.triggerGamepadRumble === 'function') {
               window.triggerGamepadRumble(160, 0.85, 0.6);

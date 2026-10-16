@@ -3,6 +3,7 @@
     postRaceActive = false;
     postRaceState = "FINISHING";
     currentRaceId++;
+    if (window.AIBrainManager) window.AIBrainManager.resetAll();
     if (playerKart) playerKart.heading = undefined;
     const myRaceId = currentRaceId;
     // Prevent duplicate animate loops by canceling any running loop
