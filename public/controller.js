@@ -200,11 +200,11 @@ class VirtualStick {
   constructor(knobId, boundaryId, type) {
     this.knob = document.getElementById(knobId);
     this.boundary = document.getElementById(boundaryId);
-    this.type = type; // 'left' or 'right'
+    this.type = type; // 'left' or 'right' or 'f1'
     this.activeTouchId = null;
     this.isMouseDown = false;
     this.center = { x: 0, y: 0 };
-    this.maxRadius = 38;
+    this.maxRadius = (type === 'f1') ? 44 : 38;
 
     if (this.knob && this.boundary) {
       this.init();
@@ -308,6 +308,34 @@ class VirtualStick {
       const isBowling = (currentLayout === 'bowling');
       const finalX = isBowling ? -normalizedX : normalizedX;
       sendInput('joystick', { x: finalX, y: normalizedY });
+    } else if (this.type === 'f1') {
+      f1State.stickSteer = normalizedX;
+      if (normalizedY < -0.22) {
+        f1State.stickThrottle = Math.min(1.0, -normalizedY);
+      } else {
+        f1State.stickThrottle = 0.0;
+      }
+      if (normalizedY > 0.22) {
+        f1State.stickBrake = Math.min(1.0, normalizedY);
+      } else {
+        f1State.stickBrake = 0.0;
+      }
+
+      if (!f1State.gyroEnabled || Math.abs(normalizedX) > 0.05) {
+        f1State.steer = normalizedX;
+      }
+
+      // Live needle update
+      const needle = document.getElementById('f1-horizon-needle');
+      if (needle) {
+        needle.style.left = `${50 + (f1State.steer * 44)}%`;
+      }
+      const degEl = document.getElementById('f1-steer-degrees');
+      if (degEl) {
+        const deg = Math.round(f1State.steer * 35);
+        degEl.innerText = `${deg > 0 ? '▶ ' : (deg < 0 ? '◀ ' : '')}${Math.abs(deg)}°`;
+      }
+      emitF1InputThrottled();
     } else {
       sendInput('aim-joystick', { x: normalizedX, y: normalizedY });
     }
@@ -319,6 +347,18 @@ class VirtualStick {
     this.knob.style.transform = 'translate(0px, 0px)';
     if (this.type === 'left') {
       sendInput('joystick', { x: 0, y: 0 });
+    } else if (this.type === 'f1') {
+      f1State.stickSteer = 0.0;
+      f1State.stickThrottle = 0.0;
+      f1State.stickBrake = 0.0;
+      if (!f1State.gyroEnabled) {
+        f1State.steer = 0.0;
+        const needle = document.getElementById('f1-horizon-needle');
+        if (needle) needle.style.left = '50%';
+        const degEl = document.getElementById('f1-steer-degrees');
+        if (degEl) degEl.innerText = '0°';
+      }
+      emitF1InputThrottled();
     } else {
       sendInput('aim-joystick', { x: 0, y: 0 });
     }
@@ -502,11 +542,13 @@ const f1State = {
   gyroEnabled: true,
   gyroZeroAngle: 0.0,
   rawAngle: 0.0,
+  gyroSteer: 0.0,
+  stickSteer: 0.0,
+  stickThrottle: 0.0,
+  stickBrake: 0.0,
   steer: 0.0,
   throttle: 0.0,
   brake: 0.0,
-  gearUp: false,
-  gearDown: false,
   drs: false,
   pitLimiter: false,
   radio: false,
@@ -540,12 +582,14 @@ function emitF1InputThrottled() {
   if (now - f1State.lastEmit < 16) return; // ~60fps
   f1State.lastEmit = now;
 
+  const effThrottle = Math.min(1.0, Math.max(f1State.throttle, f1State.stickThrottle));
+  const effBrake = Math.min(1.0, Math.max(f1State.brake, f1State.stickBrake));
+  const effSteer = Number(f1State.steer.toFixed(3));
+
   sendInput('f1-input', {
-    steer: Number(f1State.steer.toFixed(3)),
-    throttle: f1State.throttle,
-    brake: f1State.brake,
-    gearUp: f1State.gearUp,
-    gearDown: f1State.gearDown,
+    steer: effSteer,
+    throttle: effThrottle,
+    brake: effBrake,
     drs: f1State.drs,
     pitLimiter: f1State.pitLimiter,
     radio: f1State.radio,
@@ -553,15 +597,13 @@ function emitF1InputThrottled() {
     drift: f1State.drift,
     status: f1State.status,
     startEngine: !!f1State.startEngine,
-    joystickX: Number(f1State.steer.toFixed(3)),
-    joystickY: f1State.throttle > 0 ? -f1State.throttle : (f1State.brake > 0 ? f1State.brake : 0),
-    btnR2: f1State.throttle > 0.1,
-    btnL2: f1State.brake > 0.1,
-    btnCross: (f1State.throttle > 0.1) || !!f1State.startEngine,
+    joystickX: effSteer,
+    joystickY: effThrottle > 0 ? -effThrottle : (effBrake > 0 ? effBrake : 0),
+    btnR2: effThrottle > 0.1,
+    btnL2: effBrake > 0.1,
+    btnCross: (effThrottle > 0.1) || !!f1State.startEngine,
     btnSquare: !!f1State.drift,
-    btnTriangle: !!f1State.drs,
-    btnR1: !!f1State.gearUp,
-    btnL1: !!f1State.gearDown
+    btnTriangle: !!f1State.drs
   });
 }
 
@@ -585,23 +627,28 @@ function handleDeviceOrientation(e) {
   f1State.rawAngle = tilt;
   const delta = tilt - f1State.gyroZeroAngle;
 
-  // Deadzone of 1.5° to avoid hand jitter
-  const deadzone = 1.5;
-  const maxTilt = 26.0; // 26° is full lock
+  // Refined Deadzone & Soft Progressive Curve for calm, authentic steering feel
+  const deadzone = 2.5;
+  const maxTilt = 40.0; // 40° lock prevents high twitchiness
 
   let steerVal = 0.0;
   if (Math.abs(delta) > deadzone) {
     const sign = Math.sign(delta);
     const mag = Math.min(1.0, (Math.abs(delta) - deadzone) / (maxTilt - deadzone));
-    steerVal = sign * Math.pow(mag, 1.15); // gentle progressive curve
+    steerVal = sign * Math.pow(mag, 1.45) * 0.90; // progressive, smooth steering
   }
 
-  f1State.steer = steerVal;
+  f1State.gyroSteer = steerVal;
+  if (f1State.gyroEnabled) {
+    f1State.steer = (Math.abs(f1State.stickSteer) > 0.05) ? f1State.stickSteer : steerVal;
+  } else {
+    f1State.steer = f1State.stickSteer;
+  }
 
   // Update needle on G-meter horizon
   const needle = document.getElementById('f1-horizon-needle');
   if (needle) {
-    const leftPercent = 50 + (steerVal * 44);
+    const leftPercent = 50 + (f1State.steer * 44);
     needle.style.left = `${leftPercent}%`;
   }
   const degEl = document.getElementById('f1-steer-degrees');
@@ -609,7 +656,7 @@ function handleDeviceOrientation(e) {
     const degRound = Math.round(delta);
     const arrow = degRound < -1 ? "◀ " : (degRound > 1 ? " ▶" : "");
     degEl.innerText = `${arrow}${Math.abs(degRound)}°`;
-    degEl.style.color = (Math.abs(degRound) > 18) ? "#facc15" : "#06b6d4";
+    degEl.style.color = (Math.abs(degRound) > 22) ? "#facc15" : "#06b6d4";
   }
 
   emitF1InputThrottled();
@@ -639,7 +686,7 @@ function initF1WheelController() {
     window.addEventListener('deviceorientation', handleDeviceOrientation, true);
   }
 
-  // 2. Calibration & Gyro Toggle Buttons
+  // 2. Calibration & Master Gyro On/Off Toggle Button
   const calibBtn = document.getElementById('f1-btn-calibrate');
   if (calibBtn) {
     calibBtn.onclick = () => {
@@ -651,80 +698,64 @@ function initF1WheelController() {
   }
 
   const gyroToggleBtn = document.getElementById('f1-btn-gyro-toggle');
-  const touchSteerZone = document.getElementById('f1-touch-steer-zone');
+  const gyroIcon = document.getElementById('f1-gyro-icon');
+  const gyroStatusTxt = document.getElementById('f1-gyro-status-txt');
+  const modeBadge = document.getElementById('f1-mode-badge');
+  const bottomBarText = document.querySelector('.f1-bottom-bar span');
+
   if (gyroToggleBtn) {
-    gyroToggleBtn.onclick = () => {
+    gyroToggleBtn.onclick = (e) => {
+      e.preventDefault();
       f1State.gyroEnabled = !f1State.gyroEnabled;
       triggerHaptic(25);
-      gyroToggleBtn.classList.toggle('active', f1State.gyroEnabled);
-      gyroToggleBtn.innerText = f1State.gyroEnabled ? "🔄 GYRO ON" : "👆 TOUCH ON";
-      if (touchSteerZone) {
-        touchSteerZone.style.display = f1State.gyroEnabled ? "none" : "block";
-      }
-      const gyroStatusTxt = document.getElementById('f1-gyro-status-txt');
-      if (gyroStatusTxt) {
-        gyroStatusTxt.innerText = f1State.gyroEnabled 
-          ? "GYRO ACTIVE: Hold phone like a steering wheel & tilt to steer" 
-          : "TOUCH ACTIVE: Drag touch pad to steer left/right";
-      }
-      if (!f1State.gyroEnabled) {
-        f1State.steer = 0.0;
+
+      if (f1State.gyroEnabled) {
+        gyroToggleBtn.classList.remove('gyro-off');
+        gyroToggleBtn.classList.add('active');
+        if (gyroIcon) gyroIcon.innerText = '🔄';
+        if (gyroStatusTxt) gyroStatusTxt.innerText = 'GYRO: ON';
+        if (modeBadge) {
+          modeBadge.innerText = '🔄 GYRO STEER + JOYSTICK ACTIVE';
+          modeBadge.style.color = '#10b981';
+        }
+        if (bottomBarText) {
+          bottomBarText.innerText = 'GYRO ACTIVE: Hold phone like a steering wheel & tilt to steer (or use thumbstick)';
+        }
+      } else {
+        gyroToggleBtn.classList.add('gyro-off');
+        gyroToggleBtn.classList.remove('active');
+        if (gyroIcon) gyroIcon.innerText = '🕹️';
+        if (gyroStatusTxt) gyroStatusTxt.innerText = 'JOYSTICK: ACTIVE';
+        if (modeBadge) {
+          modeBadge.innerText = '🕹️ THUMBSTICK STEERING ACTIVE (GYRO OFF)';
+          modeBadge.style.color = '#06b6d4';
+        }
+        if (bottomBarText) {
+          bottomBarText.innerText = 'JOYSTICK ACTIVE: Use center thumbstick to steer & drive';
+        }
+        f1State.gyroSteer = 0.0;
+        f1State.steer = f1State.stickSteer;
         emitF1InputThrottled();
       }
     };
   }
 
-  // 3. Fallback Touch Steering Pad
-  const touchTrack = document.getElementById('f1-touch-steer-track');
-  const touchKnob = document.getElementById('f1-touch-steer-knob');
-  if (touchTrack) {
-    let isTouchingTrack = false;
-    const updateTouchSteer = (clientX) => {
-      const rect = touchTrack.getBoundingClientRect();
-      const relX = (clientX - rect.left) / rect.width; // 0 to 1
-      const steer = Math.max(-1.0, Math.min(1.0, (relX - 0.5) * 2.0));
-      f1State.steer = steer;
-      if (touchKnob) {
-        touchKnob.style.transform = `translateX(${steer * (rect.width * 0.35)}px)`;
-      }
-      emitF1InputThrottled();
-    };
-    touchTrack.addEventListener('touchstart', (e) => {
-      isTouchingTrack = true;
-      updateTouchSteer(e.touches[0].clientX);
-    }, { passive: false });
-    touchTrack.addEventListener('touchmove', (e) => {
-      if (isTouchingTrack) {
-        e.preventDefault();
-        updateTouchSteer(e.touches[0].clientX);
-      }
-    }, { passive: false });
-    const endTouchTrack = () => {
-      if (isTouchingTrack) {
-        isTouchingTrack = false;
-        f1State.steer = 0.0;
-        if (touchKnob) touchKnob.style.transform = 'none';
-        emitF1InputThrottled();
-      }
-    };
-    touchTrack.addEventListener('touchend', endTouchTrack);
-    touchTrack.addEventListener('touchcancel', endTouchTrack);
-  }
+  // 3. Central Analog Thumbstick for Full Movement & Steering
+  new VirtualStick('f1-stick', 'f1-stick-boundary', 'f1');
 
-  // 4. Gear Shift Paddles (Large, Tactile, Haptic Feedback)
+  // 4. Gear Shift Paddles (One-Shot Step-by-Step, Tactile Haptic)
   const btnGearUp = document.getElementById('f1-btn-gear-up');
   if (btnGearUp) {
     const onGearUp = (e) => {
       e.preventDefault();
-      f1State.gearUp = true;
       btnGearUp.classList.add('active');
       triggerHaptic([45, 20]);
-      emitF1InputThrottled();
+      // Explicit one-shot shift packet without persistent loop state
+      sendInput('f1-input', { gearUp: true, btnR1: true });
       setTimeout(() => {
-        f1State.gearUp = false;
         btnGearUp.classList.remove('active');
-        emitF1InputThrottled();
-      }, 120);
+        sendInput('f1-input', { gearUp: false, btnR1: false });
+      }, 100);
     };
     btnGearUp.addEventListener('touchstart', onGearUp, { passive: false });
     btnGearUp.addEventListener('mousedown', onGearUp);
@@ -734,15 +765,14 @@ function initF1WheelController() {
   if (btnGearDown) {
     const onGearDown = (e) => {
       e.preventDefault();
-      f1State.gearDown = true;
       btnGearDown.classList.add('active');
       triggerHaptic([45, 20]);
-      emitF1InputThrottled();
+      // Explicit one-shot downshift packet
+      sendInput('f1-input', { gearDown: true, btnL1: true });
       setTimeout(() => {
-        f1State.gearDown = false;
         btnGearDown.classList.remove('active');
-        emitF1InputThrottled();
-      }, 120);
+        sendInput('f1-input', { gearDown: false, btnL1: false });
+      }, 100);
     };
     btnGearDown.addEventListener('touchstart', onGearDown, { passive: false });
     btnGearDown.addEventListener('mousedown', onGearDown);

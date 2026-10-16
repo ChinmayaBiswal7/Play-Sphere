@@ -527,8 +527,14 @@
     }, 7000);
   };
 
+  let lastManualShiftTime = 0;
+
   window.f1ManualUpshift = () => {
     if (!isRaceActive || isPitStopActive) return;
+    const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+    if (now - lastManualShiftTime < 250) return;
+    lastManualShiftTime = now;
+
     if (playerKart && playerKart.pitLimiterActive) {
       if (currentGear >= 2) {
         showShiftBlockedHUD("PIT ROAD LIMIT: GEAR 2 MAX");
@@ -552,6 +558,10 @@
 
   window.f1ManualDownshift = () => {
     if (!isRaceActive || isPitStopActive) return;
+    const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+    if (now - lastManualShiftTime < 250) return;
+    lastManualShiftTime = now;
+
     let targetGear = currentGear - 1;
     if (targetGear < -1) targetGear = -1;
 
@@ -637,13 +647,16 @@
         keys.Space = !!data.drift || !!data.btnSquare;
       }
 
-      // 3. Tactile gear shifts
-      if (data.gearUp) {
+      // 3. Tactile gear shifts (Strict single-edge detection per press)
+      if (data.gearUp && !window._lastCtrlGearUp) {
         window.f1ManualUpshift();
       }
-      if (data.gearDown) {
+      window._lastCtrlGearUp = !!data.gearUp;
+
+      if (data.gearDown && !window._lastCtrlGearDown) {
         window.f1ManualDownshift();
       }
+      window._lastCtrlGearDown = !!data.gearDown;
 
       // 4. Utility toggles
       if (data.drs) {
@@ -8579,47 +8592,15 @@
 
     // Manual Upshift
     if (gamepadUpshiftPressed && !window.lastGamepadUpshift && isRaceActive && !isPitStopActive) {
-      if (playerKart && playerKart.pitLimiterActive) {
-        if (currentGear >= 2) {
-          showShiftBlockedHUD("PIT ROAD LIMIT: GEAR 2 MAX");
-        } else {
-          currentGear++;
-          triggerShiftIgnitionCut();
-        }
-      } else if (currentGear < 8) {
-        if (currentGear === -1) {
-          currentGear = 0; // Neutral
-          triggerShiftIgnitionCut();
-        } else if (currentGear === 0) {
-          currentGear = 1;
-          triggerShiftIgnitionCut();
-        } else {
-          currentGear++;
-          triggerShiftIgnitionCut();
-        }
+      if (typeof window.f1ManualUpshift === 'function') {
+        window.f1ManualUpshift();
       }
     }
 
     // Manual Downshift
     if (gamepadDownshiftPressed && !window.lastGamepadDownshift && isRaceActive && !isPitStopActive) {
-      let targetGear = currentGear - 1;
-      if (targetGear < -1) targetGear = -1; // clamp to Reverse
-
-      if (targetGear === -1 && playerKart.speed > 1.2) {
-        showShiftBlockedHUD("REVERSE BLOCKED: SPEED TOO HIGH");
-      } else if (targetGear >= 1) {
-        // Overrev protection
-        const estimatedRPM = getRPMForSpeedAndGear(playerKart.speed, targetGear);
-        if (estimatedRPM > 14600) {
-          showShiftBlockedHUD("ECU BLOCKED: OVERREV RISK");
-          gearboxWear = Math.min(100.0, gearboxWear + 5.0);
-        } else {
-          currentGear = targetGear;
-          triggerShiftIgnitionCut();
-        }
-      } else {
-        currentGear = targetGear;
-        triggerShiftIgnitionCut();
+      if (typeof window.f1ManualDownshift === 'function') {
+        window.f1ManualDownshift();
       }
     }
 

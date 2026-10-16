@@ -519,8 +519,14 @@
     }, 7000);
   };
 
+  let lastManualShiftTime = 0;
+
   window.f1ManualUpshift = () => {
     if (!isRaceActive || isPitStopActive) return;
+    const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+    if (now - lastManualShiftTime < 250) return;
+    lastManualShiftTime = now;
+
     if (playerKart && playerKart.pitLimiterActive) {
       if (currentGear >= 2) {
         showShiftBlockedHUD("PIT ROAD LIMIT: GEAR 2 MAX");
@@ -544,6 +550,10 @@
 
   window.f1ManualDownshift = () => {
     if (!isRaceActive || isPitStopActive) return;
+    const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+    if (now - lastManualShiftTime < 250) return;
+    lastManualShiftTime = now;
+
     let targetGear = currentGear - 1;
     if (targetGear < -1) targetGear = -1;
 
@@ -629,13 +639,16 @@
         keys.Space = !!data.drift || !!data.btnSquare;
       }
 
-      // 3. Tactile gear shifts
-      if (data.gearUp) {
+      // 3. Tactile gear shifts (Strict single-edge detection per press)
+      if (data.gearUp && !window._lastCtrlGearUp) {
         window.f1ManualUpshift();
       }
-      if (data.gearDown) {
+      window._lastCtrlGearUp = !!data.gearUp;
+
+      if (data.gearDown && !window._lastCtrlGearDown) {
         window.f1ManualDownshift();
       }
+      window._lastCtrlGearDown = !!data.gearDown;
 
       // 4. Utility toggles
       if (data.drs) {
