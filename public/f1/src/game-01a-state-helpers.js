@@ -473,10 +473,13 @@
       const totalBoxes = F1_TEAMS.length;
       const pBoxT = 0.26 + (selectedTeamIndex + 0.5) * (0.74 - 0.26) / totalBoxes;
       const tang = pitCurve.getTangentAt(pBoxT).normalize();
+      const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
       // Keep car pointing straight forward out of garage portal onto apron (avoids wall clipping!)
       const exitDir = norm.clone().negate().normalize();
       playerKart.heading = Math.atan2(exitDir.x, exitDir.z);
-      playerKart.mesh.rotation.y = playerKart.heading;
+      if (playerKart.mesh) {
+        playerKart.mesh.rotation.y = playerKart.heading;
+      }
     }
 
     // Mechanics immediately clear the bay by stepping back against the walls
@@ -504,12 +507,16 @@
     rdShowMessage('MANUAL CONTROL // DRIVE OUT // LIMITER: 80 KM/H', 3.5, '#10b981');
     speakEngineerRadio("Green light! Pit limiter is active, steer out to the pit lane.", 40);
 
+    window.timingTowerCollapsed = false;
+    window.timingTowerManuallyToggled = false;
+    if (typeof updateLeaderboardHUD === 'function') updateLeaderboardHUD();
+
     setTimeout(() => {
       if (!window.timingTowerManuallyToggled && isRaceActive) {
-        window.timingTowerCollapsed = false;
-        window.toggleTimingTower(true);
+        window.timingTowerCollapsed = true;
+        if (typeof updateLeaderboardHUD === 'function') updateLeaderboardHUD();
       }
-    }, 5000);
+    }, 7000);
   };
 
   window.returnToGarage = () => {
@@ -1083,7 +1090,7 @@
   window.spectatorCarIndex = 0;
   window.spectatorTargetCar = null;
 
-  // ════ TERMINAL DAMAGE OVERLAY & REPAIR HANDLERS ════
+  // ════ TERMINAL DAMAGE OVERLAY & RETIREMENT HANDLERS ════
   window.showTerminalDamageOverlay = () => {
     const overlay = document.getElementById('f1-terminal-damage-overlay');
     if (overlay) {
@@ -1092,34 +1099,34 @@
       const towBtn = document.getElementById('btn-terminal-tow');
       const spectateBtn = document.getElementById('btn-terminal-spectate');
       const endBtn = document.getElementById('btn-terminal-end-session');
+      const restartBtn = document.getElementById('btn-terminal-restart');
 
-      if (currentSessionIndex === 2) {
-        // Race DNF: Player cannot repair and continue race!
-        if (towBtn) towBtn.style.display = 'none';
-        if (spectateBtn) spectateBtn.style.display = 'inline-block';
-        if (endBtn) endBtn.style.display = 'inline-block';
-      } else {
-        // Practice / Qualifying: Can tow back to garage
-        if (towBtn) towBtn.style.display = 'inline-block';
-        if (spectateBtn) spectateBtn.style.display = 'none';
-        if (endBtn) endBtn.style.display = 'none';
-      }
+      // Authentic F1 rules: If car is fully crashed, there is NO repair and tow!
+      // Session is over (DNF/Retired). Player can spectate remaining session, end session, or restart.
+      if (towBtn) towBtn.style.display = 'none';
+      if (spectateBtn) spectateBtn.style.display = 'inline-block';
+      if (endBtn) endBtn.style.display = 'inline-block';
+      if (restartBtn) restartBtn.style.display = 'inline-block';
     }
 
     if (playerKart) {
       playerKart.speed = 0.0;
       playerKart.controlsEnabled = false;
-      if (currentSessionIndex === 2) {
-        playerKart.retired = true;
-        playerKart.finished = true;
+      playerKart.retired = true;
+      playerKart.finished = true;
+    }
+    pendingRadioQuestion = null;
+
+    if (window.ApexAudio) {
+      if (typeof window.ApexAudio.resetAudio === 'function') {
+        window.ApexAudio.resetAudio();
+      } else {
+        window.ApexAudio.stopEngine();
       }
     }
-    if (window.ApexAudio) {
-      window.ApexAudio.stopEngine();
-      window.ApexAudio.playDriftScreech();
-    }
+
     if (typeof speakEngineerRadio === 'function') {
-      speakEngineerRadio("Engine failure! Terminal damage, pull over and switch off. We're out of the race.", 100, true);
+      speakEngineerRadio("Engine off, engine off! Terminal damage detected. Car is non-operational, session is over.", 100, true);
     }
   };
 
@@ -1241,8 +1248,20 @@
 
     carDamage = 0.0;
     tyreWear = 0.0;
+    pendingRadioQuestion = null;
+
+    if (window.ApexAudio) {
+      if (typeof window.ApexAudio.resetAudio === 'function') {
+        window.ApexAudio.resetAudio();
+      } else {
+        window.ApexAudio.stopEngine();
+      }
+    }
+
     if (playerKart) {
       playerKart.damage = 0.0;
+      playerKart.retired = false;
+      playerKart.finished = false;
       playerKart.frontWingAttached = true;
       playerKart.rearWingAttached = true;
       if (typeof window.restoreCarWings === 'function') window.restoreCarWings(playerKart);

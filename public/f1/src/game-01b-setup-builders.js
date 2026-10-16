@@ -17,6 +17,8 @@
       leadCard.classList.remove('hidden');
       leadCard.style.display = 'block';
     }
+    window.timingTowerCollapsed = false;
+    window.timingTowerManuallyToggled = false;
     
     const container = document.getElementById('canvas-container');
     container.innerHTML = "";
@@ -593,12 +595,16 @@
       playerKart.currentLapInvalid = false;
     }
 
+    window.timingTowerCollapsed = false;
+    window.timingTowerManuallyToggled = false;
+    if (typeof updateLeaderboardHUD === 'function') updateLeaderboardHUD();
+
     setTimeout(() => {
       if (!window.timingTowerManuallyToggled && isRaceActive) {
-        window.timingTowerCollapsed = false;
-        window.toggleTimingTower(true);
+        window.timingTowerCollapsed = true;
+        if (typeof updateLeaderboardHUD === 'function') updateLeaderboardHUD();
       }
-    }, 5000);
+    }, 8000);
   };
 
 

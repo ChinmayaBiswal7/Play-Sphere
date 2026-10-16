@@ -341,6 +341,19 @@ class ApexAudioEngine {
     this.isPlayingEngine = false;
   }
 
+  resetAudio() {
+    this.stopEngine();
+    try {
+      if (this.ctx) {
+        const now = this.ctx.currentTime;
+        if (this.masterGain) {
+          this.masterGain.gain.cancelScheduledValues(now);
+          this.masterGain.gain.setValueAtTime(this.masterVolume, now);
+        }
+      }
+    } catch(e) {}
+  }
+
   // UI button click
   playClick() {
     this.resume();

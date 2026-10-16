@@ -67,11 +67,12 @@
     const btn = document.getElementById('btn-toggle-timing-tower');
 
     if (window.timingTowerCollapsed) {
-      if (card) card.style.width = '145px';
-      if (headerText) headerText.style.display = 'none';
-      if (lapVal) lapVal.style.display = 'none';
+      if (card) card.style.width = '210px';
+      if (headerText) headerText.style.display = 'block';
+      if (lapVal) lapVal.style.display = 'block';
       if (btn) {
-        btn.innerHTML = '&gt;';
+        btn.innerHTML = '▾';
+        btn.title = 'Expand to full grid';
         btn.style.right = '8px';
       }
     } else {
@@ -79,7 +80,8 @@
       if (headerText) headerText.style.display = 'block';
       if (lapVal) lapVal.style.display = 'block';
       if (btn) {
-        btn.innerHTML = '&lt;';
+        btn.innerHTML = '▴';
+        btn.title = 'Minimize to 4 cars';
         btn.style.right = '8px';
       }
     }
@@ -88,7 +90,16 @@
     const sorted = [...racers].sort((a, b) => a.posRank - b.posRank);
 
     const leaderScore = getRacerScore(sorted[0]);
-    const playerIdx = sorted.findIndex(r => r.isPlayer);
+    let playerIdx = sorted.findIndex(r => r.isPlayer);
+    if (playerIdx === -1) playerIdx = 0;
+
+    // Focused window of 3-4 cars centered around player position (authentic F1 TV broadcast style!)
+    let minIdx = Math.max(0, playerIdx - 1);
+    let maxIdx = minIdx + 3;
+    if (maxIdx >= sorted.length) {
+      maxIdx = sorted.length - 1;
+      minIdx = Math.max(0, maxIdx - 3);
+    }
     
     // Set container to flex layout for CSS order-based smooth animation sorting!
     container.style.display = 'flex';
@@ -109,14 +120,11 @@
       // Visually sort using CSS order
       row.style.order = idx;
 
-      // Collapse logic: hide row if collapsed and not player
+      // Collapse logic: in minimized mode, show focused 3-4 cars around player
       if (window.timingTowerCollapsed) {
-        if (racer.isPlayer) {
-          row.style.display = 'flex';
-          row.style.padding = '8px 12px';
-        } else {
-          row.style.display = 'none';
-        }
+        const isVisibleInCompact = (idx >= minIdx && idx <= maxIdx);
+        row.style.display = isVisibleInCompact ? 'flex' : 'none';
+        row.style.padding = '6px 12px';
       } else {
         row.style.display = 'flex';
         row.style.padding = '6px 12px';
