@@ -481,10 +481,13 @@
       }
     } else {
       // Legacy DRS Era Zone Logic
-      if (isStraightZone) {
+      const drsAllowedSession = !isStartingSequence && !window.formationLapActive && !safetyCarActive && !vscActive &&
+        (currentSessionIndex !== 2 || (playerKart.completedLaps || 0) >= 1);
+
+      if (isStraightZone && drsAllowedSession) {
         drsAvailable = true;
         // Auto-close on brake/pit/SC
-        if (keys.s || playerKart.inPitLane || safetyCarActive) drsActive = false;
+        if (keys.s || playerKart.inPitLane || safetyCarActive || vscActive) drsActive = false;
         const alertEl = document.getElementById('hud-drs-alert');
         if (alertEl) {
           alertEl.style.display = 'block';

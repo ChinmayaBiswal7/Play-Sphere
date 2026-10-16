@@ -550,7 +550,7 @@
       // Initial grid formation pause (bulbs dark)
       if (bannerTitle) bannerTitle.innerText = "GRID FORMATION";
       if (Math.random() < 0.05 && window.ApexAudio) {
-        window.ApexAudio.updateEnginePitch(0.35 + Math.random() * 0.15);
+        window.ApexAudio.updateEnginePitch(4200 + Math.random() * 800);
       }
       for (let i = 0; i < 10; i++) {
         const el = document.getElementById(`light-red-${i}`);
@@ -564,7 +564,7 @@
 
       // Rev engines high during starting hold
       if (window.ApexAudio) {
-        window.ApexAudio.updateEnginePitch(0.72 + Math.sin(clock.getElapsedTime() * 16.0) * 0.04);
+        window.ApexAudio.updateEnginePitch(10200 + Math.sin(clock.getElapsedTime() * 16.0) * 600);
       }
 
       // 5 Red Lights turn on column-by-column every 1.0s (1.0s, 2.0s, 3.0s, 4.0s, 5.0s)
@@ -636,6 +636,7 @@
 
     isStartingSequence = false;
     safetyCarActive = false;
+    window.raceLaunchGraceTimer = 3.5; // 3.5s launch grace period to prevent initial grid collisions
     currentGear = 1; // Auto shift to 1st gear so holding W works immediately!
     
     racers.forEach(r => {
@@ -898,12 +899,14 @@
     // 4. Solid Crisp White Track Edge Lines (left & right at ±7.88m)
     // ═══════════════════════════════════════════════════════════════════
 
-    // 1. Green Astroturf / Painted Collar Runoff (width 21.0m, y = -0.04)
-    const astroGeo = createCustomTrackGeometry(trackCurve, 21.2, 220);
-    const astroMat = new THREE.MeshStandardMaterial({ color: 0x14532d, roughness: 0.95 });
-    const astroMesh = new THREE.Mesh(astroGeo, astroMat);
-    astroMesh.position.y = -0.04;
-    scene.add(astroMesh);
+    // 1. Green Astroturf / Painted Collar Runoff (width 21.0m, y = -0.04) — only for permanent circuits, skip on street circuits
+    if (activeTrack !== 4) {
+      const astroGeo = createCustomTrackGeometry(trackCurve, 21.2, 220);
+      const astroMat = new THREE.MeshStandardMaterial({ color: 0x14532d, roughness: 0.95 });
+      const astroMesh = new THREE.Mesh(astroGeo, astroMat);
+      astroMesh.position.y = -0.04;
+      scene.add(astroMesh);
+    }
 
     // 2. Ribbed Kerbs (width 18.2m, y = -0.02)
     const kerbGeo = createCustomTrackGeometry(trackCurve, 18.2, 220);
@@ -1499,16 +1502,25 @@
     // ZERO-LAG SCENERY: FAST PRE-CALCULATED GROVES & ROLLING TERRAIN
     // ═══════════════════════════════════════════════════════════════════
 
-    // 1. Vast green racetrack grass terrain extending to horizon (8,000m x 8,000m)
+    // 1. Vast racetrack terrain extending to horizon (8,000m x 8,000m)
     const groundCanvas = document.createElement('canvas');
     groundCanvas.width = 128;
     groundCanvas.height = 128;
     const gctx = groundCanvas.getContext('2d');
-    gctx.fillStyle = '#1e7b34'; // rich racetrack emerald green
-    gctx.fillRect(0, 0, 128, 128);
-    gctx.fillStyle = '#166534';
-    gctx.fillRect(0, 0, 64, 64);
-    gctx.fillRect(64, 64, 64, 64);
+    if (activeTrack === 4) {
+      // Monaco urban seaside pavement & asphalt ground
+      gctx.fillStyle = '#1e293b';
+      gctx.fillRect(0, 0, 128, 128);
+      gctx.fillStyle = '#334155';
+      gctx.fillRect(0, 0, 64, 64);
+      gctx.fillRect(64, 64, 64, 64);
+    } else {
+      gctx.fillStyle = '#1e7b34'; // rich racetrack emerald green
+      gctx.fillRect(0, 0, 128, 128);
+      gctx.fillStyle = '#166534';
+      gctx.fillRect(0, 0, 64, 64);
+      gctx.fillRect(64, 64, 64, 64);
+    }
     const groundTex = new THREE.CanvasTexture(groundCanvas);
     groundTex.wrapS = groundTex.wrapT = THREE.RepeatWrapping;
     groundTex.repeat.set(300, 300);
@@ -1825,11 +1837,27 @@
       [tStart, tEnd].forEach(tPort => {
         const pt = trackCurve.getPointAt(tPort);
         const tang = trackCurve.getTangentAt(tPort).normalize();
-        const portal = new THREE.Mesh(new THREE.BoxGeometry(28.0, 9.5, 4.0), portalMat);
-        portal.position.copy(pt);
-        portal.position.y += 4.75;
-        portal.rotation.y = Math.atan2(tang.x, tang.z);
-        tunnelGroup.add(portal);
+        const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
+        const heading = Math.atan2(tang.x, tang.z);
+
+        // Open archway: left pillar, right pillar, and top lintel — zero road obstruction!
+        const leftPillar = new THREE.Mesh(new THREE.BoxGeometry(3.0, 9.5, 4.0), portalMat);
+        leftPillar.position.copy(pt.clone().add(norm.clone().multiplyScalar(-11.5)));
+        leftPillar.position.y += 4.75;
+        leftPillar.rotation.y = heading;
+        tunnelGroup.add(leftPillar);
+
+        const rightPillar = new THREE.Mesh(new THREE.BoxGeometry(3.0, 9.5, 4.0), portalMat);
+        rightPillar.position.copy(pt.clone().add(norm.clone().multiplyScalar(11.5)));
+        rightPillar.position.y += 4.75;
+        rightPillar.rotation.y = heading;
+        tunnelGroup.add(rightPillar);
+
+        const lintel = new THREE.Mesh(new THREE.BoxGeometry(26.0, 2.4, 4.0), portalMat);
+        lintel.position.copy(pt);
+        lintel.position.y += 8.3;
+        lintel.rotation.y = heading;
+        tunnelGroup.add(lintel);
       });
       scene.add(tunnelGroup);
 
@@ -1853,9 +1881,9 @@
         monacoCity.add(dome);
       });
 
-      // Fairmont Hotel Complex over Hairpin & Tunnel
-      const fairmont1 = new THREE.Mesh(new THREE.BoxGeometry(85, 36, 65), hotelMat);
-      fairmont1.position.set(380, 20.0 + 18, 110);
+      // Fairmont Hotel Complex (Set safely to the seaside East of the Hairpin overlooking the Mediterranean)
+      const fairmont1 = new THREE.Mesh(new THREE.BoxGeometry(65, 36, 45), hotelMat);
+      fairmont1.position.set(465, 20.0 + 18, 160);
       monacoCity.add(fairmont1);
 
       // High-rise Luxury Mediterranean Towers overlooking Beau Rivage & Port Hercule

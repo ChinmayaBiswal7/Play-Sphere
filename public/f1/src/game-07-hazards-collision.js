@@ -59,6 +59,10 @@
 
   function updateCollisionDetection() {
     // --- Authentic 3D F1 Vehicle-to-Vehicle Physics Collisions & Damage ---
+    // Zero collisions during grid formation, starting lights, or race launch grace
+    if (isStartingSequence || window.formationLapActive) return;
+    if (window.raceLaunchGraceTimer > 0) return;
+
     const CAR_RADIUS = 1.05; // 2-circle capsule model covering 4.8m length x 2.1m width
     const CIRCLE_DIST = 1.30;
     const DIAMETER = CAR_RADIUS * 2.0;
@@ -72,6 +76,7 @@
         if (!racerI.mesh || !racerJ.mesh) continue;
         if (!racerI.mesh.visible || !racerJ.mesh.visible) continue;
         if (racerI.isTrackActive === false || racerJ.isTrackActive === false) continue;
+        if (racerI.collisionEnabled === false || racerJ.collisionEnabled === false) continue;
         // Skip only cars parked stationary inside garage bays
         if ((racerI.qualifyingState === "GARAGE" && Math.abs(racerI.speed) < 0.1) || 
             (racerJ.qualifyingState === "GARAGE" && Math.abs(racerJ.speed) < 0.1)) continue;

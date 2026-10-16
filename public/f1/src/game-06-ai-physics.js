@@ -180,6 +180,10 @@
   function updateAIPysics(delta) {
     const trackLen = trackCurve ? trackCurve.getLength() : 1800.0;
 
+    if (window.raceLaunchGraceTimer > 0) {
+      window.raceLaunchGraceTimer -= delta;
+    }
+
     if (currentSessionIndex !== 2) {
       window.formationLapActive = false;
     }
@@ -371,9 +375,8 @@
 
         if (racer.isPlayer) return;
 
-        racer.speed = 0.0;
-
-        racer.launchDelay = 0.25 + Math.random() * 0.55 + (racer.gridStartPos * 0.04); // rear cars wait longer
+        const gridRank = racer.qualifyingPosition || racer.gridStartPos || (racers.indexOf(racer) + 1);
+        racer.launchDelay = 0.15 + Math.random() * 0.35 + (gridRank * 0.025); // rear cars wait slightly longer
 
         racer.swayFadeFactor = 0.0;
 
@@ -588,41 +591,11 @@
       }
 
       // Handle AI launch reaction time delay — longer for rear cars to prevent pile-ups
-
       if (racer.launchDelay > 0.0) {
-
         racer.launchDelay -= delta;
-
         racer.speed = 0.0;
-
         racer.swayFadeFactor = 0.0;
-
-        // Hold strictly at their starting grid box position with proper spacing
-
-        const row = Math.floor(racer.gridStartPos / 2);
-
-        const side = racer.gridStartPos % 2 === 0 ? 1.8 : -1.8;
-
-        const tPos = 0.0 - (racer.gridStartPos - 1) * 0.012; // wider grid spacing (matches starting sequence!)
-
-        racer.currentOffset = (tPos + 1.0) % 1.0;
-
-        racer.sideOffset = side;
-
-        const pt = trackCurve.getPointAt(racer.currentOffset);
-
-        const tang = trackCurve.getTangentAt(racer.currentOffset).normalize();
-
-        const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
-
-        pt.add(norm.clone().multiplyScalar(side));
-
-        racer.mesh.position.copy(pt);
-
-        racer.mesh.lookAt(pt.clone().add(tang));
-
         return;
-
       }
 
       // Smoothly fade in sway after launch

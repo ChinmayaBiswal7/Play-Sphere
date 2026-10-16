@@ -168,17 +168,22 @@ class ApexAudioEngine {
   updateEnginePitch(rpm) {
     if (!this.isPlayingEngine || !this.combustionOsc1 || !this.ctx) return;
     const now = this.ctx.currentTime;
-    const clampedRPM = Math.max(1200, Math.min(15500, rpm || 1500));
+    let effectiveRPM = (typeof rpm === 'number' && !isNaN(rpm)) ? rpm : 1500;
+    // If passed as 0..1 ratio, convert to RPM range 1500..15000
+    if (effectiveRPM > 0 && effectiveRPM <= 1.0) {
+      effectiveRPM = 1500 + effectiveRPM * 13500;
+    }
+    const clampedRPM = Math.max(1200, Math.min(15500, effectiveRPM));
     this.lastRPM = clampedRPM;
 
     // Real F1 V6 4-stroke firing order: 3 firings per engine revolution
-    const baseFreq = (clampedRPM / 60.0) * 3.0;
+    const baseFreq = Math.max(20.0, (clampedRPM / 60.0) * 3.0);
     const harmFreq = baseFreq * 2.003;
     const harm3Freq = baseFreq * 3.0;
     const subFreq = baseFreq * 0.5;
 
-    // Load & RPM factor
-    const rpmFactor = (clampedRPM - 1500) / (15000 - 1500);
+    // Load & RPM factor safely clamped to [0, 1] to prevent fractional pow of negative numbers returning NaN
+    const rpmFactor = Math.max(0.0, Math.min(1.0, (clampedRPM - 1500) / (15000 - 1500)));
     const turboFreq = 1600 + Math.pow(rpmFactor, 1.35) * 3600;
     const turboVol = 0.008 + Math.pow(rpmFactor, 1.5) * 0.055;
 
@@ -188,21 +193,29 @@ class ApexAudioEngine {
 
     // Dynamic engine acoustic volume with load
     const dynamicGain = 0.045 + Math.pow(rpmFactor, 0.8) * 0.04;
-    if (this.engineGain) {
+    if (this.engineGain && Number.isFinite(dynamicGain)) {
       this.engineGain.gain.setTargetAtTime(dynamicGain, now, 0.03);
     }
 
-    this.combustionOsc1.frequency.setTargetAtTime(baseFreq, now, 0.025);
-    this.combustionOsc2.frequency.setTargetAtTime(harmFreq, now, 0.025);
-    if (this.combustionOsc3) this.combustionOsc3.frequency.setTargetAtTime(harm3Freq, now, 0.025);
-    if (this.subOsc) this.subOsc.frequency.setTargetAtTime(subFreq, now, 0.03);
+    if (this.combustionOsc1 && Number.isFinite(baseFreq)) {
+      this.combustionOsc1.frequency.setTargetAtTime(baseFreq, now, 0.025);
+    }
+    if (this.combustionOsc2 && Number.isFinite(harmFreq)) {
+      this.combustionOsc2.frequency.setTargetAtTime(harmFreq, now, 0.025);
+    }
+    if (this.combustionOsc3 && Number.isFinite(harm3Freq)) {
+      this.combustionOsc3.frequency.setTargetAtTime(harm3Freq, now, 0.025);
+    }
+    if (this.subOsc && Number.isFinite(subFreq)) {
+      this.subOsc.frequency.setTargetAtTime(subFreq, now, 0.03);
+    }
 
-    if (this.turboOsc && this.turboGain) {
+    if (this.turboOsc && this.turboGain && Number.isFinite(turboFreq) && Number.isFinite(turboVol)) {
       this.turboOsc.frequency.setTargetAtTime(turboFreq, now, 0.04);
       this.turboGain.gain.setTargetAtTime(turboVol, now, 0.05);
     }
 
-    if (this.exhaustFilter) {
+    if (this.exhaustFilter && Number.isFinite(filterFreq) && Number.isFinite(filterGain)) {
       this.exhaustFilter.frequency.setTargetAtTime(filterFreq, now, 0.03);
       this.exhaustFilter.gain.setTargetAtTime(filterGain, now, 0.03);
     }
