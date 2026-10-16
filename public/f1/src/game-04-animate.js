@@ -209,6 +209,18 @@
         });
 
         racers.forEach(car => updateCarLap(car, delta));
+
+        // Animate realistic wheel rotation for active cars
+        racers.forEach(car => {
+          if (car.mesh && car.mesh.wheels) {
+            const spinDelta = (car.speed || 0.0) * delta * 2.8;
+            car.mesh.wheels.forEach(w => {
+              if (w.spinner) {
+                w.spinner.rotation.x -= spinDelta;
+              }
+            });
+          }
+        });
       }
 
       // Unified position sorting
@@ -270,6 +282,10 @@
       if (shiftBlockedHUDTimer > 0.0) {
         shiftBlockedHUDTimer -= delta;
       }
+    }
+
+    if (window.skyMesh && camera) {
+      window.skyMesh.position.copy(camera.position);
     }
 
     renderer.render(scene, camera);

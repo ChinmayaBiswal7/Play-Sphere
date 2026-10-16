@@ -25,10 +25,11 @@
     container.innerHTML = "";
 
     // Theme-specific environment settings
-    let skyTopColor = 0x0284c7;    // Albert Park: Sunny Melbourne blue sky
-    let skyBottomColor = 0xe0f2fe;
-    let fogColor = 0xe0f2fe;
-    let fogDensity = 0.0006;
+    let skyTopColor = 0x0284c7;    // Albert Park: Vibrant Melbourne blue sky
+    let skyBottomColor = 0x38bdf8; // Bright cyan-blue horizon
+    let fogColor = 0x38bdf8;
+    let fogNear = 750;
+    let fogFar = 3400;
     let ambientColor = 0xf0f9ff;
     let lightColor = 0xffffff;
     let hemiSky = 0xbae6fd;
@@ -37,9 +38,10 @@
     if (activeTrack === 1) {
       // Yas Marina Circuit: Twilight Abu Dhabi Sunset / Gold
       skyTopColor = 0x1e1b4b;
-      skyBottomColor = 0xf59e0b;
-      fogColor = 0x1e1b4b;
-      fogDensity = 0.0006;
+      skyBottomColor = 0x0284c7;
+      fogColor = 0x0f172a;
+      fogNear = 600;
+      fogFar = 3200;
       ambientColor = 0xfde68a;
       lightColor = 0xffedd5;
       hemiSky = 0x38bdf8;
@@ -48,8 +50,9 @@
       // Sunset Coast: Golden Hour Beach
       skyTopColor = 0xff9a5a;
       skyBottomColor = 0xffe8c9;
-      fogColor = 0xffb98a;
-      fogDensity = 0.0008;
+      fogColor = 0xffa066;
+      fogNear = 550;
+      fogFar = 3000;
       ambientColor = 0xffedd5;
       lightColor = 0xfeb080;
       hemiSky = 0xffdca8;
@@ -57,9 +60,10 @@
     } else if (activeTrack === 3) {
       // Alpine Heights: Mountain snow and cool blue
       skyTopColor = 0x0369a1;
-      skyBottomColor = 0xf0f9ff;
-      fogColor = 0xf0f9ff;
-      fogDensity = 0.0012;
+      skyBottomColor = 0xbae6fd;
+      fogColor = 0x93c5fd;
+      fogNear = 600;
+      fogFar = 3200;
       ambientColor = 0xf0f9ff;
       lightColor = 0xffffff;
       hemiSky = 0xbae6fd;
@@ -69,10 +73,11 @@
     // 3D Scene Setup
     scene = new THREE.Scene();
     scene.background = new THREE.Color(skyBottomColor);
-    scene.fog = new THREE.FogExp2(fogColor, fogDensity);
+    // Linear fog: zero fog up to 750m (crisp, vivid racetrack graphics), smooth atmospheric blend to horizon
+    scene.fog = new THREE.Fog(fogColor, fogNear, fogFar);
 
-    // Camera (expanded to 3000m for full-scale 5.28km circuits)
-    camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 3000);
+    // Camera (expanded to 3600m for full-scale 5.28km circuits)
+    camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 3600);
 
     renderer.setSize(window.innerWidth, window.innerHeight);
     container.appendChild(renderer.domElement);
@@ -405,10 +410,10 @@
             r.currentOffset    = 0.0;
 
             if (currentSessionIndex === 1) {
-              r.qualifyingReleaseTime = 3.0 + Math.random() * 120.0;
+              r.qualifyingReleaseTime = 6.0 + (tIdx * 12.0) + (carIdx * 16.0) + Math.random() * 10.0;
               r.qualifyingTimedLapsRemaining = 2 + Math.floor(Math.random() * 2);
             } else {
-              r.qualifyingReleaseTime = 2.0 + Math.random() * 30.0;
+              r.qualifyingReleaseTime = 12.0 + (tIdx * 15.0) + (carIdx * 20.0) + Math.random() * 12.0;
               r.qualifyingTimedLapsRemaining = 4 + Math.floor(Math.random() * 3);
             }
           });
@@ -680,7 +685,7 @@
   function getCachedTrackPoints() {
     if (!cachedTrackPoints && trackCurve) {
       cachedTrackPoints = [];
-      const steps = 120;
+      const steps = 500;
       for (let i = 0; i <= steps; i++) {
         cachedTrackPoints.push(trackCurve.getPointAt(i / steps));
       }
@@ -688,16 +693,50 @@
     return cachedTrackPoints;
   }
 
-  // Helper: Fast distance check from position to track curve (Zero Lag!)
+  // Helper: Accurate distance check from position to track centerline using segment projection (Zero false positives!)
   function getDistanceToTrack(pos) {
     if (!pos || !trackCurve) return Infinity;
     const pts = getCachedTrackPoints();
     if (!pts || pts.length === 0) return Infinity;
-    let minDistSq = Infinity;
-    for (let i = 0; i < pts.length; i++) {
-      const dSq = pos.distanceToSquared(pts[i]);
-      if (dSq < minDistSq) minDistSq = dSq;
+
+    // Fast rejection: find the closest discrete index
+    let bestIdx = 0;
+    let minDiscreteSq = Infinity;
+    for (let i = 0; i < pts.length; i += 4) {
+      const dSq = (pos.x - pts[i].x) * (pos.x - pts[i].x) + (pos.z - pts[i].z) * (pos.z - pts[i].z);
+      if (dSq < minDiscreteSq) {
+        minDiscreteSq = dSq;
+        bestIdx = i;
+      }
     }
+
+    // Check segment projection in localized window around bestIdx
+    const windowRadius = 12;
+    let minDistSq = Infinity;
+    const len = pts.length;
+
+    for (let offset = -windowRadius; offset <= windowRadius; offset++) {
+      const i1 = (bestIdx + offset + len) % len;
+      const i2 = (i1 + 1) % len;
+      const p1 = pts[i1];
+      const p2 = pts[i2];
+
+      const dx = p2.x - p1.x;
+      const dz = p2.z - p1.z;
+      const lenSq = dx * dx + dz * dz;
+      if (lenSq < 0.0001) continue;
+
+      let t = ((pos.x - p1.x) * dx + (pos.z - p1.z) * dz) / lenSq;
+      t = Math.max(0.0, Math.min(1.0, t));
+      const projX = p1.x + t * dx;
+      const projZ = p1.z + t * dz;
+
+      const curDistSq = (pos.x - projX) * (pos.x - projX) + (pos.z - projZ) * (pos.z - projZ);
+      if (curDistSq < minDistSq) {
+        minDistSq = curDistSq;
+      }
+    }
+
     return Math.sqrt(minDistSq);
   }
 
@@ -1429,7 +1468,7 @@
     // ZERO-LAG SCENERY: FAST PRE-CALCULATED GROVES & ROLLING TERRAIN
     // ═══════════════════════════════════════════════════════════════════
 
-    // 1. Vibrant grass terrain texture
+    // 1. Vast green racetrack grass terrain extending to horizon (8,000m x 8,000m)
     const groundCanvas = document.createElement('canvas');
     groundCanvas.width = 128;
     groundCanvas.height = 128;
@@ -1441,44 +1480,47 @@
     gctx.fillRect(64, 64, 64, 64);
     const groundTex = new THREE.CanvasTexture(groundCanvas);
     groundTex.wrapS = groundTex.wrapT = THREE.RepeatWrapping;
-    groundTex.repeat.set(80, 80);
+    groundTex.repeat.set(300, 300);
 
-    const groundGeo = new THREE.PlaneGeometry(1600, 1600);
+    const groundGeo = new THREE.PlaneGeometry(8000, 8000);
     const groundMat = new THREE.MeshStandardMaterial({ map: groundTex, roughness: 0.95 });
     const ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.name = "ground";
     ground.rotation.x = -Math.PI / 2;
     ground.position.y = -0.10;
     scene.add(ground);
 
-    // 2. Fast 3D Trees planted at safe spline offsets outside the barriers (Zero lag distance checks!)
+    // 2. 3D Trees planted at safe spline offsets outside the barriers (160 tree clusters along 5.28km track)
     const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5c3a21, roughness: 0.9 });
     const foliageMat1 = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.8 });
     const foliageMat2 = new THREE.MeshStandardMaterial({ color: 0x166534, roughness: 0.85 });
 
-    const treeSteps = 32;
+    const treeSteps = 160;
     for (let i = 0; i < treeSteps; i++) {
       const t = (i / treeSteps);
       const pt = trackCurve.getPointAt(t);
       const tang = trackCurve.getTangentAt(t).normalize();
       const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
 
-      // Place trees on both outer sides safely 26m away from track center
+      // Place trees on both outer sides safely 24m to 38m away from track center
       [-1, 1].forEach((side) => {
         if (side === 1 && (t >= 0.95 || t <= 0.08)) return; // skip pit building side
-        const treePos = pt.clone().add(norm.clone().multiplyScalar(side * (24.0 + (i % 3) * 6.0)));
+        const treePos = pt.clone().add(norm.clone().multiplyScalar(side * (24.0 + (i % 4) * 4.5)));
 
         const treeGroup = new THREE.Group();
-        const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.45, 3.5, 6), trunkMat);
-        trunk.position.y = 1.75;
+        treeGroup.name = "tree_scenery";
+        const treeScale = 0.9 + (i % 3) * 0.25;
+        const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.35 * treeScale, 0.5 * treeScale, 3.8 * treeScale, 6), trunkMat);
+        trunk.position.y = (3.8 * treeScale) / 2;
         treeGroup.add(trunk);
 
         const fMat = i % 2 === 0 ? foliageMat1 : foliageMat2;
-        const c1 = new THREE.Mesh(new THREE.ConeGeometry(2.4, 3.6, 6), fMat);
-        c1.position.y = 4.2;
+        const c1 = new THREE.Mesh(new THREE.ConeGeometry(2.6 * treeScale, 4.0 * treeScale, 6), fMat);
+        c1.position.y = 4.2 * treeScale;
         treeGroup.add(c1);
 
-        const c2 = new THREE.Mesh(new THREE.ConeGeometry(1.6, 2.8, 6), fMat);
-        c2.position.y = 6.2;
+        const c2 = new THREE.Mesh(new THREE.ConeGeometry(1.8 * treeScale, 3.0 * treeScale, 6), fMat);
+        c2.position.y = 6.4 * treeScale;
         treeGroup.add(c2);
 
         treeGroup.position.copy(treePos);
@@ -1488,29 +1530,63 @@
 
     // 🌊 WATER FEATURES PER TRACK
     if (activeTrack === 0) {
-      // Albert Park Lake (Melbourne inland lake centerpiece)
-      const waterGeo = new THREE.PlaneGeometry(350, 240);
-      const waterMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.18, metalness: 0.80 });
+      // Albert Park Lake (Melbourne inland lake centerpiece inside track perimeter)
+      const waterGeo = new THREE.PlaneGeometry(1600, 1100);
+      const waterMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.15, metalness: 0.85 });
       const lake = new THREE.Mesh(waterGeo, waterMat);
+      lake.name = "albert_park_lake";
       lake.rotation.x = -Math.PI / 2;
-      lake.position.set(-110, -0.2, -60);
+      lake.position.set(-150, -0.2, 50);
       scene.add(lake);
     } else if (activeTrack === 1) {
       // Yas Marina Harbor & Yacht Basin (Abu Dhabi)
-      const waterGeo = new THREE.PlaneGeometry(420, 260);
+      const waterGeo = new THREE.PlaneGeometry(1400, 900);
       const waterMat = new THREE.MeshStandardMaterial({ color: 0x0369a1, roughness: 0.12, metalness: 0.92 });
       const marina = new THREE.Mesh(waterGeo, waterMat);
+      marina.name = "yas_marina_basin";
       marina.rotation.x = -Math.PI / 2;
-      marina.position.set(-80, -0.2, -30);
+      marina.position.set(0, -0.2, -60);
       scene.add(marina);
     } else if (activeTrack === 2) {
       // Sunset Coast Ocean Promenade
-      const waterGeo = new THREE.PlaneGeometry(1200, 500);
+      const waterGeo = new THREE.PlaneGeometry(2400, 1200);
       const waterMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.15, metalness: 0.85 });
       const water = new THREE.Mesh(waterGeo, waterMat);
+      water.name = "sunset_ocean";
       water.rotation.x = -Math.PI / 2;
-      water.position.set(0, -0.3, -240);
+      water.position.set(0, -0.3, -400);
       scene.add(water);
+    }
+
+    // 🏙️ MELBOURNE CBD SKYLINE (Sector 1 & 2 Background across Albert Park Lake)
+    if (activeTrack === 0) {
+      const cityGroup = new THREE.Group();
+      cityGroup.name = "melbourne_cbd_skyline";
+      const bldgMat1 = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.6, metalness: 0.4 });
+      const bldgMat2 = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.5, metalness: 0.6 });
+      const glassMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.2, metalness: 0.8 });
+
+      // Skyscraper clusters in Melbourne CBD north of the park (x: -600 to 600, z: -1200 to -1600)
+      for (let b = 0; b < 28; b++) {
+        const bx = -600 + (b * 45) + (b % 3) * 12;
+        const bz = -1300 - (b % 4) * 80;
+        const bw = 28 + (b % 5) * 8;
+        const bd = 28 + (b % 3) * 10;
+        const bh = 80 + (b % 7) * 35;
+
+        const bMat = (b % 3 === 0) ? glassMat : ((b % 2 === 0) ? bldgMat1 : bldgMat2);
+        const bldg = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), bMat);
+        bldg.position.set(bx, bh / 2, bz);
+        cityGroup.add(bldg);
+
+        // Architectural spire / antenna on prominent towers
+        if (b % 4 === 0) {
+          const spire = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 1.6, 26, 6), bldgMat2);
+          spire.position.set(bx, bh + 13, bz);
+          cityGroup.add(spire);
+        }
+      }
+      scene.add(cityGroup);
     }
   }
 

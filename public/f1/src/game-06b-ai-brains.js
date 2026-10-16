@@ -181,12 +181,12 @@ class AIDriverBrain {
       const otherInPit = other.inPitLane || other.isPitting;
       if (myInPit !== otherInPit) continue;
 
-      let otherProgress = (other.completedLaps || 0) + (other.currentOffset || 0.0);
-      let gap = (otherProgress - myProgress);
-      // Handle lap wraparound
-      if (gap < -0.5) gap += 100;
+      // Longitudinal gap along circuit (handling lap wraparound properly within [-0.5, 0.5])
+      let diff = (other.currentOffset || 0.0) - (racer.currentOffset || 0.0);
+      while (diff > 0.5) diff -= 1.0;
+      while (diff < -0.5) diff += 1.0;
       const tLen = (typeof trackCurve !== 'undefined' && trackCurve) ? trackCurve.getLength() : 5280.0;
-      const gapMeters = gap * tLen;
+      const gapMeters = diff * tLen;
 
       // Detect Car Ahead (forward cone up to 55m)
       if (gapMeters > 0.0 && gapMeters < 55.0) {

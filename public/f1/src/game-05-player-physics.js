@@ -1683,7 +1683,7 @@
   }
 
   // ── Spline Projection Helpers ──
-  function findNearestTrackProjection(pos) {
+  function findNearestTrackProjection(pos, hintProgress) {
     if (!pos) return { progress: 0.0, distance: Infinity, lateralOffset: 0.0 };
     if (!trackCurve || !trackCurve.points || trackCurve.points.length === 0) {
       return { progress: 0.0, distance: Infinity, lateralOffset: 0.0 };
@@ -1693,8 +1693,15 @@
     let bestT = 0.0;
     let bestPoint = null;
 
-    // Fast path: localized search around player's current known offset
-    const currentT = (playerKart && playerKart.currentOffset !== undefined) ? playerKart.currentOffset : null;
+    // Fast path: localized search around hintProgress if provided, or player's current known offset if near player
+    let currentT = null;
+    if (hintProgress !== undefined && hintProgress !== null && !isNaN(hintProgress)) {
+      currentT = hintProgress;
+    } else if (playerKart && playerKart.currentOffset !== undefined && playerKart.mesh && playerKart.mesh.position) {
+      if (pos.distanceTo(playerKart.mesh.position) < 25.0) {
+        currentT = playerKart.currentOffset;
+      }
+    }
     let didFastSearch = false;
 
     if (currentT !== null) {

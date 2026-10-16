@@ -1382,20 +1382,27 @@
         }
 
         if (racer.pitProgress >= 1.0) {
-
           racer.isPitting = false;
-
+          racer.inPitLane = false;
           racer.damage = 0.0; // Reset damage on pit stop!
-
           racer.frontWingAttached = true;
-
           racer.rearWingAttached = true;
-
           restoreCarWings(racer); // Restore wing models!
 
-          racer.currentOffset = 0.06; // merge back on track straight
-
+          // Merge safely on track right side along pit exit lane
+          racer.currentOffset = 0.065;
+          racer.sideOffset = 5.2;
+          racer.targetSideOffset = 5.2;
           racer.lapsSincePit = 0;
+
+          // Prevent stacking: ensure minimum safe longitudinal separation at merge point
+          racers.forEach(other => {
+            if (other === racer || other.isTrackActive === false || other.qualifyingState === "GARAGE") return;
+            const d = Math.abs((other.currentOffset || 0.0) - racer.currentOffset);
+            if (d < 0.008) {
+              racer.currentOffset = Math.max(0.05, (other.currentOffset || 0.0) - 0.012);
+            }
+          });
 
           // Reset tyre life, change compound randomly, and update tyre stripe color
           const compounds = ["soft", "medium", "hard"];
@@ -1404,7 +1411,6 @@
           if (typeof window.updateCarTyreColor === 'function') {
             window.updateCarTyreColor(racer);
           }
-
         }
 
         return; // skip track AI physics
