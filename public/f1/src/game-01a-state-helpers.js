@@ -1,5 +1,44 @@
   'use strict';
 
+  // 🛡️ CRITICAL ENGINE STABILITY: Protect Three.js Curve evaluation against NaN, undefined, or out-of-bounds t values
+  if (typeof THREE !== 'undefined' && THREE.Curve && THREE.Curve.prototype) {
+    const _origGetPointAt = THREE.Curve.prototype.getPointAt;
+    const _origGetTangentAt = THREE.Curve.prototype.getTangentAt;
+    const _origGetPoint = THREE.CatmullRomCurve3 ? THREE.CatmullRomCurve3.prototype.getPoint : null;
+
+    THREE.Curve.prototype.getPointAt = function(u, optionalTarget) {
+      if (u === undefined || isNaN(u) || !isFinite(u)) u = 0.0;
+      if (this.closed) {
+        u = ((u % 1.0) + 1.0) % 1.0;
+      } else {
+        u = Math.max(0.0, Math.min(1.0, u));
+      }
+      return _origGetPointAt.call(this, u, optionalTarget);
+    };
+
+    THREE.Curve.prototype.getTangentAt = function(u, optionalTarget) {
+      if (u === undefined || isNaN(u) || !isFinite(u)) u = 0.0;
+      if (this.closed) {
+        u = ((u % 1.0) + 1.0) % 1.0;
+      } else {
+        u = Math.max(0.0, Math.min(1.0, u));
+      }
+      return _origGetTangentAt.call(this, u, optionalTarget);
+    };
+
+    if (_origGetPoint) {
+      THREE.CatmullRomCurve3.prototype.getPoint = function(t, optionalTarget) {
+        if (t === undefined || isNaN(t) || !isFinite(t)) t = 0.0;
+        if (this.closed) {
+          t = ((t % 1.0) + 1.0) % 1.0;
+        } else {
+          t = Math.max(0.0, Math.min(1.0, t));
+        }
+        return _origGetPoint.call(this, t, optionalTarget);
+      };
+    }
+  }
+
   // Game States
   let scene, camera, renderer;
   let menuScene, menuCamera, previewKartMesh;
@@ -955,6 +994,12 @@
     initUI();
     setupMenuPreview();
     setupVoiceRecognition();
+
+    window.addEventListener('resize', () => {
+      if (!isRaceActive && document.getElementById('main-landing-screen') && !document.getElementById('main-landing-screen').classList.contains('hidden')) {
+        setupMenuPreview();
+      }
+    });
     
     // Show console-style landing screen loading bar transition on first load
     window.triggerLoadingScreen("APEX STARS", "Chibi F1 Grand Prix", () => {
@@ -964,6 +1009,7 @@
         landing.classList.remove("hidden");
         landing.style.display = "";
       }
+      setTimeout(setupMenuPreview, 60);
     });
   };
 
@@ -1642,60 +1688,96 @@
     }
   }
 
+  let menuAnimateRunning = false;
+
   // ════ MENU 3D ROTATION CAR PREVIEW ════
   function setupMenuPreview() {
-    if (menuScene) return;
+    if (isRaceActive) return;
 
     const container = document.getElementById('menu-preview-container');
     if (!container) return;
 
-    menuScene = new THREE.Scene();
-    menuCamera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
-    menuCamera.position.set(0, 2, 6);
-    menuCamera.lookAt(0, 0.4, 0);
+    const width = container.clientWidth > 50 ? container.clientWidth : Math.max(300, Math.floor(window.innerWidth * 0.58));
+    const height = container.clientHeight > 50 ? container.clientHeight : Math.max(300, window.innerHeight);
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
-    menuScene.add(ambientLight);
+    if (!menuScene) {
+      menuScene = new THREE.Scene();
+      menuCamera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
+      menuCamera.position.set(0, 2, 6);
+      menuCamera.lookAt(0, 0.4, 0);
 
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
-    dirLight.position.set(5, 8, 2);
-    menuScene.add(dirLight);
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
+      menuScene.add(ambientLight);
 
-    const team = F1_TEAMS[selectedTeamIndex];
-    previewKartMesh = createProceduralKartMesh(parseInt(team.color.replace('#', ''), 16));
-    menuScene.add(previewKartMesh);
+      const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+      dirLight.position.set(5, 8, 2);
+      menuScene.add(dirLight);
+
+      const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.6);
+      dirLight2.position.set(-5, 4, -2);
+      menuScene.add(dirLight2);
+
+      const team = F1_TEAMS[selectedTeamIndex] || F1_TEAMS[0];
+      previewKartMesh = createProceduralKartMesh(parseInt(team.color.replace('#', ''), 16));
+      menuScene.add(previewKartMesh);
+
+      const textNode = document.getElementById('preview-car-name');
+      if (textNode) {
+        textNode.innerText = `${team.drivers[selectedTeammateIndex || 0].name.toUpperCase()} - ${team.name.toUpperCase()}`;
+      }
+    }
 
     if (!renderer) {
       renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       renderer.shadowMap.enabled = true;
     }
-    renderer.setSize(container.clientWidth, container.clientHeight);
-    container.appendChild(renderer.domElement);
 
-    function menuAnimate() {
-      if (isRaceActive) return; 
-      requestAnimationFrame(menuAnimate);
-
-      if (previewKartMesh) {
-        previewKartMesh.rotation.y += 0.008;
-      }
-      renderer.render(menuScene, menuCamera);
+    if (menuCamera) {
+      menuCamera.aspect = width / height;
+      menuCamera.updateProjectionMatrix();
     }
-    menuAnimate();
+
+    renderer.setSize(width, height);
+    if (renderer.domElement.parentElement !== container) {
+      container.appendChild(renderer.domElement);
+    }
+
+    if (!menuAnimateRunning) {
+      menuAnimateRunning = true;
+      function menuAnimate() {
+        if (isRaceActive) {
+          menuAnimateRunning = false;
+          return;
+        }
+        requestAnimationFrame(menuAnimate);
+
+        if (previewKartMesh) {
+          previewKartMesh.rotation.y += 0.008;
+        }
+        if (renderer && menuScene && menuCamera) {
+          renderer.render(menuScene, menuCamera);
+        }
+      }
+      menuAnimate();
+    }
   }
 
   function updateMenuPreviewCar() {
-    if (!menuScene || !previewKartMesh) return;
-    menuScene.remove(previewKartMesh);
-    
-    const team = F1_TEAMS[selectedTeamIndex];
+    if (!menuScene) {
+      setupMenuPreview();
+      return;
+    }
+    if (previewKartMesh) {
+      menuScene.remove(previewKartMesh);
+    }
+    const team = F1_TEAMS[selectedTeamIndex] || F1_TEAMS[0];
     previewKartMesh = createProceduralKartMesh(parseInt(team.color.replace('#', ''), 16));
     menuScene.add(previewKartMesh);
-    
+
     const textNode = document.getElementById('preview-car-name');
     if (textNode) {
-      textNode.innerText = `${team.drivers[selectedTeammateIndex].name.toUpperCase()} - ${team.name.toUpperCase()}`;
+      textNode.innerText = `${team.drivers[selectedTeammateIndex || 0].name.toUpperCase()} - ${team.name.toUpperCase()}`;
     }
   }
 

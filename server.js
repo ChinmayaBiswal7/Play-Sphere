@@ -36,6 +36,17 @@ app.use(express.static(path.join(__dirname, 'public'), {
       res.setHeader('Pragma', 'no-cache');
     } else if (/\.(jpg|jpeg|png|gif|svg|webp|woff2?|mp3|ogg|wav)$/i.test(filePath)) {
       res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+      if (filePath.endsWith('.png')) {
+        try {
+          const fd = fs.openSync(filePath, 'r');
+          const header = Buffer.alloc(2);
+          fs.readSync(fd, header, 0, 2, 0);
+          fs.closeSync(fd);
+          if (header[0] === 0xff && header[1] === 0xd8) {
+            res.setHeader('Content-Type', 'image/jpeg');
+          }
+        } catch(e) {}
+      }
     }
   }
 }));

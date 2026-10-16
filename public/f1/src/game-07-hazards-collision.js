@@ -75,16 +75,19 @@
         const otherInPit = racerJ.inPitLane || racerJ.isPitting;
         if (myInPit !== otherInPit) continue;
 
+        if (!racerI.mesh || !racerJ.mesh) continue;
         const posI = racerI.mesh.position;
         const posJ = racerJ.mesh.position;
+        if (!posI || !posJ) continue;
         const dist3D = posI.distanceTo(posJ);
 
         // Authentic Oriented Bounding Box collision for F1 cars (Length 4.8m, Width 2.1m)
         let tang = new THREE.Vector3(0, 0, 1);
         let norm = new THREE.Vector3(1, 0, 0);
         if (trackCurve) {
-          const trackT = racerI.currentOffset !== undefined ? racerI.currentOffset : 0.0;
-          tang = trackCurve.getTangentAt(trackT % 1.0).normalize();
+          const trackT = (racerI.currentOffset !== undefined && !isNaN(racerI.currentOffset)) ? racerI.currentOffset : 0.0;
+          const safeT = ((trackT % 1.0) + 1.0) % 1.0;
+          tang = trackCurve.getTangentAt(safeT).normalize();
           norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
         }
 
