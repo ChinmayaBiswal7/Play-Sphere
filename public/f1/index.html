@@ -1667,6 +1667,19 @@
             Winding Elevation Drops
           </div>
         </div>
+
+        <!-- Circuit de Monaco (Official F1) -->
+        <div class="track-card" id="track-card-4" onclick="chooseTrackIndex(4)" style="background: rgba(17,24,39,0.7); border: 2px solid rgba(255,255,255,0.15); border-radius: 12px; padding: 16px; cursor: pointer; transition: all 0.2s; text-align: left; grid-column: span 2;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="font-family: 'Orbitron', sans-serif; font-size: 1.05rem; font-weight: 800; margin: 0; color: #fff;">CIRCUIT DE MONACO</h3>
+            <span style="font-size: 1rem;">🇲🇨</span>
+          </div>
+          <span style="font-size: 0.62rem; color: #ef4444; letter-spacing: 1px; text-transform: uppercase; font-weight: 700;">Monte Carlo • Official F1</span>
+          <div style="font-size: 0.70rem; color: rgba(255,255,255,0.6); margin-top: 8px; line-height: 1.4;">
+            Length: <strong>3.337 km</strong> • 19 Corners • Port Hercule & The Tunnel<br>
+            Lap Record: 1:12.909 (Hamilton) • Fairmont Hairpin, Massenet & Casino
+          </div>
+        </div>
       </div>
       
       <div style="display: flex; gap: 15px; justify-content: center;">
@@ -3045,7 +3058,7 @@
       </div>
 
       <!-- COLUMN 2: CIRCUITS -->
-      <div class="ws-card">
+      <div class="ws-card" style="max-height: 480px; overflow-y: auto;">
         <h3 class="ws-title">2. Track Selection</h3>
         
         <div class="ws-track-card selected" id="ws-track-card-0" onclick="selectWeekendTrack(0)">
@@ -3097,6 +3110,19 @@
           </div>
           <div style="font-size: 0.65rem; color: rgba(255,255,255,0.5); line-height: 1.3; margin-top: 3px;">
             16 corners, dramatic mountain peaks, downhill sweeps and high-speed downforce.
+          </div>
+        </div>
+
+        <div class="ws-track-card" id="ws-track-card-4" onclick="selectWeekendTrack(4)">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 0.95rem; color: #fff;">Circuit de Monaco</strong>
+            <span style="font-size: 0.85rem;">🇲🇨</span>
+          </div>
+          <div style="font-size: 0.68rem; color: #ef4444; font-weight: bold; margin-top: 2px;">
+            Monte Carlo • Official F1 (3.337 km)
+          </div>
+          <div style="font-size: 0.65rem; color: rgba(255,255,255,0.5); line-height: 1.3; margin-top: 3px;">
+            19 corners, Port Hercule superyachts, Tunnel, Fairmont hairpin. Lap record: 1:12.909.
           </div>
         </div>
       </div>
@@ -3441,6 +3467,7 @@
   <script src="../maps/albert_park/layout.js?v=7.1"></script>
   <script src="../maps/yas_marina/layout.js?v=7.1"></script>
   <script src="../maps/sunset_coast/layout.js?v=7.1"></script>
+  <script src="../maps/monaco/layout.js?v=7.1"></script>
   <!-- Environment, Road, and Pit Complex builders -->
   <script src="EnvironmentManager.js?v=6.0"></script>
   <script src="RoadGenerator.js?v=6.0"></script>

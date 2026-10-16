@@ -1160,7 +1160,8 @@
       new THREE.Vector3(-120, 3.0, -40),
       new THREE.Vector3(-80, 0.5, -11),
       new THREE.Vector3(-40, 1.2, 20)
-    ]
+    ],
+    (window.MONACO && window.MONACO.trackPoints) || window.SUNSET_COAST.trackPoints
   ];
 
   // Dynamic Reusable Loading Screen Progress Bar Animator
@@ -1548,7 +1549,7 @@
     }
 
     const sessionTitle = sessionNames[currentSessionIndex];
-    const trackNames = ["Albert Park Circuit", "Yas Marina Circuit", "Sunset Coast Circuit", "Alpine Heights"];
+    const trackNames = ["Albert Park Circuit", "Yas Marina Circuit", "Sunset Coast Circuit", "Alpine Heights", "Circuit de Monaco"];
     window.triggerLoadingScreen(sessionTitle, trackNames[activeTrack], () => {
       setupGame();
     });
@@ -2687,7 +2688,7 @@
 
   function updateWeekendTrackUI() {
     const idx = window.weekendConfig.selectedTrackId;
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 5; i++) {
       const card = document.getElementById(`ws-track-card-${i}`);
       if (card) card.classList.toggle('selected', idx === i);
     }
@@ -2758,7 +2759,7 @@
 
     const sessionNames = ["PRACTICE", "QUALIFYING", "MAIN GP RACE"];
     const sessionTitle = sessionNames[currentSessionIndex];
-    const trackNames = ["Albert Park Circuit", "Yas Marina Circuit", "Sunset Coast Circuit", "Alpine Heights"];
+    const trackNames = ["Albert Park Circuit", "Yas Marina Circuit", "Sunset Coast Circuit", "Alpine Heights", "Circuit de Monaco"];
 
     window.triggerLoadingScreen(sessionTitle, trackNames[activeTrack], () => {
       setupGame();
@@ -3291,6 +3292,15 @@
           corners: "16 Corners",
           record: "1:14.280 (Hamilton)",
           desc: "High-altitude fast-flowing track. Dramatic mountain peaks, extreme elevation changes, and high-speed downforce curves." 
+        },
+        { 
+          id: 4, 
+          name: "Circuit de Monaco", 
+          icon: "🇲🇨", 
+          km: "3.337 km", 
+          corners: "19 Corners",
+          record: "1:12.909 (Hamilton)",
+          desc: "Iconic Monte Carlo street circuit. Port Hercule superyachts, high-speed Tunnel, and the tightest hairpin in F1." 
         }
       ];
       tracks.forEach((track) => {
@@ -3346,7 +3356,8 @@
         "🇦🇺 Albert Park Circuit (5.278 km)",
         "🇦🇪 Yas Marina Circuit (5.281 km)",
         "🌅 Sunset Coast Circuit (4.860 km)",
-        "🏔️ Alpine Heights (4.318 km)"
+        "🏔️ Alpine Heights (4.318 km)",
+        "🇲🇨 Circuit de Monaco (3.337 km)"
       ];
       const trackName = trackLabels[window.weekendConfig.selectedTrackId] || trackLabels[0];
       const difficulties = ["EASY", "NORMAL", "HARD", "EXPERT"];
@@ -3363,7 +3374,7 @@
     const currentTeam = F1_TEAMS[window.weekendConfig.selectedTeamId];
     document.getElementById('db-gp-team').innerText = currentTeam ? currentTeam.name : 'NONE';
     document.getElementById('db-gp-driver').innerText = currentTeam ? currentTeam.drivers[window.weekendConfig.selectedDriverId].name : 'NONE';
-    const trackShortNames = ["Albert Park", "Yas Marina", "Sunset Coast", "Alpine Heights"];
+    const trackShortNames = ["Albert Park", "Yas Marina", "Sunset Coast", "Alpine Heights", "Monaco"];
     document.getElementById('db-gp-track').innerText = trackShortNames[window.weekendConfig.selectedTrackId] || 'Albert Park';
     document.getElementById('db-gp-laps').innerText = window.weekendConfig.raceLaps;
     const diffNames = ["EASY", "NORMAL", "HARD", "EXPERT"];
@@ -3466,7 +3477,7 @@
     // Hide GP setup screen
     document.getElementById('grandPrixSetupScreen').style.display = 'none';
 
-    const trackNames = ["Albert Park Circuit", "Yas Marina Circuit", "Sunset Coast Circuit", "Alpine Heights"];
+    const trackNames = ["Albert Park Circuit", "Yas Marina Circuit", "Sunset Coast Circuit", "Alpine Heights", "Circuit de Monaco"];
     window.triggerLoadingScreen("GRAND PRIX RACE", trackNames[activeTrack], () => {
       setupGame();
     });
@@ -3493,7 +3504,7 @@
     // Hide GP setup screen
     document.getElementById('grandPrixSetupScreen').style.display = 'none';
 
-    const trackNames = ["Albert Park Circuit", "Yas Marina Circuit", "Sunset Coast Circuit", "Alpine Heights"];
+    const trackNames = ["Albert Park Circuit", "Yas Marina Circuit", "Sunset Coast Circuit", "Alpine Heights", "Circuit de Monaco"];
     window.triggerLoadingScreen("PRACTICE SESSION", trackNames[activeTrack] + " — Pit Lane", () => {
       setupGame();
     });
@@ -3730,6 +3741,17 @@
       lightColor = 0xffffff;
       hemiSky = 0xbae6fd;
       hemiGround = 0x1e3a8a;
+    } else if (activeTrack === 4) {
+      // Circuit de Monaco: Bright Côte d'Azur Mediterranean sunshine & azure sea light
+      skyTopColor = 0x0284c7;
+      skyBottomColor = 0xdbeafe;
+      fogColor = 0xdbeafe;
+      fogNear = 750;
+      fogFar = 3500;
+      ambientColor = 0xfffbeb;
+      lightColor = 0xfff7ed;
+      hemiSky = 0x38bdf8;
+      hemiGround = 0x0f172a;
     }
 
     // 3D Scene Setup
@@ -3842,11 +3864,14 @@
     // Track-specific historical meteorological weather data (official F1 historical stats)
     // Albert Park Melbourne: ~15% chance of rain (late summer/early autumn in Victoria)
     // Yas Marina Abu Dhabi: ~1% chance of rain (arid desert climate)
-    // Portimao Algarve: ~18% chance of rain (Atlantic coastal)
+    // Sunset Coast: ~18% chance of rain (Atlantic coastal)
+    // Monaco: ~18% chance of rain (Mediterranean Riviera late spring)
     const TRACK_RAIN_PROBABILITY = {
       0: 0.15,
       1: 0.01,
-      2: 0.18
+      2: 0.18,
+      3: 0.20,
+      4: 0.18
     };
 
     const trackProb = TRACK_RAIN_PROBABILITY[activeTrack] !== undefined ? TRACK_RAIN_PROBABILITY[activeTrack] : 0.15;
@@ -5308,6 +5333,229 @@
       water.rotation.x = -Math.PI / 2;
       water.position.set(0, -0.3, -400);
       scene.add(water);
+    } else if (activeTrack === 4) {
+      // ═══════════════════════════════════════════════════════════════════
+      // 🇲🇨 CIRCUIT DE MONACO — PORT HERCULE, TUNNEL, CASINO & SUPERYACHTS
+      // ═══════════════════════════════════════════════════════════════════
+      
+      // 1. Port Hercule Deep Marina Basin
+      const marinaGeo = new THREE.PlaneGeometry(850, 520);
+      const marinaMat = new THREE.MeshStandardMaterial({ color: 0x0369a1, roughness: 0.1, metalness: 0.92 });
+      const marina = new THREE.Mesh(marinaGeo, marinaMat);
+      marina.name = "monaco_port_hercule";
+      marina.rotation.x = -Math.PI / 2;
+      marina.position.set(-140, -0.22, 50);
+      scene.add(marina);
+
+      // 2. Mediterranean Sea Coastline (Flanking Portier, Tunnel & Coastal Headland)
+      const seaGeo = new THREE.PlaneGeometry(2400, 1400);
+      const seaMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.15, metalness: 0.88 });
+      const sea = new THREE.Mesh(seaGeo, seaMat);
+      sea.name = "monaco_mediterranean_sea";
+      sea.rotation.x = -Math.PI / 2;
+      sea.position.set(150, -0.3, 750);
+      scene.add(sea);
+
+      // 3. Stade Nautique Rainier III (Iconic Olympic Swimming Pool at Turns 13-16)
+      const poolGroup = new THREE.Group();
+      poolGroup.name = "monaco_swimming_pool";
+      const poolDeckMat = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.8 });
+      const poolDeck = new THREE.Mesh(new THREE.BoxGeometry(68, 0.4, 34), poolDeckMat);
+      poolDeck.position.set(-415, 0.15, 35);
+      poolGroup.add(poolDeck);
+
+      const poolWaterMat = new THREE.MeshStandardMaterial({ color: 0x06b6d4, roughness: 0.05, metalness: 0.95 });
+      const poolWater = new THREE.Mesh(new THREE.PlaneGeometry(60, 26), poolWaterMat);
+      poolWater.rotation.x = -Math.PI / 2;
+      poolWater.position.set(-415, 0.38, 35);
+      poolGroup.add(poolWater);
+
+      const diveTowerMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.4 });
+      const diveTower = new THREE.Mesh(new THREE.BoxGeometry(3, 14, 4), diveTowerMat);
+      diveTower.position.set(-440, 7.0, 35);
+      poolGroup.add(diveTower);
+      const diveBoard = new THREE.Mesh(new THREE.BoxGeometry(8, 0.4, 2.5), diveTowerMat);
+      diveBoard.position.set(-436, 12.0, 35);
+      poolGroup.add(diveBoard);
+      scene.add(poolGroup);
+
+      // 4. Moored Luxury Superyachts & Jetties in Port Hercule
+      const yachtGroup = new THREE.Group();
+      yachtGroup.name = "monaco_superyachts";
+      const hullMat1 = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.35, metalness: 0.3 });
+      const hullMat2 = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.4, metalness: 0.5 });
+      const deckWoodMat = new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.75 });
+      const glassMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.1, metalness: 0.9 });
+      const pierMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.85 });
+
+      // Mooring Piers extending into the harbor
+      [[-280, 80, 25, 140], [-200, 40, 22, 160], [-100, 20, 22, 180]].forEach(([px, pz, pw, pd]) => {
+        const pier = new THREE.Mesh(new THREE.BoxGeometry(pw, 0.6, pd), pierMat);
+        pier.position.set(px, 0.1, pz);
+        yachtGroup.add(pier);
+      });
+
+      // Luxury Mega-Yachts & Superyachts lined up along the harbor
+      const yachtsData = [
+        [-240, 70, 48, 12, 0.1, 0],
+        [-240, 120, 56, 14, -0.05, 1],
+        [-160, 30, 42, 10, 0.2, 0],
+        [-160, 80, 52, 13, 0.15, 1],
+        [-160, 130, 64, 16, 0.05, 0],
+        [-70, 0, 38, 9, 0.3, 0],
+        [-70, 50, 46, 11, 0.2, 1],
+        [-70, 100, 54, 13, 0.1, 0],
+        [-70, 150, 72, 18, 0.0, 1],
+        [20, 40, 44, 11, -0.2, 0],
+        [20, 90, 50, 12, -0.1, 1],
+        [20, 140, 58, 14, 0.0, 0],
+        [100, 80, 42, 10, -0.3, 0],
+        [100, 130, 52, 12, -0.15, 1],
+      ];
+
+      yachtsData.forEach(([yx, yz, ylen, ywidth, yrot, style]) => {
+        const yacht = new THREE.Group();
+        const hMat = style === 1 ? hullMat2 : hullMat1;
+        const hull = new THREE.Mesh(new THREE.BoxGeometry(ywidth, 4.5, ylen), hMat);
+        hull.position.y = 1.2;
+        yacht.add(hull);
+        const deck = new THREE.Mesh(new THREE.BoxGeometry(ywidth * 0.95, 0.3, ylen * 0.92), deckWoodMat);
+        deck.position.y = 3.5;
+        yacht.add(deck);
+        const super2 = new THREE.Mesh(new THREE.BoxGeometry(ywidth * 0.72, 3.2, ylen * 0.65), hullMat1);
+        super2.position.set(0, 5.2, -ylen * 0.05);
+        yacht.add(super2);
+        const glassCabin = new THREE.Mesh(new THREE.BoxGeometry(ywidth * 0.65, 2.4, ylen * 0.38), glassMat);
+        glassCabin.position.set(0, 8.0, -ylen * 0.1);
+        yacht.add(glassCabin);
+        const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.3, 5.0, 6), hullMat1);
+        mast.position.set(0, 11.5, -ylen * 0.1);
+        yacht.add(mast);
+        const dome = new THREE.Mesh(new THREE.SphereGeometry(1.2, 8, 8), hullMat1);
+        dome.position.set(0, 13.5, -ylen * 0.1);
+        yacht.add(dome);
+
+        yacht.position.set(yx, 0.0, yz);
+        yacht.rotation.y = yrot;
+        yachtGroup.add(yacht);
+      });
+      scene.add(yachtGroup);
+
+      // 5. The Legendary Monaco Grand Prix Tunnel (Turn 9: t = 0.585 to 0.705)
+      const tunnelGroup = new THREE.Group();
+      tunnelGroup.name = "monaco_grand_prix_tunnel";
+      const tunnelSteps = 45;
+      const tStart = 0.588;
+      const tEnd = 0.705;
+      const tunnelWallMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.85, metalness: 0.2 });
+      const tunnelCeilingMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.9 });
+      const tunnelLightMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b });
+
+      for (let i = 0; i < tunnelSteps; i++) {
+        const t1 = tStart + (i / tunnelSteps) * (tEnd - tStart);
+        const t2 = tStart + ((i + 1) / tunnelSteps) * (tEnd - tStart);
+        const p1 = trackCurve.getPointAt(t1);
+        const p2 = trackCurve.getPointAt(t2);
+        const tang1 = trackCurve.getTangentAt(t1).normalize();
+        const norm1 = new THREE.Vector3(-tang1.z, 0, tang1.x).normalize();
+        
+        const segmentLen = p1.distanceTo(p2);
+        const midP = p1.clone().add(p2).multiplyScalar(0.5);
+        const heading = Math.atan2(p2.x - p1.x, p2.z - p1.z);
+
+        const roof = new THREE.Mesh(new THREE.BoxGeometry(26.0, 1.2, segmentLen + 0.5), tunnelCeilingMat);
+        roof.position.copy(midP);
+        roof.position.y += 7.2;
+        roof.rotation.y = heading;
+        tunnelGroup.add(roof);
+
+        const wallSea = new THREE.Mesh(new THREE.BoxGeometry(1.2, 7.5, segmentLen + 0.5), tunnelWallMat);
+        const wallSeaPos = midP.clone().add(norm1.clone().multiplyScalar(-11.5));
+        wallSea.position.copy(wallSeaPos);
+        wallSea.position.y += 3.75;
+        wallSea.rotation.y = heading;
+        tunnelGroup.add(wallSea);
+
+        const wallHotel = new THREE.Mesh(new THREE.BoxGeometry(1.2, 7.5, segmentLen + 0.5), tunnelWallMat);
+        const wallHotelPos = midP.clone().add(norm1.clone().multiplyScalar(11.5));
+        wallHotel.position.copy(wallHotelPos);
+        wallHotel.position.y += 3.75;
+        wallHotel.rotation.y = heading;
+        tunnelGroup.add(wallHotel);
+
+        if (i % 2 === 0) {
+          const amberStrip = new THREE.Mesh(new THREE.BoxGeometry(14.0, 0.25, 1.8), tunnelLightMat);
+          amberStrip.position.copy(midP);
+          amberStrip.position.y += 6.55;
+          amberStrip.rotation.y = heading;
+          tunnelGroup.add(amberStrip);
+        }
+      }
+
+      const portalMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.7 });
+      [tStart, tEnd].forEach(tPort => {
+        const pt = trackCurve.getPointAt(tPort);
+        const tang = trackCurve.getTangentAt(tPort).normalize();
+        const portal = new THREE.Mesh(new THREE.BoxGeometry(28.0, 9.5, 4.0), portalMat);
+        portal.position.copy(pt);
+        portal.position.y += 4.75;
+        portal.rotation.y = Math.atan2(tang.x, tang.z);
+        tunnelGroup.add(portal);
+      });
+      scene.add(tunnelGroup);
+
+      // 6. Casino de Monte-Carlo, Fairmont Complex & Monte Carlo Architecture
+      const monacoCity = new THREE.Group();
+      monacoCity.name = "monaco_monte_carlo_city";
+      const rivieraMat1 = new THREE.MeshStandardMaterial({ color: 0xfef08a, roughness: 0.7 });
+      const rivieraMat2 = new THREE.MeshStandardMaterial({ color: 0xfed7aa, roughness: 0.65 });
+      const rivieraMat3 = new THREE.MeshStandardMaterial({ color: 0xffedd5, roughness: 0.75 });
+      const grandCasinoMat = new THREE.MeshStandardMaterial({ color: 0xfdf4dc, roughness: 0.55, metalness: 0.25 });
+      const casinoRoofMat = new THREE.MeshStandardMaterial({ color: 0x059669, roughness: 0.45, metalness: 0.6 });
+      const hotelMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.6 });
+
+      // Casino de Monte-Carlo Grand Palace at Casino Square
+      const casinoBase = new THREE.Mesh(new THREE.BoxGeometry(90, 28, 55), grandCasinoMat);
+      casinoBase.position.set(495, 42.0 + 14, -40);
+      monacoCity.add(casinoBase);
+      [-30, 30].forEach(dx => {
+        const dome = new THREE.Mesh(new THREE.SphereGeometry(12, 16, 12), casinoRoofMat);
+        dome.position.set(495 + dx, 42.0 + 28 + 6, -40);
+        monacoCity.add(dome);
+      });
+
+      // Fairmont Hotel Complex over Hairpin & Tunnel
+      const fairmont1 = new THREE.Mesh(new THREE.BoxGeometry(85, 36, 65), hotelMat);
+      fairmont1.position.set(380, 20.0 + 18, 110);
+      monacoCity.add(fairmont1);
+
+      // High-rise Luxury Mediterranean Towers overlooking Beau Rivage & Port Hercule
+      for (let b = 0; b < 24; b++) {
+        const bx = -420 + (b * 38);
+        const bz = -280 - (b % 4) * 45;
+        const bw = 24 + (b % 3) * 6;
+        const bd = 22 + (b % 4) * 5;
+        const bh = 50 + (b % 5) * 18;
+        const bMat = (b % 3 === 0) ? rivieraMat1 : ((b % 2 === 0) ? rivieraMat2 : rivieraMat3);
+        const bldg = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), bMat);
+        bldg.position.set(bx, bh / 2, bz);
+        monacoCity.add(bldg);
+      }
+
+      // Cliffside Apartments behind Start/Finish straight & Rascasse
+      for (let b = 0; b < 16; b++) {
+        const bx = -640 - (b % 3) * 35;
+        const bz = -140 + (b * 26);
+        const bw = 26 + (b % 3) * 8;
+        const bd = 22 + (b % 2) * 6;
+        const bh = 42 + (b % 4) * 16;
+        const bMat = (b % 2 === 0) ? rivieraMat3 : rivieraMat2;
+        const bldg = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), bMat);
+        bldg.position.set(bx, bh / 2, bz);
+        monacoCity.add(bldg);
+      }
+
+      scene.add(monacoCity);
     }
 
     // 🏙️ MELBOURNE CITY SKYLINE ENCIRCLING THE CIRCUIT (Matching Real-World Reference Images)
@@ -5670,6 +5918,10 @@
       // Track 3: Alpine Heights (Cool mountain blue)
       skyTopColor = 0x0369a1;
       skyBottomColor = 0xbae6fd;
+    } else if (activeTrack === 4) {
+      // Track 4: Circuit de Monaco (Vibrant Côte d'Azur Mediterranean blue)
+      skyTopColor = 0x0284c7;
+      skyBottomColor = 0xdbeafe;
     }
 
     const skyMat = new THREE.ShaderMaterial({
@@ -9585,6 +9837,24 @@
     playerKart.currentOffset = proj.progress;
     playerKart.sideOffset = proj.lateralOffset;
 
+    // Smoothly adhere player car elevation and pitch to 3D track slope
+    if (trackCurve && !playerKart.inPitLane) {
+      const trackPt = trackCurve.getPointAt(playerKart.currentOffset);
+      if (trackPt) {
+        playerKart.mesh.position.y = THREE.MathUtils.lerp(playerKart.mesh.position.y, trackPt.y, delta * 18.0);
+      }
+      const slopeTang = trackCurve.getTangentAt(playerKart.currentOffset);
+      if (slopeTang) {
+        const pitch = Math.asin(THREE.MathUtils.clamp(slopeTang.y, -0.6, 0.6));
+        playerKart.mesh.rotation.x = THREE.MathUtils.lerp(playerKart.mesh.rotation.x, -pitch, delta * 8.0);
+      }
+    } else if (playerKart.inPitLane && pitCurve) {
+      const pitPt = pitCurve.getPointAt(Math.max(0.0, Math.min(1.0, pitProgress)));
+      if (pitPt) {
+        playerKart.mesh.position.y = THREE.MathUtils.lerp(playerKart.mesh.position.y, pitPt.y, delta * 18.0);
+      }
+    }
+
     // Grass / Gravel traps / Barrier collision
     isGravel = false;
     const isPitStraightRight = (playerKart.currentOffset >= 0.930 || playerKart.currentOffset <= 0.090) && playerKart.sideOffset > 0.0;
@@ -10941,8 +11211,10 @@ class AIDriverBrain {
       // Modern high-downforce F1 cornering limits:
       // Gentle sweepers (c ~ 0.06): ~310 km/h (86 m/s)
       // Medium bends (c ~ 0.15): ~260 km/h (72 m/s)
-      // Hairpins/Chicanes (c ~ 0.40): ~130 km/h (36 m/s)
-      const cornerLimit = Math.max(34.0, targetSpeed - (absCurvature - 0.035) * 145.0);
+      // Chicanes (c ~ 0.30): ~130 km/h (36 m/s)
+      // Tight technical hairpins (Fairmont/Rascasse c > 0.35): ~50-65 km/h (14-18 m/s)
+      const minCornerSpeed = (absCurvature > 0.35) ? 14.5 : 34.0;
+      const cornerLimit = Math.max(minCornerSpeed, targetSpeed - (absCurvature - 0.035) * 145.0);
       targetSpeed = Math.min(targetSpeed, cornerLimit * (0.97 + this.personality.cons * 0.06));
     }
 
@@ -16249,7 +16521,7 @@ window.AIBrainManager = {
     window.ApexAudio.playClick();
     tempTrackSelection = idx;
     
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 5; i++) {
       const card = document.getElementById(`track-card-${i}`);
       if (card) {
         card.style.borderColor = idx === i ? 'var(--neon-cyan)' : 'rgba(255,255,255,0.15)';
@@ -16285,7 +16557,7 @@ window.AIBrainManager = {
     
     const sessionNames = ["PRACTICE", "QUALIFYING", "MAIN GP RACE"];
     const sessionTitle = isCareerSession ? sessionNames[currentSessionIndex] : "EXHIBITION GP";
-    const trackNames = ["Albert Park Circuit", "Yas Marina Circuit", "Sunset Coast Circuit", "Alpine Heights"];
+    const trackNames = ["Albert Park Circuit", "Yas Marina Circuit", "Sunset Coast Circuit", "Alpine Heights", "Circuit de Monaco"];
     
     window.triggerLoadingScreen(sessionTitle, trackNames[activeTrack], () => {
       setupGame();

@@ -19,6 +19,10 @@
       // Track 3: Alpine Heights (Cool mountain blue)
       skyTopColor = 0x0369a1;
       skyBottomColor = 0xbae6fd;
+    } else if (activeTrack === 4) {
+      // Track 4: Circuit de Monaco (Vibrant Côte d'Azur Mediterranean blue)
+      skyTopColor = 0x0284c7;
+      skyBottomColor = 0xdbeafe;
     }
 
     const skyMat = new THREE.ShaderMaterial({

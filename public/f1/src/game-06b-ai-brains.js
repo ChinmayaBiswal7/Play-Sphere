@@ -243,8 +243,10 @@ class AIDriverBrain {
       // Modern high-downforce F1 cornering limits:
       // Gentle sweepers (c ~ 0.06): ~310 km/h (86 m/s)
       // Medium bends (c ~ 0.15): ~260 km/h (72 m/s)
-      // Hairpins/Chicanes (c ~ 0.40): ~130 km/h (36 m/s)
-      const cornerLimit = Math.max(34.0, targetSpeed - (absCurvature - 0.035) * 145.0);
+      // Chicanes (c ~ 0.30): ~130 km/h (36 m/s)
+      // Tight technical hairpins (Fairmont/Rascasse c > 0.35): ~50-65 km/h (14-18 m/s)
+      const minCornerSpeed = (absCurvature > 0.35) ? 14.5 : 34.0;
+      const cornerLimit = Math.max(minCornerSpeed, targetSpeed - (absCurvature - 0.035) * 145.0);
       targetSpeed = Math.min(targetSpeed, cornerLimit * (0.97 + this.personality.cons * 0.06));
     }
 

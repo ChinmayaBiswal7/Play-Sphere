@@ -301,7 +301,7 @@
     window.ApexAudio.playClick();
     tempTrackSelection = idx;
     
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 5; i++) {
       const card = document.getElementById(`track-card-${i}`);
       if (card) {
         card.style.borderColor = idx === i ? 'var(--neon-cyan)' : 'rgba(255,255,255,0.15)';
@@ -337,7 +337,7 @@
     
     const sessionNames = ["PRACTICE", "QUALIFYING", "MAIN GP RACE"];
     const sessionTitle = isCareerSession ? sessionNames[currentSessionIndex] : "EXHIBITION GP";
-    const trackNames = ["Albert Park Circuit", "Yas Marina Circuit", "Sunset Coast Circuit", "Alpine Heights"];
+    const trackNames = ["Albert Park Circuit", "Yas Marina Circuit", "Sunset Coast Circuit", "Alpine Heights", "Circuit de Monaco"];
     
     window.triggerLoadingScreen(sessionTitle, trackNames[activeTrack], () => {
       setupGame();

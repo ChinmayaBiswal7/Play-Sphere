@@ -1152,7 +1152,8 @@
       new THREE.Vector3(-120, 3.0, -40),
       new THREE.Vector3(-80, 0.5, -11),
       new THREE.Vector3(-40, 1.2, 20)
-    ]
+    ],
+    (window.MONACO && window.MONACO.trackPoints) || window.SUNSET_COAST.trackPoints
   ];
 
   // Dynamic Reusable Loading Screen Progress Bar Animator
@@ -1540,7 +1541,7 @@
     }
 
     const sessionTitle = sessionNames[currentSessionIndex];
-    const trackNames = ["Albert Park Circuit", "Yas Marina Circuit", "Sunset Coast Circuit", "Alpine Heights"];
+    const trackNames = ["Albert Park Circuit", "Yas Marina Circuit", "Sunset Coast Circuit", "Alpine Heights", "Circuit de Monaco"];
     window.triggerLoadingScreen(sessionTitle, trackNames[activeTrack], () => {
       setupGame();
     });
@@ -2679,7 +2680,7 @@
 
   function updateWeekendTrackUI() {
     const idx = window.weekendConfig.selectedTrackId;
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 5; i++) {
       const card = document.getElementById(`ws-track-card-${i}`);
       if (card) card.classList.toggle('selected', idx === i);
     }
@@ -2750,7 +2751,7 @@
 
     const sessionNames = ["PRACTICE", "QUALIFYING", "MAIN GP RACE"];
     const sessionTitle = sessionNames[currentSessionIndex];
-    const trackNames = ["Albert Park Circuit", "Yas Marina Circuit", "Sunset Coast Circuit", "Alpine Heights"];
+    const trackNames = ["Albert Park Circuit", "Yas Marina Circuit", "Sunset Coast Circuit", "Alpine Heights", "Circuit de Monaco"];
 
     window.triggerLoadingScreen(sessionTitle, trackNames[activeTrack], () => {
       setupGame();
@@ -3283,6 +3284,15 @@
           corners: "16 Corners",
           record: "1:14.280 (Hamilton)",
           desc: "High-altitude fast-flowing track. Dramatic mountain peaks, extreme elevation changes, and high-speed downforce curves." 
+        },
+        { 
+          id: 4, 
+          name: "Circuit de Monaco", 
+          icon: "🇲🇨", 
+          km: "3.337 km", 
+          corners: "19 Corners",
+          record: "1:12.909 (Hamilton)",
+          desc: "Iconic Monte Carlo street circuit. Port Hercule superyachts, high-speed Tunnel, and the tightest hairpin in F1." 
         }
       ];
       tracks.forEach((track) => {
@@ -3338,7 +3348,8 @@
         "🇦🇺 Albert Park Circuit (5.278 km)",
         "🇦🇪 Yas Marina Circuit (5.281 km)",
         "🌅 Sunset Coast Circuit (4.860 km)",
-        "🏔️ Alpine Heights (4.318 km)"
+        "🏔️ Alpine Heights (4.318 km)",
+        "🇲🇨 Circuit de Monaco (3.337 km)"
       ];
       const trackName = trackLabels[window.weekendConfig.selectedTrackId] || trackLabels[0];
       const difficulties = ["EASY", "NORMAL", "HARD", "EXPERT"];
@@ -3355,7 +3366,7 @@
     const currentTeam = F1_TEAMS[window.weekendConfig.selectedTeamId];
     document.getElementById('db-gp-team').innerText = currentTeam ? currentTeam.name : 'NONE';
     document.getElementById('db-gp-driver').innerText = currentTeam ? currentTeam.drivers[window.weekendConfig.selectedDriverId].name : 'NONE';
-    const trackShortNames = ["Albert Park", "Yas Marina", "Sunset Coast", "Alpine Heights"];
+    const trackShortNames = ["Albert Park", "Yas Marina", "Sunset Coast", "Alpine Heights", "Monaco"];
     document.getElementById('db-gp-track').innerText = trackShortNames[window.weekendConfig.selectedTrackId] || 'Albert Park';
     document.getElementById('db-gp-laps').innerText = window.weekendConfig.raceLaps;
     const diffNames = ["EASY", "NORMAL", "HARD", "EXPERT"];
@@ -3458,7 +3469,7 @@
     // Hide GP setup screen
     document.getElementById('grandPrixSetupScreen').style.display = 'none';
 
-    const trackNames = ["Albert Park Circuit", "Yas Marina Circuit", "Sunset Coast Circuit", "Alpine Heights"];
+    const trackNames = ["Albert Park Circuit", "Yas Marina Circuit", "Sunset Coast Circuit", "Alpine Heights", "Circuit de Monaco"];
     window.triggerLoadingScreen("GRAND PRIX RACE", trackNames[activeTrack], () => {
       setupGame();
     });
@@ -3485,7 +3496,7 @@
     // Hide GP setup screen
     document.getElementById('grandPrixSetupScreen').style.display = 'none';
 
-    const trackNames = ["Albert Park Circuit", "Yas Marina Circuit", "Sunset Coast Circuit", "Alpine Heights"];
+    const trackNames = ["Albert Park Circuit", "Yas Marina Circuit", "Sunset Coast Circuit", "Alpine Heights", "Circuit de Monaco"];
     window.triggerLoadingScreen("PRACTICE SESSION", trackNames[activeTrack] + " — Pit Lane", () => {
       setupGame();
     });

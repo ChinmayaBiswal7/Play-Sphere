@@ -1259,6 +1259,24 @@
     playerKart.currentOffset = proj.progress;
     playerKart.sideOffset = proj.lateralOffset;
 
+    // Smoothly adhere player car elevation and pitch to 3D track slope
+    if (trackCurve && !playerKart.inPitLane) {
+      const trackPt = trackCurve.getPointAt(playerKart.currentOffset);
+      if (trackPt) {
+        playerKart.mesh.position.y = THREE.MathUtils.lerp(playerKart.mesh.position.y, trackPt.y, delta * 18.0);
+      }
+      const slopeTang = trackCurve.getTangentAt(playerKart.currentOffset);
+      if (slopeTang) {
+        const pitch = Math.asin(THREE.MathUtils.clamp(slopeTang.y, -0.6, 0.6));
+        playerKart.mesh.rotation.x = THREE.MathUtils.lerp(playerKart.mesh.rotation.x, -pitch, delta * 8.0);
+      }
+    } else if (playerKart.inPitLane && pitCurve) {
+      const pitPt = pitCurve.getPointAt(Math.max(0.0, Math.min(1.0, pitProgress)));
+      if (pitPt) {
+        playerKart.mesh.position.y = THREE.MathUtils.lerp(playerKart.mesh.position.y, pitPt.y, delta * 18.0);
+      }
+    }
+
     // Grass / Gravel traps / Barrier collision
     isGravel = false;
     const isPitStraightRight = (playerKart.currentOffset >= 0.930 || playerKart.currentOffset <= 0.090) && playerKart.sideOffset > 0.0;
