@@ -41,7 +41,7 @@
   <!-- Core Controller Stylesheet -->
   <link rel="stylesheet" href="/controller.css?v=120">
 
-  <!-- Embedded Formula 1 Virtual Steering Wheel Cockpit Styles (Zero-Cache Failure Shield) -->
+  <!-- Embedded Formula 1 Steering Wheel Cockpit Styles (Zero-Cache Shield) -->
   <style id="f1-cockpit-styles">
     body.f1-mode-active {
       display: block !important;
@@ -81,14 +81,14 @@
 
     .f1-chassis {
       width: 100%;
-      max-width: 960px;
+      max-width: 980px;
       height: 100%;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
       border-radius: 14px;
       border: 1.5px solid rgba(255, 255, 255, 0.12);
-      background: rgba(9, 13, 20, 0.92);
+      background: rgba(9, 13, 20, 0.94);
       box-shadow: inset 0 0 30px rgba(0,0,0,0.9), 0 0 25px rgba(0,0,0,0.85);
       padding: 4px 8px;
       box-sizing: border-box;
@@ -103,9 +103,8 @@
       justify-content: space-between;
       width: 100%;
       padding: 2px 4px;
-      gap: 6px;
       border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-      height: 32px;
+      height: 34px;
       box-sizing: border-box;
     }
 
@@ -115,7 +114,6 @@
       gap: 6px;
       flex: 1;
     }
-
     .f1-header-right {
       justify-content: flex-end;
     }
@@ -125,23 +123,15 @@
       border: 1px solid rgba(255, 255, 255, 0.18);
       color: #fff;
       border-radius: 6px;
-      padding: 4px 8px;
+      padding: 4px 10px;
       font-family: inherit;
-      font-size: 0.62rem;
+      font-size: 0.65rem;
       font-weight: 800;
       letter-spacing: 0.5px;
       cursor: pointer;
       box-shadow: 0 2px 6px rgba(0,0,0,0.4);
       transition: all 0.1s;
     }
-
-    .f1-util-btn.active {
-      background: rgba(16, 185, 129, 0.22);
-      border-color: #10b981;
-      color: #10b981;
-      box-shadow: 0 0 10px rgba(16, 185, 129, 0.35);
-    }
-
     .f1-util-btn:active {
       transform: scale(0.94);
     }
@@ -150,25 +140,29 @@
       background: rgba(239, 68, 68, 0.18);
       border-color: rgba(239, 68, 68, 0.4);
       color: #ef4444;
+      font-weight: 900;
     }
 
-    .f1-engine-btn {
-      background: linear-gradient(135deg, rgba(239, 68, 68, 0.4), rgba(220, 38, 38, 0.6)) !important;
-      border: 1px solid #ef4444 !important;
-      color: #fff !important;
-      font-weight: 900 !important;
-      box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
-      animation: f1-pulse-engine 2s infinite ease-in-out;
+    .f1-telemetry-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 6px;
+      padding: 3px 10px;
     }
-
-    @keyframes f1-pulse-engine {
-      0%, 100% { box-shadow: 0 0 6px rgba(239, 68, 68, 0.4); }
-      50% { box-shadow: 0 0 16px rgba(239, 68, 68, 0.9); transform: scale(1.04); }
+    .f1-badge-pill {
+      font-size: 0.62rem;
+      font-weight: 900;
+      color: #60a5fa;
+      letter-spacing: 1px;
     }
-
-    .f1-engine-btn:active {
-      transform: scale(0.92) !important;
-      background: #ef4444 !important;
+    .f1-gear-live {
+      font-size: 0.72rem;
+      font-weight: 900;
+      color: #eab308;
+      letter-spacing: 1px;
     }
 
     .f1-room-pill {
@@ -178,109 +172,74 @@
       background: rgba(59, 130, 246, 0.12);
       border: 1px solid rgba(59, 130, 246, 0.3);
       border-radius: 4px;
-      padding: 3px 6px;
+      padding: 3px 8px;
       letter-spacing: 1px;
     }
 
-    /* Prominent Master Gyro On/Off Button */
-    .f1-gyro-master-btn {
-      background: rgba(16, 185, 129, 0.22);
-      border: 1.5px solid #10b981;
-      color: #10b981;
-      border-radius: 6px;
-      padding: 4px 14px;
-      font-family: inherit;
-      font-size: 0.68rem;
-      font-weight: 900;
-      letter-spacing: 0.5px;
-      cursor: pointer;
-      box-shadow: 0 0 10px rgba(16, 185, 129, 0.35);
-      transition: all 0.12s ease;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .f1-gyro-master-btn.gyro-off {
-      background: rgba(6, 182, 212, 0.22);
-      border-color: #06b6d4;
-      color: #06b6d4;
-      box-shadow: 0 0 10px rgba(6, 182, 212, 0.35);
-    }
-    .f1-gyro-master-btn:active {
-      transform: scale(0.93);
-    }
-    .f1-gyro-icon {
-      font-size: 0.82rem;
-    }
-
-    /* Main Wheel Tri-Section: Left Grip | Central Dash | Right Grip */
+    /* Main Tri-Section: Left Grip | Central Tactical Console | Right Grip */
     .f1-main-wheel {
       display: flex;
       align-items: stretch;
       justify-content: space-between;
       width: 100%;
       flex: 1;
-      gap: 8px;
+      gap: 10px;
       padding: 3px 0;
       min-height: 0;
     }
 
-    /* Grip Wings */
+    /* Grip Wings (Left & Right) */
     .f1-grip {
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      width: 175px;
-      min-width: 135px;
-      background: rgba(13, 17, 26, 0.7);
-      border: 1.5px solid rgba(255, 255, 255, 0.07);
-      border-radius: 10px;
+      width: 215px;
+      min-width: 175px;
+      background: rgba(13, 17, 26, 0.75);
+      border: 1.5px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
       padding: 6px 8px;
       box-sizing: border-box;
     }
 
-    .f1-grip-top-cluster, .f1-grip-mid-cluster {
+    .f1-grip-top-cluster {
       display: flex;
       gap: 6px;
       justify-content: space-between;
+      width: 100%;
     }
 
     /* Round Cockpit Push Buttons */
     .f1-round-btn {
       flex: 1;
-      height: 42px;
-      border-radius: 50px;
+      height: 38px;
+      border-radius: 20px;
       border: 2px solid rgba(255, 255, 255, 0.16);
       background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.95) 100%);
       color: #fff;
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
+      gap: 6px;
       cursor: pointer;
       box-shadow: 0 4px 10px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.15);
       font-family: inherit;
       transition: transform 0.08s, box-shadow 0.08s;
-      padding: 1px;
+      padding: 2px 6px;
     }
-
     .f1-round-btn:active, .f1-round-btn.active {
       transform: scale(0.92);
     }
-
     .f1-btn-icon {
-      font-size: 0.82rem;
+      font-size: 0.85rem;
       line-height: 1;
     }
-
     .f1-btn-label {
-      font-size: 0.54rem;
+      font-size: 0.6rem;
       font-weight: 900;
       letter-spacing: 0.5px;
-      margin-top: 1px;
     }
 
-    /* Color Themed Buttons */
     .f1-btn-radio {
       border-color: #f97316;
       background: linear-gradient(135deg, rgba(249, 115, 22, 0.25) 0%, rgba(15, 23, 42, 0.9) 100%);
@@ -289,50 +248,6 @@
     .f1-btn-radio.active, .f1-btn-radio:active {
       box-shadow: 0 0 15px rgba(249, 115, 22, 0.7);
       background: #f97316;
-      color: #000;
-    }
-
-    .f1-btn-pit {
-      border-color: #eab308;
-      background: linear-gradient(135deg, rgba(234, 179, 8, 0.25) 0%, rgba(15, 23, 42, 0.9) 100%);
-      color: #fef08a;
-    }
-    .f1-btn-pit.active, .f1-btn-pit:active {
-      box-shadow: 0 0 15px rgba(234, 179, 8, 0.7);
-      background: #eab308;
-      color: #000;
-    }
-
-    .f1-btn-drs {
-      border-color: #06b6d4;
-      background: linear-gradient(135deg, rgba(6, 182, 212, 0.25) 0%, rgba(15, 23, 42, 0.9) 100%);
-      color: #67e8f9;
-    }
-    .f1-btn-drs.active, .f1-btn-drs:active {
-      box-shadow: 0 0 16px rgba(6, 182, 212, 0.8);
-      background: #06b6d4;
-      color: #000;
-    }
-
-    .f1-btn-ot {
-      border-color: #a855f7;
-      background: linear-gradient(135deg, rgba(168, 85, 247, 0.25) 0%, rgba(15, 23, 42, 0.9) 100%);
-      color: #d8b4fe;
-    }
-    .f1-btn-ot.active, .f1-btn-ot:active {
-      box-shadow: 0 0 16px rgba(168, 85, 247, 0.8);
-      background: #a855f7;
-      color: #000;
-    }
-
-    .f1-btn-status {
-      border-color: #3b82f6;
-      background: linear-gradient(135deg, rgba(59, 130, 246, 0.25) 0%, rgba(15, 23, 42, 0.9) 100%);
-      color: #93c5fd;
-    }
-    .f1-btn-status.active, .f1-btn-status:active {
-      box-shadow: 0 0 15px rgba(59, 130, 246, 0.7);
-      background: #3b82f6;
       color: #000;
     }
 
@@ -347,161 +262,15 @@
       color: #000;
     }
 
-    .f1-btn-sub {
-      height: 34px;
-      font-size: 0.62rem;
-      border-color: rgba(255, 255, 255, 0.15);
-      background: rgba(255, 255, 255, 0.06);
-    }
-
-    /* Gear Shift Paddles (Large, Prominent, Ergonomic) */
-    .f1-paddle-container {
-      width: 100%;
-      margin: 3px 0;
-    }
-
-    .f1-paddle-btn {
-      width: 100%;
-      height: 46px;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      font-family: inherit;
-      font-weight: 900;
-      cursor: pointer;
-      box-shadow: 0 5px 12px rgba(0,0,0,0.6), inset 0 1px 2px rgba(255,255,255,0.2);
-      transition: transform 0.06s, box-shadow 0.06s;
-      border: 2px solid;
-    }
-
-    .f1-paddle-down {
-      background: linear-gradient(135deg, rgba(220, 38, 38, 0.35) 0%, rgba(127, 29, 29, 0.6) 100%);
-      border-color: #ef4444;
-      color: #fff;
-    }
-    .f1-paddle-down:active, .f1-paddle-down.active {
-      background: #ef4444;
-      color: #000;
-      box-shadow: 0 0 20px rgba(239, 68, 68, 0.8);
-      transform: scale(0.94);
-    }
-
-    .f1-paddle-up {
-      background: linear-gradient(135deg, rgba(16, 185, 129, 0.35) 0%, rgba(6, 78, 59, 0.6) 100%);
-      border-color: #10b981;
-      color: #fff;
-    }
-    .f1-paddle-up:active, .f1-paddle-up.active {
-      background: #10b981;
-      color: #000;
-      box-shadow: 0 0 20px rgba(16, 185, 129, 0.8);
-      transform: scale(0.94);
-    }
-
-    .f1-paddle-symbol {
-      font-size: 1.2rem;
-      line-height: 1;
-    }
-
-    .f1-paddle-text {
-      font-size: 0.68rem;
-      letter-spacing: 1px;
-    }
-
-    /* Throttle & Brake Giant Touch Trigger Footpads */
-    .f1-trigger-container {
-      width: 100%;
-      margin-top: 2px;
-    }
-
-    .f1-trigger-btn {
-      width: 100%;
-      height: 50px;
-      border-radius: 8px;
-      border: 2px solid;
-      font-family: inherit;
-      font-size: 0.78rem;
-      font-weight: 900;
-      letter-spacing: 1px;
-      cursor: pointer;
-      position: relative;
-      overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: transform 0.05s;
-    }
-
-    .f1-trigger-brake {
-      background: linear-gradient(180deg, rgba(239, 68, 68, 0.2) 0%, rgba(30, 10, 15, 0.8) 100%);
-      border-color: #ef4444;
-      color: #ef4444;
-    }
-    .f1-trigger-brake:active, .f1-trigger-brake.active {
-      background: rgba(239, 68, 68, 0.6);
-      color: #fff;
-      box-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
-      transform: scale(0.96);
-    }
-
-    .f1-trigger-throttle {
-      background: linear-gradient(180deg, rgba(16, 185, 129, 0.2) 0%, rgba(6, 30, 20, 0.8) 100%);
-      border-color: #10b981;
-      color: #10b981;
-    }
-    .f1-trigger-throttle:active, .f1-trigger-throttle.active {
-      background: rgba(16, 185, 129, 0.6);
-      color: #fff;
-      box-shadow: 0 0 20px rgba(16, 185, 129, 0.6);
-      transform: scale(0.96);
-    }
-
-    /* Central Dual-Mode Steering & Movement Joystick Core */
-    .f1-center-core {
-      flex: 1;
+    /* LEFT SIDE: PS-Style Analog Thumbstick */
+    .f1-stick-left-wrapper {
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
-      align-items: center;
-      min-width: 0;
-      padding: 2px 8px;
-      height: 100%;
-      box-sizing: border-box;
-    }
-
-    .f1-mode-ribbon {
-      width: 100%;
-      text-align: center;
-      margin-bottom: 2px;
-    }
-
-    .f1-mode-badge {
-      font-size: 0.6rem;
-      font-weight: 900;
-      padding: 3px 10px;
-      border-radius: 4px;
-      background: rgba(16, 185, 129, 0.15);
-      border: 1px solid rgba(16, 185, 129, 0.4);
-      color: #10b981;
-      letter-spacing: 0.8px;
-      display: inline-block;
-      transition: all 0.2s;
-    }
-    .f1-mode-badge.badge-stick {
-      background: rgba(6, 182, 212, 0.15);
-      border-color: rgba(6, 182, 212, 0.4);
-      color: #06b6d4;
-    }
-
-    .f1-stick-wrapper {
-      flex: 1;
-      display: flex;
       align-items: center;
       justify-content: center;
-      width: 100%;
-      min-height: 120px;
+      flex: 1;
+      margin: 4px 0;
+      position: relative;
     }
 
     .f1-thumbstick-base {
@@ -509,8 +278,8 @@
       height: 126px;
       border-radius: 50%;
       background: radial-gradient(circle at 35% 35%, #1e293b 0%, #090d16 80%);
-      border: 2px solid rgba(6, 182, 212, 0.35);
-      box-shadow: inset 0 0 16px rgba(0,0,0,0.9), 0 0 16px rgba(6, 182, 212, 0.2);
+      border: 2.5px solid rgba(6, 182, 212, 0.4);
+      box-shadow: inset 0 0 18px rgba(0,0,0,0.95), 0 0 14px rgba(6, 182, 212, 0.25);
       position: relative;
       touch-action: none;
       display: flex;
@@ -535,8 +304,8 @@
     }
 
     .f1-thumbstick-knob {
-      width: 54px;
-      height: 54px;
+      width: 56px;
+      height: 56px;
       border-radius: 50%;
       background: radial-gradient(circle at 35% 35%, #334155 0%, #0f172a 100%);
       border: 2px solid #06b6d4;
@@ -549,92 +318,321 @@
       pointer-events: none;
       transition: transform 0.04s ease-out;
     }
-
     .f1-knob-icon {
-      font-size: 1.15rem;
+      font-size: 1.25rem;
       filter: drop-shadow(0 0 4px rgba(6, 182, 212, 0.6));
     }
 
-    /* Steering Horizon G-Meter Bar below screen */
-    .f1-horizon-container {
-      display: flex;
-      align-items: center;
-      width: 100%;
-      gap: 6px;
-      padding: 4px 4px 1px 4px;
+    .f1-stick-label {
+      font-size: 0.54rem;
+      font-weight: 800;
+      color: rgba(255, 255, 255, 0.4);
+      letter-spacing: 1px;
+      margin-top: 3px;
     }
 
-    .f1-horizon-label {
-      font-size: 0.52rem;
-      color: rgba(255, 255, 255, 0.5);
+    /* RIGHT SIDE: Dedicated Neutral [N] Button & Paddles */
+    .f1-neutral-container {
+      width: 100%;
+      margin-bottom: 2px;
+    }
+
+    .f1-neutral-btn {
+      width: 100%;
+      height: 42px;
+      background: linear-gradient(135deg, rgba(234, 179, 8, 0.28) 0%, rgba(161, 98, 7, 0.55) 100%);
+      border: 2px solid #eab308;
+      border-radius: 8px;
+      color: #fef08a;
+      font-family: inherit;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      box-shadow: 0 0 12px rgba(234, 179, 8, 0.35);
+      transition: all 0.08s ease;
+      padding: 0 6px;
+    }
+    .f1-neutral-btn:active, .f1-neutral-btn.active {
+      background: #eab308;
+      color: #000;
+      box-shadow: 0 0 20px rgba(234, 179, 8, 0.85);
+      transform: scale(0.95);
+    }
+    .f1-neutral-icon {
+      font-size: 1rem;
+    }
+    .f1-neutral-text-group {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      line-height: 1.1;
+    }
+    .f1-neutral-label {
+      font-size: 0.68rem;
+      font-weight: 900;
+      letter-spacing: 0.8px;
+    }
+    .f1-neutral-sub {
+      font-size: 0.48rem;
       font-weight: 700;
+      color: rgba(254, 240, 138, 0.8);
+      letter-spacing: 0.4px;
+    }
+
+    /* Vertical Gear Shift Zone on Right */
+    .f1-paddles-vertical {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+      justify-content: center;
+      margin: 3px 0;
+    }
+
+    .f1-paddle-btn {
+      width: 100%;
+      height: 46px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-family: inherit;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 5px 12px rgba(0,0,0,0.6), inset 0 1px 2px rgba(255,255,255,0.2);
+      transition: transform 0.06s, box-shadow 0.06s;
+      border: 2px solid;
+    }
+
+    .f1-paddle-up {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.35) 0%, rgba(6, 78, 59, 0.6) 100%);
+      border-color: #10b981;
+      color: #fff;
+    }
+    .f1-paddle-up:active, .f1-paddle-up.active {
+      background: #10b981;
+      color: #000;
+      box-shadow: 0 0 20px rgba(16, 185, 129, 0.85);
+      transform: scale(0.94);
+    }
+
+    .f1-paddle-down {
+      background: linear-gradient(135deg, rgba(220, 38, 38, 0.35) 0%, rgba(127, 29, 29, 0.6) 100%);
+      border-color: #ef4444;
+      color: #fff;
+    }
+    .f1-paddle-down:active, .f1-paddle-down.active {
+      background: #ef4444;
+      color: #000;
+      box-shadow: 0 0 20px rgba(239, 68, 68, 0.85);
+      transform: scale(0.94);
+    }
+
+    .f1-paddle-symbol {
+      font-size: 1.15rem;
+      line-height: 1;
+    }
+    .f1-paddle-text {
+      font-size: 0.72rem;
       letter-spacing: 1px;
     }
 
-    .f1-horizon-track {
-      flex: 1;
-      height: 6px;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 3px;
+    /* Throttle & Brake Giant Touch Triggers */
+    .f1-trigger-container {
+      width: 100%;
+      margin-top: 2px;
+    }
+
+    .f1-trigger-btn {
+      width: 100%;
+      height: 48px;
+      border-radius: 8px;
+      border: 2px solid;
+      font-family: inherit;
+      font-size: 0.76rem;
+      font-weight: 900;
+      letter-spacing: 1px;
+      cursor: pointer;
       position: relative;
       overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.05s;
     }
 
-    .f1-horizon-center-mark {
-      position: absolute;
-      left: 50%;
-      top: 0;
-      width: 2px;
-      height: 100%;
-      background: rgba(255, 255, 255, 0.4);
-      transform: translateX(-50%);
+    .f1-trigger-brake {
+      background: linear-gradient(180deg, rgba(239, 68, 68, 0.22) 0%, rgba(30, 10, 15, 0.85) 100%);
+      border-color: #ef4444;
+      color: #ef4444;
+    }
+    .f1-trigger-brake:active, .f1-trigger-brake.active {
+      background: rgba(239, 68, 68, 0.7);
+      color: #fff;
+      box-shadow: 0 0 20px rgba(239, 68, 68, 0.7);
+      transform: scale(0.96);
     }
 
-    .f1-horizon-needle {
-      position: absolute;
-      top: 0;
-      height: 100%;
-      width: 14px;
-      background: #06b6d4;
-      border-radius: 3px;
-      box-shadow: 0 0 8px #06b6d4;
-      left: 50%;
-      transform: translateX(-50%);
-      transition: left 0.04s ease-out;
+    .f1-trigger-throttle {
+      background: linear-gradient(180deg, rgba(16, 185, 129, 0.22) 0%, rgba(6, 30, 20, 0.85) 100%);
+      border-color: #10b981;
+      color: #10b981;
+    }
+    .f1-trigger-throttle:active, .f1-trigger-throttle.active {
+      background: rgba(16, 185, 129, 0.7);
+      color: #fff;
+      box-shadow: 0 0 20px rgba(16, 185, 129, 0.7);
+      transform: scale(0.96);
     }
 
-    .f1-steer-degrees {
+    /* CENTER CONSOLE: TACTICAL F1 WHEEL BUTTONS */
+    .f1-center-core {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-width: 0;
+      padding: 4px 6px;
+      box-sizing: border-box;
+    }
+
+    .f1-center-cluster {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      width: 100%;
+      max-width: 290px;
+    }
+
+    .f1-center-row {
+      display: flex;
+      gap: 8px;
+      justify-content: stretch;
+      width: 100%;
+    }
+
+    .f1-tactical-btn {
+      flex: 1;
+      height: 44px;
+      border-radius: 8px;
+      border: 2px solid;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 900;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      transition: all 0.08s ease;
+      padding: 0 6px;
+    }
+    .f1-tactical-btn:active, .f1-tactical-btn.active {
+      transform: scale(0.94);
+    }
+    .f1-tac-icon {
+      font-size: 0.95rem;
+      line-height: 1;
+    }
+    .f1-tac-label {
       font-size: 0.62rem;
-      color: #06b6d4;
-      font-weight: 800;
-      font-family: monospace;
-      min-width: 30px;
-      text-align: right;
+      letter-spacing: 0.6px;
     }
 
-    /* Bottom Bar Info & iOS Gyro sensor permission button */
+    .f1-btn-drs {
+      border-color: #06b6d4;
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.22) 0%, rgba(15, 23, 42, 0.9) 100%);
+      color: #67e8f9;
+    }
+    .f1-btn-drs.active, .f1-btn-drs:active {
+      box-shadow: 0 0 16px rgba(6, 182, 212, 0.8);
+      background: #06b6d4;
+      color: #000;
+    }
+
+    .f1-btn-pit {
+      border-color: #eab308;
+      background: linear-gradient(135deg, rgba(234, 179, 8, 0.22) 0%, rgba(15, 23, 42, 0.9) 100%);
+      color: #fef08a;
+    }
+    .f1-btn-pit.active, .f1-btn-pit:active {
+      box-shadow: 0 0 16px rgba(234, 179, 8, 0.8);
+      background: #eab308;
+      color: #000;
+    }
+
+    .f1-btn-ot {
+      border-color: #a855f7;
+      background: linear-gradient(135deg, rgba(168, 85, 247, 0.22) 0%, rgba(15, 23, 42, 0.9) 100%);
+      color: #d8b4fe;
+    }
+    .f1-btn-ot.active, .f1-btn-ot:active {
+      box-shadow: 0 0 16px rgba(168, 85, 247, 0.8);
+      background: #a855f7;
+      color: #000;
+    }
+
+    .f1-btn-status {
+      border-color: #3b82f6;
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.22) 0%, rgba(15, 23, 42, 0.9) 100%);
+      color: #93c5fd;
+    }
+    .f1-btn-status.active, .f1-btn-status:active {
+      box-shadow: 0 0 15px rgba(59, 130, 246, 0.7);
+      background: #3b82f6;
+      color: #000;
+    }
+
+    /* Brake Bias Row */
+    .f1-bias-row {
+      align-items: center;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      padding: 3px 6px;
+    }
+    .f1-bias-btn {
+      flex: 1;
+      height: 32px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      color: #cbd5e1;
+      font-family: inherit;
+      font-size: 0.62rem;
+      font-weight: 800;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .f1-bias-btn:active {
+      background: rgba(255, 255, 255, 0.2);
+      transform: scale(0.95);
+    }
+    .f1-bias-title {
+      font-size: 0.55rem;
+      color: rgba(255, 255, 255, 0.5);
+      font-weight: 800;
+      letter-spacing: 0.8px;
+      padding: 0 6px;
+    }
+
+    /* Bottom Bar Info */
     .f1-bottom-bar {
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 10px;
       width: 100%;
-      padding-top: 2px;
-      font-size: 0.55rem;
+      height: 18px;
+      font-size: 0.54rem;
       color: rgba(255, 255, 255, 0.45);
-      letter-spacing: 0.5px;
+      letter-spacing: 0.4px;
     }
-
-    .f1-ios-perm-btn {
-      background: #3b82f6;
-      border: none;
-      color: #fff;
-      border-radius: 4px;
-      padding: 3px 8px;
-      font-size: 0.58rem;
-      font-weight: 800;
-      cursor: pointer;
-    }
+  </style>
 
 
   </style>
@@ -725,168 +723,151 @@
     </div>
   </div>
 
-  <!-- 4. Dedicated Formula 1 Steering Wheel Cockpit Layout (Active in F1 Mode) -->
+  <!-- 4. Dedicated Formula 1 Cockpit Layout (Active in F1 Mode) -->
   <div id="f1-wheel-container" class="f1-wheel-container" style="display:none;">
     <!-- Wheel Outer Chassis Frame -->
     <div class="f1-chassis">
       
-      <!-- Top Dashboard Header: Gyro Toggle, Calibration, Start Engine & Status -->
+      <!-- Top Dashboard Header: ESC, Telemetry Gear Badge, Room Code -->
       <div class="f1-top-bar">
-        <!-- Top Left: Calibrate Gyro Center -->
         <div class="f1-header-left">
-          <button id="f1-btn-calibrate" class="f1-util-btn" title="Reset steering center to current phone tilt">
-            🎯 CALIB
-          </button>
-        </div>
-
-        <!-- Center: Prominent Master Gyro On/Off Toggle Button -->
-        <div class="f1-header-center">
-          <button id="f1-btn-gyro-toggle" class="f1-gyro-master-btn active" title="Toggle between Gyroscope tilt steering and Virtual Joystick steering">
-            <span id="f1-gyro-icon" class="f1-gyro-icon">🔄</span>
-            <span id="f1-gyro-status-txt">GYRO: ON</span>
-          </button>
-        </div>
-
-        <!-- Top Right: Start Engine, Room Code & ESC / Pause -->
-        <div class="f1-header-right">
-          <button id="f1-btn-engine" class="f1-util-btn f1-engine-btn" title="Start Engine / Drive Out">
-            🏎️ START
-          </button>
-          <span id="f1-room-pill" class="f1-room-pill">ROOM: ----</span>
           <button id="f1-btn-esc" class="f1-util-btn f1-esc-btn" title="Pause / Menu">
             ESC
           </button>
         </div>
+
+        <div class="f1-header-center">
+          <div class="f1-telemetry-badge">
+            <span class="f1-badge-pill">🏎️ APEX F1</span>
+            <span id="f1-gear-live" class="f1-gear-live">GEAR: N</span>
+          </div>
+        </div>
+
+        <div class="f1-header-right">
+          <span id="f1-room-pill" class="f1-room-pill">ROOM: ----</span>
+        </div>
       </div>
 
-      <!-- Main Wheel Core: Left Grip | Central Analog Joystick | Right Grip -->
+      <!-- Main Tri-Section: Left (Joystick + Brakes) | Center (Tactical F1 Buttons) | Right (Gear Up/Down + Neutral + Throttle) -->
       <div class="f1-main-wheel">
 
-        <!-- LEFT WHEEL GRIP CONTROLS -->
+        <!-- LEFT SIDE: PS-STYLE ANALOG JOYSTICK & BRAKE/DRIFT -->
         <div class="f1-grip f1-grip-left">
-          <!-- Upper Thumb Buttons: RADIO & PIT LIMITER -->
           <div class="f1-grip-top-cluster">
-            <button id="f1-btn-radio" class="f1-round-btn f1-btn-radio" title="Team Radio (Hold/Tap to Speak)">
+            <button id="f1-btn-radio" class="f1-round-btn f1-btn-radio" title="Team Radio (Tap to Speak)">
               <span class="f1-btn-icon">🎙️</span>
               <span class="f1-btn-label">RADIO</span>
             </button>
-            <button id="f1-btn-pit" class="f1-round-btn f1-btn-pit" title="Pit Lane Speed Limiter (80 km/h)">
-              <span class="f1-btn-icon">⚠️</span>
-              <span class="f1-btn-label">PIT</span>
-            </button>
-          </div>
-
-          <!-- Secondary Left Buttons: DRS & BRAKE BIAS -->
-          <div class="f1-grip-mid-cluster">
-            <button id="f1-btn-drs" class="f1-round-btn f1-btn-drs" title="DRS Rear Wing Flap">
-              <span class="f1-btn-icon">⚡</span>
-              <span class="f1-btn-label">DRS</span>
-            </button>
-            <button id="f1-btn-bb-down" class="f1-round-btn f1-btn-sub" title="Brake Bias -">
-              <span class="f1-btn-label">BB −</span>
-            </button>
-          </div>
-
-          <!-- Prominent Left Shift Paddle: GEAR DOWN (-) -->
-          <div class="f1-paddle-container">
-            <button id="f1-btn-gear-down" class="f1-paddle-btn f1-paddle-down" title="Downshift (-)">
-              <span class="f1-paddle-symbol">−</span>
-              <span class="f1-paddle-text">GEAR DN</span>
-            </button>
-          </div>
-
-          <!-- Large Left Foot/Trigger: BRAKE -->
-          <div class="f1-trigger-container">
-            <button id="f1-btn-brake" class="f1-trigger-btn f1-trigger-brake" title="Brake / Reverse">
-              <span class="f1-trigger-label">BRAKE</span>
-              <div class="f1-trigger-indicator" id="f1-brake-meter"></div>
-            </button>
-          </div>
-        </div>
-
-        <!-- CENTRAL ANALOG JOYSTICK & DUAL-MODE STEERING CORE -->
-        <div class="f1-center-core">
-          <!-- Active Mode Ribbon -->
-          <div class="f1-mode-ribbon">
-            <span class="f1-mode-badge" id="f1-mode-badge">🔄 GYRO STEER + JOYSTICK ACTIVE</span>
-          </div>
-
-          <!-- Central Analog Steering & Movement Joystick -->
-          <div class="f1-stick-wrapper">
-            <div class="f1-thumbstick-base" id="f1-stick-boundary">
-              <div class="f1-thumbstick-crosshair-h"></div>
-              <div class="f1-thumbstick-crosshair-v"></div>
-              <div class="f1-thumbstick-knob" id="f1-stick">
-                <div class="f1-knob-icon">🏎️</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Live Steering Horizon & Angle Indicator -->
-          <div class="f1-horizon-container">
-            <span class="f1-horizon-label">STEER</span>
-            <div class="f1-horizon-track">
-              <div class="f1-horizon-center-mark"></div>
-              <div class="f1-horizon-needle" id="f1-horizon-needle"></div>
-            </div>
-            <span id="f1-steer-degrees" class="f1-steer-degrees">0°</span>
-          </div>
-        </div>
-
-        <!-- RIGHT WHEEL GRIP CONTROLS -->
-        <div class="f1-grip f1-grip-right">
-          <!-- Upper Thumb Buttons: OVERTAKE (OT) & MFD / STATUS -->
-          <div class="f1-grip-top-cluster">
-            <button id="f1-btn-ot" class="f1-round-btn f1-btn-ot" title="Overtake ERS Maximum Power Boost">
-              <span class="f1-btn-icon">⚡</span>
-              <span class="f1-btn-label">OT</span>
-            </button>
-            <button id="f1-btn-status" class="f1-round-btn f1-btn-status" title="MFD Car Telemetry / Status">
-              <span class="f1-btn-icon">📊</span>
-              <span class="f1-btn-label">MFD</span>
-            </button>
-          </div>
-
-          <!-- Secondary Right Buttons: DRIFT / HANDBRAKE & BRAKE BIAS + -->
-          <div class="f1-grip-mid-cluster">
             <button id="f1-btn-drift" class="f1-round-btn f1-btn-drift" title="Drift / Handbrake">
               <span class="f1-btn-icon">💨</span>
               <span class="f1-btn-label">DRIFT</span>
             </button>
-            <button id="f1-btn-bb-up" class="f1-round-btn f1-btn-sub" title="Brake Bias +">
-              <span class="f1-btn-label">BB +</span>
+          </div>
+
+          <!-- PS-STYLE ANALOG THUMBSTICK (Steer Left/Right, Throttle Up, Brake Down) -->
+          <div class="f1-stick-left-wrapper">
+            <div class="f1-thumbstick-base" id="f1-stick-boundary">
+              <div class="f1-thumbstick-crosshair-h"></div>
+              <div class="f1-thumbstick-crosshair-v"></div>
+              <div class="f1-thumbstick-knob" id="f1-stick">
+                <div class="f1-knob-icon">🕹️</div>
+              </div>
+            </div>
+            <div class="f1-stick-label">STEER / DRIVE</div>
+          </div>
+
+          <!-- Quick Left Trigger: BRAKE -->
+          <div class="f1-trigger-container">
+            <button id="f1-btn-brake" class="f1-trigger-btn f1-trigger-brake" title="Brake / Reverse">
+              <span class="f1-trigger-label">🛑 BRAKE</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- CENTER CONSOLE: TACTICAL F1 WHEEL BUTTONS -->
+        <div class="f1-center-core">
+          <div class="f1-center-cluster">
+            <!-- Row 1: DRS & PIT -->
+            <div class="f1-center-row">
+              <button id="f1-btn-drs" class="f1-tactical-btn f1-btn-drs" title="DRS Rear Wing Flap">
+                <span class="f1-tac-icon">⚡</span>
+                <span class="f1-tac-label">DRS</span>
+              </button>
+              <button id="f1-btn-pit" class="f1-tactical-btn f1-btn-pit" title="Pit Lane Speed Limiter (80 km/h)">
+                <span class="f1-tac-icon">⚠️</span>
+                <span class="f1-tac-label">PIT LIMIT</span>
+              </button>
+            </div>
+
+            <!-- Row 2: OVERTAKE (OT) & MFD TELEMETRY -->
+            <div class="f1-center-row">
+              <button id="f1-btn-ot" class="f1-tactical-btn f1-btn-ot" title="Overtake ERS Maximum Power Boost">
+                <span class="f1-tac-icon">🚀</span>
+                <span class="f1-tac-label">OT BOOST</span>
+              </button>
+              <button id="f1-btn-status" class="f1-tactical-btn f1-btn-status" title="MFD Car Telemetry / Status">
+                <span class="f1-tac-icon">📊</span>
+                <span class="f1-tac-label">CAR MFD</span>
+              </button>
+            </div>
+
+            <!-- Row 3: BRAKE BIAS ADJUSTMENT -->
+            <div class="f1-center-row f1-bias-row">
+              <button id="f1-btn-bb-down" class="f1-bias-btn" title="Brake Bias -">
+                <span>BB −</span>
+              </button>
+              <span class="f1-bias-title">BIAS</span>
+              <button id="f1-btn-bb-up" class="f1-bias-btn" title="Brake Bias +">
+                <span>BB +</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT SIDE: SHIFTING SUITE (GEAR UP, GEAR DOWN, NEUTRAL [N]) & THROTTLE -->
+        <div class="f1-grip f1-grip-right">
+          <!-- TOP: DEDICATED NEUTRAL [N] & ENGINE START BUTTON -->
+          <div class="f1-neutral-container">
+            <button id="f1-btn-neutral" class="f1-neutral-btn" title="Engage Neutral [N] / Start Engine">
+              <span class="f1-neutral-icon">🏁</span>
+              <div class="f1-neutral-text-group">
+                <span class="f1-neutral-label">NEUTRAL [N]</span>
+                <span class="f1-neutral-sub">START ENGINE / IDLE</span>
+              </div>
             </button>
           </div>
 
-          <!-- Prominent Right Shift Paddle: GEAR UP (+) -->
-          <div class="f1-paddle-container">
-            <button id="f1-btn-gear-up" class="f1-paddle-btn f1-paddle-up" title="Upshift (+)">
-              <span class="f1-paddle-symbol">+</span>
+          <!-- ERGONOMIC GEAR UP & GEAR DOWN BUTTONS (Right Thumb) -->
+          <div class="f1-paddles-vertical">
+            <button id="f1-btn-gear-up" class="f1-paddle-btn f1-paddle-up" title="Upshift (+1 Gear)">
+              <span class="f1-paddle-symbol">▲ +</span>
               <span class="f1-paddle-text">GEAR UP</span>
             </button>
+            <button id="f1-btn-gear-down" class="f1-paddle-btn f1-paddle-down" title="Downshift (-1 Gear)">
+              <span class="f1-paddle-symbol">▼ −</span>
+              <span class="f1-paddle-text">GEAR DOWN</span>
+            </button>
           </div>
 
-          <!-- Large Right Foot/Trigger: THROTTLE -->
+          <!-- Quick Right Trigger: THROTTLE -->
           <div class="f1-trigger-container">
             <button id="f1-btn-throttle" class="f1-trigger-btn f1-trigger-throttle" title="Throttle / Accelerate">
-              <span class="f1-trigger-label">THROTTLE</span>
-              <div class="f1-trigger-indicator" id="f1-throttle-meter"></div>
+              <span class="f1-trigger-label">⚡ THROTTLE</span>
             </button>
           </div>
         </div>
 
       </div>
 
-      <!-- Bottom Status & iOS Gyro Permission Bar -->
+      <!-- Bottom Bar: Clean Controller Help Tip -->
       <div class="f1-bottom-bar">
-        <span id="f1-gyro-status-txt">GYRO ACTIVE: Hold phone like a steering wheel & tilt to steer</span>
-        <button id="f1-ios-gyro-btn" class="f1-ios-perm-btn" style="display:none;">ALLOW MOTION SENSORS</button>
+        <span>LEFT: Analog Joystick (Steer & Drive) &bull; RIGHT: Gear Up/Down & [N] Neutral &bull; CENTER: DRS/PIT/OT</span>
       </div>
 
     </div>
   </div>
 
   <!-- Gamepad Client Script -->
-  <script src="/controller.js?v=125"></script>
+  <script src="/controller.js?v=130"></script>
 </body>
 </html>

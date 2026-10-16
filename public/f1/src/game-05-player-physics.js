@@ -82,8 +82,9 @@
 
     if (playerKart.qualifyingState === "GARAGE" && pitCurve) {
       const ctrl = window.controllerInput || (window.parent && window.parent.controllerInput);
-      const isStartTriggered = (ctrl && (ctrl.startEngine || (ctrl.throttle > 0.15) || ctrl.btnR2 || ctrl.btnCross)) ||
-                               keys.w || keys.ArrowUp || keys.Space;
+      const isStartTriggered = (currentGear >= 1) &&
+                               ((ctrl && ((ctrl.throttle > 0.15) || ctrl.btnR2 || ctrl.btnCross)) ||
+                                keys.w || keys.ArrowUp);
       if (isStartTriggered) {
         window.driveOutFromGarage();
       } else {

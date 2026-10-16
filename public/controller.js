@@ -310,30 +310,16 @@ class VirtualStick {
       sendInput('joystick', { x: finalX, y: normalizedY });
     } else if (this.type === 'f1') {
       f1State.stickSteer = normalizedX;
-      if (normalizedY < -0.22) {
-        f1State.stickThrottle = Math.min(1.0, -normalizedY);
+      f1State.steer = normalizedX;
+      if (normalizedY < -0.16) {
+        f1State.stickThrottle = Math.min(1.0, (-normalizedY - 0.16) / 0.84);
       } else {
         f1State.stickThrottle = 0.0;
       }
-      if (normalizedY > 0.22) {
-        f1State.stickBrake = Math.min(1.0, normalizedY);
+      if (normalizedY > 0.16) {
+        f1State.stickBrake = Math.min(1.0, (normalizedY - 0.16) / 0.84);
       } else {
         f1State.stickBrake = 0.0;
-      }
-
-      if (!f1State.gyroEnabled || Math.abs(normalizedX) > 0.05) {
-        f1State.steer = normalizedX;
-      }
-
-      // Live needle update
-      const needle = document.getElementById('f1-horizon-needle');
-      if (needle) {
-        needle.style.left = `${50 + (f1State.steer * 44)}%`;
-      }
-      const degEl = document.getElementById('f1-steer-degrees');
-      if (degEl) {
-        const deg = Math.round(f1State.steer * 35);
-        degEl.innerText = `${deg > 0 ? '▶ ' : (deg < 0 ? '◀ ' : '')}${Math.abs(deg)}°`;
       }
       emitF1InputThrottled();
     } else {
@@ -351,13 +337,7 @@ class VirtualStick {
       f1State.stickSteer = 0.0;
       f1State.stickThrottle = 0.0;
       f1State.stickBrake = 0.0;
-      if (!f1State.gyroEnabled) {
-        f1State.steer = 0.0;
-        const needle = document.getElementById('f1-horizon-needle');
-        if (needle) needle.style.left = '50%';
-        const degEl = document.getElementById('f1-steer-degrees');
-        if (degEl) degEl.innerText = '0°';
-      }
+      f1State.steer = 0.0;
       emitF1InputThrottled();
     } else {
       sendInput('aim-joystick', { x: 0, y: 0 });
@@ -535,14 +515,10 @@ function sendInput(type, payload) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// FORMULA 1 VIRTUAL STEERING WHEEL COCKPIT CONTROLLER
+// FORMULA 1 COCKPIT CONTROLLER (PS-Style Left Stick + Shifter)
 // ═══════════════════════════════════════════════════════════════
 const f1State = {
   initialized: false,
-  gyroEnabled: true,
-  gyroZeroAngle: 0.0,
-  rawAngle: 0.0,
-  gyroSteer: 0.0,
   stickSteer: 0.0,
   stickThrottle: 0.0,
   stickBrake: 0.0,
@@ -555,9 +531,7 @@ const f1State = {
   overtake: false,
   drift: false,
   status: false,
-  startEngine: false,
-  lastEmit: 0,
-  iosPermissionRequested: false
+  lastEmit: 0
 };
 
 function updateF1LayoutUI(active) {
@@ -596,161 +570,30 @@ function emitF1InputThrottled() {
     overtake: f1State.overtake,
     drift: f1State.drift,
     status: f1State.status,
-    startEngine: !!f1State.startEngine,
     joystickX: effSteer,
     joystickY: effThrottle > 0 ? -effThrottle : (effBrake > 0 ? effBrake : 0),
     btnR2: effThrottle > 0.1,
     btnL2: effBrake > 0.1,
-    btnCross: (effThrottle > 0.1) || !!f1State.startEngine,
+    btnCross: effThrottle > 0.1,
     btnSquare: !!f1State.drift,
     btnTriangle: !!f1State.drs
   });
-}
-
-function handleDeviceOrientation(e) {
-  if (!f1State.gyroEnabled || currentLayout !== 'f1') return;
-
-  // In landscape mode: tilt left/right corresponds to gamma or beta depending on orientation angle.
-  let tilt = 0;
-  const orientAngle = (screen.orientation && screen.orientation.angle !== undefined)
-    ? screen.orientation.angle
-    : (window.orientation !== undefined ? window.orientation : 90);
-
-  if (orientAngle === 90) {
-    tilt = (e.beta !== null) ? e.beta : 0;
-  } else if (orientAngle === -90 || orientAngle === 270) {
-    tilt = (e.beta !== null) ? -e.beta : 0;
-  } else {
-    tilt = (e.gamma !== null) ? e.gamma : 0;
-  }
-
-  f1State.rawAngle = tilt;
-  const delta = tilt - f1State.gyroZeroAngle;
-
-  // Refined Deadzone & Soft Progressive Curve for calm, authentic steering feel
-  const deadzone = 2.5;
-  const maxTilt = 40.0; // 40° lock prevents high twitchiness
-
-  let steerVal = 0.0;
-  if (Math.abs(delta) > deadzone) {
-    const sign = Math.sign(delta);
-    const mag = Math.min(1.0, (Math.abs(delta) - deadzone) / (maxTilt - deadzone));
-    steerVal = sign * Math.pow(mag, 1.45) * 0.90; // progressive, smooth steering
-  }
-
-  f1State.gyroSteer = steerVal;
-  if (f1State.gyroEnabled) {
-    f1State.steer = (Math.abs(f1State.stickSteer) > 0.05) ? f1State.stickSteer : steerVal;
-  } else {
-    f1State.steer = f1State.stickSteer;
-  }
-
-  // Update needle on G-meter horizon
-  const needle = document.getElementById('f1-horizon-needle');
-  if (needle) {
-    const leftPercent = 50 + (f1State.steer * 44);
-    needle.style.left = `${leftPercent}%`;
-  }
-  const degEl = document.getElementById('f1-steer-degrees');
-  if (degEl) {
-    const degRound = Math.round(delta);
-    const arrow = degRound < -1 ? "◀ " : (degRound > 1 ? " ▶" : "");
-    degEl.innerText = `${arrow}${Math.abs(degRound)}°`;
-    degEl.style.color = (Math.abs(degRound) > 22) ? "#facc15" : "#06b6d4";
-  }
-
-  emitF1InputThrottled();
 }
 
 function initF1WheelController() {
   if (f1State.initialized) return;
   f1State.initialized = true;
 
-  // 1. Gyroscope Orientation Listener & iOS Permission Check
-  if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-    const permBtn = document.getElementById('f1-ios-gyro-btn');
-    if (permBtn && !f1State.iosPermissionRequested) {
-      permBtn.style.display = 'inline-block';
-      permBtn.onclick = () => {
-        DeviceOrientationEvent.requestPermission().then(res => {
-          if (res === 'granted') {
-            permBtn.style.display = 'none';
-            f1State.iosPermissionRequested = true;
-            window.addEventListener('deviceorientation', handleDeviceOrientation, true);
-            triggerHaptic([30, 20]);
-          }
-        }).catch(console.warn);
-      };
-    }
-  } else {
-    window.addEventListener('deviceorientation', handleDeviceOrientation, true);
-  }
-
-  // 2. Calibration & Master Gyro On/Off Toggle Button
-  const calibBtn = document.getElementById('f1-btn-calibrate');
-  if (calibBtn) {
-    calibBtn.onclick = () => {
-      f1State.gyroZeroAngle = f1State.rawAngle;
-      triggerHaptic([40, 20, 40]);
-      calibBtn.innerText = "✓ ZEROED";
-      setTimeout(() => { calibBtn.innerText = "🎯 CALIB"; }, 1200);
-    };
-  }
-
-  const gyroToggleBtn = document.getElementById('f1-btn-gyro-toggle');
-  const gyroIcon = document.getElementById('f1-gyro-icon');
-  const gyroStatusTxt = document.getElementById('f1-gyro-status-txt');
-  const modeBadge = document.getElementById('f1-mode-badge');
-  const bottomBarText = document.querySelector('.f1-bottom-bar span');
-
-  if (gyroToggleBtn) {
-    gyroToggleBtn.onclick = (e) => {
-      e.preventDefault();
-      f1State.gyroEnabled = !f1State.gyroEnabled;
-      triggerHaptic(25);
-
-      if (f1State.gyroEnabled) {
-        gyroToggleBtn.classList.remove('gyro-off');
-        gyroToggleBtn.classList.add('active');
-        if (gyroIcon) gyroIcon.innerText = '🔄';
-        if (gyroStatusTxt) gyroStatusTxt.innerText = 'GYRO: ON';
-        if (modeBadge) {
-          modeBadge.innerText = '🔄 GYRO STEER + JOYSTICK ACTIVE';
-          modeBadge.style.color = '#10b981';
-        }
-        if (bottomBarText) {
-          bottomBarText.innerText = 'GYRO ACTIVE: Hold phone like a steering wheel & tilt to steer (or use thumbstick)';
-        }
-      } else {
-        gyroToggleBtn.classList.add('gyro-off');
-        gyroToggleBtn.classList.remove('active');
-        if (gyroIcon) gyroIcon.innerText = '🕹️';
-        if (gyroStatusTxt) gyroStatusTxt.innerText = 'JOYSTICK: ACTIVE';
-        if (modeBadge) {
-          modeBadge.innerText = '🕹️ THUMBSTICK STEERING ACTIVE (GYRO OFF)';
-          modeBadge.style.color = '#06b6d4';
-        }
-        if (bottomBarText) {
-          bottomBarText.innerText = 'JOYSTICK ACTIVE: Use center thumbstick to steer & drive';
-        }
-        f1State.gyroSteer = 0.0;
-        f1State.steer = f1State.stickSteer;
-        emitF1InputThrottled();
-      }
-    };
-  }
-
-  // 3. Central Analog Thumbstick for Full Movement & Steering
+  // 1. Left PS-Style Analog Thumbstick (Steering + Drive Movement)
   new VirtualStick('f1-stick', 'f1-stick-boundary', 'f1');
 
-  // 4. Gear Shift Paddles (One-Shot Step-by-Step, Tactile Haptic)
+  // 2. Right Side: One-Shot Gear Shift Paddles (Strict 1-by-1 Shift)
   const btnGearUp = document.getElementById('f1-btn-gear-up');
   if (btnGearUp) {
     const onGearUp = (e) => {
       e.preventDefault();
       btnGearUp.classList.add('active');
       triggerHaptic([45, 20]);
-      // Explicit one-shot shift packet without persistent loop state
       sendInput('f1-input', { gearUp: true, btnR1: true });
       setTimeout(() => {
         btnGearUp.classList.remove('active');
@@ -767,7 +610,6 @@ function initF1WheelController() {
       e.preventDefault();
       btnGearDown.classList.add('active');
       triggerHaptic([45, 20]);
-      // Explicit one-shot downshift packet
       sendInput('f1-input', { gearDown: true, btnL1: true });
       setTimeout(() => {
         btnGearDown.classList.remove('active');
@@ -778,22 +620,36 @@ function initF1WheelController() {
     btnGearDown.addEventListener('mousedown', onGearDown);
   }
 
-  // 5. Throttle & Brake Giant Touch Triggers
+  // 3. Dedicated NEUTRAL [N] Button (Starts engine in Neutral, allows revving, coasts)
+  const btnNeutral = document.getElementById('f1-btn-neutral');
+  if (btnNeutral) {
+    const onNeutral = (e) => {
+      e.preventDefault();
+      btnNeutral.classList.add('active');
+      triggerHaptic([60, 40, 80]);
+      sendInput('f1-input', { neutral: true });
+      setTimeout(() => {
+        btnNeutral.classList.remove('active');
+        sendInput('f1-input', { neutral: false });
+      }, 150);
+    };
+    btnNeutral.addEventListener('touchstart', onNeutral, { passive: false });
+    btnNeutral.addEventListener('mousedown', onNeutral);
+  }
+
+  // 4. Quick Throttle & Brake Triggers / Pedals
   const btnThrottle = document.getElementById('f1-btn-throttle');
   if (btnThrottle) {
     const onThrottleDown = (e) => {
       e.preventDefault();
       f1State.throttle = 1.0;
-      f1State.startEngine = true; // Auto-start engine and drive out from garage on initial throttle tap
       btnThrottle.classList.add('active');
       triggerHaptic(20);
       emitF1InputThrottled();
-      setTimeout(() => { f1State.startEngine = false; }, 300);
     };
     const onThrottleUp = (e) => {
       e.preventDefault();
       f1State.throttle = 0.0;
-      f1State.startEngine = false;
       btnThrottle.classList.remove('active');
       emitF1InputThrottled();
     };
@@ -826,7 +682,7 @@ function initF1WheelController() {
     btnBrake.addEventListener('mouseup', onBrakeUp);
   }
 
-  // 6. Utility Functions for Buttons
+  // 5. Utility Button Helpers
   function bindF1Toggle(id, stateKey, rumbleTime) {
     const btn = document.getElementById(id);
     if (!btn) return;
@@ -868,32 +724,22 @@ function initF1WheelController() {
   bindF1Momentary('f1-btn-ot', 'overtake', 50);
   bindF1Momentary('f1-btn-drift', 'drift', 20);
 
-  // START ENGINE / DRIVE OUT BUTTON
-  const btnEngine = document.getElementById('f1-btn-engine');
-  if (btnEngine) {
-    const onEngineTrigger = (e) => {
+  // Brake Bias Adjusters
+  const btnBbUp = document.getElementById('f1-btn-bb-up');
+  if (btnBbUp) {
+    btnBbUp.onclick = (e) => {
       e.preventDefault();
-      triggerHaptic([60, 40, 80]);
-      btnEngine.classList.add('active');
-      f1State.startEngine = true;
-      f1State.throttle = 1.0;
-      emitF1InputThrottled();
-      // Send explicit direct packet
-      sendInput('f1-input', {
-        startEngine: true,
-        throttle: 1.0,
-        steer: Number(f1State.steer.toFixed(3)),
-        btnCross: true,
-        btnR2: 1.0
-      });
-      setTimeout(() => {
-        f1State.startEngine = false;
-        btnEngine.classList.remove('active');
-        emitF1InputThrottled();
-      }, 500);
+      triggerHaptic(20);
+      sendInput('f1-input', { brakeBiasUp: true });
     };
-    btnEngine.addEventListener('touchstart', onEngineTrigger, { passive: false });
-    btnEngine.addEventListener('mousedown', onEngineTrigger);
+  }
+  const btnBbDown = document.getElementById('f1-btn-bb-down');
+  if (btnBbDown) {
+    btnBbDown.onclick = (e) => {
+      e.preventDefault();
+      triggerHaptic(20);
+      sendInput('f1-input', { brakeBiasDown: true });
+    };
   }
 
   const btnStatus = document.getElementById('f1-btn-status');
@@ -928,107 +774,26 @@ function initF1WheelController() {
   }, 100);
 }
 
-// 7. Live Telemetry & 15-Shift LED Display Updater
+// 6. Live Telemetry Updater from Game Feed
 function updateF1WheelDisplay(data) {
   if (!data) return;
 
-  // Gear
-  const gearEl = document.getElementById('f1-dash-gear');
-  if (gearEl && data.gear !== undefined) {
-    gearEl.innerText = data.gear;
-    if (data.gear === 'R') gearEl.style.color = '#ef4444';
-    else if (data.gear === 'N') gearEl.style.color = '#eab308';
-    else gearEl.style.color = '#06b6d4';
+  const gearLive = document.getElementById('f1-gear-live');
+  if (gearLive && data.gear !== undefined) {
+    gearLive.innerText = `GEAR: ${data.gear}`;
+    if (data.gear === 'R') gearLive.style.color = '#ef4444';
+    else if (data.gear === 'N') gearLive.style.color = '#eab308';
+    else gearLive.style.color = '#10b981';
   }
 
-  // RPM
-  const rpmEl = document.getElementById('f1-dash-rpm');
-  if (rpmEl && data.rpm !== undefined) {
-    rpmEl.innerText = Number(data.rpm).toLocaleString();
+  const drsBtn = document.getElementById('f1-btn-drs');
+  if (drsBtn && data.drsAct !== undefined) {
+    drsBtn.classList.toggle('active', !!data.drsAct);
   }
 
-  // Speed
-  const speedEl = document.getElementById('f1-dash-speed');
-  if (speedEl && data.speed !== undefined) {
-    speedEl.innerText = data.speed;
-  }
-
-  // ERS Battery Bar
-  const ersBar = document.getElementById('f1-ers-bar');
-  const ersVal = document.getElementById('f1-dash-ers-val');
-  if (ersBar && data.ers !== undefined) {
-    ersBar.style.width = `${Math.min(100, Math.max(0, data.ers))}%`;
-  }
-  if (ersVal && data.ers !== undefined) {
-    ersVal.innerText = `${Math.round(data.ers)}%`;
-  }
-
-  // Lap count
-  const lapEl = document.getElementById('f1-dash-lap');
-  if (lapEl && data.lap !== undefined) {
-    lapEl.innerText = `LAP ${data.lap}/${data.maxLaps || 5}`;
-  }
-
-  // Delta
-  const deltaEl = document.getElementById('f1-dash-delta');
-  if (deltaEl && data.delta !== undefined) {
-    deltaEl.innerText = data.delta;
-    deltaEl.style.color = String(data.delta).startsWith('+') ? '#ef4444' : '#10b981';
-  }
-
-  // DRS status pill
-  const drsPill = document.getElementById('f1-dash-drs-pill');
-  if (drsPill) {
-    drsPill.classList.toggle('active-drs', !!data.drsAct || !!data.drsAvail);
-    if (data.drsAct) {
-      drsPill.style.color = '#06b6d4';
-      drsPill.innerText = 'DRS OPEN';
-    } else if (data.drsAvail) {
-      drsPill.style.color = '#10b981';
-      drsPill.innerText = 'DRS AVAIL';
-    } else {
-      drsPill.innerText = 'DRS';
-    }
-  }
-
-  // Pit Limiter pill
-  const pitPill = document.getElementById('f1-dash-pit-pill');
-  if (pitPill) {
-    pitPill.classList.toggle('active-pit', !!data.pitLim);
-  }
-
-  // 15 Shift LED Rev Lights
-  const rpm = Number(data.rpm) || 0;
-  const isRevLimit = rpm >= 13200;
-
-  for (let i = 0; i < 5; i++) {
-    const led = document.getElementById(`f1-led-${i}`);
-    if (led) {
-      const threshold = 7500 + i * 600;
-      const on = rpm >= threshold;
-      led.classList.toggle('lit-green', on);
-      led.classList.toggle('flashing', isRevLimit);
-    }
-  }
-
-  for (let i = 0; i < 5; i++) {
-    const led = document.getElementById(`f1-led-${5 + i}`);
-    if (led) {
-      const threshold = 10500 + i * 400;
-      const on = rpm >= threshold;
-      led.classList.toggle('lit-red', on);
-      led.classList.toggle('flashing', isRevLimit);
-    }
-  }
-
-  for (let i = 0; i < 5; i++) {
-    const led = document.getElementById(`f1-led-${10 + i}`);
-    if (led) {
-      const threshold = 12500 + i * 150;
-      const on = rpm >= threshold;
-      led.classList.toggle('lit-purple', on);
-      led.classList.toggle('flashing', isRevLimit);
-    }
+  const pitBtn = document.getElementById('f1-btn-pit');
+  if (pitBtn && data.pitLim !== undefined) {
+    pitBtn.classList.toggle('active', !!data.pitLim);
   }
 }
 

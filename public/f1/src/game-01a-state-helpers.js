@@ -574,6 +574,41 @@
     }
   };
 
+  window.f1EngageNeutral = () => {
+    if (window.ApexAudio) {
+      window.ApexAudio.startEngine();
+      window.ApexAudio.updateEnginePitch(2800);
+    }
+    currentGear = 0; // Neutral!
+    triggerShiftIgnitionCut();
+
+    if (playerKart && (playerKart.qualifyingState === 'GARAGE' || playerKart.qualifyingState === 'PITLANE_STANDBY')) {
+      const overlay = document.getElementById('f1-garage-overlay');
+      if (overlay) {
+        overlay.classList.add('hidden');
+        overlay.style.display = 'none';
+      }
+      playerKart.qualifyingState = 'PITLANE_STANDBY';
+      if (typeof rdShowMessage === 'function') {
+        rdShowMessage('ENGINE IDLE IN NEUTRAL [N] // ENGAGE GEAR 1 TO DRIVE', 4.0, '#facc15');
+      }
+      speakEngineerRadio("Engine running in Neutral. Engage first gear to pull away.", 60);
+    } else {
+      showShiftBlockedHUD("GEARBOX: NEUTRAL [N]");
+      if (typeof rdShowMessage === 'function') {
+        rdShowMessage('NEUTRAL [N] ENGAGED', 1.5, '#facc15');
+      }
+    }
+  };
+
+  window.f1BrakeBias = 56.0;
+  window.f1AdjustBrakeBias = (delta) => {
+    window.f1BrakeBias = Math.min(62.0, Math.max(50.0, window.f1BrakeBias + delta));
+    if (typeof rdShowMessage === 'function') {
+      rdShowMessage(`BRAKE BIAS: ${window.f1BrakeBias.toFixed(1)}% FRONT`, 1.2, '#60a5fa');
+    }
+  };
+
   window.f1ToggleDRS = () => {
     if (!isRaceActive) return;
     if (window.f1RegulationEra === '2026') {
@@ -614,13 +649,16 @@
         window.parent.controllerInput = Object.assign(window.parent.controllerInput || {}, data);
       }
 
-      // 1. Engine start / drive out from garage
-      if (data.startEngine || (data.throttle > 0.15 && playerKart && playerKart.qualifyingState === 'GARAGE')) {
-        if (playerKart && playerKart.qualifyingState === 'GARAGE') {
+      // 1. Neutral button & Engine start in neutral
+      if (data.neutral && !window._lastCtrlNeutral) {
+        window.f1EngageNeutral();
+      }
+      window._lastCtrlNeutral = !!data.neutral;
+
+      // When in garage / standby, driving out only occurs once gear 1 or higher is selected and throttle applied
+      if (playerKart && (playerKart.qualifyingState === 'GARAGE' || playerKart.qualifyingState === 'PITLANE_STANDBY')) {
+        if (currentGear >= 1 && (data.throttle > 0.1 || keys.w)) {
           window.driveOutFromGarage();
-        }
-        if (currentGear === 0) {
-          currentGear = 1;
         }
       }
 
@@ -638,6 +676,17 @@
       if (data.drift !== undefined) {
         keys.Space = !!data.drift || !!data.btnSquare;
       }
+
+      // Brake Bias Adjusters
+      if (data.brakeBiasUp && !window._lastCtrlBbUp) {
+        window.f1AdjustBrakeBias(0.5);
+      }
+      window._lastCtrlBbUp = !!data.brakeBiasUp;
+
+      if (data.brakeBiasDown && !window._lastCtrlBbDown) {
+        window.f1AdjustBrakeBias(-0.5);
+      }
+      window._lastCtrlBbDown = !!data.brakeBiasDown;
 
       // 3. Tactile gear shifts (Strict single-edge detection per press)
       if (data.gearUp && !window._lastCtrlGearUp) {
