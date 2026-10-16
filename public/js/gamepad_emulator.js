@@ -366,11 +366,29 @@
         if (data.radio !== undefined) window.controllerInput.radio = data.radio;
         if (data.overtake !== undefined) window.controllerInput.overtake = data.overtake;
         if (data.status !== undefined) window.controllerInput.status = data.status;
+        if (data.startEngine !== undefined) window.controllerInput.startEngine = data.startEngine;
+        if (data.joystickX !== undefined) window.controllerInput.joystickX = data.joystickX;
+        if (data.joystickY !== undefined) window.controllerInput.joystickY = data.joystickY;
+        if (data.btnR2 !== undefined) window.controllerInput.btnR2 = data.btnR2;
+        if (data.btnL2 !== undefined) window.controllerInput.btnL2 = data.btnL2;
+        if (data.btnCross !== undefined) window.controllerInput.btnCross = data.btnCross;
+
+        // Auto-call driveOutFromGarage if requested and in garage
+        if (data.startEngine) {
+          if (typeof window.driveOutFromGarage === 'function') {
+            try { window.driveOutFromGarage(); } catch(e) {}
+          }
+        }
 
         // Sync to active game iframe
         const iframe = document.getElementById('game-session-iframe');
         if (iframe && iframe.contentWindow) {
-          try { iframe.contentWindow.controllerInput = window.controllerInput; } catch(e) {}
+          try {
+            iframe.contentWindow.controllerInput = Object.assign(iframe.contentWindow.controllerInput || {}, window.controllerInput);
+            if (data.startEngine && typeof iframe.contentWindow.driveOutFromGarage === 'function') {
+              iframe.contentWindow.driveOutFromGarage();
+            }
+          } catch(e) {}
         }
 
         // Emulate keyboard keys for games/components relying on key events
@@ -381,9 +399,10 @@
           setKey('KeyD', data.steer > dz);
           setKey('ArrowRight', data.steer > dz);
         }
-        if (data.throttle !== undefined) {
-          setKey('KeyW', data.throttle > 0.1);
-          setKey('ArrowUp', data.throttle > 0.1);
+        if (data.throttle !== undefined || data.startEngine) {
+          const isThrottleActive = (data.throttle > 0.1) || !!data.startEngine;
+          setKey('KeyW', isThrottleActive);
+          setKey('ArrowUp', isThrottleActive);
         }
         if (data.brake !== undefined) {
           setKey('KeyS', data.brake > 0.1);

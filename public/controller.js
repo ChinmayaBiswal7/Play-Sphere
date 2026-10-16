@@ -513,6 +513,7 @@ const f1State = {
   overtake: false,
   drift: false,
   status: false,
+  startEngine: false,
   lastEmit: 0,
   iosPermissionRequested: false
 };
@@ -550,7 +551,17 @@ function emitF1InputThrottled() {
     radio: f1State.radio,
     overtake: f1State.overtake,
     drift: f1State.drift,
-    status: f1State.status
+    status: f1State.status,
+    startEngine: !!f1State.startEngine,
+    joystickX: Number(f1State.steer.toFixed(3)),
+    joystickY: f1State.throttle > 0 ? -f1State.throttle : (f1State.brake > 0 ? f1State.brake : 0),
+    btnR2: f1State.throttle > 0.1,
+    btnL2: f1State.brake > 0.1,
+    btnCross: (f1State.throttle > 0.1) || !!f1State.startEngine,
+    btnSquare: !!f1State.drift,
+    btnTriangle: !!f1State.drs,
+    btnR1: !!f1State.gearUp,
+    btnL1: !!f1State.gearDown
   });
 }
 
@@ -743,13 +754,16 @@ function initF1WheelController() {
     const onThrottleDown = (e) => {
       e.preventDefault();
       f1State.throttle = 1.0;
+      f1State.startEngine = true; // Auto-start engine and drive out from garage on initial throttle tap
       btnThrottle.classList.add('active');
       triggerHaptic(20);
       emitF1InputThrottled();
+      setTimeout(() => { f1State.startEngine = false; }, 300);
     };
     const onThrottleUp = (e) => {
       e.preventDefault();
       f1State.throttle = 0.0;
+      f1State.startEngine = false;
       btnThrottle.classList.remove('active');
       emitF1InputThrottled();
     };
@@ -823,6 +837,34 @@ function initF1WheelController() {
   bindF1Momentary('f1-btn-radio', 'radio', 25);
   bindF1Momentary('f1-btn-ot', 'overtake', 50);
   bindF1Momentary('f1-btn-drift', 'drift', 20);
+
+  // START ENGINE / DRIVE OUT BUTTON
+  const btnEngine = document.getElementById('f1-btn-engine');
+  if (btnEngine) {
+    const onEngineTrigger = (e) => {
+      e.preventDefault();
+      triggerHaptic([60, 40, 80]);
+      btnEngine.classList.add('active');
+      f1State.startEngine = true;
+      f1State.throttle = 1.0;
+      emitF1InputThrottled();
+      // Send explicit direct packet
+      sendInput('f1-input', {
+        startEngine: true,
+        throttle: 1.0,
+        steer: Number(f1State.steer.toFixed(3)),
+        btnCross: true,
+        btnR2: 1.0
+      });
+      setTimeout(() => {
+        f1State.startEngine = false;
+        btnEngine.classList.remove('active');
+        emitF1InputThrottled();
+      }, 500);
+    };
+    btnEngine.addEventListener('touchstart', onEngineTrigger, { passive: false });
+    btnEngine.addEventListener('mousedown', onEngineTrigger);
+  }
 
   const btnStatus = document.getElementById('f1-btn-status');
   if (btnStatus) {

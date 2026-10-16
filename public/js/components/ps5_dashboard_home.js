@@ -239,7 +239,7 @@
         if (typeof window.launchCricketGame === 'function') window.launchCricketGame();
         return;
       }
-      const code = roomCode || '';
+      const code = roomCode || window.roomCode || sessionStorage.getItem('activeRoomCode') || localStorage.getItem('play_sphere_room') || '';
       const urls = {
         blockzone:    `/blockzone/index.html`,
         football:     `/football/index.html?room=${code}`,

@@ -81,27 +81,34 @@
     }
 
     if (playerKart.qualifyingState === "GARAGE" && pitCurve) {
-      playerKart.speed = 0.0;
-      playerKart.inPitLane = true;
-      playerKart.currentPath = "PIT";
-      
-      const totalBoxes = F1_TEAMS.length;
-      const pBoxT = 0.26 + (selectedTeamIndex + 0.5) * (0.74 - 0.26) / totalBoxes;
-      pitProgress = pBoxT;
-      
-      const pt = pitCurve.getPointAt(pBoxT);
-      const tang = pitCurve.getTangentAt(pBoxT).normalize();
-      const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
+      const ctrl = window.controllerInput || (window.parent && window.parent.controllerInput);
+      const isStartTriggered = (ctrl && (ctrl.startEngine || (ctrl.throttle > 0.15) || ctrl.btnR2 || ctrl.btnCross)) ||
+                               keys.w || keys.ArrowUp || keys.Space;
+      if (isStartTriggered) {
+        window.driveOutFromGarage();
+      } else {
+        playerKart.speed = 0.0;
+        playerKart.inPitLane = true;
+        playerKart.currentPath = "PIT";
+        
+        const totalBoxes = F1_TEAMS.length;
+        const pBoxT = 0.26 + (selectedTeamIndex + 0.5) * (0.74 - 0.26) / totalBoxes;
+        pitProgress = pBoxT;
+        
+        const pt = pitCurve.getPointAt(pBoxT);
+        const tang = pitCurve.getTangentAt(pBoxT).normalize();
+        const norm = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
 
-      // Placed inside spacious garage bay (at offset +24.0m), facing straight out of garage door towards pit apron
-      playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(24.0)));
-      const exitDir = norm.clone().negate().normalize(); // straight out towards pit lane
-      playerKart.heading = Math.atan2(exitDir.x, exitDir.z);
-      playerKart.mesh.rotation.y = playerKart.heading;
-      playerKart.mesh.rotation.x = 0;
-      playerKart.mesh.rotation.z = 0;
-      if (playerKart.mesh.playerArrow) playerKart.mesh.playerArrow.visible = false;
-      return;
+        // Placed inside spacious garage bay (at offset +24.0m), facing straight out of garage door towards pit apron
+        playerKart.mesh.position.copy(pt.clone().add(norm.clone().multiplyScalar(24.0)));
+        const exitDir = norm.clone().negate().normalize(); // straight out towards pit lane
+        playerKart.heading = Math.atan2(exitDir.x, exitDir.z);
+        playerKart.mesh.rotation.y = playerKart.heading;
+        playerKart.mesh.rotation.x = 0;
+        playerKart.mesh.rotation.z = 0;
+        if (playerKart.mesh.playerArrow) playerKart.mesh.playerArrow.visible = false;
+        return;
+      }
     }
 
     // Safety check to prevent any NaN propagation
@@ -184,7 +191,7 @@
     let phoneDownshiftPressed = false;
     let phoneStatusPressed = false;
 
-    const ctrl = window.controllerInput;
+    const ctrl = window.controllerInput || (window.parent && window.parent.controllerInput);
     if (ctrl) {
       if (Math.abs(ctrl.joystickX) > 0.04) {
         phoneSteer = ctrl.joystickX;

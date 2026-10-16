@@ -39,7 +39,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Outfit:wght@500;700;900&display=swap" rel="stylesheet">
 
   <!-- Core Controller Stylesheet -->
-  <link rel="stylesheet" href="/controller.css?v=110">
+  <link rel="stylesheet" href="/controller.css?v=120">
 
   <!-- Embedded Formula 1 Virtual Steering Wheel Cockpit Styles (Zero-Cache Failure Shield) -->
   <style id="f1-cockpit-styles">
@@ -150,6 +150,25 @@
       background: rgba(239, 68, 68, 0.18);
       border-color: rgba(239, 68, 68, 0.4);
       color: #ef4444;
+    }
+
+    .f1-engine-btn {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.4), rgba(220, 38, 38, 0.6)) !important;
+      border: 1px solid #ef4444 !important;
+      color: #fff !important;
+      font-weight: 900 !important;
+      box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+      animation: f1-pulse-engine 2s infinite ease-in-out;
+    }
+
+    @keyframes f1-pulse-engine {
+      0%, 100% { box-shadow: 0 0 6px rgba(239, 68, 68, 0.4); }
+      50% { box-shadow: 0 0 16px rgba(239, 68, 68, 0.9); transform: scale(1.04); }
+    }
+
+    .f1-engine-btn:active {
+      transform: scale(0.92) !important;
+      background: #ef4444 !important;
     }
 
     .f1-room-pill {
@@ -844,8 +863,11 @@
           </div>
         </div>
 
-        <!-- Top Right: Room Code & ESC / Pause -->
+        <!-- Top Right: Start Engine, Room Code & ESC / Pause -->
         <div class="f1-header-right">
+          <button id="f1-btn-engine" class="f1-util-btn f1-engine-btn" title="Start Engine / Drive Out">
+            🏎️ START
+          </button>
           <span id="f1-room-pill" class="f1-room-pill">ROOM: ----</span>
           <button id="f1-btn-esc" class="f1-util-btn f1-esc-btn" title="Pause / Menu">
             ESC
@@ -1025,6 +1047,6 @@
   </div>
 
   <!-- Gamepad Client Script -->
-  <script src="/controller.js?v=110"></script>
+  <script src="/controller.js?v=120"></script>
 </body>
 </html>

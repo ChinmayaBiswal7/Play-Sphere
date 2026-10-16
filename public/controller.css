@@ -1026,3 +1026,22 @@ body.f1-mode-active {
   pointer-events: none;
 }
 
+.f1-engine-btn {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.4), rgba(220, 38, 38, 0.6)) !important;
+  border: 1px solid #ef4444 !important;
+  color: #fff !important;
+  font-weight: 900 !important;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+  animation: f1-pulse-engine 2s infinite ease-in-out;
+}
+
+@keyframes f1-pulse-engine {
+  0%, 100% { box-shadow: 0 0 6px rgba(239, 68, 68, 0.4); }
+  50% { box-shadow: 0 0 16px rgba(239, 68, 68, 0.9); transform: scale(1.04); }
+}
+
+.f1-engine-btn:active {
+  transform: scale(0.92) !important;
+  background: #ef4444 !important;
+}
+

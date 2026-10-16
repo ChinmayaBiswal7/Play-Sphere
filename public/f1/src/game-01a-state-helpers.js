@@ -519,6 +519,145 @@
     }, 7000);
   };
 
+  window.f1ManualUpshift = () => {
+    if (!isRaceActive || isPitStopActive) return;
+    if (playerKart && playerKart.pitLimiterActive) {
+      if (currentGear >= 2) {
+        showShiftBlockedHUD("PIT ROAD LIMIT: GEAR 2 MAX");
+      } else {
+        currentGear++;
+        triggerShiftIgnitionCut();
+      }
+    } else if (currentGear < 8) {
+      if (currentGear === -1) {
+        currentGear = 0;
+        triggerShiftIgnitionCut();
+      } else if (currentGear === 0) {
+        currentGear = 1;
+        triggerShiftIgnitionCut();
+      } else {
+        currentGear++;
+        triggerShiftIgnitionCut();
+      }
+    }
+  };
+
+  window.f1ManualDownshift = () => {
+    if (!isRaceActive || isPitStopActive) return;
+    let targetGear = currentGear - 1;
+    if (targetGear < -1) targetGear = -1;
+
+    if (targetGear === -1 && playerKart && playerKart.speed > 1.2) {
+      showShiftBlockedHUD("REVERSE BLOCKED: SPEED TOO HIGH");
+    } else if (targetGear >= 1) {
+      const estimatedRPM = getRPMForSpeedAndGear(playerKart ? playerKart.speed : 0, targetGear);
+      if (estimatedRPM > 14600) {
+        showShiftBlockedHUD("ECU BLOCKED: OVERREV RISK");
+        gearboxWear = Math.min(100.0, gearboxWear + 5.0);
+      } else {
+        currentGear = targetGear;
+        triggerShiftIgnitionCut();
+      }
+    } else {
+      currentGear = targetGear;
+      triggerShiftIgnitionCut();
+    }
+  };
+
+  window.f1ToggleDRS = () => {
+    if (!isRaceActive) return;
+    if (window.f1RegulationEra === '2026') {
+      if (drsAvailable) {
+        drsActive = !drsActive;
+        if (drsActive) {
+          if (window.ApexAudio) window.ApexAudio.playBoost();
+          speakEngineerRadio('DRS open.', 70);
+        } else {
+          speakEngineerRadio('DRS closed.', 70);
+        }
+      } else if (window.overtakeModeEligible && window.ersBatteryLevel > 5.0) {
+        window.overtakeModeActive = !window.overtakeModeActive;
+        if (window.ApexAudio && window.overtakeModeActive) window.ApexAudio.playBoost();
+      }
+    } else {
+      triggerDRS();
+    }
+  };
+
+  window.setupF1ControllerSocketListener = function() {
+    const sock = window.socket || (window.parent && window.parent.socket);
+    if (!sock) return;
+
+    if (window._f1SocketListenerBound) return;
+    window._f1SocketListenerBound = true;
+
+    // Join room if active
+    const activeRoom = window.roomCode || new URLSearchParams(window.location.search).get('room') || sessionStorage.getItem('activeRoomCode') || (window.parent && window.parent.roomCode);
+    if (activeRoom && sock.emit) {
+      sock.emit('join-room-pc', { roomCode: activeRoom });
+    }
+
+    sock.on('controller-input', (data) => {
+      if (!data) return;
+      window.controllerInput = Object.assign(window.controllerInput || {}, data);
+      if (window.parent) {
+        window.parent.controllerInput = Object.assign(window.parent.controllerInput || {}, data);
+      }
+
+      // 1. Engine start / drive out from garage
+      if (data.startEngine || (data.throttle > 0.15 && playerKart && playerKart.qualifyingState === 'GARAGE')) {
+        if (playerKart && playerKart.qualifyingState === 'GARAGE') {
+          window.driveOutFromGarage();
+        }
+        if (currentGear === 0) {
+          currentGear = 1;
+        }
+      }
+
+      // 2. Direct Sync into keys object for instant physics response
+      if (data.throttle !== undefined) {
+        keys.w = (data.throttle > 0.1) || !!data.btnR2 || !!data.btnCross;
+      }
+      if (data.brake !== undefined) {
+        keys.s = (data.brake > 0.1) || !!data.btnL2 || !!data.btnCircle;
+      }
+      if (data.steer !== undefined) {
+        keys.a = data.steer < -0.12;
+        keys.d = data.steer > 0.12;
+      }
+      if (data.drift !== undefined) {
+        keys.Space = !!data.drift || !!data.btnSquare;
+      }
+
+      // 3. Tactile gear shifts
+      if (data.gearUp) {
+        window.f1ManualUpshift();
+      }
+      if (data.gearDown) {
+        window.f1ManualDownshift();
+      }
+
+      // 4. Utility toggles
+      if (data.drs) {
+        window.f1ToggleDRS();
+      }
+      if (data.pitLimiter) {
+        if (typeof togglePitLimiterManual === 'function') togglePitLimiterManual();
+      }
+      if (data.radio) {
+        if (typeof window.toggleVoiceListening === 'function') window.toggleVoiceListening();
+      }
+      if (data.overtake) {
+        if (window.overtakeModeEligible && window.ersBatteryLevel > 5.0) {
+          window.overtakeModeActive = true;
+        }
+      }
+      if (data.pause) {
+        if (typeof toggleSettingsOverlay === 'function') toggleSettingsOverlay();
+      }
+    });
+  };
+
   window.returnToGarage = () => {
     isPitting = false;
     hasStoppedAtPitBox = false;
@@ -3425,19 +3564,23 @@
 
   // Poll for socket initialization to bind controller events
   const socketPoll = setInterval(() => {
-    if (window.socket) {
+    const sock = window.socket || (window.parent && window.parent.socket);
+    if (sock) {
       clearInterval(socketPoll);
-      window.socket.on('phone-connected', () => {
+      if (typeof window.setupF1ControllerSocketListener === 'function') {
+        window.setupF1ControllerSocketListener();
+      }
+      sock.on('phone-connected', () => {
         window.controllerConnected = true;
         updateF1ControllerModalUI();
         updateControllerPromptKeybinds();
       });
-      window.socket.on('phone-disconnected', () => {
+      sock.on('phone-disconnected', () => {
         window.controllerConnected = false;
         updateF1ControllerModalUI();
         updateControllerPromptKeybinds();
       });
-      window.socket.on('room-created', ({ roomCode }) => {
+      sock.on('room-created', ({ roomCode }) => {
         window.roomCode = roomCode;
         updateF1ControllerModalUI();
       });
