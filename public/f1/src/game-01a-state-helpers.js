@@ -669,10 +669,6 @@
       if (data.brake !== undefined) {
         keys.s = (data.brake > 0.1) || !!data.btnL2 || !!data.btnCircle;
       }
-      if (data.steer !== undefined) {
-        keys.a = data.steer < -0.12;
-        keys.d = data.steer > 0.12;
-      }
       if (data.drift !== undefined) {
         keys.Space = !!data.drift || !!data.btnSquare;
       }

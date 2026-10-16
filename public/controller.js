@@ -309,8 +309,18 @@ class VirtualStick {
       const finalX = isBowling ? -normalizedX : normalizedX;
       sendInput('joystick', { x: finalX, y: normalizedY });
     } else if (this.type === 'f1') {
-      f1State.stickSteer = normalizedX;
-      f1State.steer = normalizedX;
+      // Deadzone & progressive exponential steering curve (eliminates over-sensitive twitchiness)
+      const deadzone = 0.08;
+      let steerVal = 0.0;
+      if (Math.abs(normalizedX) > deadzone) {
+        const sign = Math.sign(normalizedX);
+        const mag = (Math.abs(normalizedX) - deadzone) / (1.0 - deadzone);
+        // Exponent 1.8 gives gentle micro-adjustments near center and smooth control on deep deflection
+        steerVal = sign * Math.pow(mag, 1.8) * 0.75;
+      }
+      f1State.stickSteer = steerVal;
+      f1State.steer = steerVal;
+
       if (normalizedY < -0.16) {
         f1State.stickThrottle = Math.min(1.0, (-normalizedY - 0.16) / 0.84);
       } else {

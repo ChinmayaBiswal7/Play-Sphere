@@ -1062,25 +1062,24 @@
     if (!playerKart.handling) {
       playerKart.handling = {
         wheelBase: 3.6,
-        steeringBuildRate: 2.8,
-        steeringReturnRate: 4.2,
-        physicsMaxSteer: THREE.MathUtils.degToRad(14),
-        visualMaxSteer: THREE.MathUtils.degToRad(22),
-        yawResponseLowSpeed: 3.2,
-        yawResponseHighSpeed: 5.0,
-        yawDamping: 5.5,
-        steeringCurveExponent: 1.65
+        steeringBuildRate: 2.2,
+        steeringReturnRate: 4.5,
+        physicsMaxSteer: THREE.MathUtils.degToRad(13), // 13° authentic F1 lock
+        visualMaxSteer: THREE.MathUtils.degToRad(20),
+        yawResponseLowSpeed: 2.2,
+        yawResponseHighSpeed: 3.8,
+        yawDamping: 6.0,
+        steeringCurveExponent: 2.2 // progressive curve: micro-precision on small stick movements
       };
     }
     const hConfig = playerKart.handling;
     const steerSpeedRatio = THREE.MathUtils.clamp(Math.abs(playerKart.speed) / 50.0, 0.0, 1.0);
-    const isLowSpeedManoeuvre = Math.abs(playerKart.speed) < 16.0 || playerKart.inPitLane || playerKart.isExitingGarage;
+    const isLowSpeedManoeuvre = playerKart.isExitingGarage || (Math.abs(playerKart.speed) < 2.5 && playerKart.inPitLane);
 
-    // Steering authority decreases non-linearly as speed increases
-    // Adjusted floor from 0.22 to 0.32 and exponent from 0.7 to 0.85 to improve high-speed turn-in
+    // Steering authority decreases smoothly as speed increases
     const steeringAuthority = THREE.MathUtils.lerp(
       1.0,
-      0.32,
+      0.35,
       Math.pow(steerSpeedRatio, 0.85)
     );
 
@@ -1095,7 +1094,7 @@
     }
 
     let phoneAnalogSteer = 0.0;
-    if (Math.abs(phoneSteer) > 0.04) {
+    if (Math.abs(phoneSteer) > 0.02) {
       phoneAnalogSteer = -phoneSteer;
     }
 
@@ -1104,9 +1103,9 @@
     let rawSteeringInput = THREE.MathUtils.clamp(combinedSteer, -1.0, 1.0);
     playerKart.rawSteeringInput = rawSteeringInput;
 
-    // Filter steering input with speed-dependent build rate (heavier steering at high speeds, crisp & quick at low speed)
+    // Filter steering input with speed-dependent build rate
     if (playerKart.filteredSteeringInput === undefined) playerKart.filteredSteeringInput = 0.0;
-    const effectiveBuildRate = isLowSpeedManoeuvre ? 4.5 : THREE.MathUtils.lerp(hConfig.steeringBuildRate, 1.6, steerSpeedRatio);
+    const effectiveBuildRate = THREE.MathUtils.lerp(hConfig.steeringBuildRate, 1.4, steerSpeedRatio);
     const steerRate = (rawSteeringInput === 0.0) ? hConfig.steeringReturnRate : effectiveBuildRate;
 
     playerKart.filteredSteeringInput = THREE.MathUtils.lerp(
@@ -1120,12 +1119,12 @@
     const steeringMagnitude = Math.abs(playerKart.filteredSteeringInput);
     const curvedSteeringInput = steeringSign * Math.pow(steeringMagnitude, hConfig.steeringCurveExponent);
 
-    // Calculate target steering angle (up to 30° at low speed / garage manoeuvres for easy tight turns)
-    const currentMaxSteer = isLowSpeedManoeuvre ? THREE.MathUtils.degToRad(30) : hConfig.physicsMaxSteer;
+    // Calculate target steering angle (up to 16° in garage exit, 13° on track)
+    const currentMaxSteer = isLowSpeedManoeuvre ? THREE.MathUtils.degToRad(16) : hConfig.physicsMaxSteer;
     const targetSteeringAngle = curvedSteeringInput * currentMaxSteer * steeringAuthority * (window.dmgSteerAgility || 1.0);
 
     // Smooth steering rack movement
-    const steeringRackSpeed = isLowSpeedManoeuvre ? 10.0 : THREE.MathUtils.lerp(7.0, 3.0, steerSpeedRatio);
+    const steeringRackSpeed = THREE.MathUtils.lerp(5.5, 2.8, steerSpeedRatio);
     if (playerKart.steeringAngle === undefined) playerKart.steeringAngle = 0.0;
     playerKart.steeringAngle = THREE.MathUtils.lerp(
       playerKart.steeringAngle,
@@ -1136,8 +1135,8 @@
     // Drift angle for visual feedback
     playerKart.driftAngle = THREE.MathUtils.lerp(
       playerKart.driftAngle,
-      rawSteeringInput * 0.22,
-      delta * 10.0
+      rawSteeringInput * 0.18,
+      delta * 8.0
     );
 
     // Initialize heading to track direction on first frame if undefined
@@ -1155,11 +1154,11 @@
     // Rotational Inertia: calculate desired yaw and smooth yawVelocity (chassis weight)
     if (playerKart.yawVelocity === undefined) playerKart.yawVelocity = 0.0;
     const directionFactor = (currentGear === -1) ? -1 : 1;
-    // Boost low-speed yaw authority so car turns effortlessly out of garage and hairpin bends
-    const effectiveYawSpeed = isLowSpeedManoeuvre ? Math.max(4.0, Math.abs(playerKart.speed)) : Math.abs(playerKart.speed);
+    // Controlled low-speed yaw authority
+    const effectiveYawSpeed = isLowSpeedManoeuvre ? Math.max(1.8, Math.abs(playerKart.speed)) : Math.abs(playerKart.speed);
     const desiredYawRate = (effectiveYawSpeed / hConfig.wheelBase) * Math.tan(playerKart.steeringAngle) * directionFactor;
 
-    const yawResponse = isLowSpeedManoeuvre ? 4.5 : THREE.MathUtils.lerp(hConfig.yawResponseLowSpeed, hConfig.yawResponseHighSpeed, steerSpeedRatio);
+    const yawResponse = isLowSpeedManoeuvre ? 2.5 : THREE.MathUtils.lerp(hConfig.yawResponseLowSpeed, hConfig.yawResponseHighSpeed, steerSpeedRatio);
     playerKart.yawVelocity = THREE.MathUtils.lerp(
       playerKart.yawVelocity,
       desiredYawRate,
@@ -1171,8 +1170,8 @@
       playerKart.yawVelocity *= Math.exp(-hConfig.yawDamping * delta);
     }
 
-    // Clamp maximum yaw rate to prevent toy-car instant spinning
-    const maxYawRate = isLowSpeedManoeuvre ? 1.8 : THREE.MathUtils.lerp(1.15, 0.58, steerSpeedRatio);
+    // Clamp maximum yaw rate to prevent spinning out from small movements
+    const maxYawRate = THREE.MathUtils.lerp(0.85, 0.42, steerSpeedRatio);
     playerKart.yawVelocity = THREE.MathUtils.clamp(playerKart.yawVelocity, -maxYawRate, maxYawRate);
 
     // Apply yaw velocity to heading
