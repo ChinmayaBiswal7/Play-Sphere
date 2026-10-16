@@ -972,9 +972,11 @@
           }
         }
       } else {
-        // On standing start, all cars launch from behind the finish line.
-        // Ignore the initial line crossing from the grid launch so it does NOT count as a full lap!
-        if (!car.gridLaunchCrossingHandled) {
+        // Main Grand Prix Race
+        // STRICT SAFETY GUARD: A real F1 lap takes at least 60s.
+        // During the first 12 seconds of the race, or if the grid launch crossing has not been handled yet,
+        // crossing the start line simply marks the launch completed - NEVER completes a lap or ends the race!
+        if (raceTimer < 12.0 || !car.gridLaunchCrossingHandled) {
           car.gridLaunchCrossingHandled = true;
           car.lapTimeElapsed = 0.0;
           car.previousTrackProgress = current;

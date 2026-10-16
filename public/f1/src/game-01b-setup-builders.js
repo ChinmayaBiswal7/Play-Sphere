@@ -269,6 +269,7 @@
       playerKart.pitZone = "TRACK";
       playerKart.currentPath = "TRACK";
       playerKart.currentOffset = pSlot.progress;
+      playerKart.previousTrackProgress = pSlot.progress;
       playerKart.sideOffset = pSlot.sideOffset;
       playerKart.speed = 0.0;
       playerKart.qualifyingState = "FORMATION";
@@ -282,6 +283,8 @@
       playerKart.completedLaps = 0;
       playerKart.finished = false;
       playerKart.retired = false;
+      playerKart.damage = 0.0;
+      carDamage = 0.0;
       playerKart.gridLaunchCrossingHandled = false;
       playerKart.tyreLife = 100.0;
       playerKart.tyreCompound = activeCompound || "medium";
@@ -295,6 +298,7 @@
         r.completedLaps = 0;
         r.finished = false;
         r.retired = false;
+        r.damage = 0.0;
         r.gridLaunchCrossingHandled = false;
         r.postRaceStopped = false;
         r.postFinishStartProgress = undefined;
@@ -314,6 +318,7 @@
         r.pitZone = "TRACK";
         r.currentPath = "TRACK";
         r.currentOffset = slot.progress;
+        r.previousTrackProgress = slot.progress;
         r.sideOffset = slot.sideOffset;
         r.speed = 0.0;
         r.qualifyingState = "FORMATION";
@@ -623,6 +628,27 @@
   window.enterNormalRaceMode = () => {
     console.log("[RACE] ENTERING NORMAL RACE MODE");
     window.raceState = "RACING";
+    isRaceActive = true;
+    postRaceActive = false;
+    isStartingSequence = false;
+    safetyCarActive = false;
+    vscActive = false;
+    redFlagActive = false;
+    window.yellowFlagActive = false;
+    window.raceLaunchGraceTimer = 6.0; // 6.0s launch grace period to prevent initial grid collisions
+    currentGear = 1; // Auto shift to 1st gear so holding W works immediately!
+    
+    // Cleanly dismiss any lingering overlays
+    const terminalOverlay = document.getElementById('f1-terminal-damage-overlay');
+    if (terminalOverlay) terminalOverlay.style.display = 'none';
+    const postRaceOverlay = document.getElementById('post-race-overlay');
+    if (postRaceOverlay) postRaceOverlay.style.display = 'none';
+
+    // Zero out damage and reset tyre wear
+    carDamage = 0.0;
+    tyreWear = 0.0;
+    if (typeof updateDamageHUD === 'function') updateDamageHUD();
+
     if (typeof console.table === 'function') {
       console.table({
         currentGear: currentGear,
@@ -633,24 +659,42 @@
         ersBatteryLevel: window.ersBatteryLevel
       });
     }
-
-    isStartingSequence = false;
-    safetyCarActive = false;
-    window.raceLaunchGraceTimer = 3.5; // 3.5s launch grace period to prevent initial grid collisions
-    currentGear = 1; // Auto shift to 1st gear so holding W works immediately!
     
     racers.forEach(r => {
       r.qualifyingState = "RACING";
       r.isTrackActive = true;
       r.collisionEnabled = true;
       r.gridReady = false;
+      r.completedLaps = 0;
+      r.finished = false;
+      r.retired = false;
+      r.damage = 0.0;
+      r.gridLaunchCrossingHandled = false;
+      r.previousTrackProgress = r.currentOffset;
+      r.lapTimeElapsed = 0.0;
+      r.lastCollisionDamageTime = 0;
     });
     
     if (playerKart) {
+      playerKart.controlsEnabled = true; // Unlock controls so keyboard/gamepad/phone can drive!
       playerKart.pitLimiterActive = false;
       playerKart.isOnTimedLap = true;
       playerKart.lapTimeElapsed = 0.0;
       playerKart.currentLapInvalid = false;
+      playerKart.retired = false;
+      playerKart.finished = false;
+      playerKart.damage = 0.0;
+      playerKart.gridLaunchCrossingHandled = false;
+      playerKart.previousTrackProgress = playerKart.currentOffset;
+
+      // Align heading with track tangent forward
+      if (trackCurve && playerKart.currentOffset !== undefined) {
+        const tang = trackCurve.getTangentAt(playerKart.currentOffset).normalize();
+        playerKart.heading = Math.atan2(tang.x, tang.z);
+        if (playerKart.mesh) {
+          playerKart.mesh.rotation.y = playerKart.heading;
+        }
+      }
     }
 
     window.timingTowerCollapsed = false;

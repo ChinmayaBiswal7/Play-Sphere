@@ -288,14 +288,33 @@
             const myGridIdx = window.startingGrid.findIndex(g => g.name === r.name);
             const slot = window.getGridSlotTransform(myGridIdx);
             r.currentOffset = slot.progress;
+            r.previousTrackProgress = slot.progress;
             r.sideOffset = slot.sideOffset;
             r.speed = 0.0;
+            r.completedLaps = 0;
+            r.finished = false;
+            r.retired = false;
+            r.damage = 0.0;
+            r.gridLaunchCrossingHandled = false;
+            r.lapTimeElapsed = 0.0;
             if (r.mesh) {
               r.mesh.position.copy(slot.position);
               r.mesh.rotation.y = slot.heading;
             }
           });
           
+          if (playerKart) {
+            playerKart.completedLaps = 0;
+            playerKart.finished = false;
+            playerKart.retired = false;
+            playerKart.damage = 0.0;
+            playerKart.gridLaunchCrossingHandled = false;
+            playerKart.previousTrackProgress = playerKart.currentOffset;
+            playerKart.controlsEnabled = false;
+          }
+          carDamage = 0.0;
+          if (typeof updateDamageHUD === 'function') updateDamageHUD();
+
           // Reset tires & battery for launch
           tyreWear = 0.0;
           window.ersBatteryLevel = 100.0;

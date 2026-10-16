@@ -176,17 +176,31 @@
           const speedDiff = racerI.speed - racerJ.speed;
           const impact = Math.max(Math.abs(speedDiff), maxOverlap * 14.0);
 
-          // 3. F1 Component Damage Accumulation
-          const addedDamage = Math.max(3.5, impact * 1.35);
-          racerI.damage = Math.min(100.0, (racerI.damage || 0.0) + addedDamage);
-          racerJ.damage = Math.min(100.0, (racerJ.damage || 0.0) + addedDamage);
+          // 3. F1 Component Damage Accumulation with debounce cooldown & reasonable damage scaling
+          const nowMs = performance.now();
+          const cooldownI = (nowMs - (racerI.lastCollisionDamageTime || 0)) > 500;
+          const cooldownJ = (nowMs - (racerJ.lastCollisionDamageTime || 0)) > 500;
+          const isLaunchGrace = (window.raceLaunchGraceTimer > 0) || isStartingSequence;
 
-          if (racerI.isPlayer || racerJ.isPlayer) {
-            const pKart = racerI.isPlayer ? racerI : racerJ;
-            carDamage = pKart.damage;
-            updateDamageHUD();
-            if (typeof window.triggerGamepadRumble === 'function') {
-              window.triggerGamepadRumble(160, 0.85, 0.6);
+          if (!isLaunchGrace && (cooldownI || cooldownJ)) {
+            // Authentic F1 contact damage: light rub = 1.5-3%, solid bang = 4-8%, heavy crash = 10-18%
+            const addedDamage = Math.min(18.0, Math.max(1.5, impact * 0.35));
+            if (cooldownI) {
+              racerI.damage = Math.min(100.0, (racerI.damage || 0.0) + addedDamage);
+              racerI.lastCollisionDamageTime = nowMs;
+            }
+            if (cooldownJ) {
+              racerJ.damage = Math.min(100.0, (racerJ.damage || 0.0) + addedDamage);
+              racerJ.lastCollisionDamageTime = nowMs;
+            }
+
+            if (racerI.isPlayer || racerJ.isPlayer) {
+              const pKart = racerI.isPlayer ? racerI : racerJ;
+              carDamage = pKart.damage;
+              updateDamageHUD();
+              if (typeof window.triggerGamepadRumble === 'function') {
+                window.triggerGamepadRumble(160, 0.85, 0.6);
+              }
             }
           }
 

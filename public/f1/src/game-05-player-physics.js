@@ -1316,21 +1316,32 @@
           playerKart.heading = lerpHeading(playerKart.heading, targetHeading, 0.45);
 
           const impact = Math.abs(playerKart.speed);
-          playerKart.speed = 8.0;
-          triggerSpinout(playerKart);
+          playerKart.speed = Math.min(playerKart.speed, 12.0);
           
-          carDamage = Math.min(100.0, carDamage + impact * 0.95);
-          updateDamageHUD();
+          const nowMs = performance.now();
+          const isLaunchGrace = (window.raceLaunchGraceTimer > 0) || isStartingSequence;
+          const wallCooldown = (nowMs - (playerKart.lastWallHitTime || 0)) > 650;
 
-          if (typeof window.triggerGamepadRumble === 'function') {
-            window.triggerGamepadRumble(350, 0.85, 0.55);
-          }
-          if (typeof window.triggerPhoneVibration === 'function') {
-            window.triggerPhoneVibration([120, 40, 180]);
-          }
-          
-          if (impact > 45.0 && !safetyCarActive) {
-            triggerSafetyCar();
+          if (!isLaunchGrace && wallCooldown) {
+            playerKart.lastWallHitTime = nowMs;
+            if (impact > 14.0) {
+              triggerSpinout(playerKart);
+            }
+            
+            const wallDamage = Math.min(22.0, Math.max(2.5, impact * 0.38));
+            carDamage = Math.min(100.0, carDamage + wallDamage);
+            updateDamageHUD();
+
+            if (typeof window.triggerGamepadRumble === 'function') {
+              window.triggerGamepadRumble(300, 0.75, 0.45);
+            }
+            if (typeof window.triggerPhoneVibration === 'function') {
+              window.triggerPhoneVibration([100, 40, 140]);
+            }
+            
+            if (impact > 45.0 && !safetyCarActive) {
+              triggerSafetyCar();
+            }
           }
         }
       }
