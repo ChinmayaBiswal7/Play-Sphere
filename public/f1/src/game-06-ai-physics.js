@@ -654,6 +654,7 @@
         racer.aiStyle = { aggression: agg, defence: def, consistency: con };
       }
       const aggression = racer.aiStyle.aggression;
+      const defenceSkill = racer.aiStyle.defence;
       const paceMultiplier = 0.98 + aggression * 0.08;
       target *= paceMultiplier;
 
@@ -1472,10 +1473,6 @@
       }
 
             // ── ADVANCED RACING LINE, DEFENDING, OVERTAKING & PREDICITIVE COLLISION AVOIDANCE ──
-      // B2: Persistent driver style
-      const aggression = racer.aiStyle ? racer.aiStyle.aggression : 0.75;
-      const defenceSkill = racer.aiStyle ? racer.aiStyle.defence : 0.70;
-
       // Clamp target speed using existing limits
       const maxLimit = racer.boostTime > 0.0 ? baseSpeed * 1.35 : baseSpeed * 1.15;
       target = Math.min(target, maxLimit);
