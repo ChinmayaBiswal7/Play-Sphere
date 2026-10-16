@@ -44,9 +44,9 @@ function initSocket() {
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === '') {
       const ip = localIp || window.location.hostname;
       const pt = port || window.location.port || 3000;
-      phoneUrl = `http://${ip}:${pt}/controller.html?room=${code}`;
+      phoneUrl = `http://${ip}:${pt}/controller.html?room=${code}&v=110`;
     } else {
-      phoneUrl = `${window.location.origin}/controller.html?room=${code}`;
+      phoneUrl = `${window.location.origin}/controller.html?room=${code}&v=110`;
     }
 
     // 1. Update the old PvP lobby elements (if they exist)

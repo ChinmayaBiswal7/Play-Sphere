@@ -31,8 +31,688 @@
   </script>
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>PlaySphere DualSense Controller</title>
-  <link rel="stylesheet" href="controller.css?v=85">
+  <title>PlaySphere Wireless Controller</title>
+  
+  <!-- Web Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Outfit:wght@500;700;900&display=swap" rel="stylesheet">
+
+  <!-- Core Controller Stylesheet -->
+  <link rel="stylesheet" href="/controller.css?v=110">
+
+  <!-- Embedded Formula 1 Virtual Steering Wheel Cockpit Styles (Zero-Cache Failure Shield) -->
+  <style id="f1-cockpit-styles">
+    body.f1-mode-active {
+      display: block !important;
+      background: #05070b !important;
+      overflow: hidden !important;
+      width: 100vw !important;
+      height: 100vh !important;
+    }
+
+    body.f1-mode-active .gamepad-container {
+      display: none !important;
+    }
+
+    #f1-wheel-container {
+      display: none;
+    }
+
+    body.f1-mode-active #f1-wheel-container {
+      display: flex !important;
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      background: radial-gradient(circle at 50% 50%, rgba(18, 24, 38, 0.95) 0%, rgba(4, 6, 10, 1) 100%),
+                  repeating-linear-gradient(45deg, #10141f 0px, #10141f 2px, #080a10 2px, #080a10 4px);
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 8px;
+      box-sizing: border-box;
+      font-family: 'Orbitron', 'Outfit', -apple-system, sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+      z-index: 100;
+    }
+
+    .f1-chassis {
+      width: 100%;
+      max-width: 960px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      border-radius: 14px;
+      border: 1.5px solid rgba(255, 255, 255, 0.12);
+      background: rgba(9, 13, 20, 0.92);
+      box-shadow: inset 0 0 30px rgba(0,0,0,0.9), 0 0 25px rgba(0,0,0,0.85);
+      padding: 4px 8px;
+      box-sizing: border-box;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Top Dashboard Header Bar */
+    .f1-top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      padding: 2px 4px;
+      gap: 6px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      height: 32px;
+      box-sizing: border-box;
+    }
+
+    .f1-header-left, .f1-header-right {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+    }
+
+    .f1-header-right {
+      justify-content: flex-end;
+    }
+
+    .f1-util-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      color: #fff;
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-family: inherit;
+      font-size: 0.62rem;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+      transition: all 0.1s;
+    }
+
+    .f1-util-btn.active {
+      background: rgba(16, 185, 129, 0.22);
+      border-color: #10b981;
+      color: #10b981;
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.35);
+    }
+
+    .f1-util-btn:active {
+      transform: scale(0.94);
+    }
+
+    .f1-esc-btn {
+      background: rgba(239, 68, 68, 0.18);
+      border-color: rgba(239, 68, 68, 0.4);
+      color: #ef4444;
+    }
+
+    .f1-room-pill {
+      font-size: 0.64rem;
+      font-weight: 900;
+      color: #60a5fa;
+      background: rgba(59, 130, 246, 0.12);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: 4px;
+      padding: 3px 6px;
+      letter-spacing: 1px;
+    }
+
+    /* 15 Shift LED Rev Lights Array */
+    .f1-shift-lights {
+      display: flex;
+      gap: 4px;
+      justify-content: center;
+      align-items: center;
+      background: rgba(0, 0, 0, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 3px 8px;
+      border-radius: 16px;
+    }
+
+    .f1-led-group {
+      display: flex;
+      gap: 3px;
+    }
+
+    .f1-led {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #1e293b;
+      border: 1px solid rgba(0, 0, 0, 0.8);
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);
+      transition: background 0.05s, box-shadow 0.05s;
+    }
+
+    .f1-led.lit-green {
+      background: #22c55e !important;
+      box-shadow: 0 0 8px #22c55e, 0 0 14px #22c55e !important;
+    }
+
+    .f1-led.lit-red {
+      background: #ef4444 !important;
+      box-shadow: 0 0 8px #ef4444, 0 0 14px #ef4444 !important;
+    }
+
+    .f1-led.lit-purple {
+      background: #c084fc !important;
+      box-shadow: 0 0 10px #c084fc, 0 0 18px #c084fc !important;
+    }
+
+    .f1-led.flashing {
+      animation: f1LedFlash 0.12s infinite alternate;
+    }
+
+    @keyframes f1LedFlash {
+      0% { opacity: 0.2; }
+      100% { opacity: 1.0; }
+    }
+
+    /* Main Wheel Tri-Section: Left Grip | Central Dash | Right Grip */
+    .f1-main-wheel {
+      display: flex;
+      align-items: stretch;
+      justify-content: space-between;
+      width: 100%;
+      flex: 1;
+      gap: 8px;
+      padding: 3px 0;
+      min-height: 0;
+    }
+
+    /* Grip Wings */
+    .f1-grip {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      width: 175px;
+      min-width: 135px;
+      background: rgba(13, 17, 26, 0.7);
+      border: 1.5px solid rgba(255, 255, 255, 0.07);
+      border-radius: 10px;
+      padding: 6px 8px;
+      box-sizing: border-box;
+    }
+
+    .f1-grip-top-cluster, .f1-grip-mid-cluster {
+      display: flex;
+      gap: 6px;
+      justify-content: space-between;
+    }
+
+    /* Round Cockpit Push Buttons */
+    .f1-round-btn {
+      flex: 1;
+      height: 42px;
+      border-radius: 50px;
+      border: 2px solid rgba(255, 255, 255, 0.16);
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.95) 100%);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.15);
+      font-family: inherit;
+      transition: transform 0.08s, box-shadow 0.08s;
+      padding: 1px;
+    }
+
+    .f1-round-btn:active, .f1-round-btn.active {
+      transform: scale(0.92);
+    }
+
+    .f1-btn-icon {
+      font-size: 0.82rem;
+      line-height: 1;
+    }
+
+    .f1-btn-label {
+      font-size: 0.54rem;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      margin-top: 1px;
+    }
+
+    /* Color Themed Buttons */
+    .f1-btn-radio {
+      border-color: #f97316;
+      background: linear-gradient(135deg, rgba(249, 115, 22, 0.25) 0%, rgba(15, 23, 42, 0.9) 100%);
+      color: #fdba74;
+    }
+    .f1-btn-radio.active, .f1-btn-radio:active {
+      box-shadow: 0 0 15px rgba(249, 115, 22, 0.7);
+      background: #f97316;
+      color: #000;
+    }
+
+    .f1-btn-pit {
+      border-color: #eab308;
+      background: linear-gradient(135deg, rgba(234, 179, 8, 0.25) 0%, rgba(15, 23, 42, 0.9) 100%);
+      color: #fef08a;
+    }
+    .f1-btn-pit.active, .f1-btn-pit:active {
+      box-shadow: 0 0 15px rgba(234, 179, 8, 0.7);
+      background: #eab308;
+      color: #000;
+    }
+
+    .f1-btn-drs {
+      border-color: #06b6d4;
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.25) 0%, rgba(15, 23, 42, 0.9) 100%);
+      color: #67e8f9;
+    }
+    .f1-btn-drs.active, .f1-btn-drs:active {
+      box-shadow: 0 0 16px rgba(6, 182, 212, 0.8);
+      background: #06b6d4;
+      color: #000;
+    }
+
+    .f1-btn-ot {
+      border-color: #a855f7;
+      background: linear-gradient(135deg, rgba(168, 85, 247, 0.25) 0%, rgba(15, 23, 42, 0.9) 100%);
+      color: #d8b4fe;
+    }
+    .f1-btn-ot.active, .f1-btn-ot:active {
+      box-shadow: 0 0 16px rgba(168, 85, 247, 0.8);
+      background: #a855f7;
+      color: #000;
+    }
+
+    .f1-btn-status {
+      border-color: #3b82f6;
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.25) 0%, rgba(15, 23, 42, 0.9) 100%);
+      color: #93c5fd;
+    }
+    .f1-btn-status.active, .f1-btn-status:active {
+      box-shadow: 0 0 15px rgba(59, 130, 246, 0.7);
+      background: #3b82f6;
+      color: #000;
+    }
+
+    .f1-btn-drift {
+      border-color: #10b981;
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.25) 0%, rgba(15, 23, 42, 0.9) 100%);
+      color: #6ee7b7;
+    }
+    .f1-btn-drift.active, .f1-btn-drift:active {
+      box-shadow: 0 0 15px rgba(16, 185, 129, 0.7);
+      background: #10b981;
+      color: #000;
+    }
+
+    .f1-btn-sub {
+      height: 34px;
+      font-size: 0.62rem;
+      border-color: rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    /* Gear Shift Paddles (Large, Prominent, Ergonomic) */
+    .f1-paddle-container {
+      width: 100%;
+      margin: 3px 0;
+    }
+
+    .f1-paddle-btn {
+      width: 100%;
+      height: 46px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-family: inherit;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 5px 12px rgba(0,0,0,0.6), inset 0 1px 2px rgba(255,255,255,0.2);
+      transition: transform 0.06s, box-shadow 0.06s;
+      border: 2px solid;
+    }
+
+    .f1-paddle-down {
+      background: linear-gradient(135deg, rgba(220, 38, 38, 0.35) 0%, rgba(127, 29, 29, 0.6) 100%);
+      border-color: #ef4444;
+      color: #fff;
+    }
+    .f1-paddle-down:active, .f1-paddle-down.active {
+      background: #ef4444;
+      color: #000;
+      box-shadow: 0 0 20px rgba(239, 68, 68, 0.8);
+      transform: scale(0.94);
+    }
+
+    .f1-paddle-up {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.35) 0%, rgba(6, 78, 59, 0.6) 100%);
+      border-color: #10b981;
+      color: #fff;
+    }
+    .f1-paddle-up:active, .f1-paddle-up.active {
+      background: #10b981;
+      color: #000;
+      box-shadow: 0 0 20px rgba(16, 185, 129, 0.8);
+      transform: scale(0.94);
+    }
+
+    .f1-paddle-symbol {
+      font-size: 1.2rem;
+      line-height: 1;
+    }
+
+    .f1-paddle-text {
+      font-size: 0.68rem;
+      letter-spacing: 1px;
+    }
+
+    /* Throttle & Brake Giant Touch Trigger Footpads */
+    .f1-trigger-container {
+      width: 100%;
+      margin-top: 2px;
+    }
+
+    .f1-trigger-btn {
+      width: 100%;
+      height: 50px;
+      border-radius: 8px;
+      border: 2px solid;
+      font-family: inherit;
+      font-size: 0.78rem;
+      font-weight: 900;
+      letter-spacing: 1px;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.05s;
+    }
+
+    .f1-trigger-brake {
+      background: linear-gradient(180deg, rgba(239, 68, 68, 0.2) 0%, rgba(30, 10, 15, 0.8) 100%);
+      border-color: #ef4444;
+      color: #ef4444;
+    }
+    .f1-trigger-brake:active, .f1-trigger-brake.active {
+      background: rgba(239, 68, 68, 0.6);
+      color: #fff;
+      box-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
+      transform: scale(0.96);
+    }
+
+    .f1-trigger-throttle {
+      background: linear-gradient(180deg, rgba(16, 185, 129, 0.2) 0%, rgba(6, 30, 20, 0.8) 100%);
+      border-color: #10b981;
+      color: #10b981;
+    }
+    .f1-trigger-throttle:active, .f1-trigger-throttle.active {
+      background: rgba(16, 185, 129, 0.6);
+      color: #fff;
+      box-shadow: 0 0 20px rgba(16, 185, 129, 0.6);
+      transform: scale(0.96);
+    }
+
+    /* Central OLED Telemetry Display Screen */
+    .f1-center-dash {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      min-width: 0;
+      padding: 0 4px;
+    }
+
+    .f1-oled-bezel {
+      width: 100%;
+      flex: 1;
+      background: #020407;
+      border: 2.5px solid #1e293b;
+      border-radius: 10px;
+      box-shadow: inset 0 0 20px rgba(0,0,0,1), 0 0 15px rgba(0,0,0,0.8);
+      padding: 6px 10px;
+      display: flex;
+      flex-direction: column;
+      box-sizing: border-box;
+    }
+
+    .f1-oled-screen {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .f1-dash-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+    }
+
+    .f1-dash-sub {
+      font-size: 0.52rem;
+      color: rgba(255, 255, 255, 0.5);
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+
+    .f1-dash-highlight {
+      font-size: 0.88rem;
+      font-weight: 900;
+      color: #fff;
+      letter-spacing: 0.5px;
+    }
+
+    .f1-ers-cluster {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .f1-ers-bar-outer {
+      width: 46px;
+      height: 7px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .f1-ers-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #10b981 0%, #06b6d4 100%);
+      transition: width 0.1s;
+    }
+
+    .f1-dash-val-sm {
+      font-size: 0.68rem;
+      font-weight: 800;
+      color: #06b6d4;
+      font-family: monospace;
+    }
+
+    /* Giant Central Gear Display */
+    .f1-dash-center {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin: 1px 0;
+    }
+
+    .f1-gear-display {
+      font-size: 3rem;
+      font-weight: 900;
+      color: #06b6d4;
+      text-shadow: 0 0 18px rgba(6, 182, 212, 0.6), 0 0 35px rgba(6, 182, 212, 0.3);
+      line-height: 1;
+    }
+
+    .f1-dash-status-pills {
+      display: flex;
+      gap: 6px;
+      margin-top: 2px;
+    }
+
+    .f1-dash-pill {
+      font-size: 0.52rem;
+      font-weight: 900;
+      padding: 2px 5px;
+      border-radius: 3px;
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      letter-spacing: 0.5px;
+    }
+
+    .f1-dash-pill.active-drs {
+      background: rgba(6, 182, 212, 0.25);
+      border-color: #06b6d4;
+      color: #06b6d4;
+      box-shadow: 0 0 10px rgba(6, 182, 212, 0.4);
+    }
+
+    .f1-dash-pill.active-pit {
+      background: rgba(234, 179, 8, 0.25);
+      border-color: #eab308;
+      color: #eab308;
+      box-shadow: 0 0 10px rgba(234, 179, 8, 0.4);
+    }
+
+    .f1-dash-speed {
+      font-size: 1.3rem;
+      font-weight: 900;
+      color: #fff;
+      line-height: 1;
+    }
+
+    .f1-dash-delta {
+      font-size: 0.8rem;
+      font-weight: 800;
+      color: #10b981;
+      font-family: monospace;
+    }
+
+    /* Steering Horizon G-Meter Bar below screen */
+    .f1-horizon-container {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      gap: 6px;
+      padding: 4px 4px 1px 4px;
+    }
+
+    .f1-horizon-label {
+      font-size: 0.52rem;
+      color: rgba(255, 255, 255, 0.5);
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+
+    .f1-horizon-track {
+      flex: 1;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 3px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .f1-horizon-center-mark {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      width: 2px;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.4);
+      transform: translateX(-50%);
+    }
+
+    .f1-horizon-needle {
+      position: absolute;
+      top: 0;
+      height: 100%;
+      width: 14px;
+      background: #06b6d4;
+      border-radius: 3px;
+      box-shadow: 0 0 8px #06b6d4;
+      left: 50%;
+      transform: translateX(-50%);
+      transition: left 0.04s ease-out;
+    }
+
+    .f1-steer-degrees {
+      font-size: 0.62rem;
+      color: #06b6d4;
+      font-weight: 800;
+      font-family: monospace;
+      min-width: 30px;
+      text-align: right;
+    }
+
+    /* Bottom Bar Info & iOS Gyro sensor permission button */
+    .f1-bottom-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding-top: 2px;
+      font-size: 0.55rem;
+      color: rgba(255, 255, 255, 0.45);
+      letter-spacing: 0.5px;
+    }
+
+    .f1-ios-perm-btn {
+      background: #3b82f6;
+      border: none;
+      color: #fff;
+      border-radius: 4px;
+      padding: 3px 8px;
+      font-size: 0.58rem;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    /* Fallback Touch Steer Zone */
+    .f1-touch-steer-zone {
+      width: 100%;
+      margin-top: 3px;
+    }
+
+    .f1-touch-steer-track {
+      width: 100%;
+      height: 32px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      touch-action: none;
+    }
+
+    .f1-touch-steer-knob {
+      font-size: 0.6rem;
+      font-weight: 800;
+      color: #fff;
+      background: #06b6d4;
+      padding: 3px 6px;
+      border-radius: 4px;
+      box-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
+      pointer-events: none;
+    }
+  </style>
+
   <!-- Socket.io-client -->
   <script src="/socket.io/socket.io.js"></script>
 </head>
@@ -345,6 +1025,6 @@
   </div>
 
   <!-- Gamepad Client Script -->
-  <script src="controller.js?v=86"></script>
+  <script src="/controller.js?v=110"></script>
 </body>
 </html>

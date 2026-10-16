@@ -3355,7 +3355,7 @@
     }
 
     if (code && qrImg) {
-      const phoneUrl = `${window.location.origin}/controller.html?room=${code}&game=f1`;
+      const phoneUrl = `${window.location.origin}/controller.html?room=${code}&game=f1&v=110`;
       qrImg.src = `/qrcode?text=${encodeURIComponent(phoneUrl)}`;
       qrImg.onload = () => {
         if (qrSpinner) qrSpinner.style.display = 'none';

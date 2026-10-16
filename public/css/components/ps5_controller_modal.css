@@ -1,16 +1,41 @@
 /* ── PlaySphere Controller Link Modal Styles ── */
 
+#ps5-controller-modal {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 2000000;
+}
+
 #ps5-controller-modal .controller-card {
-  max-width: 460px;
-  min-height: 480px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 40px;
-  box-sizing: border-box;
-  text-align: center;
-  gap: 20px;
+  position: relative !important;
+  inset: auto !important;
+  width: 90% !important;
+  max-width: 460px !important;
+  min-height: auto !important;
+  height: auto !important;
+  max-height: 90vh !important;
+  background: radial-gradient(circle at 50% 15%, #131d38 0%, #070c1e 100%) !important;
+  border: 1px solid rgba(59, 130, 246, 0.28) !important;
+  border-radius: 24px !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.85), 0 0 45px rgba(59, 130, 246, 0.2) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 40px 32px !important;
+  box-sizing: border-box !important;
+  text-align: center !important;
+  gap: 18px !important;
+  margin: auto !important;
+  overflow: visible !important;
+}
+
+#ps5-controller-modal .ps5-profile-close {
+  position: absolute !important;
+  top: 18px !important;
+  right: 20px !important;
+  z-index: 10 !important;
 }
 
 #ps5-controller-modal h2 {
